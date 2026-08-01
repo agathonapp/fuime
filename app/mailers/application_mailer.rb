@@ -3,10 +3,10 @@
 class ApplicationMailer < ActionMailer::Base
   self.delivery_job = MailDeliveryJob
 
-  OPERATIONS_EMAIL = "hcb@hackclub.com"
+  OPERATIONS_EMAIL = "support@fuime.com"
 
-  DOMAIN = Rails.env.production? ? "hackclub.com" : "staging.hcb.hackclub.com"
-  default from: "HCB <hcb@#{DOMAIN}>"
+  DOMAIN = Rails.env.production? ? "fuime.com" : "localhost"
+  default from: "Fuime <no-reply@#{DOMAIN}>"
   layout "mailer/default"
 
   # allow usage of application helper
@@ -67,12 +67,12 @@ class ApplicationMailer < ActionMailer::Base
   def hcb_email_with_name_of(object)
     name = object.try(:name)
     if name.present?
-      name += " via HCB"
+      name += " via Fuime"
     else
-      name = "HCB"
+      name = "Fuime"
     end
 
-    email_address_with_name("hcb@hackclub.com", name)
+    email_address_with_name("support@fuime.com", name)
   end
 
   def no_recipients?

@@ -55,6 +55,13 @@ Rails.application.routes.draw do
 
   resources :raffles, only: [:new, :create]
 
+  # Fuime: Guardian invite/accept flow
+  resources :guardianships, only: [:new, :create, :show], path: "guardian" do
+    member do
+      post :accept
+    end
+  end
+
   resources :receipts, only: [:create, :destroy] do
     collection do
       post "link"

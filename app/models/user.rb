@@ -122,6 +122,12 @@ class User < ApplicationRecord
 
   has_many :messages, class_name: "Ahoy::Message", as: :user
 
+  # Fuime guardianship relationships
+  has_many :guardianships_as_guardian, class_name: "Guardianship", foreign_key: :guardian_id, inverse_of: :guardian
+  has_many :guardianships_as_minor, class_name: "Guardianship", foreign_key: :minor_id, inverse_of: :minor
+  has_many :wards, through: :guardianships_as_guardian, source: :minor  # teens this user is guardian for
+  has_many :guardians, through: :guardianships_as_minor, source: :guardian  # guardians of this teen
+
   has_many :events, through: :organizer_positions
   has_many :reader_events, through: :reader_organizer_positions, class_name: "Event", source: :event
 
@@ -219,6 +225,9 @@ class User < ApplicationRecord
 
   validates_presence_of :full_name, if: -> { full_name_in_database.present? }
   validates_presence_of :birthday, if: -> { birthday_ciphertext_in_database.present? }
+
+  # Fuime: Block under-13 signups (COPPA compliance)
+  validate :minimum_age_requirement, if: -> { birthday_changed? && birthday.present? }
 
   validates :full_name, format: {
     with: /\A[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,'-]+ [a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,' -]+\z/,
@@ -492,6 +501,26 @@ class User < ApplicationRecord
     age&.<(18)
   end
 
+  # Fuime: Check if this minor has an active guardian
+  def has_active_guardian?
+    guardianships_as_minor.active.exists?
+  end
+
+  # Fuime: Check if this minor needs a guardian (under 18 and no active guardian)
+  def needs_guardian?
+    is_minor? && !has_active_guardian?
+  end
+
+  # Fuime: Get the active guardian for this minor
+  def active_guardian
+    guardianships_as_minor.active.first&.guardian
+  end
+
+  # Fuime: Check if user is a guardian for any minors
+  def is_guardian?
+    guardianships_as_guardian.active.exists?
+  end
+
   def was_teenager_on_join?
     return age_on(created_at || Time.current) <= 18 if birthday.present?
 
@@ -696,6 +725,15 @@ class User < ApplicationRecord
 
   def create_legal_entity
     legal_entities.create!(entity_type: :person, name: full_name)
+  end
+
+  # Fuime: COPPA compliance - must be 13+ to use the platform
+  def minimum_age_requirement
+    return unless birthday.present?
+
+    if age.present? && age < 13
+      errors.add(:birthday, "indicates you are under 13. You must be at least 13 years old to use Fuime.")
+    end
   end
 
   def auditors_must_be_verified

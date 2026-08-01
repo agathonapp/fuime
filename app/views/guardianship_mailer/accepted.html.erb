@@ -1,0 +1,27 @@
+<p>
+  Hey <%= @minor.first_name || @minor.name %>,
+</p>
+
+<p>
+  Great news! <strong><%= @guardian.name || @guardian.email %></strong> has accepted your guardian invitation
+  on Fuime.
+</p>
+
+<p>
+  Your business account is now fully activated! You can:
+</p>
+<ul>
+  <li>Accept payments from customers</li>
+  <li>Track your income and expenses</li>
+  <li>See your tax status in real-time</li>
+  <li>Build your business history</li>
+</ul>
+
+<p>
+  <%= link_to "Go to your dashboard", root_url %>
+</p>
+
+<p>
+  Best,<br>
+  The Fuime Team
+</p>
