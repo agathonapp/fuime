@@ -9,7 +9,7 @@
 <div class="flex flex-col gap-4">
   <div class="card">
     <div class="flex items-center gap-3 mb-4">
-      <%= inline_icon "money-dollar-box", size: 24, class: "text-primary" %>
+      <%= inline_icon "payment", size: 24, class: "text-primary" %>
       <h2 class="m-0"><%= Date.current.year %> Tax Summary</h2>
     </div>
 
@@ -49,7 +49,7 @@
     <div class="p-4 rounded-lg <%= @tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
       <div class="flex items-start gap-3">
         <% if @tax_tracker.over_threshold? %>
-          <%= inline_icon "alert-triangle", size: 20, class: "text-error flex-shrink-0 mt-0.5" %>
+          <%= inline_icon "warning", size: 20, class: "text-error flex-shrink-0 mt-0.5" %>
         <% else %>
           <%= inline_icon "check-circle", size: 20, class: "text-success flex-shrink-0 mt-0.5" %>
         <% end %>

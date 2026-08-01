@@ -4,7 +4,7 @@
 <div class="card card--breakdown p-4 flex-1">
   <div class="flex items-center justify-between mb-3">
     <h3 class="m-0 flex items-center gap-2">
-      <%= inline_icon "money-dollar-box", size: 20 %>
+      <%= inline_icon "payment", size: 20 %>
       Tax Tracker
     </h3>
     <%= link_to fuime_taxes_path(@event.slug), class: "flex items-center shrink-0 no-underline text-sm" do %>
@@ -35,7 +35,7 @@
   <div class="p-3 rounded-lg text-sm <%= tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
     <% if tax_tracker.over_threshold? %>
       <span class="flex items-center gap-2">
-        <%= inline_icon "alert-triangle", size: 16, class: "text-error" %>
+        <%= inline_icon "warning", size: 16, class: "text-error" %>
         <span>Over threshold — <%= link_to "download parent packet", fuime_taxes_download_path(@event.slug, format: :csv) %></span>
       </span>
     <% else %>
