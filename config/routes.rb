@@ -62,6 +62,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Fuime: Stripe webhook for payment links
+  namespace :fuime do
+    post "webhooks/stripe", to: "webhooks#stripe"
+  end
+
   resources :receipts, only: [:create, :destroy] do
     collection do
       post "link"

@@ -5,17 +5,12 @@
 
 <h1 class="heading border-b-0 mb-0 pb-0 flex-col sm:flex-row items-center sm:items-start justify-center sm:justify-between center sm:text-left w-auto m-0 mt-3 gap-2">
   <div>
-    <% if current_user.hack_clubber? || current_user.is_teenager? %>
-      <a
-        class="text-base caps muted block no-underline"
-        href="https://github.com/hackclub/hcb-expansions/tree/main#hcb-what-does-it-stand-for"
-        target="_blank">
-        <%= @hcb_expansion %>
-      </a>
-    <% end %>
     <span class="<%= "warning" if fall? %>">
-      Welcome to <span class="primary">HCB</span>
+      Welcome to <span class="primary">Fuime</span>
     </span>
+    <% if current_user.is_teenager? %>
+      <span class="text-base muted block">Your teen business dashboard</span>
+    <% end %>
   </div>
   <span class="badge ml-0 text-sm rounded-xl caps <%= Rails.env.development? ? "bg-success" : by_season("bg-muted", fall: "bg-warning") %>" id="flavor-text" data-turbo-permanent><%= flavor_text %></span>
 </h1>
@@ -112,7 +107,7 @@
 <main class="flex flex-col items-center text-center pb-8">
   <% if signed_in? %>
     <% if @invites.any? %>
-      <h2 class="w-full text-left mt-8 pb-0 border-none h2 pl-0 ml-0">Pending organization invitations</h2>
+      <h2 class="w-full text-left mt-8 pb-0 border-none h2 pl-0 ml-0">Pending business invitations</h2>
       <ul class="grid grid--narrow text-left w-full mt-2">
         <% @invites.each do |invite| %>
           <%= link_to invite do %>
@@ -153,12 +148,12 @@
     <% end %>
 
     <h2 class="user-home-section mb-2 flex items-center w-full">
-      <span>Your organizations</span>
+      <span>Your businesses</span>
       <% if @show_event_reorder_tip && @events.any? %>
         <% if @events.size > 1 %>
-          <%= link_to "https://blog.hcb.hackclub.com/posts/re-order-your-homepage-247413", class: "muted flex items-center justify-end h6 ml-auto", target: "_blank" do %>
+          <span class="muted flex items-center justify-end h6 ml-auto">
             <%= inline_icon "hand-pointer-solid", size: 18, class: "mr1" %> Drag to reorder
-          <% end %>
+          </span>
         <% end %>
       <% end %>
     </h2>
@@ -179,7 +174,7 @@
               <div class="pop success mx-auto flex mb-1">
                 <%= inline_icon "plus", size: 28 %>
               </div>
-              New organization
+              New business
             </div>
           </li>
         <% end %>
@@ -188,7 +183,7 @@
 
     <% if @events.hidden.any? %>
       <details class="w-full text-left">
-        <summary><h4 class="inline-block pb-0 border-none muted">Hidden organizations</h4></summary>
+        <summary><h4 class="inline-block pb-0 border-none muted">Hidden businesses</h4></summary>
         <ul class="grid grid--medium-narrow text-left mt-0">
           <%= render partial: "events/event_card", collection: @events.hidden, as: :event %>
         </ul>
@@ -198,39 +193,37 @@
     <% if @events.empty? %>
       <div class="center mt0 mb0 pt4 pb4 slate bold h3 mx-auto rounded-lg border flex flex-col w-full items-center justify-center">
         <span>
-          You aren't a part of an organization yet, looking to start one?
+          Ready to start your first business?
         </span>
         <%= link_to apply_path, class: "btn bg-success mt2" do %>
           <%= inline_icon "plus" %>
-          New organization
+          New business
         <% end %>
       </div>
     <% end %>
 
     <%= render "static_pages/index/teenager_raffle" %>
 
-    <%# Latest HCB announcement %>
+    <%# Latest Fuime announcement - hidden for now until we have announcements %>
+    <%#
     <% if @latest_hcb_announcement %>
       <div class="flex flex-row w-full justify-between items-center">
         <h2 class="heading h2 leading-[1.5] my-2 mt-4 mr-auto py-2 px-4 ml-0 pl-0 border-none">
-          The latest from HCB
+          The latest from Fuime
         </h2>
-        <%= link_to event_announcement_overview_path(Event.find(EventMappingEngine::EventIds::HACK_CLUB_BANK)), class: "muted", target: :_blank do %>
-          View all announcements
-          <%= inline_icon "external", size: 18, class: "ml-1 align-text-top", style: "transform: scale(1.2)" %>
-        <% end %>
       </div>
       <div class="mb-4 text-left w-full self-stretch">
         <%= render partial: "announcements/announcement_card", locals: { announcement: @latest_hcb_announcement } %>
       </div>
     <% end %>
+    %>
 
     <%= render "static_pages/index/explore" %>
 
     <% valid_contracts = current_user.contracts.sent.select { |contract| contract.party(:signee).present? } %>
     <% if valid_contracts.any? %>
       <h2 class="w-full text-left mt-4 pb-0 border-none">Pending forms</h2>
-      <p class="text-left my0 w-100 muted">Forms are sent to your HCB email, currently set to <%= mail_to current_user.email %>.</p>
+      <p class="text-left my0 w-100 muted">Forms are sent to your email: <%= mail_to current_user.email %>.</p>
       <div class="grid grid--narrow grid-cols-1 text-left w-full mt-2">
         <%= render partial: "contracts/contract", collection: valid_contracts, as: :contract %>
       </div>
