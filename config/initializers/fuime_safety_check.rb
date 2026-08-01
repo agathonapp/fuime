@@ -83,10 +83,38 @@ Rails.application.config.after_initialize do
   # --- 4. Don't let a fork reach Hack Club production ------------------------
   # CLAUDE.md Rule 4. A stray hcb.hackclub.com host means Fuime emails and links
   # point at someone else's production service.
+  #
+  # These settings hold a bare host ("fuime.example.com"), but tolerate someone
+  # supplying a full URL. Match on the parsed host and only on an exact domain
+  # or a real subdomain of it — a substring check both misses nothing and flags
+  # too much ("fuime.com/?ref=hackclub.com", "nothackclub.com").
+  banned_domains = ["hackclub.com"]
+
+  extract_host = lambda do |value|
+    raw = value.to_s.strip
+    next nil if raw.empty?
+
+    host =
+      begin
+        # A bare host has no scheme; give the parser one so it populates #host.
+        candidate = raw.match?(%r{\A[a-zA-Z][a-zA-Z0-9+.-]*://}) ? raw : "//#{raw}"
+        URI.parse(candidate).host
+      rescue URI::InvalidURIError
+        nil
+      end
+
+    host&.downcase&.delete_suffix(".")
+  end
+
   hcb_host = [
     ENV["LIVE_URL_HOST"],
     Rails.application.config.action_mailer.default_url_options[:host]
-  ].compact.find { |h| h.to_s.include?("hackclub.com") }
+  ].compact.find do |value|
+    host = extract_host.call(value)
+    next false if host.nil?
+
+    banned_domains.any? { |domain| host == domain || host.end_with?(".#{domain}") }
+  end
 
   if hcb_host
     errors << <<~MSG.strip
