@@ -3,7 +3,7 @@
 <% disabled = !policy(event).update? %>
 
 <%= form_with(model: event, local: true, class: "mb3") do |form| %>
-  <%= form_errors event, "organization" %>
+  <%= form_errors event, "business" %>
 
   <div class="card flex flex-col items-start gap-2 p0 pb2 mb3">
     <div class="event_settings__banner">

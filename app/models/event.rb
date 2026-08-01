@@ -86,6 +86,10 @@ class Event < ApplicationRecord
   MAX_SHORT_NAME_LENGTH = 16
   validates :short_name, length: { maximum: MAX_SHORT_NAME_LENGTH }, allow_blank: true
 
+  # Fuime: Business categories for teen ventures
+  BUSINESS_CATEGORIES = %w[crafts services digital food other].freeze
+  validates :business_category, inclusion: { in: BUSINESS_CATEGORIES }, allow_blank: true
+
   include AASM
   include PgSearch::Model
   pg_search_scope :search_name, against: [:name, :slug, :id], using: { tsearch: { prefix: true, dictionary: "simple" } }

@@ -40,6 +40,17 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Onboarding button text | "Start using HCB" → "Start using Fuime" | `app/views/users/edit.html.erb` |
 | Settings data sharing text | HCB → Fuime | `app/views/users/edit.html.erb` |
 
+## M3: Business Creation Flow
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Added business_category + storefront_tagline to events | Business categorization | `db/migrate/20260801110000_add_fuime_business_fields_to_events.rb` |
+| Added BUSINESS_CATEGORIES constant | Category validation | `app/models/event.rb` |
+| Restrung _begin.html.erb | HCB → Fuime, nonprofit → business | `app/views/event/applications/_begin.html.erb` |
+| Restrung project_info.html.erb | Project → Business terminology | `app/views/event/applications/project_info.html.erb` |
+| Restrung _title.html.erb | Organization → Business | `app/views/events/_title.html.erb` |
+| Restrung settings details | Organization → Business | `app/views/events/settings/_details.html.erb` |
+
 ## Render Deployment
 
 | Change | Why | Files |

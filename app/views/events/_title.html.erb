@@ -9,7 +9,7 @@
       <%= inline_icon "more", size: 24 %>
     </button>
     <div class="menu__content menu__content--switcher h5" data-menu-target="content">
-      <span class="muted font-medium h5 pl-2 p-1 m0">Parent <%= "organization".pluralize(parent_events.count) %></span>
+      <span class="muted font-medium h5 pl-2 p-1 m0">Parent <%= "business".pluralize(parent_events.count) %></span>
       <% parent_events.each do |ancestor| %>
         <%= link_to_if organizer_signed_in?(ancestor, as: :reader), ancestor.name, ancestor do %>
           <div class="menu__action opacity-70 pointer-events-none">
@@ -35,10 +35,10 @@
       <% admin_tool do %>
         <button class="menu__action" data-controller="clipboard" data-clipboard-text-value="<%= @event.name %>" data-action="click->clipboard#copy">
           <%= inline_icon "copy", size: 24 %>
-          Copy org name
+          Copy business name
         </button>
       <% end %>
-      <p class="muted font-medium h5 pl-2 p-1 m0">Switch organizations</p>
+      <p class="muted font-medium h5 pl-2 p-1 m0">Switch businesses</p>
       <% events = current_user.events.not_hidden.excluding(@event).with_attached_logo %>
       <% events.map do |event| %>
         <%= link_to event, title: event.name, class: "gap-2" do %>
