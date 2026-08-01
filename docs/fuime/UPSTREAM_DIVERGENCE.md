@@ -202,3 +202,28 @@ Note: `app/views/card_grants/transaction_index.html.erb` has a similar
 `<%# <%= ... %>` pattern, but it leaves only stray text rather than an
 unbalanced `end`, so it does not break that template. Left as upstream code
 per Rule 6.
+
+## Guardian Invite Submission 500
+
+With request logging finally visible, submitting the invite form surfaced:
+
+```
+POST /guardian → 500
+ActiveModel::UnknownAttributeError: unknown attribute 'guardian_email'
+for Guardianship. (guardianships_controller.rb:17)
+```
+
+`guardian_email` is a form-only field used to find or create the guardian
+User — it is not a column on `guardianships`. Passing the permitted params
+straight into `Guardianship.new` raised on every submission. `/guardian/new`
+rendered fine (200), so only the POST failed.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Build record from `minor:` only; read guardian_email from params | `guardian_email` is not a model attribute | `app/controllers/guardianships_controller.rb` |
+| `params.fetch` instead of `params.require` | Missing key returned 500 instead of a form error | `app/controllers/guardianships_controller.rb` |
+| `formats: [:html]` on error re-renders | Form posts as turbo_stream; no turbo_stream template exists for `new` | `app/controllers/guardianships_controller.rb` |
+
+Verified on production: the old constructor call still raises
+`ActiveModel::UnknownAttributeError`, while the new flow creates the guardian,
+saves the guardianship, and enqueues the invite (`NEW_FLOW=OK`, `enqueue=OK`).
