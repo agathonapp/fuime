@@ -133,3 +133,36 @@ reported symptoms were the same bug.
 Operator action required: set `SMTP__PASSWORD` to the Resend API key in the
 Render dashboard for BOTH `fuime-web` and `fuime-worker`, and verify the
 `fuime.com` domain in Resend so `no-reply@fuime.com` is an allowed sender.
+
+## Mailer Host + Redis Fixes (Render)
+
+Two further production bugs found after the SMTP fix, both diagnosed by running
+`rails runner` one-off jobs against the live service.
+
+**1. Missing mailer host.** SMTP was correctly configured (verified against
+Resend: `address=smtp.resend.com port=587 user=resend pw_set=true`), but
+`LIVE_URL_HOST` was unset. Mailer templates build absolute URLs, so rendering
+raised `Missing host to link to!` *before* SMTP was contacted. Because login
+codes send inline via `deliver_now`, this broke login itself.
+
+**2. `REDIS_CACHE_URL` never set.** `config/cable.yml` and the production
+`cache_store` both read `REDIS_CACHE_URL`, but `render.yaml` only provided
+`REDIS_URL`. Both fell back to `redis://localhost:6379/1`. ActionCable failed
+loudly — every `Turbo::Streams::ActionBroadcastJob` died with
+`Redis::CannotConnectError` — which broke guardian invite emails
+(`deliver_later`) and signed-in page rendering. The cache store failed silently
+with `url: nil`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Mailer host falls back to `RENDER_EXTERNAL_HOSTNAME` | Render always injects it; removes dependence on a hand-set var | `config/environments/production.rb`, `config/application.rb` |
+| Boot warning when no mailer host configured | Missing host breaks email at render time, not send time | `config/initializers/smtp_check.rb` |
+| `REDIS_CACHE_URL` added to web + worker | cable.yml and cache_store read it | `render.yaml` |
+| cable.yml / cache_store fall back to `REDIS_URL` | Works whether or not the Blueprint is re-synced | `config/cable.yml`, `config/environments/production.rb` |
+
+Verified on production: login code emails accepted by Resend; both guardianship
+mailers deliver; previously-failing broadcast jobs now report `done` with zero
+`CannotConnectError`.
+
+Note: `render.yaml` is a Blueprint — the `REDIS_CACHE_URL` entry only reaches
+Render on a manual Blueprint re-sync. The code fallbacks make that optional.
