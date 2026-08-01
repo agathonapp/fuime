@@ -9,15 +9,17 @@
       "",
     data: { "controller" => "analytics #{"ar" if current_page?(auth_users_path)}", "analytics-event-name-value" => "Icon right-clicked", "ar-usdz-href-value" => "/bank.usdz", "action" => "contextmenu->menu#toggle contextmenu->analytics#track click@document->menu#close keydown@document->menu#keydown", "menu-target" => "toggle" } do %>
 
-    <% logo_env = Rails.env.local? ? "development" : Rails.env %>
+    <%# Fuime: Use SVG logos instead of PNGs %>
+    <% logo_env = Rails.env.local? ? "development" : (Rails.env.production? ? "" : Rails.env) %>
+    <% logo_suffix = logo_env.present? ? "-#{logo_env}" : "" %>
 
-    <%= image_tag user_birthday? ? "logo-party-dark.gif" : "logo-#{logo_env}-dark.png",
+    <%= image_tag "logo#{logo_suffix}-dark.svg",
         name: "header-logo",
         class: "logo-dark",
         width: @home_size || 36,
         height: @home_size || 36,
         alt: "Fuime logo" %>
-    <%= image_tag user_birthday? ? "logo-party.gif" : "logo-#{logo_env}.png",
+    <%= image_tag "logo#{logo_suffix}.svg",
         name: "header-logo",
         class: "logo",
         width: @home_size || 36,
