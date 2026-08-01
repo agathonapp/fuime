@@ -778,7 +778,16 @@ class User < ApplicationRecord
   end
 
   def slug_candidates
-    slug = normalize_friendly_id self.name
+    # `name` can come back ASCII-8BIT (e.g. for a user created with only an
+    # email, where it falls back to email_handle). ActiveSupport's
+    # transliterate — called by normalize_friendly_id — raises
+    # "Cannot transliterate strings with ASCII-8BIT encoding" on binary
+    # strings, which surfaced as a 500 when creating a guardian by email.
+    source = self.name.to_s
+    source = source.dup.force_encoding(Encoding::UTF_8) unless source.encoding == Encoding::UTF_8
+    source = source.scrub("") unless source.valid_encoding?
+
+    slug = normalize_friendly_id source
     # From https://github.com/norman/friendly_id/issues/480
     sequence = User.where("slug LIKE ?", "#{slug}-%").size + 2
     [slug, "#{slug} #{sequence}"]

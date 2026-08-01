@@ -30,8 +30,20 @@ class GuardianshipsController < ApplicationController
     guardian = User.find_by(email: guardian_email)
 
     if guardian.nil?
-      # Create a new user for the guardian (they'll onboard when accepting)
-      guardian = User.create!(email: guardian_email)
+      # Create a new user for the guardian (they'll onboard when accepting).
+      # Rescued so an invalid address renders a form error instead of a 500.
+      begin
+        guardian = User.create!(email: guardian_email)
+      rescue ActiveRecord::RecordInvalid => e
+        flash[:error] = e.record.errors.full_messages.to_sentence
+        render :new, status: :unprocessable_content
+        return
+      rescue => e
+        Rails.error.report(e, handled: true, context: { guardian_email: })
+        flash[:error] = "We couldn't create an account for that email address. Please check it and try again."
+        render :new, status: :unprocessable_content
+        return
+      end
     end
 
     if guardian.id == current_user.id
