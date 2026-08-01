@@ -1,14 +1,14 @@
-<% title "Tell us about your project" %>
+<% title "Tell us about your business" %>
 
 <% content_for :progress, 25 %>
 
 <% content_for :info_pane do %>
   <div class="flex flex-col">
     <h2 class="text-4xl">
-      Tell us about your project
+      Tell us about your business
     </h2>
 
-    <p class="mt-0 text-lg muted">Help our team understand your mission</p>
+    <p class="mt-0 text-lg muted">Help us understand what you sell</p>
   </div>
 <% end %>
 
@@ -19,31 +19,19 @@
     x-data="application_project_info({ has_website: '<%= @application.website_url.present? ? "true" : "false" %>', has_political: '<%= @application.political_description.present? ? "true" : "false" %>', teenager: '<%= @application.teen_led? ? "true" : "false" %>', committed: '<%= @application.committed_amount %>', description: '<%= @application.description %>' })">
     <div class="field">
       <%= form.label :name do %>
-        Project name <span class="text-primary">*</span>
+        Business name <span class="text-primary">*</span>
       <% end %>
-      <%= form.text_field :name, placeholder: "Leosia Hacks", class: "w-full !max-w-full", required: true, "x-bind:disabled": "teenager == null" %>
+      <%= form.text_field :name, placeholder: "Maya's Art Prints", class: "w-full !max-w-full", required: true, "x-bind:disabled": "teenager == null" %>
     </div>
 
     <div class="field">
       <%= form.label :description do %>
-        <% if @application.teen_led? %>
-          Tell us about your project
-        <% else %>
-          Describe your mission's charitable purpose
-        <% end %>
-        <span class="text-primary">*</span>
+        What does your business do? <span class="text-primary">*</span>
       <% end %>
       <p class="text-sm muted mt-1 mb-2">
-        <% if @application.teen_led? %>
-          Are you running a hackathon, leading a robotics team, organizing a nonprofit, building a project, or something else? We want to know!
-        <% else %>
-          Please share some additional details about your project’s charitable mission, operations and reason for seeking fiscal sponsorship. (minimum 50 words)
-        <% end %>
+        Tell us what you sell or what services you offer. This helps us understand your business!
       </p>
-      <%= form.text_area :description, class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null", "x-model": "description" %>
-      <% unless @application.teen_led? %>
-        <p class="text-sm muted mt-1 mb-2" x-text="description_word_count_text"></p>
-      <% end %>
+      <%= form.text_area :description, class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null", "x-model": "description", placeholder: "I create and sell custom art prints and stickers..." %>
     </div>
 
     <div class="field">
@@ -125,7 +113,7 @@
 
     <div class="field m-0">
       <%= form.label :previously_applied do %>
-        Have you applied for fiscal sponsorship with HCB in the past? <span class="text-primary">*</span>
+        Have you used Fuime before? <span class="text-primary">*</span>
       <% end %>
       <%= form.select :previously_applied, options_for_select([["No", "false"], ["Yes", "true"]], (@application.previously_applied.nil? ? @application.user.organizer_positions.with_deleted.joins(:organizer_position_invite).where(is_signee: true, organizer_position_invite: { initial: true }).exists? : @application.previously_applied).to_s), {}, { class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null" } %>
     </div>

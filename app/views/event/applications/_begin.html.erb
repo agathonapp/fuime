@@ -7,32 +7,32 @@
       <% if application.present? && application.created_at < 1.hour.ago %>
         Continue your application
       <% else %>
-        Let's get started
+        Start your business
       <% end %>
     </h2>
 
-    <p class="mt-0 mb-8 text-2xl muted">Applying for HCB is easy and quick</p>
+    <p class="mt-0 mb-8 text-2xl muted">Setting up your Fuime business takes minutes</p>
 
     <div class="mb-12">
       <div class="flex flex-col gap-3">
         <div class="flex flex-row items-start justify-start gap-4">
           <%= inline_icon "idea" %>
-          <p class="m-0 py-1">We'll start by asking some questions about your project</p>
+          <p class="m-0 py-1">Tell us about your business and what you sell</p>
         </div>
         <div class="flex flex-row items-start justify-start gap-4">
           <%= inline_icon "person" %>
-          <p class="m-0 py-1">Then, we'll ask some questions about you</p>
+          <p class="m-0 py-1">Your parent will be your account's legal signer</p>
         </div>
         <div class="flex flex-row items-start justify-start gap-4">
           <%= inline_icon "clock" %>
-          <p class="m-0 py-1">The whole process takes less than 5 minutes</p>
+          <p class="m-0 py-1">Start accepting payments in minutes</p>
         </div>
       </div>
     </div>
 
     <div class="max-w-lg">
-      <h3 class="text-lg mb-0">HCB is not a bank, we're a <%= link_to "fiscal sponsor", "https://hackclub.com/fiscal-sponsorship/", class: "underline" %></h3>
-      <p class="mt-0">HCB partners with <%= link_to "Column N.A.", "https://column.com" %>, Member FDIC, to provide restricted funds to fiscally-sponsored projects. We do not provide direct funding.</p>
+      <h3 class="text-lg mb-0">Built for teen entrepreneurs</h3>
+      <p class="mt-0">Fuime gives you a real business account with clean books and tax tracking. Your parent signs as the responsible adult until you turn 18.</p>
     </div>
 
   </div>
@@ -44,26 +44,26 @@
 
         <div class="card card--outline mb-6" x-data="{ teenager: '<%= @application&.teen_led? ? "true" : @application&.teen_led? == false ? "false" : "" %>' }">
           <%= form.label :teen_led do %>
-            Are you a teenager? <span class="text-primary">*</span>
+            Are you under 18? <span class="text-primary">*</span>
           <% end %>
 
-          <p class="text-sm muted mt-1 mb-2">HCB primarily focuses on teen-led projects, so we're more selective with adult-run organizations.</p>
+          <p class="text-sm muted mt-1 mb-2">Fuime is designed for teen entrepreneurs (13-17). Adults can use Fuime too!</p>
 
           <div class="field field--options max-w-none mb-0 relative">
             <%= form.radio_button :teen_led, "true", { "x-model": "teenager", checked: @application&.teen_led?, required: true, class: "absolute !block opacity-0" } %>
             <%= form.label :teen_led, value: "true" do %>
-              <strong>Yes, I'm a teenager</strong>
-              <small>18 and under</small>
+              <strong>Yes, I'm under 18</strong>
+              <small>13-17 years old</small>
             <% end %>
             <%= form.radio_button :teen_led, "false", { "x-model": "teenager", checked: @application&.teen_led? == false, required: true, class: "absolute !block opacity-0" } %>
             <%= form.label :teen_led, value: "false" do %>
-              <strong>No, I'm an adult</strong>
-              <small>Over 18</small>
+              <strong>No, I'm 18+</strong>
+              <small>Adult entrepreneur</small>
             <% end %>
           </div>
 
-          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'true'">HCB is a full financial tool stack that provides 501(c)(3) status for your project. If you are a teenager running a club, nonprofit, or robotics team, you qualify.</p>
-          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'false'">HCB is a model A fiscal sponsor. If approved, your nonprofit will become a project of The Hack Foundation.</p>
+          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'true'">Great! Your parent or guardian will be the legal signer on your account. They can see all your transactions and help with taxes.</p>
+          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'false'">You can manage your own Fuime business account without a guardian.</p>
 
         </div>
       <% end %>
