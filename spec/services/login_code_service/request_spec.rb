@@ -80,5 +80,24 @@ describe LoginCodeService::Request do
         expect(response[:error].attribute_names).to eq([:email])
       end
     end
+
+    context "when the SMTP server is unreachable" do
+      it "returns a readable error instead of raising" do
+        user = create(:user)
+
+        allow(LoginCodeMailer).to receive(:send_code)
+          .and_raise(Errno::ECONNREFUSED.new("connect(2) for nil port 25"))
+
+        response = nil
+        expect do
+          response = described_class.new(email: user.email,
+                                         ip_address:,
+                                         user_agent:).run
+        end.not_to raise_error
+
+        expect(response[:method]).to eq(:email)
+        expect(response[:error]).to match(/couldn't send your login code/i)
+      end
+    end
   end
 end

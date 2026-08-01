@@ -25,13 +25,22 @@ module Bank
     }
 
     # SMTP config
+    #
+    # Defaults target Resend, which is what Fuime uses in production. Only
+    # SMTP__PASSWORD (the Resend API key) has no safe default and must be set
+    # in the environment.
+    #
+    # `port` MUST be an Integer: Net::SMTP will happily accept a String, but
+    # Mail's `enable_starttls_auto` comparison against port 465 then silently
+    # fails, so a String port can leave STARTTLS off.
     config.action_mailer.smtp_settings = {
-      user_name: Credentials.fetch(:SMTP, :USERNAME),
+      user_name: Credentials.fetch(:SMTP, :USERNAME, fallback: "resend"),
       password: Credentials.fetch(:SMTP, :PASSWORD),
-      address: Credentials.fetch(:SMTP, :ADDRESS),
-      domain: Credentials.fetch(:SMTP, :DOMAIN),
-      port: Credentials.fetch(:SMTP, :PORT),
-      authentication: :plain
+      address: Credentials.fetch(:SMTP, :ADDRESS, fallback: "smtp.resend.com"),
+      domain: Credentials.fetch(:SMTP, :DOMAIN, fallback: "fuime.com"),
+      port: Credentials.fetch(:SMTP, :PORT, fallback: 587).to_i,
+      authentication: :plain,
+      enable_starttls_auto: true
     }
 
     # Settings in config/environments/* take precedence over those specified here.

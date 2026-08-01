@@ -47,7 +47,16 @@ module LoginCodeService
         user_agent: @user_agent
       )
 
-      LoginCodeMailer.send_code(user.email_address_with_name, login_code.pretty).deliver_now
+      begin
+        LoginCodeMailer.send_code(user.email_address_with_name, login_code.pretty).deliver_now
+      rescue => e
+        # A misconfigured or unreachable SMTP server must not turn into a 500 on
+        # the login page. Report it and surface a readable error instead, so the
+        # cause shows up in Sentry rather than only as a failed login.
+        Rails.error.report(e, handled: true, context: { email: user.email })
+
+        return { error: "We couldn't send your login code right now. Please try again in a moment.", method: :email }
+      end
 
       {
         id: user.id,

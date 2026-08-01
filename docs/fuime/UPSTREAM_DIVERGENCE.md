@@ -109,3 +109,27 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Added render.yaml Blueprint | Render deployment | `render.yaml` |
 | Ruby version 3.4.7 → 3.4.9 | Match .ruby-version | `production.Dockerfile` |
 | Active Storage default to local | No S3 required for initial deploy | `config/environments/production.rb` |
+
+## Login + Email Delivery Fix (Render)
+
+Root cause: `config/application.rb` built `smtp_settings` purely from
+`Credentials.fetch(:SMTP, ...)` with no fallbacks. On Render only
+`SMTP__PASSWORD` is `sync: false`, but `credentials.yml.enc` contains just
+`secret_key_base` — so any unset SMTP var resolved to `nil`, producing
+`address: nil` and `Errno::ECONNREFUSED ... for nil port 25`.
+
+Because `LoginCodeService::Request` calls `deliver_now` inline, that SMTP
+exception surfaced as a failed login, not merely a missing email. Both
+reported symptoms were the same bug.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| SMTP defaults for Resend + integer port + `enable_starttls_auto` | Missing env vars no longer yield `address: nil`; String port can leave STARTTLS off | `config/application.rb` |
+| Rescue delivery errors in login code service | SMTP outage returns a readable error via the existing `resp[:error]` path instead of a 500 on login | `app/services/login_code_service/request.rb` |
+| Spec for unreachable SMTP | Regression cover for the login-breaks-on-mail-failure path | `spec/services/login_code_service/request_spec.rb` |
+| Boot-time SMTP warning | Surfaces the misconfiguration in logs instead of as a buried request error | `config/initializers/smtp_check.rb` |
+| Login code subject HCB → Fuime | Brand | `app/mailers/login_code_mailer.rb` |
+
+Operator action required: set `SMTP__PASSWORD` to the Resend API key in the
+Render dashboard for BOTH `fuime-web` and `fuime-worker`, and verify the
+`fuime.com` domain in Resend so `no-reply@fuime.com` is an allowed sender.
