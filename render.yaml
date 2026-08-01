@@ -17,7 +17,7 @@ services:
     runtime: docker
     dockerfilePath: ./production.Dockerfile
     dockerContext: .
-    plan: starter
+    plan: standard
     healthCheckPath: /up
     envVars:
       - key: DATABASE_URL
@@ -126,7 +126,7 @@ services:
     runtime: docker
     dockerfilePath: ./production.Dockerfile
     dockerContext: .
-    plan: starter
+    plan: standard
     dockerCommand: bundle exec sidekiq
     envVars:
       - key: DATABASE_URL
