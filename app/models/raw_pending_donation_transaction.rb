@@ -20,11 +20,20 @@ class RawPendingDonationTransaction < ApplicationRecord
   end
 
   def memo
-    "Donation"
+    fuime_payment? ? "Payment" : "Donation"
+  end
+
+  # Fuime: Stripe Checkout payments recorded by Fuime::PaymentWebhookHandler.
+  def fuime_payment?
+    donation_transaction_id.to_s.start_with?("fuime_")
   end
 
   def likely_event_id
-    @likely_event_id ||= donation.event.id
+    # Fuime: rows created from Stripe Checkout payments use a synthetic
+    # "fuime_<stripe_id>" key and have no Donation record — they are mapped to
+    # their event directly by Fuime::PaymentWebhookHandler. Guard against the
+    # nil so the shared pipeline doesn't raise on them.
+    @likely_event_id ||= donation&.event&.id
   end
 
   def donation

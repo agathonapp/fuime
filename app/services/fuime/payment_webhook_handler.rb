@@ -1,9 +1,25 @@
 # frozen_string_literal: true
 
-# Fuime: Handle Stripe webhook events for incoming payments
-# Maps payments to businesses via event_id in metadata
+# Fuime: Handle Stripe webhook events for incoming payments.
+#
+# Payments are taken on one pooled Fuime platform Stripe account; the paying
+# business is identified by `fuime_event_id` in the Checkout/PaymentIntent
+# metadata. This handler feeds those payments into HCB's EXISTING ledger
+# pipeline rather than reimplementing any of it (CLAUDE.md Rule 3):
+#
+#   RawPendingDonationTransaction   <- narrowest legitimate "money in" source
+#     -> CanonicalPendingTransaction (creates HcbCode + ledger item on commit)
+#       -> CanonicalPendingEventMapping (assigns it to the business)
+#
+# Donation is the correct analogue: an outside party sending money into an
+# org. We do not touch the pipeline internals — only its public entry points.
+#
+# Idempotency: keyed on the Stripe object id. Replaying the same webhook does
+# not double-post, which Stripe relies on since it retries on any non-2xx.
 module Fuime
   class PaymentWebhookHandler
+    class MissingEventError < StandardError; end
+
     def initialize(event:)
       @stripe_event = event
     end
@@ -11,55 +27,76 @@ module Fuime
     def handle
       case @stripe_event.type
       when "checkout.session.completed"
-        handle_checkout_completed
+        record_payment(
+          object: @stripe_event.data.object,
+          amount_cents: @stripe_event.data.object.amount_total
+        )
       when "payment_intent.succeeded"
-        handle_payment_succeeded
+        record_payment(
+          object: @stripe_event.data.object,
+          amount_cents: @stripe_event.data.object.amount_received
+        )
       else
-        Rails.logger.info "[Fuime] Ignoring webhook event: #{@stripe_event.type}"
+        Rails.logger.info("[Fuime] Ignoring webhook event: #{@stripe_event.type}")
+        nil
       end
     end
 
     private
 
-    def handle_checkout_completed
-      session = @stripe_event.data.object
-      metadata = session.metadata
+    def record_payment(object:, amount_cents:)
+      metadata = object.metadata
+      event_id = metadata && metadata["fuime_event_id"]
+      return nil if event_id.blank?
+      return nil if amount_cents.to_i <= 0
 
-      return unless metadata&.fuime_event_id.present?
+      event = ::Event.find_by(id: event_id)
+      unless event
+        Rails.logger.warn("[Fuime] Webhook references unknown event_id=#{event_id}")
+        return nil
+      end
 
-      event = Event.find_by(id: metadata.fuime_event_id)
-      return unless event
+      # One ledger line per Stripe object, no matter how often Stripe retries.
+      transaction_key = "fuime_#{object.id}"
 
-      amount_cents = session.amount_total
-      fee_cents = metadata.fuime_fee_cents&.to_i || 0
+      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: transaction_key)
+      if existing
+        Rails.logger.info("[Fuime] Webhook #{object.id} already recorded; skipping")
+        return existing
+      end
 
-      Rails.logger.info "[Fuime] Payment received for #{event.name}: $#{amount_cents / 100.0} (fee: $#{fee_cents / 100.0})"
+      ActiveRecord::Base.transaction do
+        raw = ::RawPendingDonationTransaction.create!(
+          donation_transaction_id: transaction_key,
+          amount_cents: amount_cents.to_i,
+          date_posted: Time.at(object.created).to_date
+        )
 
-      # TODO: Create canonical pending transaction through HCB's ledger pipeline
-      # For hackathon demo, we'll just log it
-      # In production, this would:
-      # 1. Create a RawStripeTransaction
-      # 2. Let the existing pipeline map it to the event's ledger
-      # 3. Split out the platform fee
+        cpt = ::CanonicalPendingTransaction.create!(
+          date: raw.date,
+          memo: memo_for(object, event),
+          amount_cents: raw.amount_cents,
+          raw_pending_donation_transaction_id: raw.id,
+          fronted: true
+        )
 
-      true
+        ::CanonicalPendingEventMapping.create!(
+          canonical_pending_transaction_id: cpt.id,
+          event_id: event.id
+        )
+
+        Rails.logger.info(
+          "[Fuime] Recorded payment #{object.id} for #{event.name}: " \
+          "$#{amount_cents.to_i / 100.0} (cpt=#{cpt.id})"
+        )
+
+        raw
+      end
     end
 
-    def handle_payment_succeeded
-      payment_intent = @stripe_event.data.object
-      metadata = payment_intent.metadata
-
-      return unless metadata&.fuime_event_id.present?
-
-      event = Event.find_by(id: metadata.fuime_event_id)
-      return unless event
-
-      amount_cents = payment_intent.amount_received
-      fee_cents = metadata.fuime_fee_cents&.to_i || 0
-
-      Rails.logger.info "[Fuime] PaymentIntent succeeded for #{event.name}: $#{amount_cents / 100.0} (fee: $#{fee_cents / 100.0})"
-
-      true
+    def memo_for(object, event)
+      description = object.respond_to?(:description) ? object.description : nil
+      description.presence || "Payment to #{event.name}"
     end
   end
 end
