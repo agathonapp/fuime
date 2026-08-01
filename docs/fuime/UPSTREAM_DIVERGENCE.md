@@ -40,6 +40,17 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Onboarding button text | "Start using HCB" → "Start using Fuime" | `app/views/users/edit.html.erb` |
 | Settings data sharing text | HCB → Fuime | `app/views/users/edit.html.erb` |
 
+## M4: Account UI + Payment Links
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Dashboard rebranding | HCB → Fuime, organizations → businesses | `app/views/static_pages/index.html.erb` |
+| Onboarded email rebranding | HCB → Fuime | `app/views/user_mailer/onboarded.html.erb` |
+| Payment link service | Generate Stripe Checkout sessions | `app/services/fuime/payment_link_service.rb` |
+| Payment webhook handler | Map payments to business ledgers | `app/services/fuime/payment_webhook_handler.rb` |
+| Fuime webhooks controller | Handle Stripe webhook events | `app/controllers/fuime/webhooks_controller.rb` |
+| Fuime webhook route | POST /fuime/webhooks/stripe | `config/routes.rb` |
+
 ## M3: Business Creation Flow
 
 | Change | Why | Files |
