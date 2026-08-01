@@ -20,7 +20,8 @@ namespace :fuime do
       user = User.new(
         email: email,
         full_name: "Fuime Admin",
-        access_level: :superadmin
+        access_level: :superadmin,
+        verified: true
       )
 
       if user.save(validate: false)
@@ -30,7 +31,7 @@ namespace :fuime do
         exit 1
       end
     else
-      user.update!(access_level: :superadmin)
+      user.update!(access_level: :superadmin, verified: true)
       puts "Made #{email} a superadmin!"
     end
 
