@@ -1,66 +1,58 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/7ef837ac0539217c_image.png">
-    <img src="https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/af6d676a11c64b6c_image.png" width="126" alt="HCB logo">
-  </picture>
-  <h1>HCB by Hack Club</h1>
-
-  ![Transactions last week](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhcb.hackclub.com%2Fstats&query=%24.last_week.size.total&style=flat&label=past%20week&color=%23ec3750&suffix=%20transactions) ![Transactions today](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhcb.hackclub.com%2Fstats&query=%24.last_day.size.total&style=flat&label=today&color=%23338eda&suffix=%20transactions) ![Currently online](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhcb.hackclub.com%2Fstats&query=%24.currently_online&style=flat&label=currently%20online&color=%2333d6a6&suffix=%20users)
-
+  <h1>Fuime</h1>
+  <p><strong>The financial home for teen-run businesses.</strong></p>
 </div>
 <br>
 
-Welcome to the [HCB](https://hackclub.com/fiscal-sponsorship/) codebase!
+Fuime gives teens (13-17) everything they need to run a real business: a business account with their parent as the legal signer, clean books, tax tracking, and a path to their own LLC at 18.
 
-## What is HCB?
+## What is Fuime?
 
-HCB is an [open source](https://hackclub.com/fiscal-sponsorship/open-source/),
-safe, and easy-to-use fiscal sponsorship platform for hackathons, Hack Clubs,
-robotic teams and more. We use it to run
-our [fiscal sponsorship program](https://hackclub.com/fiscal-sponsorship/), we
-provide high schoolers with a 501(c)(3) status-backed restricted fund for their
-organization. Behind the scenes, HCB is a Ruby on Rails application (learn more
-by reading [our documentation](/dev-docs)).
+Teens under 18 can't open business bank accounts or sign contracts. Fuime solves this by providing:
 
-<img width="1377" alt="Screenshot of Hack Club HQ's finances on HCB" src="https://github.com/user-attachments/assets/2d3e23b7-265a-4ba2-9d0d-f8bef2435557">
+- **A real business account** — with your parent as the legal signer
+- **Clean books** — every transaction tracked and organized
+- **Tax tracking** — know when you cross the $400 IRS self-employment threshold
+- **Graduation path** — export to your own LLC when you turn 18
 
-## Table of Contents
+## Built on HCB
 
-- [What is HCB?](#what-is-hcb)
-- [Table of Contents](#table-of-contents)
-- [Security](#i-found-a-security-vulnerability-what-should-i-do)
-- [Quick start](#quick-start)
-- [Contributing](#contributing)
-- [Documentation](https://github.com/hackclub/hcb/blob/main/dev-docs/)
+Fuime is a fork of [HCB](https://github.com/hackclub/hcb) by [Hack Club](https://hackclub.com), the open-source fiscal sponsorship platform that has processed millions of dollars for teen nonprofits since 2018. We've repurposed it from nonprofit fiscal sponsorship to teen business banking.
 
-## I found a security vulnerability! What should I do?
+**HCB's battle-tested infrastructure powers Fuime:**
+- The same ledger engine that tracks millions in nonprofit funds
+- The same receipt management and transparency features
+- The same card issuing infrastructure (Stripe Issuing)
 
-Please email [hcb-security@hackclub.com](mailto:hcb-security@hackclub.com) to
-report the vulnerability. To learn more about security bounties, visit https://security.hackclub.com
+## Quick Start
 
-## Quick start
+```bash
+# Clone the repo
+git clone https://github.com/agathonapp/fuime.git
+cd fuime
 
-To run HCB in a development environment, follow the setup instructions in
-our [documentation](/dev-docs/development.md). We support development through
-Codespaces, Docker, and a native setup.
+# Using Docker (recommended)
+./docker_dev_setup.sh
 
-## Contributing
+# Or follow dev-docs/development.md for other options
+```
 
-We are so excited for you to join the codebase! We have a getting started
-documentation in the [`dev-docs` folder](/dev-docs/development.md).
+## Documentation
 
-All contributors are expected to follow the Hack
-Club [Code of Conduct](https://hackclub.com/conduct) and Hack
-Club's [contributing guidelines](https://github.com/hackclub/hackclub/blob/main/CONTRIBUTING.md).
+- [Development Setup](/dev-docs/development.md)
+- [Fuime Operating Guide](/CLAUDE.md)
+- [Hackathon Spec](/FUIME_HACKATHON_SPEC.md)
 
-Join the [#hcb-dev](https://hackclub.slack.com/archives/C068U0JMV19) channel on the [Hack Club Slack](https://hackclub.com/slack) for support.
+## License
+
+Fuime is open source under the [AGPL-3.0 license](LICENSE), the same license as HCB.
 
 ---
 
 <div align="center">
-  <img src="./hcb_laser.gif" alt="Laser engraving of the HCB logo" width="500">
-  <br>
-  <p><strong>Happy hacking. ❤️</strong></p>
+  <p>
+    <strong>Fuime is a fork of <a href="https://github.com/hackclub/hcb">HCB</a> by <a href="https://hackclub.com">Hack Club</a>.</strong>
+    <br>
+    Thank you to the Hack Club team for open-sourcing HCB.
+  </p>
 </div>
-
-🔼 [Back to Top](#readme)

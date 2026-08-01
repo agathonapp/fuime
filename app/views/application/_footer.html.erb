@@ -3,7 +3,7 @@
     <%= help_message if current_user && local_assigns[:help_message] != false %>
   </p>
   <p class="text-xs text-center">
-    HCB Visa® Commercial cards are powered by Stripe and issued by Celtic Bank.
+    Fuime is a fork of <a href="https://github.com/hackclub/hcb" target="_blank" class="underline">HCB</a> by Hack Club (AGPL-3.0).
   </p>
 
   <% if !Rails.env.production? || auditor_signed_in? %>
