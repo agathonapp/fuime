@@ -1,0 +1,123 @@
+<% title "#{@event.name} | Fuime" %>
+
+<% content_for :head do %>
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:url" content="<%= fuime_storefront_url(@event.slug) %>">
+  <meta property="og:title" content="<%= @event.name %> on Fuime">
+  <meta name="twitter:title" content="<%= @event.name %> on Fuime">
+  <% description = "#{@event.name} is a teen business on Fuime — the financial platform for young entrepreneurs. #{@event.storefront_tagline.presence || 'View their public ledger and support their business.'}" %>
+  <meta property="og:description" content="<%= description %>">
+  <meta name="twitter:description" content="<%= description %>">
+  <meta name="description" content="<%= description %>">
+<% end %>
+
+<div class="max-w-3xl mx-auto py-8 px-4">
+  <%# Header %>
+  <div class="text-center mb-8">
+    <% if @event.logo.attached? %>
+      <%= image_tag @event.logo, class: "w-24 h-24 rounded-full mx-auto mb-4 object-cover", alt: @event.name %>
+    <% else %>
+      <div class="w-24 h-24 rounded-full mx-auto mb-4 bg-primary flex items-center justify-center">
+        <span class="text-white text-3xl font-bold"><%= @event.name.first.upcase %></span>
+      </div>
+    <% end %>
+
+    <h1 class="text-3xl font-bold mb-2"><%= @event.name %></h1>
+
+    <% if @event.storefront_tagline.present? %>
+      <p class="text-lg muted mb-4"><%= @event.storefront_tagline %></p>
+    <% end %>
+
+    <%# Official badge %>
+    <div class="flex items-center justify-center gap-2 flex-wrap">
+      <span class="badge bg-success text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+        <%= inline_icon "check-circle", size: 16 %>
+        Official on Fuime
+      </span>
+      <% if @has_guardian %>
+        <span class="badge bg-primary text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+          <%= inline_icon "people-2", size: 16 %>
+          Parent-signed account
+        </span>
+      <% end %>
+      <% if @event.business_category.present? %>
+        <span class="badge bg-muted text-dark px-3 py-1.5 rounded-full">
+          <%= @event.business_category.titleize %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Payment button %>
+  <div class="card text-center mb-6 bg-snow">
+    <h3 class="m-0 mb-2">Support this business</h3>
+    <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
+    <button class="btn btn--primary btn--lg" disabled>
+      <%= inline_icon "money-dollar-box", size: 20, class: "mr-2" %>
+      Pay <%= @event.name %>
+    </button>
+    <p class="text-sm muted mt-2">(Payment links coming soon)</p>
+  </div>
+
+  <%# Business stats %>
+  <div class="card mb-6">
+    <h3 class="m-0 mb-4">Business Overview</h3>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div class="p-3 bg-snow rounded-lg text-center">
+        <p class="muted m-0 mb-1 text-sm">Balance</p>
+        <p class="m-0 text-xl font-bold">$<%= render_money_amount(@event.balance_available_v2_cents) %></p>
+      </div>
+      <div class="p-3 bg-snow rounded-lg text-center">
+        <p class="muted m-0 mb-1 text-sm">On Fuime since</p>
+        <p class="m-0 text-xl font-bold"><%= @event.created_at.strftime("%b %Y") %></p>
+      </div>
+      <% if @owner.present? %>
+        <div class="p-3 bg-snow rounded-lg text-center">
+          <p class="muted m-0 mb-1 text-sm">Owner</p>
+          <p class="m-0 text-xl font-bold"><%= @owner.first_name %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# About section %>
+  <% if @event.public_message.present? %>
+    <div class="card mb-6">
+      <h3 class="m-0 mb-4">About</h3>
+      <div class="prose">
+        <%= MarkdownService.instance.render(@event.public_message) %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Public ledger teaser %>
+  <div class="card mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="m-0">Public Ledger</h3>
+      <%= link_to event_path(@event), class: "flex items-center shrink-0 no-underline text-sm" do %>
+        View full ledger
+        <%= inline_icon "view-forward", size: 16 %>
+      <% end %>
+    </div>
+    <p class="muted m-0">
+      This business's finances are transparent. You can view their complete transaction history
+      and see exactly how funds are being used.
+    </p>
+  </div>
+
+  <%# Footer %>
+  <div class="text-center pt-8 border-t">
+    <p class="muted text-sm">
+      <%= @event.name %> is a teen-run business powered by
+      <%= link_to "Fuime", root_path, class: "text-primary" %> —
+      the financial platform for young entrepreneurs.
+    </p>
+    <p class="muted text-sm mt-2">
+      Fuime is forked from
+      <%= link_to "HCB by Hack Club", "https://hackclub.com/hcb", target: "_blank", class: "text-primary" %>
+      (AGPL-3.0)
+    </p>
+  </div>
+</div>

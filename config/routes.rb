@@ -67,6 +67,13 @@ Rails.application.routes.draw do
     post "webhooks/stripe", to: "webhooks#stripe"
   end
 
+  # Fuime: Tax Tracker
+  get "/:event_slug/taxes", to: "fuime/taxes#show", as: :fuime_taxes
+  get "/:event_slug/taxes/download", to: "fuime/taxes#download_packet", as: :fuime_taxes_download
+
+  # Fuime: Public storefront
+  get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
+
   resources :receipts, only: [:create, :destroy] do
     collection do
       post "link"

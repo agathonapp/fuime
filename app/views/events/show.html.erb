@@ -11,16 +11,13 @@
 <% if @event.is_public %>
   <% auto_discover_feed(@event) %>
   <% content_for :head do %>
-    <% img = "https://hcb-og.hackclub.com/api/embeds/#{@event.slug}" %>
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    <meta property="og:image" content="<%= img %>">
-    <meta name="twitter:image" content="<%= img %>">
-    <meta property="og:site_name" content="HCB">
+    <meta property="og:site_name" content="Fuime">
     <meta property="og:url" content="<%= event_url(@event) %>">
     <meta property="og:title" content="<%= @event.name %>">
     <meta name="twitter:title" content="<%= @event.name %>">
-    <% description = "#{@event.name}'s finances have been made public on HCB so you can see how their money is spent." %>
+    <% description = "#{@event.name}'s finances have been made public on Fuime so you can see how their money is spent." %>
     <meta property="og:description" content="<%= description %>">
     <meta name="twitter:description" content="<%= description %>">
     <meta name="description" content="<%= description %>">
@@ -84,7 +81,7 @@
       <div class="relative card my-3 text-center sm:text-left flex items-center flex-col sm:flex-row gap-5">
         <div class="flex-1">
           <p class="my-0 text-lg font-[700]">Schedule an onboarding call</p>
-          <p class="my-0 text-md max-w-2xl">If you would like, you can schedule a call with a member of the HCB team to learn more about the platform, or <%= link_to "hide this message", hide_onboarding_message_event_path(@event), method: :post %>.</p>
+          <p class="my-0 text-md max-w-2xl">If you would like, you can schedule a call with the Fuime team to learn more about the platform, or <%= link_to "hide this message", hide_onboarding_message_event_path(@event), method: :post %>.</p>
         </div>
         <% if (scheduling_link = @event.onboarding_scheduling_link).present? %>
           <%= link_to scheduling_link, class: "btn" do %>
@@ -109,6 +106,13 @@
     </div>
     <div class="card card--breakdown p-0 text-center flex-1 flex flex-col items-center justify-center min-h-[422px]" style="flex: 1">
       <%= render partial: "application/loading_container" %>
+    </div>
+  <% end %>
+
+  <%# Fuime: Tax Tracker card %>
+  <% if organizer_signed_in? %>
+    <div class="flex gap-4 flex-col sm:flex-row mb-4">
+      <%= render "events/home/tax_tracker" %>
     </div>
   <% end %>
 
