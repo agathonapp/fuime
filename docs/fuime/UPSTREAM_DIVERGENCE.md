@@ -255,3 +255,40 @@ Remaining `Hack Club` references live in marketing pages, PDF templates
 (`verification_letter`, `fiscal_sponsorship_letter`, transfer confirmations),
 `static_pages/branding`, and disabled modules — none render in the current
 teen flow. A full sweep is Milestone 3 work.
+
+## Production Data Reset (fresh state for demo)
+
+The admin console showed inherited HCB seed state: $17,994,358.00 in
+transactions, 15 organizations, and several 9999-count queues.
+
+**What was deleted** (via `rails runner` on production, not a code change):
+all canonical transactions / pending transactions / hcb_codes / fees /
+ledger_items, 48 activity records, the 3 demo events (DevHacks, ExpensiCon,
+Hack The Seas), and the `admin@bank.engineering` seed user.
+
+**What was deliberately kept:**
+
+- The **12 HCB system orgs** — `EventMappingEngine::EventIds` references them
+  by hardcoded id (fee routing in `HcbCode`, `StripeServiceFee`, grant-fund
+  qualifiers in `Disbursement`). Deleting them breaks the ledger, so they are
+  hidden from the admin count instead.
+- `bank@hackclub.com` (id 2891) — this is `User::SYSTEM_USER_ID`, required by
+  the app, not a seed account.
+- All three real user accounts.
+
+**Gotchas hit** (worth knowing before any future reset):
+
+- `TRUNCATE ... CASCADE` on ledger tables also empties `ledgers`, which is
+  only populated by `Event#after_create :create_ledger`. Every surviving event
+  had to have its primary ledger recreated (`missing_ledger=0` confirmed).
+- `admin@bank.engineering` was `point_of_contact` on all 12 system orgs; the
+  FK had to be reassigned (to `rushilchopra@gmail.com`) before deletion.
+- `organizer_position_invites` must be deleted before `organizer_positions`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Exclude system orgs from Organizations badge | 12 inherited orgs aren't real Fuime businesses | `app/views/static_pages/admin_tools.html.erb` |
+| Hide Airtable/identity cards | `admin_controller.rb:1789` returns 9999 when the Hack Club Airtable base is unreachable — permanently broken counters in this fork | `app/views/static_pages/admin_tools.html.erb` |
+
+Verified: volume `$0`, org badge `0`, 0 transactions, 0 activities,
+12/12 ledgers intact, admin_tools template compiles.
