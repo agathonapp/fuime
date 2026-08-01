@@ -108,6 +108,17 @@ services:
         sync: false
       - key: TAXBANDITS__DOMAIN_ID
         sync: false
+      # Resend SMTP for email delivery
+      - key: SMTP__USERNAME
+        value: resend
+      - key: SMTP__PASSWORD
+        sync: false
+      - key: SMTP__ADDRESS
+        value: smtp.resend.com
+      - key: SMTP__DOMAIN
+        value: fuime.com
+      - key: SMTP__PORT
+        value: "587"
       # AWS
       - key: AWS_REGION
         value: us-east-1
@@ -218,6 +229,17 @@ services:
         sync: false
       - key: TAXBANDITS__DOMAIN_ID
         sync: false
+      # Resend SMTP for email delivery
+      - key: SMTP__USERNAME
+        value: resend
+      - key: SMTP__PASSWORD
+        sync: false
+      - key: SMTP__ADDRESS
+        value: smtp.resend.com
+      - key: SMTP__DOMAIN
+        value: fuime.com
+      - key: SMTP__PORT
+        value: "587"
       # AWS
       - key: AWS_REGION
         value: us-east-1
