@@ -26,6 +26,11 @@ class ApplicationController < ActionController::Base
   # Redirect users to the onboarding page if they haven't completed it yet
   before_action :redirect_to_onboarding
 
+  # Fuime: minors without an active guardianship cannot operate a business.
+  # Included after :redirect_to_onboarding so onboarding (where a date of birth
+  # is entered) runs first. See the concern for the allowlist.
+  include Fuime::GuardianshipEnforcement
+
   # update the current session's last_seen_at
   before_action { Current.session&.update_session_timestamps }
 

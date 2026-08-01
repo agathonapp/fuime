@@ -252,7 +252,7 @@ class EventPolicy < ApplicationPolicy
   end
 
   def toggle_event_tag?
-    user.admin?
+    user&.admin?
   end
 
   def receive_grant?
@@ -260,7 +260,11 @@ class EventPolicy < ApplicationPolicy
   end
 
   def audit_log?
-    user.auditor?
+    # EventsController skips :signed_in_user so public org pages render for
+    # logged-out visitors, so `user` can be nil here. Without the safe
+    # navigation this raises NoMethodError and returns a 500 instead of
+    # redirecting to login.
+    user&.auditor?
   end
 
   def termination?
@@ -324,15 +328,36 @@ class EventPolicy < ApplicationPolicy
   end
 
   def reader?
+    # Read access is NOT gated on guardianship: a teen waiting on their parent
+    # can still see their own business, and a guardian needs to see the ledger
+    # they are responsible for. Only acting on the business is gated.
     OrganizerPosition.role_at_least?(user, record, :reader)
   end
 
+  # Fuime: member and manager are the roles that can *act* on a business —
+  # every write path in this policy resolves through one of them. Gating here
+  # rather than on ~40 individual predicates means a minor without an active
+  # guardianship cannot mutate a business through any of them, including any
+  # added later.
   def member?
+    return false unless permitted_to_operate_business?
+
     OrganizerPosition.role_at_least?(user, record, :member)
   end
 
   def manager?
+    return false unless permitted_to_operate_business?
+
     OrganizerPosition.role_at_least?(user, record, :manager)
+  end
+
+  # Admins are staff, not teen business owners, and are not subject to the
+  # guardianship control.
+  def permitted_to_operate_business?
+    return true if user.blank?
+    return true if user.admin?
+
+    user.permitted_to_operate_business?
   end
 
   def signee?

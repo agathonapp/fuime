@@ -106,7 +106,22 @@ class GuardianshipsController < ApplicationController
       return
     end
 
-    if @guardianship.accept!
+    # Preconditions for signing as the responsible adult — chiefly a confirmed
+    # 18+ date of birth. A guardian invited by email starts as a stub user with
+    # no birthday, so this is the common path, not an edge case.
+    blockers = @guardianship.activation_blockers
+    if blockers.any?
+      flash[:error] = blockers.to_sentence
+      redirect_to edit_user_path(current_user, return_to: accept_guardianship_path(@guardianship.invite_token))
+      return
+    end
+
+    accepted = @guardianship.accept!(
+      consent_ip: request.remote_ip,
+      consent_user_agent: request.user_agent
+    )
+
+    if accepted
       flash[:success] = "You are now #{@guardianship.minor.name}'s guardian on Fuime!"
       redirect_to root_path
     else

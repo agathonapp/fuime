@@ -1,12 +1,30 @@
 # frozen_string_literal: true
 
 module StripeService
+  # Fuime: upstream hardcodes :live in production. Fuime is not yet licensed to
+  # move real money (see docs/fuime/PRODUCTION_READINESS.md §1.5), so production
+  # must be able to run against test-mode Stripe. STRIPE_MODE selects explicitly.
+  #
+  # Going live is a deliberate act: set STRIPE_MODE=live *and* provide
+  # STRIPE__LIVE__* credentials. Absent the env var, production stays in test
+  # mode — the safe default, and the one that matches the keys render.yaml
+  # actually provisions.
+  VALID_MODES = [:test, :live].freeze
+
   def self.mode
-    if Rails.env.production?
-      :live
-    else
-      :test
+    configured = ENV["STRIPE_MODE"].presence&.downcase&.to_sym
+    return configured if configured.in?(VALID_MODES)
+
+    if configured.present?
+      raise ArgumentError, "Invalid STRIPE_MODE=#{configured.inspect}; expected one of #{VALID_MODES.join(', ')}"
     end
+
+    # No explicit mode: test everywhere. Fuime never silently goes live.
+    :test
+  end
+
+  def self.live?
+    mode == :live
   end
 
   def self.publishable_key

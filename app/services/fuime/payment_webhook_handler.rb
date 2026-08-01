@@ -26,15 +26,39 @@ module Fuime
 
     def handle
       case @stripe_event.type
-      when "checkout.session.completed"
-        record_payment(
-          object: @stripe_event.data.object,
-          amount_cents: @stripe_event.data.object.amount_total
-        )
+      # A Checkout payment fires BOTH checkout.session.completed and
+      # payment_intent.succeeded, with different object ids. Keying idempotency
+      # on the object id therefore posted the same payment to the ledger twice.
+      # We handle payment_intent.succeeded only — it is the event that fires for
+      # every payment (Checkout, Payment Link, or direct PaymentIntent) and
+      # carries the settled amount.
       when "payment_intent.succeeded"
         record_payment(
           object: @stripe_event.data.object,
           amount_cents: @stripe_event.data.object.amount_received
+        )
+      when "checkout.session.completed"
+        Rails.logger.info(
+          "[Fuime] Ignoring checkout.session.completed for #{@stripe_event.data.object.id}; " \
+          "the payment is recorded from payment_intent.succeeded"
+        )
+        nil
+      # The failure half of the lifecycle. Without these, a refunded or disputed
+      # payment stays on a teen's ledger as income and inflates the tax number
+      # Fuime shows their family.
+      when "charge.refunded"
+        record_reversal(
+          object: @stripe_event.data.object,
+          amount_cents: @stripe_event.data.object.amount_refunded,
+          kind: :refund
+        )
+      when "charge.dispute.created"
+        dispute = @stripe_event.data.object
+        record_reversal(
+          object: dispute,
+          amount_cents: dispute.amount,
+          kind: :dispute,
+          payment_intent_id: dispute.payment_intent
         )
       else
         Rails.logger.info("[Fuime] Ignoring webhook event: #{@stripe_event.type}")
@@ -77,7 +101,12 @@ module Fuime
           memo: memo_for(object, event),
           amount_cents: raw.amount_cents,
           raw_pending_donation_transaction_id: raw.id,
-          fronted: true
+          # NOT fronted. In HCB, `fronted` means the platform advances the org
+          # spendable credit against money that hasn't settled — a balance-sheet
+          # decision backed by Hack Club's reserves. Fuime has no reserves, and
+          # Stripe settlement is T+2 with refund and chargeback risk after that,
+          # so fronting here would let a teen spend money Fuime does not hold.
+          fronted: false
         )
 
         ::CanonicalPendingEventMapping.create!(
