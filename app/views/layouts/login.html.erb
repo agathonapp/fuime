@@ -17,8 +17,8 @@
     <%= render "layouts/seasonal" %>
     <%= yield(:header) %>
     <main class="container <%= content_for :container_class %>" style="<%= content_for :container_style %>">
-      <div class="flex flex-col-reverse lg:flex-row lg:w-screen lg:h-screen lg:dark:bg-neutral-900 w-full max-w-[500px] sm:max-w-[600px] mx-auto lg:max-w-full">
-        <div class="relative sm:flex-1 md:min-w-[50vw] lg:min-w-[540px] max-w-[1000px] p-6 pt-10 sm:p-16 sm:overflow-y-auto sm:h-screen max-w-screen flex flex-col">
+      <div class="flex flex-col w-full max-w-[500px] sm:max-w-[600px] mx-auto">
+        <div class="relative p-6 pt-10 sm:p-16 flex flex-col">
           <div class="flex flex-row gap-4 items-start">
             <%= render partial: "application/logo" %>
           </div>
@@ -26,32 +26,6 @@
             <%= render "application/flash", klass: "mb1" unless @hide_flash %>
           </div>
           <%= yield %>
-        </div>
-        <% hackathon = sample_hackathon %>
-
-        <div class="overflow-hidden max-h-none p-3 grid h-screen relative hidden lg:block flex-grow">
-          <div class="relative bg-cover bg-center text-white w-full h-full rounded-xl" style="background: <%= @referral_program&.background_image_css.presence || hackathon[:background] %>; background-size: cover; background-position: <%= @referral_program&.background_image_css.present? ? "right" : "center" %>; color: <%= @referral_program&.login_text_color.presence %>">
-            <div class="max-w-xl px-16 mx-auto flex flex-col items-center justify-center h-full select-none">
-              <h5 class="text-4xl lg:text-5xl mb-0 text-center mt-0 sm:mt-3 md:mt-5 font-medium">
-                <%= @referral_program&.login_header_text.presence || capture do %>
-                  The&nbsp;<span class="font-bold">financial home</span><br>
-                  for&nbsp;teen&nbsp;businesses
-                <% end %>
-              </h5>
-              <p class="my-5 text-sm lg:text-md text-center font-medium hidden sm:block text-balance">
-                <%= @referral_program&.login_body_text.presence || capture do %>
-                  Start your business with Fuime: a real business account,
-                  parent as legal signer, clean books, and tax tracking.
-                  Graduate to your own LLC at 18.
-                <% end %>
-              </p>
-            </div>
-            <div class="absolute bottom-0 left-0 m-0 p-5 w-full opacity-75 text-center">
-              <% unless @referral_program&.background_image_url.present? %>
-                <p class="text-xs mb-0 mt-1"><%= link_to "#{hackathon[:name]} • #{hackathon[:time]}", hackathon[:url] || "#", class: "!text-white no-underline", target: "_blank" %></p>
-              <% end %>
-            </div>
-          </div>
         </div>
       </div>
     </main>

@@ -90,6 +90,18 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Storefront view | Official badge, payment button, public ledger | `app/views/fuime/storefronts/show.html.erb` |
 | Storefront route | GET /b/:slug | `config/routes.rb` |
 
+## M8: Login Page Rebrand
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Login page HCB → Fuime | Brand identity | `app/views/logins/new.html.erb` |
+| Login header HCB → Fuime | Brand identity | `app/views/logins/_header.html.erb` |
+| Removed "What's HCB?" link | Brand identity | `app/views/logins/_footer.html.erb` |
+| Removed right side image panel | Simpler login UI | `app/views/layouts/login.html.erb` |
+| Logout page HCB → Fuime | Brand identity | `app/views/users/logout.html.erb` |
+| User nav HCB → Fuime | Brand identity | `app/views/users/_nav.html.erb` |
+| Removed HCB Wrapped promo | HCB-specific feature | `app/views/users/_nav.html.erb` |
+
 ## Render Deployment
 
 | Change | Why | Files |
