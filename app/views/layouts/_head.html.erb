@@ -1,4 +1,4 @@
-<%# locals: (title_suffix: "HCB", admin: false, bare: false, force_light: false) %>
+<%# locals: (title_suffix: "Fuime", admin: false, bare: false, force_light: false) %>
 
 <title><%= yield(:title).concat(" – ") if content_for?(:title) %><%= title_suffix %></title>
 <%= csrf_meta_tags %>
@@ -19,31 +19,20 @@
   <%= stylesheet_link_tag "application", media: "all", 'data-turbo-track': "reload" %>
   <% if Rails.env.production? %>
     <script>
-      console.log(`%c                   -*%@@%*-
-                  .=#@@@@@@@@@@#=.
-              .=%@@@@@*-..-*@@@@@%=.
-            -#@@@@@+:        :+@@@@@#-
-          :*@@@@@*:              :*@@@@@*:
-        =%@@@@#-                    -#@@@@%=.
-      *@@@@@+.                        .+@@@@@*
-      *@@*-   *@@*      *@@*      *@@*   :*@@*
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              @@@@      @@@@      @@@@
-              *@@*      *@@*      *@@*
+      console.log(`%c
+    ███████╗██╗   ██╗██╗███╗   ███╗███████╗
+    ██╔════╝██║   ██║██║████╗ ████║██╔════╝
+    █████╗  ██║   ██║██║██╔████╔██║█████╗
+    ██╔══╝  ██║   ██║██║██║╚██╔╝██║██╔══╝
+    ██║     ╚██████╔╝██║██║ ╚═╝ ██║███████╗
+    ╚═╝      ╚═════╝ ╚═╝╚═╝     ╚═╝╚══════╝
 
-        *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*
-        *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*
+    The financial home for teen businesses.
+    Forked from HCB by Hack Club (AGPL-3.0)
 
-              Come hack on HCB with us!
-            <%= Rails.configuration.constants.github_url %> <%# erb_lint:disable ErbSafety %>
-      `, 'color: #ec3750; font-weight: bold; font-size: 10px;')
+    <%= Rails.configuration.constants.github_url %> <%# erb_lint:disable ErbSafety %>
+      `, 'color: #2242FF; font-weight: bold; font-size: 10px;')
     </script>
-    <script defer data-domain="hcb.hackclub.com" src="https://plausible.io/js/script.pageview-props.tagged-events.js"></script>
   <% end %>
 
   <%# Web component used for TOTP / donation QR codes %>
@@ -54,8 +43,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#ec3750">
-<meta name="msapplication-TileColor" content="#ec3750">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2242FF">
+<meta name="msapplication-TileColor" content="#2242FF">
 
 <% if content_for?(:favicon) %>
   <%= yield :favicon %>
