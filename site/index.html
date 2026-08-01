@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>fuime · invoicing for teens who already have clients</title>
+    <meta
+      name="description"
+      content="Invoice your clients, get paid into an account you run, and know what you owe at tax time. A parent co-signs once."
+    />
+    <meta
+      property="og:title"
+      content="fuime · you're already working. start billing."
+    />
+    <meta
+      property="og:description"
+      content="Real invoices for teens who tutor, mow, shoot, edit, or DJ. A parent co-signs once. After that it's yours."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── tokens ───────────────────────────────────────────────────────────── */
+      :root {
+        --paper: #f4f1e8; /* carbon-copy white */
+        --paper-2: #eae6d9; /* second sheet */
+        --carbon: #14120e; /* ink */
+        --carbon-2: #3a362d;
+        --muted: #6f6959;
+        --rule: #cdc7b5; /* ledger hairline */
+        --stamp: #c2401f; /* the PAID stamp. used almost nowhere else. */
+        --cleared: #1d5c36;
+
+        /* the deliberately inverted band (parents section). These do NOT flip
+           with the theme — the band is always the opposite of the page, so it
+           needs its own pair rather than reusing --carbon/--paper. */
+        --inv-bg: #14120e;
+        --inv-fg: #f4f1e8;
+        --inv-muted: rgba(244, 241, 232, 0.66);
+        --inv-rule: rgba(244, 241, 232, 0.18);
+
+        --f-display: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        --f-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+        --s1: 4px;
+        --s2: 8px;
+        --s3: 12px;
+        --s4: 16px;
+        --s5: 24px;
+        --s6: 32px;
+        --s7: 48px;
+        --s8: 64px;
+        --s9: 96px;
+        --s10: 144px;
+
+        --r: 2px;
+        --ease: cubic-bezier(0.2, 0, 0, 1);
+        --dur: 180ms;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #121110;
+          --paper-2: #1b1917;
+          --carbon: #f2efe7;
+          --carbon-2: #c9c3b4;
+          --muted: #8a8371;
+          --rule: #332f29;
+          --stamp: #e4623c;
+          --cleared: #5fbf85;
+
+          --inv-bg: #f4f1e8;
+          --inv-fg: #14120e;
+          --inv-muted: rgba(20, 18, 14, 0.66);
+          --inv-rule: rgba(20, 18, 14, 0.18);
+        }
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--carbon);
+        font-family: var(--f-display);
+        font-variation-settings: 'wdth' 100;
+        font-size: 17px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      a {
+        color: inherit;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 var(--s5);
+      }
+      .mono {
+        font-family: var(--f-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .rule {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 0;
+      }
+
+      /* eyebrow label — the little stamped caption above every section */
+      .eyebrow {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 var(--s4);
+      }
+
+      /* ── nav ──────────────────────────────────────────────────────────────── */
+      nav {
+        border-bottom: 1px solid var(--rule);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: color-mix(in srgb, var(--paper) 88%, transparent);
+        backdrop-filter: blur(8px);
+      }
+      .nav-in {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 60px;
+        gap: var(--s5);
+      }
+      .mark {
+        font-weight: 800;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+        font-variation-settings:
+          'wdth' 88,
+          'wght' 800;
+      }
+      .mark span {
+        color: var(--stamp);
+      }
+      .nav-links {
+        display: flex;
+        gap: var(--s6);
+        align-items: center;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+        transition: color var(--dur) var(--ease);
+      }
+      .nav-links a:hover {
+        color: var(--carbon);
+      }
+      @media (max-width: 720px) {
+        .nav-links a.hide-sm {
+          display: none;
+        }
+      }
+
+      /* ── buttons + field ──────────────────────────────────────────────────── */
+      .btn {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 13px var(--s5);
+        border: 1px solid var(--carbon);
+        background: var(--carbon);
+        color: var(--paper);
+        border-radius: var(--r);
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        white-space: nowrap;
+        transition:
+          transform var(--dur) var(--ease),
+          box-shadow var(--dur) var(--ease);
+        box-shadow: 3px 3px 0 var(--carbon-2);
+      }
+      .btn:hover {
+        transform: translate(-1px, -1px);
+        box-shadow: 4px 4px 0 var(--carbon-2);
+      }
+      .btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 0 0 0 var(--carbon-2);
+      }
+      .btn[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: 3px 3px 0 var(--carbon-2);
+      }
+
+      .capture {
+        display: flex;
+        gap: var(--s2);
+        flex-wrap: wrap;
+        max-width: 480px;
+      }
+      .capture input {
+        flex: 1 1 240px;
+        min-width: 0;
+        font-family: var(--f-mono);
+        font-size: 14px;
+        padding: 13px var(--s4);
+        border: 1px solid var(--rule);
+        border-radius: var(--r);
+        background: transparent;
+        color: var(--carbon);
+      }
+      .capture input:focus {
+        outline: 2px solid var(--carbon);
+        outline-offset: -1px;
+        border-color: var(--carbon);
+      }
+      .capture input::placeholder {
+        color: var(--muted);
+      }
+      .note {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: var(--s3);
+      }
+      .note[data-state='ok'] {
+        color: var(--cleared);
+      }
+      .note[data-state='err'] {
+        color: var(--stamp);
+      }
+
+      /* ── hero ─────────────────────────────────────────────────────────────── */
+      .hero {
+        padding: var(--s9) 0 var(--s8);
+        display: grid;
+        gap: var(--s8);
+        grid-template-columns: 1.15fr 0.85fr;
+        align-items: start;
+      }
+      @media (max-width: 940px) {
+        .hero {
+          grid-template-columns: 1fr;
+          padding: var(--s7) 0 var(--s7);
+        }
+      }
+
+      h1 {
+        font-size: clamp(40px, 6.4vw, 76px);
+        line-height: 0.94;
+        letter-spacing: -0.035em;
+        font-weight: 800;
+        font-variation-settings:
+          'wdth' 86,
+          'wght' 820;
+        margin: 0 0 var(--s5);
+        text-wrap: balance;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--stamp);
+      }
+      .lede {
+        font-size: clamp(17px, 1.9vw, 20px);
+        color: var(--carbon-2);
+        max-width: 44ch;
+        margin: 0 0 var(--s6);
+        line-height: 1.45;
+      }
+
+      /* ── the invoice artifact ─────────────────────────────────────────────── */
+      .doc {
+        background: var(--paper-2);
+        border: 1px solid var(--rule);
+        border-radius: var(--r);
+        box-shadow: 6px 6px 0 var(--rule);
+        position: relative;
+        overflow: hidden;
+      }
+      .doc-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: var(--s5);
+        border-bottom: 1px solid var(--rule);
+      }
+      .doc-head b {
+        font-size: 15px;
+        font-variation-settings: 'wght' 700;
+      }
+      .doc-body {
+        padding: var(--s5);
+      }
+      .line {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--s4);
+        font-family: var(--f-mono);
+        font-size: 13px;
+        padding: var(--s3) 0;
+        border-bottom: 1px dotted var(--rule);
+      }
+      .line:last-child {
+        border-bottom: 0;
+      }
+      .line .l {
+        color: var(--carbon-2);
+      }
+      .line .r {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .line.neg .r {
+        color: var(--muted);
+      }
+      .line.tot {
+        border-top: 1px solid var(--carbon);
+        border-bottom: 0;
+        margin-top: var(--s3);
+        padding-top: var(--s4);
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .doc-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s4);
+        padding: var(--s4) var(--s5) var(--s5);
+        border-top: 1px solid var(--rule);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 62px;
+      }
+      .stamp {
+        font-family: var(--f-mono);
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.22em;
+        color: var(--stamp);
+        border: 2.5px solid var(--stamp);
+        border-radius: 3px;
+        padding: 5px 11px;
+        transform: rotate(-11deg) scale(1);
+        opacity: 0.9;
+        animation: thud 620ms var(--ease) 700ms backwards;
+      }
+      @keyframes thud {
+        0% {
+          transform: rotate(-11deg) scale(2.6);
+          opacity: 0;
+        }
+        60% {
+          transform: rotate(-11deg) scale(0.94);
+          opacity: 1;
+        }
+        100% {
+          transform: rotate(-11deg) scale(1);
+          opacity: 0.9;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stamp {
+          animation: none;
+        }
+      }
+
+      /* ── sections ─────────────────────────────────────────────────────────── */
+      section {
+        padding: var(--s9) 0;
+      }
+      @media (max-width: 720px) {
+        section {
+          padding: var(--s8) 0;
+        }
+      }
+      h2 {
+        font-size: clamp(28px, 3.6vw, 42px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        font-weight: 800;
+        font-variation-settings:
+          'wdth' 90,
+          'wght' 800;
+        margin: 0 0 var(--s6);
+        max-width: 20ch;
+        text-wrap: balance;
+      }
+
+      /* today — dense ledger of what actually happens now */
+      .today {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 var(--s8);
+        align-items: start;
+      }
+      @media (max-width: 860px) {
+        .today {
+          grid-template-columns: 1fr;
+          gap: var(--s6);
+        }
+      }
+      .ledger {
+        border-top: 1px solid var(--carbon);
+      }
+      .ledger-row {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: var(--s4);
+        padding: var(--s4) 0;
+        border-bottom: 1px solid var(--rule);
+      }
+      .ledger-row .k {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .ledger-row .v {
+        font-size: 15px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      @media (max-width: 520px) {
+        .ledger-row {
+          grid-template-columns: 1fr;
+          gap: var(--s1);
+        }
+      }
+
+      /* steps — invoice line items, not feature cards */
+      .steps {
+        border-top: 1px solid var(--carbon);
+      }
+      .step {
+        display: grid;
+        grid-template-columns: 64px 1fr;
+        gap: var(--s5);
+        padding: var(--s6) 0;
+        border-bottom: 1px solid var(--rule);
+        align-items: start;
+      }
+      .step .n {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        color: var(--stamp);
+        font-weight: 700;
+        padding-top: 5px;
+      }
+      .step h3 {
+        margin: 0 0 var(--s2);
+        font-size: 22px;
+        letter-spacing: -0.02em;
+        font-variation-settings: 'wght' 700;
+      }
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 56ch;
+        line-height: 1.5;
+      }
+      @media (max-width: 520px) {
+        .step {
+          grid-template-columns: 40px 1fr;
+          gap: var(--s4);
+        }
+      }
+
+      /* money — the transparency block */
+      .money {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--s8);
+        align-items: start;
+      }
+      @media (max-width: 860px) {
+        .money {
+          grid-template-columns: 1fr;
+          gap: var(--s6);
+        }
+      }
+      .tiers {
+        border-top: 1px solid var(--carbon);
+      }
+      .tier {
+        padding: var(--s5) 0;
+        border-bottom: 1px solid var(--rule);
+      }
+      .tier .amt {
+        font-family: var(--f-mono);
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .tier .when {
+        color: var(--muted);
+        margin-top: var(--s1);
+        font-size: 15px;
+      }
+
+      /* parents */
+      .parents {
+        background: var(--inv-bg);
+        color: var(--inv-fg);
+      }
+      .parents .eyebrow {
+        color: var(--inv-muted);
+      }
+      .parents h2,
+      .parents .ledger-row .k {
+        color: var(--inv-fg);
+      }
+      .parents .lede-inv {
+        color: var(--inv-muted);
+        max-width: 46ch;
+        margin: 0;
+      }
+      .parents .ledger {
+        border-top-color: var(--inv-fg);
+      }
+      .parents .ledger-row {
+        border-bottom-color: var(--inv-rule);
+      }
+      .parents .ledger-row .v {
+        color: var(--inv-muted);
+      }
+      .p-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--s8);
+      }
+      @media (max-width: 860px) {
+        .p-grid {
+          grid-template-columns: 1fr;
+          gap: var(--s6);
+        }
+      }
+
+      /* signup */
+      .signup {
+        text-align: left;
+        padding-bottom: var(--s10);
+      }
+      .signup h2 {
+        max-width: 24ch;
+      }
+
+      footer {
+        border-top: 1px solid var(--rule);
+        padding: var(--s6) 0 var(--s7);
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--s5);
+        flex-wrap: wrap;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap nav-in">
+        <div class="mark">fu<span>i</span>me</div>
+        <div class="nav-links">
+          <a href="#how" class="hide-sm">How it works</a>
+          <a href="#money" class="hide-sm">What it costs</a>
+          <a href="#parents">Parents</a>
+          <a href="#join" class="btn" style="padding: 9px 16px">Early access</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="wrap hero">
+      <div>
+        <p class="eyebrow">Invoicing + books for under-18 service businesses</p>
+        <h1>You're already working.<br />Start <em>billing</em>.</h1>
+        <p class="lede">
+          Send a real invoice, get paid into an account you run day to day, and
+          know what you owe at tax time. A parent co-signs once. After that it's
+          yours.
+        </p>
+        <form class="capture" id="join-top" novalidate>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@school.edu"
+            autocomplete="email"
+            required
+            aria-label="Email address"
+          />
+          <button class="btn" type="submit">Get early access</button>
+        </form>
+        <p class="note" id="note-top">
+          Built for tutoring, lawn care, photo, video, web, and DJ work.
+        </p>
+      </div>
+
+      <div class="doc" aria-label="Example invoice">
+        <div class="doc-head">
+          <div>
+            <b>Invoice 0014</b>
+            <div
+              class="mono"
+              style="font-size: 12px; color: var(--muted); margin-top: 3px"
+            >
+              Maya R. · Photography
+            </div>
+          </div>
+          <div class="mono" style="font-size: 12px; color: var(--muted)">
+            Due on receipt
+          </div>
+        </div>
+        <div class="doc-body">
+          <div class="line">
+            <span class="l">Senior portraits · 3 hr session</span
+            ><span class="r">$400.00</span>
+          </div>
+          <div class="line neg">
+            <span class="l">Card processing (Stripe)</span
+            ><span class="r">−$11.90</span>
+          </div>
+          <div class="line neg">
+            <span class="l">fuime fee · 7%</span><span class="r">−$28.00</span>
+          </div>
+          <div class="line tot">
+            <span class="l">Lands in your account</span
+            ><span class="r">$360.10</span>
+          </div>
+        </div>
+        <div class="doc-foot">
+          <span>Paid Jun 14 · Visa ···· 4242</span>
+          <span class="stamp" aria-hidden="true">PAID</span>
+        </div>
+      </div>
+    </header>
+
+    <hr class="rule" />
+
+    <section id="today">
+      <div class="wrap today">
+        <div>
+          <p class="eyebrow">How you get paid today</p>
+          <h2>Every option makes you look like a kid doing a favor.</h2>
+          <p style="color: var(--muted); max-width: 46ch; margin: 0">
+            The work is real and the client is real. The payment method is a
+            group chat and somebody's mom.
+          </p>
+        </div>
+        <div class="ledger">
+          <div class="ledger-row">
+            <div class="k">Venmo → mom</div>
+            <div class="v">
+              It's her account, her name, her transaction history. You ask her
+              for your own money.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">Cash</div>
+            <div class="v">
+              No record. Nothing to show a client who wants a receipt, or the
+              IRS if you clear $400.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">"I'll get you next week"</div>
+            <div class="v">
+              You have no invoice to point at, so following up feels like
+              begging.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">A business account</div>
+            <div class="v">
+              Requires 18. That's the whole wall, and waiting it out costs you
+              two years of clients.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule" />
+
+    <section id="how">
+      <div class="wrap">
+        <p class="eyebrow">How fuime works</p>
+        <h2>Three steps. One of them needs a parent.</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="n">01</div>
+            <div>
+              <h3>Sign up and name your business</h3>
+              <p>
+                Takes about a minute. You'll need a parent or guardian's email
+                address, because of step two.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">02</div>
+            <div>
+              <h3>Your parent completes one ID check</h3>
+              <p>
+                Stripe lets a guardian own an account on behalf of someone 13 or
+                older. They verify once and they're the legal owner. You're the
+                operator: you send the invoices, you spend the money, you run
+                the business.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">03</div>
+            <div>
+              <h3>Invoice clients and get paid</h3>
+              <p>
+                Send a link. Clients pay by card or bank transfer. The money
+                settles into your account, and fuime keeps your books as it
+                goes: income, expenses, net, and a warning when you cross the
+                $400 the IRS cares about.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule" />
+
+    <section id="money">
+      <div class="wrap money">
+        <div>
+          <p class="eyebrow">What it costs</p>
+          <h2>7% of what you collect. No monthly fee until you're earning.</h2>
+          <p style="color: var(--muted); max-width: 46ch">
+            A flat monthly fee on a kid making $80 a month is a tax on starting.
+            So there isn't one until the business is real.
+          </p>
+          <p
+            style="color: var(--muted); max-width: 46ch; margin-top: var(--s4)"
+          >
+            Stripe's card processing is separate and goes to Stripe. We show it
+            on every invoice so the math is never a surprise.
+          </p>
+        </div>
+        <div class="tiers">
+          <div class="tier">
+            <div class="amt">7%</div>
+            <div class="when">
+              Charged on money you collect. If you don't get paid, there's no
+              fee.
+            </div>
+          </div>
+          <div class="tier">
+            <div class="amt">
+              $0<span style="font-size: 15px; font-weight: 400">/mo</span>
+            </div>
+            <div class="when">Under $250 collected in the last 30 days.</div>
+          </div>
+          <div class="tier">
+            <div class="amt">
+              $15<span style="font-size: 15px; font-weight: 400">/mo</span>
+            </div>
+            <div class="when">
+              Over $250 collected in the last 30 days. Billed to the guardian.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="parents" id="parents">
+      <div class="wrap p-grid">
+        <div>
+          <p class="eyebrow">For parents</p>
+          <h2>You sign once. You keep the controls.</h2>
+          <p class="lede-inv">
+            Your kid is going to keep taking money for work either way. This is
+            the version with a paper trail.
+          </p>
+        </div>
+        <div class="ledger">
+          <div class="ledger-row">
+            <div class="k">The account is yours</div>
+            <div class="v">
+              A Stripe account in your name, with them as operator. Your own
+              Venmo and cards stay out of it.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">You see everything</div>
+            <div class="v">
+              Every invoice and every payment, in a read-only view. You can shut
+              it off.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">Tax time is legible</div>
+            <div class="v">
+              Income, expenses, and net for the year, with the $400
+              self-employment threshold flagged.
+            </div>
+          </div>
+          <div class="ledger-row">
+            <div class="k">We never hold the money</div>
+            <div class="v">
+              Payments go from the client to your Stripe account. fuime takes
+              its 7% and nothing else.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="signup" id="join">
+      <div class="wrap">
+        <p class="eyebrow">Early access</p>
+        <h2>We're onboarding the first businesses now.</h2>
+        <form class="capture" id="join-bottom" novalidate>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@school.edu"
+            autocomplete="email"
+            required
+            aria-label="Email address"
+          />
+          <button class="btn" type="submit">Get early access</button>
+        </form>
+        <p class="note" id="note-bottom">
+          One email when it's your turn. Nothing else.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap foot">
+        <div>fuime · invoicing for people who aren't 18 yet</div>
+        <div>hi@fuime.com</div>
+      </div>
+    </footer>
+
+    <script>
+      ;(function () {
+        var DEFAULTS = {
+          top: 'Built for tutoring, lawn care, photo, video, web, and DJ work.',
+          bottom: "One email when it's your turn. Nothing else.",
+        }
+        function wire(formId, noteId, key) {
+          var form = document.getElementById(formId)
+          var note = document.getElementById(noteId)
+          if (!form || !note) return
+          form.addEventListener('submit', function (e) {
+            e.preventDefault()
+            var input = form.querySelector('input[name=email]')
+            var btn = form.querySelector('button')
+            var email = (input.value || '').trim()
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+              note.textContent = 'That address looks off. Check it?'
+              note.dataset.state = 'err'
+              input.focus()
+              return
+            }
+            btn.disabled = true
+            note.dataset.state = ''
+            note.textContent = 'Sending…'
+            fetch('/api/waitlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, source: key }),
+            })
+              .then(function (r) {
+                return r.json().catch(function () {
+                  return { ok: r.ok }
+                })
+              })
+              .then(function (d) {
+                if (d && d.ok) {
+                  note.textContent =
+                    "You're on the list. We'll email you when it's your turn."
+                  note.dataset.state = 'ok'
+                  input.value = ''
+                  input.disabled = true
+                  btn.textContent = 'On the list'
+                } else {
+                  throw new Error((d && d.error) || 'failed')
+                }
+              })
+              .catch(function () {
+                note.textContent =
+                  "That didn't go through. Email hi@fuime.com and we'll add you by hand."
+                note.dataset.state = 'err'
+                btn.disabled = false
+              })
+          })
+          form
+            .querySelector('input[name=email]')
+            .addEventListener('input', function () {
+              if (note.dataset.state === 'err') {
+                note.dataset.state = ''
+                note.textContent = DEFAULTS[key]
+              }
+            })
+        }
+        wire('join-top', 'note-top', 'top')
+        wire('join-bottom', 'note-bottom', 'bottom')
+      })()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "fuime-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "fuime landing page + waitlist capture",
+  "scripts": {
+    "test": "node test/waitlist.test.mjs"
+  }
+}
