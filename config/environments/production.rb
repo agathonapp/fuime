@@ -154,10 +154,28 @@ Rails.application.configure do
   config.log_tags = [:request_id]
   config.lograge.custom_payload { |controller| { request_id: controller.request.uuid } }
   config.lograge.keep_original_rails_log = true
-  config.lograge.logger = Appsignal::Logger.new(
-    "rails",
-    format: Appsignal::Logger::LOGFMT
-  )
+  # Fuime: without an Appsignal push key, lograge sends request logs into a
+  # sink nobody can read — exceptions become invisible in `render logs`, which
+  # makes production errors (the "ERR-xxxxxxxx" page) undiagnosable. Fall back
+  # to stdout so Render captures them.
+  config.lograge.logger = if ENV["APPSIGNAL_PUSH_API_KEY"].present?
+                            Appsignal::Logger.new("rails", format: Appsignal::Logger::LOGFMT)
+                          else
+                            ActiveSupport::Logger.new($stdout)
+                          end
+
+  # Always log the exception class, message and app backtrace alongside the
+  # request id so an ERR- reference can be traced back to a real error.
+  config.lograge.custom_options = lambda do |event|
+    next {} unless event.payload[:exception_object]
+
+    e = event.payload[:exception_object]
+    {
+      exception_class: e.class.name,
+      exception_message: e.message,
+      exception_backtrace: e.backtrace&.reject { |l| l.include?("/gems/") }&.first(10)&.join(" | ")
+    }
+  end
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false

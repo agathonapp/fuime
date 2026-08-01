@@ -30,6 +30,15 @@ class ErrorsController < ApplicationController
 
   def set_error_reference
     @error_reference = ErrorReference.from_request_id(request.uuid)
+
+    # Log the reference alongside the underlying exception so a user-reported
+    # code can be traced to a stack trace in `render logs --text ERR-XXXXXXXX`.
+    exception = request.env["action_dispatch.exception"]
+    Rails.logger.error(
+      "[Fuime] #{@error_reference} path=#{request.env['action_dispatch.original_path'] || request.fullpath} " \
+      "exception=#{exception&.class} message=#{exception&.message} " \
+      "backtrace=#{exception&.backtrace&.reject { |l| l.include?('/gems/') }&.first(10)&.join(' | ')}"
+    )
   end
 
 end
