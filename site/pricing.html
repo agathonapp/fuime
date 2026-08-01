@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>What it costs · fuime</title>
+    <meta
+      name="description"
+      content="7% of the money you collect. $0/mo under $250 collected in the last 30 days, $15/mo over. Stripe's card processing is separate and goes to Stripe. Drag the slider and check the math."
+    />
+    <link rel="canonical" href="https://fuime.com/pricing" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fuime.com/pricing" />
+    <meta
+      property="og:title"
+      content="7% of what you collect. That's the whole price."
+    />
+    <meta
+      property="og:description"
+      content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
+    />
+    <meta property="og:image" content="https://fuime.com/img/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="7% of what you collect. That's the whole price."
+    />
+    <meta
+      name="twitter:description"
+      content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.png" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- First paint, inline and above every script: the browser must never get a
+         chance to paint white before the loader's own background arrives. -->
+    <meta name="theme-color" content="#141420" />
+    <meta name="darkreader-lock" />
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+  </head>
+
+  <body>
+    <script>
+      try {
+        if (sessionStorage.getItem('fuime.booted')) {
+          document.documentElement.classList.add('booted')
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 713 582">
+        <path
+          transform="translate(0,582) scale(.025,-.025)"
+          d="M13280 23253 c-1236 -89 -2294 -263 -3280 -540 -1314 -369 -2819 -933 -2874 -1076 -14 -37 -305 -255 -646 -484 -341 -229 -663 -451 -716 -494 -1479 -1211 -2458 -2278 -3416 -3723 -148 -222 -268 -417 -268 -434 0 -16 -33 -77 -74 -136 -161 -230 -743 -1439 -907 -1886 -80 -217 -115 -308 -170 -440 -22 -55 -106 -307 -185 -560 -80 -253 -163 -515 -185 -583 -21 -67 -39 -158 -39 -202 0 -43 -16 -96 -36 -117 -20 -21 -45 -110 -57 -198 -12 -88 -58 -358 -102 -600 -147 -808 -155 -858 -283 -1902 -27 -221 -42 -2025 -42 -5104 l0 -4761 1650 3 1650 4 24 5020 c13 2761 36 5083 51 5160 15 77 46 275 70 440 305 2123 1256 4261 2579 5800 190 221 1064 1099 1256 1261 212 180 951 739 976 739 12 0 198 113 413 252 355 228 1231 685 1631 851 88 36 211 90 274 120 212 102 382 115 408 31 13 -41 41 -105 61 -143 20 -39 37 -100 37 -138 0 -37 18 -123 39 -190 22 -68 77 -285 123 -483 130 -557 213 -891 278 -1120 53 -186 93 -346 173 -680 31 -132 69 -286 84 -343 35 -128 0 -156 -337 -275 -1274 -451 -2630 -1547 -3443 -2782 -208 -317 -578 -1016 -688 -1300 -21 -55 -66 -152 -99 -215 -33 -63 -104 -270 -158 -460 -405 -1422 -406 -1436 -409 -7035 -3 -4490 -3 -4490 287 -4491 160 -1 3606 -6 7660 -10 l7370 -9 0 1170 0 1170 -3010 4 c-1655 3 -3139 1 -3296 -3 -157 -4 -296 9 -309 30 -13 21 -28 891 -33 1934 l-10 1895 3319 7 3319 7 13 1513 c19 2263 -87 3096 -534 4213 -564 1409 -1261 2360 -2401 3277 -633 509 -1188 831 -2028 1177 -184 76 -184 83 -33 716 64 270 130 562 145 650 16 88 116 508 223 934 107 426 195 816 195 867 0 127 40 219 94 219 38 0 462 -155 766 -281 44 -18 161 -65 260 -105 768 -306 2031 -1095 2777 -1734 235 -202 1008 -986 1163 -1180 88 -110 178 -219 200 -243 22 -24 148 -193 280 -374 132 -182 279 -377 326 -433 48 -56 111 -149 140 -206 29 -57 130 -226 224 -374 93 -149 170 -289 170 -310 0 -22 18 -40 40 -40 22 0 40 -36 40 -80 0 -44 18 -80 40 -80 22 0 40 -24 40 -52 0 -29 34 -124 75 -210 80 -168 215 -468 313 -698 33 -77 76 -176 95 -220 29 -67 139 -398 358 -1083 21 -67 39 -170 39 -227 0 -58 16 -115 36 -127 19 -12 45 -81 58 -153 12 -71 41 -229 64 -350 23 -121 77 -544 121 -940 74 -677 79 -1004 80 -5490 l1 -4770 1070 -7 c589 -3 1304 -8 1590 -10 520 -3 520 -3 532 4377 14 5314 -10 5881 -317 7420 -405 2028 -1159 3812 -2327 5508 -612 887 -1045 1408 -1785 2144 -917 911 -1788 1581 -2855 2193 -244 140 -427 255 -406 255 206 3 -800 378 -1702 635 -2004 572 -4105 823 -5840 698z m3887 -1272 c-7 -88 -27 -178 -45 -200 -18 -23 -42 -95 -54 -161 -12 -66 -70 -336 -129 -600 -58 -264 -116 -539 -127 -610 -12 -72 -37 -141 -56 -153 -20 -12 -36 -60 -36 -107 0 -46 -17 -140 -37 -207 -61 -199 -161 -604 -283 -1143 -81 -360 -105 -458 -200 -840 -98 -391 -127 -510 -160 -660 -20 -88 -53 -232 -74 -320 -140 -578 -175 -733 -195 -840 -39 -220 3 -214 -1443 -215 -742 0 -1377 8 -1413 18 -36 11 -85 94 -109 188 -64 247 -346 1441 -424 1789 -36 165 -199 840 -361 1500 -163 660 -324 1322 -358 1470 -151 647 -194 820 -249 987 -31 97 -48 200 -37 230 17 44 523 52 2912 43 2891 -10 2891 -10 2878 -169z m-3867 -13701 l0 -5900 -1920 0 -1920 0 0 3740 c0 3492 5 3763 74 4080 41 187 88 403 104 480 114 532 467 1336 780 1775 239 336 818 887 1162 1108 555 357 1253 640 1540 626 180 -9 180 -9 180 -5909z m2434 5857 c1402 -362 2419 -1307 3036 -2817 279 -683 401 -1379 383 -2173 -13 -554 -13 -554 -1909 -551 -1043 2 -1906 12 -1916 23 -11 11 -21 1271 -24 2800 -5 3177 -57 2843 430 2718z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── first-visit loader ───────────────────────────────────────────
+         The arch fills from the bottom as a progress meter. Suppressed for
+         the rest of the session by the sessionStorage guard above. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--over">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing" aria-current="page"
+            >What it costs</a
+          >
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="btn btn--accent" href="#join">Get early access</a>
+        </nav>
+      </div>
+      <div
+        class="split-mount split-mount--dock"
+        data-fx-split="dock"
+        data-you="90.0"
+        data-fuime="7.0"
+        data-stripe="3.0"
+        aria-hidden="true"
+      ></div>
+    </header>
+
+    <main>
+      <!-- ── hero ──────────────────────────────────────────────────────── -->
+      <section class="hero hero--short">
+        <div class="hero__media">
+          <picture>
+            <source
+              type="image/avif"
+              srcset="
+                /img/pricing-hero-900.avif   900w,
+                /img/pricing-hero-1600.avif 1600w
+              "
+              sizes="100vw"
+            />
+            <source
+              type="image/webp"
+              srcset="
+                /img/pricing-hero-900.webp   900w,
+                /img/pricing-hero-1600.webp 1600w
+              "
+              sizes="100vw"
+            />
+            <img
+              src="/img/pricing-hero-1600.webp"
+              alt="An aluminium folding table on a grassy hilltop at dusk, a small dark card reader standing on it catching one ring of warm light, the scattered lights of a town in the valley far below."
+              width="1600"
+              height="686"
+              fetchpriority="high"
+              decoding="async"
+            />
+          </picture>
+          <!-- preload="none" so nothing is fetched until site.js decides the
+               connection and the reader's motion preference can afford it. -->
+          <video
+            class="hero__live"
+            muted
+            playsinline
+            preload="none"
+            aria-hidden="true"
+            tabindex="-1"
+          >
+            <source src="/vid/pricing-live-web.webm" type="video/webm" />
+            <source src="/vid/pricing-live-web.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="hero__glow"></div>
+        <div class="grain"></div>
+
+        <div class="wrap hero__in">
+          <div class="hero__body">
+            <h1>7% of what you collect.<br />That's the whole price.</h1>
+            <p class="disclaimer mt-6" >
+              $0/mo under $250 collected in 30 days. $15/mo over. Stripe's card
+              processing is separate and goes to Stripe.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── the live number ───────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise" data-calc>
+          <div>
+            <p class="eyebrow">Run it yourself</p>
+            <h2 class="h2">Put a real job in it.</h2>
+            <p class="lead mt-5" style="max-width: 52ch">
+              The same arithmetic the product runs when a client pays. Drag it
+              to something you have actually charged for and read the bottom
+              line.
+            </p>
+          </div>
+
+          <div class="calc split mt-8" >
+            <div>
+              <p class="calc__label">What lands, after everything</p>
+              <p class="calc__figure num" data-out="lands">$360.10</p>
+              <p class="calc__hint">
+                lands in your account on a
+                <span class="num" data-out="charged">$400.00</span> job.
+              </p>
+
+              <div class="calc__slider">
+                <input
+                  class="calc__range"
+                  type="range"
+                  min="25"
+                  max="2000"
+                  step="5"
+                  value="400"
+                  aria-label="Invoice amount"
+                />
+                <div class="calc__ticks">
+                  <span>$25</span>
+                  <span>$5,000</span>
+                </div>
+              </div>
+
+              <p class="calc__hint" data-out="monthly">
+                $15/mo once you clear $250 in 30 days
+              </p>
+            </div>
+
+            <div>
+              <span class="artifact-label">Worked example</span>
+              <div class="invoice">
+                <div class="invoice__head">
+                  <div>
+                    <strong>Invoice 0014</strong>
+                    <div class="muted small">Maya R. · Photography</div>
+                  </div>
+                  <span class="tag">Due on receipt</span>
+                </div>
+                <div class="invoice__body">
+                  <div class="invoice__row">
+                    <span>Senior portraits · 3 hr session</span>
+                    <span class="num" data-out="charged">$400.00</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span class="muted">Card processing (Stripe)</span>
+                    <span class="muted num" data-out="stripe">−$11.90</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span class="muted">fuime fee · 7%</span>
+                    <span class="muted num" data-out="fuime">−$28.00</span>
+                  </div>
+                  <div class="invoice__row invoice__row--total">
+                    <span>Lands in your account</span>
+                    <span class="num" data-out="lands">$360.10</span>
+                  </div>
+                </div>
+                <div class="invoice__foot">
+                  <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
+                  <span class="tag">Paid</span>
+                </div>
+              </div>
+              <div
+                class="split-mount mt-5"
+                data-fx-split="full"
+                data-you="90.0"
+                data-fuime="7.0"
+                data-stripe="3.0"
+              ></div>
+            </div>
+          </div>
+
+          <p class="lead mt-8" style="max-width: 62ch">
+            Stripe takes 2.9% plus 30 cents to run the card. That money goes to
+            Stripe, not to fuime. Every business that accepts cards pays it, and
+            we print it on the invoice instead of burying it. fuime's 7% is the
+            only line that comes to us.
+          </p>
+          <p class="lead mt-5" style="max-width: 62ch">
+            The $15 monthly fee is not in that figure. It is billed once a
+            month, to the guardian, and only in a month where more than $250
+            came in during the previous 30 days.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the three numbers ─────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <p class="eyebrow">The whole price list</p>
+          <h2 class="h2">
+            7% of what you collect. No monthly fee until you're earning.
+          </h2>
+          <p class="lead mt-5" style="max-width: 52ch">
+            A flat monthly fee on a kid making $80 a month is a tax on starting.
+            So there isn't one until the business is real.
+          </p>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Rate on everything you collect</h3>
+                <p>If a client doesn't pay, there is no fee.</p>
+              </div>
+              <p class="price__fig">7%</p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Monthly fee, under $250 in 30 days</h3>
+                <p>Nothing. Not a trial, not an introductory rate.</p>
+              </div>
+              <p class="price__fig">$0<sub>/mo</sub></p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Monthly fee, over $250 in 30 days</h3>
+                <p>Billed to the guardian who owns the account.</p>
+              </div>
+              <p class="price__fig">$15<sub>/mo</sub></p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/parents"
+              >Who the $15 is billed to, and why<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <picture>
+        <source
+          type="image/avif"
+          srcset="/img/keys-900.avif 900w, /img/keys-1600.avif 1600w"
+          sizes="100vw"
+        />
+        <source
+          type="image/webp"
+          srcset="/img/keys-900.webp 900w, /img/keys-1600.webp 1600w"
+          sizes="100vw"
+        />
+        <img
+          class="seam"
+          src="/img/keys-900.webp"
+          alt=""
+          width="1600"
+          height="686"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+
+      <!-- ── what you are not charged for ──────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <p class="eyebrow">What you are not charged for</p>
+          <h2 class="h2">Six things that never turn into a bill.</h2>
+          <p class="lead mt-5" style="max-width: 48ch">
+            There is no second page to the pricing. If it isn't the 7% or the
+            $15, it isn't a fee.
+          </p>
+
+          <div class="grid grid--2 mt-8" >
+            <article class="card">
+              <h3 class="h4">No setup fee</h3>
+              <p>
+                Signing up costs nothing. Naming the business costs nothing. The
+                ID check your parent does costs nothing.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">No fee on an invoice that never gets paid</h3>
+              <p>
+                The 7% comes out of money that arrives. If a client ghosts you,
+                you lose the work. You do not also pay us for it.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">No fee to send an invoice</h3>
+              <p>
+                Send one this year or forty this week. There is no per-invoice
+                charge and no cap on how many you write.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">No minimum</h3>
+              <p>
+                Nothing to clear before the account works. A $25 job goes
+                through the same way a $2,500 one does.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">No contract</h3>
+              <p>
+                Nothing to sign for a term and nothing to cancel out of. Stop
+                sending invoices and the price goes back to $0.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">No charge for the parent's account</h3>
+              <p>
+                Their login, the read-only view of every invoice, and the
+                year-end summary are all part of it. The $15 is the only thing
+                that ever reaches them.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/#how"
+              >How the whole thing works<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── questions ─────────────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <p class="eyebrow">Questions</p>
+          <h2 class="h2">The ones worth asking before you sign up.</h2>
+
+          <div class="faq mt-8" >
+            <details>
+              <summary>What happens if a client never pays?</summary>
+              <p class="faq__a">
+                You owe nothing. The fee is charged on money that lands in your
+                account, so an unpaid invoice costs you the chasing and nothing
+                else. fuime keeps it in your books as outstanding, not as
+                income, so your year-end total stays honest.
+              </p>
+            </details>
+
+            <details>
+              <summary>Why 7% and not less?</summary>
+              <p class="faq__a">
+                Because there is no floor underneath it. No setup fee, no
+                per-invoice charge, and no monthly bill until the business
+                clears $250 in 30 days. When you are small, the percentage is
+                paying for all of it. A cheaper rate with a fixed fee attached
+                would cost you more in every month you barely worked, which for
+                most people starting out is most months.
+              </p>
+            </details>
+
+            <details>
+              <summary>Who pays the $15 a month?</summary>
+              <p class="faq__a">
+                The guardian, on the card attached to the account, because they
+                are the legal owner of it. It is charged only in a month where
+                more than $250 came in during the previous 30 days. Below that
+                the account is $0 and stays fully working.
+              </p>
+            </details>
+
+            <details>
+              <summary>What does Stripe charge on top?</summary>
+              <p class="faq__a">
+                2.9% plus 30 cents on a card payment, taken by Stripe before the
+                money reaches your account. That is Stripe's price for
+                processing a card and every business that takes one pays it. It
+                is shown as its own line on the invoice so the number you read
+                is the number that lands.
+              </p>
+            </details>
+
+            <details>
+              <summary>Does fuime ever hold the money?</summary>
+              <p class="faq__a">
+                No. fuime is not a bank. The payment goes from your client into
+                the Stripe account your guardian owns, and our 7% is collected
+                as a fee on that payment. We never sit in the middle holding a
+                balance, and there is no fuime wallet for money to get stuck in.
+              </p>
+            </details>
+
+            <details>
+              <summary>What happens when I turn 18?</summary>
+              <p class="faq__a">
+                Nothing resets. Your invoices, clients and books stay attached
+                to the account, and the price stays the same: 7%, and $0 a month
+                under $250. What we have not built yet is moving the Stripe
+                account itself out of your guardian's name and into yours. We
+                will say so here when we have.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── join ──────────────────────────────────────────────────────── -->
+      <section class="band band--night" id="join">
+        <div class="wrap rise">
+          <p class="eyebrow">Early access</p>
+          <h2 class="h2">We're onboarding the first businesses now.</h2>
+          <p class="lead mt-5" >
+            One email when it's your turn. Nothing else.
+          </p>
+
+          <form
+            class="capture mt-7"
+            data-source="pricing-foot"
+            novalidate
+          >
+            <div class="capture__row">
+              <input
+                type="email"
+                name="email"
+                placeholder="you@school.edu"
+                autocomplete="email"
+                aria-label="Email address"
+                required
+              />
+              <button type="submit" class="btn btn--accent">
+                Get early access
+              </button>
+            </div>
+            <p class="capture__msg" role="status" aria-live="polite"></p>
+            <p class="capture__done">
+              You're on the list. We'll email you once.
+            </p>
+          </form>
+
+          <p class="small muted mt-5" >
+            A question the page didn't answer:
+            <a class="tlink" href="mailto:hi@fuime.com">hi@fuime.com</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ── footer ──────────────────────────────────────────────────────── -->
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/pricing">What it costs</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="mailto:hi@fuime.com">hi@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <div class="foot__bot">
+          <span>fuime · invoicing for people who aren't 18 yet</span>
+          <span
+            >fuime is not a bank. Payments settle into your own Stripe
+            account.</span
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

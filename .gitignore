@@ -59,3 +59,41 @@ yarn-debug.log*
 
 # AI
 .claude/
+
+# --- gambit repo-sentinel baseline (safe to extend, do not delete) ---
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+dist/
+build/
+out/
+.next/
+.turbo/
+.parcel-cache/
+target/
+.gradle/
+DerivedData/
+*.xcuserstate
+Pods/
+*.xcworkspace/xcuserdata/
+Thumbs.db
+*.log
+logs/
+.env
+.env.*
+!.env.example
+!.env.sample
+*credentials*
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+id_rsa*
+id_ed25519*
+*.keystore
+*.jks
+secrets.json
+.netrc
