@@ -292,3 +292,45 @@ Hack The Seas), and the `admin@bank.engineering` seed user.
 
 Verified: volume `$0`, org badge `0`, 0 transactions, 0 activities,
 12/12 ledgers intact, admin_tools template compiles.
+
+## Money Loop: Stripe → Ledger
+
+`Fuime::PaymentWebhookHandler` was a stub — it logged incoming payments and
+returned, with `# TODO: Create canonical pending transaction` where the ledger
+write belonged. A test payment would succeed in Stripe and never appear on the
+business's page.
+
+Implemented using HCB's existing pipeline entry points (Rule 3 — feed the
+ledger, never modify it):
+
+```
+RawPendingDonationTransaction  (narrowest legitimate "money in" source)
+  -> CanonicalPendingTransaction   (callbacks create HcbCode + ledger item)
+    -> CanonicalPendingEventMapping (assigns the line to the business)
+```
+
+Donation is the correct analogue: an outside party sending money into an org.
+Because the HcbCode is created by the normal callbacks, receipts and comments
+work on the resulting line.
+
+Idempotency is keyed on the Stripe object id (`fuime_<id>`), so Stripe's
+retries cannot double-post.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Implement webhook → ledger | Payments never reached the ledger | `app/services/fuime/payment_webhook_handler.rb` |
+| Guard `likely_event_id` | Fuime rows have no Donation record; shared pipeline would raise | `app/models/raw_pending_donation_transaction.rb` |
+| Memo "Payment" for Fuime rows | These are customer payments, not donations | `app/models/raw_pending_donation_transaction.rb` |
+| Fix missing icons | `inline_icon` reads SVGs off disk; `money-dollar-box` / `alert-triangle` don't exist and 500'd the storefront + tax tracker | `app/views/fuime/storefronts/show.html.erb`, `app/views/fuime/taxes/show.html.erb`, `app/views/events/home/_tax_tracker.html.erb` |
+| Rebrand transparency banner | Customer-facing page said "This HCB organization…" | `app/views/application/_banner_container.html.erb`, `app/views/layouts/docs.html.erb` |
+
+Verified on production: a simulated `checkout.session.completed` produced a
+ledger line (`$45.00`, memo from the Stripe description, HcbCode present);
+replaying the same event kept the count at 1; `/b/sunset-cookies` returns 200
+showing a `$41.85` balance (net of the 4% fee) and a public ledger.
+
+**Still required for a live payment:** `STRIPE__TEST__SECRET_KEY`,
+`STRIPE__TEST__PUBLISHABLE_KEY`, and `FUIME_STRIPE_WEBHOOK_SECRET` are unset in
+Render, so no real Checkout session can be created yet.
+
+Audited all 137 `inline_icon` names across `app/views`: no missing icons.
