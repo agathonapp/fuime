@@ -20,8 +20,10 @@ module Bank
 
     Credentials.load if ENV["DOPPLER_TOKEN"]
 
+    # Falls back to Render's injected hostname so mailer URL generation can't
+    # fail with "Missing host to link to!" when LIVE_URL_HOST is unset.
     config.action_mailer.default_url_options = {
-      host: Credentials.fetch(:LIVE_URL_HOST)
+      host: Credentials.fetch(:LIVE_URL_HOST, fallback: ENV["RENDER_EXTERNAL_HOSTNAME"])
     }
 
     # SMTP config

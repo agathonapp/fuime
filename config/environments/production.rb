@@ -116,10 +116,16 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = {
-    host: Credentials.fetch(:LIVE_URL_HOST)
-  }
-  Rails.application.routes.default_url_options[:host] = Credentials.fetch(:LIVE_URL_HOST)
+  #
+  # Mailer templates build absolute URLs, so a missing host raises
+  # "Missing host to link to!" while RENDERING — before SMTP is ever contacted.
+  # Because login codes are delivered inline, that breaks signing in entirely.
+  # Render always injects RENDER_EXTERNAL_HOSTNAME, so fall back to it rather
+  # than depending on LIVE_URL_HOST being set by hand.
+  mailer_host = Credentials.fetch(:LIVE_URL_HOST, fallback: ENV["RENDER_EXTERNAL_HOSTNAME"])
+
+  config.action_mailer.default_url_options = { host: mailer_host }
+  Rails.application.routes.default_url_options[:host] = mailer_host
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {

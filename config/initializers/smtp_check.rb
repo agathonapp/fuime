@@ -13,6 +13,16 @@ Rails.application.config.after_initialize do
   next unless Rails.env.production? || Rails.env.staging?
   next unless Rails.application.config.action_mailer.delivery_method == :smtp
 
+  # A missing mailer host breaks email at RENDER time, before SMTP is used —
+  # and because login codes send inline, that breaks login too.
+  if Rails.application.config.action_mailer.default_url_options[:host].blank?
+    Rails.logger.error(
+      "[Fuime] No mailer host configured. Mailer templates that build absolute " \
+      "URLs will raise \"Missing host to link to!\" and email login codes will " \
+      "fail. Set LIVE_URL_HOST."
+    )
+  end
+
   settings = Rails.application.config.action_mailer.smtp_settings || {}
   missing = settings.slice(:address, :port, :user_name, :password)
                     .select { |_k, v| v.blank? }
