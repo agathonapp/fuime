@@ -1,0 +1,226 @@
+databases:
+  - name: fuime-postgres
+    plan: basic-256mb
+    databaseName: fuime_production
+    user: fuime
+    ipAllowList: []
+
+services:
+  - type: redis
+    name: fuime-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: fuime-web
+    runtime: docker
+    dockerfilePath: ./production.Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /up
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fuime-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
+      - key: RAILS_ENV
+        value: production
+      - key: RACK_ENV
+        value: production
+      - key: NODE_ENV
+        value: production
+      - key: RAILS_LOG_TO_STDOUT
+        value: "true"
+      - key: RAILS_SERVE_STATIC_FILES
+        value: "true"
+      - key: LANG
+        value: en_US.UTF-8
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: RAILS_MASTER_KEY
+        sync: false
+      # Active Record Encryption keys
+      - key: ACTIVE_RECORD__ENCRYPTION__DETERMINISTIC_KEY
+        sync: false
+      - key: ACTIVE_RECORD__ENCRYPTION__KEY_DERIVATION_SALT
+        sync: false
+      - key: ACTIVE_RECORD__ENCRYPTION__PRIMARY_KEY
+        sync: false
+      # Lockbox encryption
+      - key: LOCKBOX
+        sync: false
+      # Column banking integration
+      - key: COLUMN__SANDBOX__API_KEY
+        sync: false
+      - key: COLUMN__SANDBOX__DEFAULT_ACCOUNT_NUMBER
+        sync: false
+      - key: COLUMN__SANDBOX__FS_MAIN_ACCOUNT_ID
+        sync: false
+      - key: COLUMN__SANDBOX__FS_OPERATING_ACCOUNT_ID
+        sync: false
+      - key: COLUMN__SANDBOX__WEBHOOK_SECRET
+        sync: false
+      # Stripe integration
+      - key: STRIPE__TEST__PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE__TEST__SECRET_KEY
+        sync: false
+      - key: STRIPE__TEST__PHYSICAL_BUNDLE_IDS__US_VISA_CREDIT_BLACK
+        sync: false
+      - key: STRIPE__TEST__PHYSICAL_BUNDLE_IDS__US_VISA_CREDIT_WHITE
+        sync: false
+      # OpenAI
+      - key: OPENAI_API_KEY
+        sync: false
+      # Twilio
+      - key: TWILIO__SMS_VERIFY__ACCOUNT_SID
+        sync: false
+      - key: TWILIO__SMS_VERIFY__AUTH_TOKEN
+        sync: false
+      # Doppler (secrets management)
+      - key: DOPPLER_TOKEN
+        sync: false
+      # URLs
+      - key: LIVE_URL_HOST
+        sync: false
+      - key: TEST_URL_HOST
+        sync: false
+      # HelpScout
+      - key: HELPSCOUT__BEACON_ID
+        sync: false
+      # Hashid
+      - key: HASHID_SALT
+        sync: false
+      # TaxBandits
+      - key: TAXBANDITS__CLIENT_ID
+        sync: false
+      - key: TAXBANDITS__CLIENT_SECRET
+        sync: false
+      - key: TAXBANDITS__USER_TOKEN
+        sync: false
+      - key: TAXBANDITS__CUSTOMIZATION_ID
+        sync: false
+      - key: TAXBANDITS__DOMAIN_ID
+        sync: false
+      # AWS KMS
+      - key: AWS_KMS__TIN_KEY_ID
+        sync: false
+      - key: AWS_KMS__REGION
+        sync: false
+      - key: AWS_KMS__ACCESS_KEY_ID
+        sync: false
+      - key: AWS_KMS__SECRET_ACCESS_KEY
+        sync: false
+
+  - type: worker
+    name: fuime-worker
+    runtime: docker
+    dockerfilePath: ./production.Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: bundle exec sidekiq
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fuime-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
+      - key: RAILS_ENV
+        value: production
+      - key: RACK_ENV
+        value: production
+      - key: RAILS_MAX_THREADS
+        value: "10"
+      - key: RAILS_LOG_TO_STDOUT
+        value: "true"
+      - key: LANG
+        value: en_US.UTF-8
+      - key: SECRET_KEY_BASE
+        fromService:
+          name: fuime-web
+          type: web
+          envVarKey: SECRET_KEY_BASE
+      - key: RAILS_MASTER_KEY
+        sync: false
+      # Active Record Encryption keys
+      - key: ACTIVE_RECORD__ENCRYPTION__DETERMINISTIC_KEY
+        sync: false
+      - key: ACTIVE_RECORD__ENCRYPTION__KEY_DERIVATION_SALT
+        sync: false
+      - key: ACTIVE_RECORD__ENCRYPTION__PRIMARY_KEY
+        sync: false
+      # Lockbox encryption
+      - key: LOCKBOX
+        sync: false
+      # Column banking integration
+      - key: COLUMN__SANDBOX__API_KEY
+        sync: false
+      - key: COLUMN__SANDBOX__DEFAULT_ACCOUNT_NUMBER
+        sync: false
+      - key: COLUMN__SANDBOX__FS_MAIN_ACCOUNT_ID
+        sync: false
+      - key: COLUMN__SANDBOX__FS_OPERATING_ACCOUNT_ID
+        sync: false
+      - key: COLUMN__SANDBOX__WEBHOOK_SECRET
+        sync: false
+      # Stripe integration
+      - key: STRIPE__TEST__PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE__TEST__SECRET_KEY
+        sync: false
+      - key: STRIPE__TEST__PHYSICAL_BUNDLE_IDS__US_VISA_CREDIT_BLACK
+        sync: false
+      - key: STRIPE__TEST__PHYSICAL_BUNDLE_IDS__US_VISA_CREDIT_WHITE
+        sync: false
+      # OpenAI
+      - key: OPENAI_API_KEY
+        sync: false
+      # Twilio
+      - key: TWILIO__SMS_VERIFY__ACCOUNT_SID
+        sync: false
+      - key: TWILIO__SMS_VERIFY__AUTH_TOKEN
+        sync: false
+      # Doppler (secrets management)
+      - key: DOPPLER_TOKEN
+        sync: false
+      # URLs
+      - key: LIVE_URL_HOST
+        sync: false
+      - key: TEST_URL_HOST
+        sync: false
+      # HelpScout
+      - key: HELPSCOUT__BEACON_ID
+        sync: false
+      # Hashid
+      - key: HASHID_SALT
+        sync: false
+      # TaxBandits
+      - key: TAXBANDITS__CLIENT_ID
+        sync: false
+      - key: TAXBANDITS__CLIENT_SECRET
+        sync: false
+      - key: TAXBANDITS__USER_TOKEN
+        sync: false
+      - key: TAXBANDITS__CUSTOMIZATION_ID
+        sync: false
+      - key: TAXBANDITS__DOMAIN_ID
+        sync: false
+      # AWS KMS
+      - key: AWS_KMS__TIN_KEY_ID
+        sync: false
+      - key: AWS_KMS__REGION
+        sync: false
+      - key: AWS_KMS__ACCESS_KEY_ID
+        sync: false
+      - key: AWS_KMS__SECRET_ACCESS_KEY
+        sync: false
