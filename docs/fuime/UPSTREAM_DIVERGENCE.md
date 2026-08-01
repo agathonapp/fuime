@@ -227,3 +227,31 @@ rendered fine (200), so only the POST failed.
 Verified on production: the old constructor call still raises
 `ActiveModel::UnknownAttributeError`, while the new flow creates the guardian,
 saves the guardianship, and enqueues the invite (`NEW_FLOW=OK`, `enqueue=OK`).
+
+## Guardian Link Host + Hack Club Branding Removal
+
+**Guardian link.** A delivered invite pointed at `https://guardian/<token>` —
+no host. This was an email generated *before* the `LIVE_URL_HOST` fix
+deployed; with the mailer host set, `guardianship_url(token)` now correctly
+produces `https://fuime-web.onrender.com/guardian/<token>` (verified on
+production for positional, `id:`, and explicit-host forms). No code change
+needed — old emails contain the bad link, new ones do not.
+
+**Branding.** The signed-in homepage rendered an "Explore Hack Club" card grid
+(Stardance, Macondo, Outpost, Hack Club Slack, Hack Clubs, Boba Drops) plus a
+Hack Club teenager raffle promo.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Stop rendering `_explore` | "Explore Hack Club" promo grid | `app/views/static_pages/index.html.erb` |
+| Stop rendering `_teenager_raffle` | Hack Club raffle promo | `app/views/static_pages/index.html.erb` |
+
+Partials left on disk per Rule 2, tagged `FUIME-DISABLED`.
+
+The footer attribution ("Fuime is a fork of HCB by Hack Club (AGPL-3.0)")
+**stays** — Rule 7 requires it.
+
+Remaining `Hack Club` references live in marketing pages, PDF templates
+(`verification_letter`, `fiscal_sponsorship_letter`, transfer confirmations),
+`static_pages/branding`, and disabled modules — none render in the current
+teen flow. A full sweep is Milestone 3 work.
