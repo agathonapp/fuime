@@ -13,17 +13,20 @@ class GuardianshipsController < ApplicationController
   end
 
   def create
-    # Teen creating an invite for their parent/guardian
-    @guardianship = Guardianship.new(guardianship_params)
-    @guardianship.minor = current_user
+    # Teen creating an invite for their parent/guardian.
+    #
+    # `guardian_email` is a form-only field used to look up (or create) the
+    # guardian — it is NOT a column on Guardianship, so it must not be passed
+    # to the constructor.
+    @guardianship = Guardianship.new(minor: current_user)
     authorize @guardianship
 
     # Find or create guardian user by email
-    guardian_email = params[:guardianship][:guardian_email]&.strip&.downcase
+    guardian_email = guardianship_params[:guardian_email]&.strip&.downcase
 
     if guardian_email.blank?
       flash[:error] = "Please enter your parent or guardian's email address."
-      render :new, status: :unprocessable_content
+      render :new, status: :unprocessable_content, formats: [:html]
       return
     end
 
@@ -36,19 +39,19 @@ class GuardianshipsController < ApplicationController
         guardian = User.create!(email: guardian_email)
       rescue ActiveRecord::RecordInvalid => e
         flash[:error] = e.record.errors.full_messages.to_sentence
-        render :new, status: :unprocessable_content
+        render :new, status: :unprocessable_content, formats: [:html]
         return
       rescue => e
         Rails.error.report(e, handled: true, context: { guardian_email: })
         flash[:error] = "We couldn't create an account for that email address. Please check it and try again."
-        render :new, status: :unprocessable_content
+        render :new, status: :unprocessable_content, formats: [:html]
         return
       end
     end
 
     if guardian.id == current_user.id
       flash[:error] = "You cannot invite yourself as a guardian."
-      render :new, status: :unprocessable_content
+      render :new, status: :unprocessable_content, formats: [:html]
       return
     end
 
@@ -61,7 +64,7 @@ class GuardianshipsController < ApplicationController
       redirect_to root_path
     else
       flash[:error] = @guardianship.errors.full_messages.join(", ")
-      render :new, status: :unprocessable_content
+      render :new, status: :unprocessable_content, formats: [:html]
     end
   end
 
@@ -123,6 +126,6 @@ class GuardianshipsController < ApplicationController
   end
 
   def guardianship_params
-    params.require(:guardianship).permit(:guardian_email)
+    params.fetch(:guardianship, ActionController::Parameters.new).permit(:guardian_email)
   end
 end
