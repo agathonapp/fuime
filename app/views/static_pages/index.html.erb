@@ -204,18 +204,15 @@
 
     <%= render "static_pages/index/teenager_raffle" %>
 
-    <%# Latest Fuime announcement - hidden for now until we have announcements %>
-    <%#
-    <% if @latest_hcb_announcement %>
-      <div class="flex flex-row w-full justify-between items-center">
-        <h2 class="heading h2 leading-[1.5] my-2 mt-4 mr-auto py-2 px-4 ml-0 pl-0 border-none">
-          The latest from Fuime
-        </h2>
-      </div>
-      <div class="mb-4 text-left w-full self-stretch">
-        <%= render partial: "announcements/announcement_card", locals: { announcement: @latest_hcb_announcement } %>
-      </div>
-    <% end %>
+    <%# Latest Fuime announcement - hidden for now until we have announcements.
+      NOTE: an ERB comment tag ends at the first closing delimiter, so the
+      disabled markup below must contain no further ERB tags of its own.
+      Re-opening a tag here leaves a stray `end` that breaks the template.
+
+      if @latest_hcb_announcement
+        render partial: "announcements/announcement_card",
+               locals: { announcement: @latest_hcb_announcement }
+      end
     %>
 
     <%= render "static_pages/index/explore" %>
