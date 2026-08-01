@@ -166,3 +166,39 @@ mailers deliver; previously-failing broadcast jobs now report `done` with zero
 
 Note: `render.yaml` is a Blueprint — the `REDIS_CACHE_URL` entry only reaches
 Render on a manual Blueprint re-sync. The code fallbacks make that optional.
+
+## Homepage 500 + Error Visibility
+
+**The homepage returned 500 on every request.** The exception was invisible
+because `config.lograge.logger` pointed at Appsignal, which has no
+`APPSIGNAL_PUSH_API_KEY` set — so request logs and stack traces went nowhere,
+and the `ERR-xxxxxxxx` reference codes shown to users could not be traced.
+
+Once lograge was pointed at stdout, the cause appeared immediately:
+
+```
+ActionView::SyntaxErrorInTemplate
+app/views/static_pages/index.html.erb:241: unexpected 'end', ignoring it
+```
+
+An ERB comment tag ends at the *first* closing delimiter. The `<%#` used to
+disable the announcement block was terminated by the very next line, so the
+`<% if %>` / `<% end %>` inside the "commented" region still compiled. The
+unmatched `end` broke the entire template — and with it, `/` and `/guardian`
+(which is `guardianships#new`, routed via `path: "guardian"`).
+
+| Change | Why | Files |
+|--------|-----|-------|
+| lograge → stdout unless Appsignal configured | Exceptions were invisible in `render logs` | `config/environments/production.rb` |
+| Log exception class/message/backtrace via lograge | Make ERR- codes traceable | `config/environments/production.rb` |
+| Log ERR- reference next to the exception | `render logs --text ERR-XXXXXXXX` finds the trace | `app/controllers/errors_controller.rb` |
+| Rewrite broken ERB comment block | Stray `end` broke the homepage template | `app/views/static_pages/index.html.erb` |
+
+Verified: all 9 `static_pages` views compile under Rails' Erubi handler
+(`broken=0`); `/` and `/guardian` return 302 instead of 500; zero `status=500`
+in the logs.
+
+Note: `app/views/card_grants/transaction_index.html.erb` has a similar
+`<%# <%= ... %>` pattern, but it leaves only stray text rather than an
+unbalanced `end`, so it does not break that template. Left as upstream code
+per Rule 6.
