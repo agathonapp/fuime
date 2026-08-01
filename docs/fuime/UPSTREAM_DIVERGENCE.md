@@ -62,6 +62,34 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Restrung _title.html.erb | Organization → Business | `app/views/events/_title.html.erb` |
 | Restrung settings details | Organization → Business | `app/views/events/settings/_details.html.erb` |
 
+## M5: Ledger Strings + Event Page Rebranding
+
+| Change | Why | Files |
+|--------|-----|-------|
+| OG meta tags HCB → Fuime | Brand identity | `app/views/events/show.html.erb` |
+| Removed HCB OG image URL | External dependency | `app/views/events/show.html.erb` |
+| Onboarding message HCB → Fuime | Brand identity | `app/views/events/show.html.erb` |
+
+## M6: Tax Tracker
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Tax Tracker service | Compute net income, $400 threshold | `app/services/fuime/tax_tracker_service.rb` |
+| Tax Tracker controller | /taxes page + CSV download | `app/controllers/fuime/taxes_controller.rb` |
+| Tax Tracker page view | Full tax details + packet download | `app/views/fuime/taxes/show.html.erb` |
+| Tax Tracker card | Home page summary card | `app/views/events/home/_tax_tracker.html.erb` |
+| Added Tax Tracker card to home | Demo visibility | `app/views/events/show.html.erb` |
+| Added Taxes nav item | Navigation | `app/helpers/events_helper.rb` |
+| Tax routes | /taxes, /taxes/download | `config/routes.rb` |
+
+## M7: Public Storefront
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Storefront controller | Public /b/:slug page | `app/controllers/fuime/storefronts_controller.rb` |
+| Storefront view | Official badge, payment button, public ledger | `app/views/fuime/storefronts/show.html.erb` |
+| Storefront route | GET /b/:slug | `config/routes.rb` |
+
 ## Render Deployment
 
 | Change | Why | Files |

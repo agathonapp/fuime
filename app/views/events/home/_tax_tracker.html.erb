@@ -1,0 +1,48 @@
+<%# Fuime: Tax Tracker card for business home page %>
+<% tax_tracker = Fuime::TaxTrackerService.new(event: @event) %>
+
+<div class="card card--breakdown p-4 flex-1">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="m-0 flex items-center gap-2">
+      <%= inline_icon "money-dollar-box", size: 20 %>
+      Tax Tracker
+    </h3>
+    <%= link_to fuime_taxes_path(@event.slug), class: "flex items-center shrink-0 no-underline text-sm" do %>
+      View details
+      <%= inline_icon "view-forward", size: 16 %>
+    <% end %>
+  </div>
+
+  <div class="mb-3">
+    <p class="muted m-0 mb-1 text-sm">Net Income (<%= Date.current.year %>)</p>
+    <p class="m-0 text-2xl font-bold <%= tax_tracker.net_income_cents >= 0 ? 'text-success' : 'text-error' %>">
+      $<%= render_money_amount(tax_tracker.net_income_cents.abs) %>
+      <%= tax_tracker.net_income_cents < 0 ? "(loss)" : "" %>
+    </p>
+  </div>
+
+  <div class="mb-3">
+    <div class="flex justify-between items-center mb-1">
+      <p class="m-0 text-sm muted">$400 IRS Threshold</p>
+      <p class="m-0 text-sm muted"><%= tax_tracker.threshold_percentage %>%</p>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div class="h-2 rounded-full transition-all duration-500 <%= tax_tracker.over_threshold? ? 'bg-error' : 'bg-primary' %>"
+           style="width: <%= tax_tracker.threshold_percentage %>%"></div>
+    </div>
+  </div>
+
+  <div class="p-3 rounded-lg text-sm <%= tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
+    <% if tax_tracker.over_threshold? %>
+      <span class="flex items-center gap-2">
+        <%= inline_icon "alert-triangle", size: 16, class: "text-error" %>
+        <span>Over threshold — <%= link_to "download parent packet", fuime_taxes_download_path(@event.slug, format: :csv) %></span>
+      </span>
+    <% else %>
+      <span class="flex items-center gap-2">
+        <%= inline_icon "check-circle", size: 16, class: "text-success" %>
+        <span>Under filing threshold</span>
+      </span>
+    <% end %>
+  </div>
+</div>

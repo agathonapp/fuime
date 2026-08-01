@@ -1,0 +1,95 @@
+<% title "Tax Tracker - #{@event.name}" %>
+<%= render "events/nav", selected: :taxes %>
+
+<%= render "events/heading", event: @event do %>
+  <span class="flex-grow">Tax Tracker</span>
+<% end %>
+<hr class="mt-0.5 mb-4 opacity-0 sm:opacity-50">
+
+<div class="flex flex-col gap-4">
+  <div class="card">
+    <div class="flex items-center gap-3 mb-4">
+      <%= inline_icon "money-dollar-box", size: 24, class: "text-primary" %>
+      <h2 class="m-0"><%= Date.current.year %> Tax Summary</h2>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-snow rounded-lg">
+        <p class="muted m-0 mb-1 text-sm">Total Income</p>
+        <p class="m-0 text-2xl font-bold text-success">
+          $<%= render_money_amount(@tax_tracker.income_cents) %>
+        </p>
+      </div>
+      <div class="p-4 bg-snow rounded-lg">
+        <p class="muted m-0 mb-1 text-sm">Total Expenses</p>
+        <p class="m-0 text-2xl font-bold text-error">
+          $<%= render_money_amount(@tax_tracker.expenses_cents) %>
+        </p>
+      </div>
+      <div class="p-4 bg-snow rounded-lg">
+        <p class="muted m-0 mb-1 text-sm">Net Income</p>
+        <p class="m-0 text-2xl font-bold <%= @tax_tracker.net_income_cents >= 0 ? 'text-success' : 'text-error' %>">
+          $<%= render_money_amount(@tax_tracker.net_income_cents.abs) %>
+          <%= @tax_tracker.net_income_cents < 0 ? "(loss)" : "" %>
+        </p>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="flex justify-between items-center mb-2">
+        <p class="m-0 font-medium">IRS Self-Employment Threshold</p>
+        <p class="m-0 muted">$<%= render_money_amount(@tax_tracker.net_income_cents) %> / $400.00</p>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+        <div class="h-4 rounded-full transition-all duration-500 <%= @tax_tracker.over_threshold? ? 'bg-error' : 'bg-primary' %>"
+             style="width: <%= @tax_tracker.threshold_percentage %>%"></div>
+      </div>
+    </div>
+
+    <div class="p-4 rounded-lg <%= @tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
+      <div class="flex items-start gap-3">
+        <% if @tax_tracker.over_threshold? %>
+          <%= inline_icon "alert-triangle", size: 20, class: "text-error flex-shrink-0 mt-0.5" %>
+        <% else %>
+          <%= inline_icon "check-circle", size: 20, class: "text-success flex-shrink-0 mt-0.5" %>
+        <% end %>
+        <div>
+          <p class="m-0 font-medium"><%= @tax_tracker.status_message %></p>
+          <% if @tax_tracker.over_threshold? %>
+            <p class="m-0 mt-2 muted text-sm">
+              When you earn over $400 in net self-employment income, you may owe self-employment tax.
+              Download your year-end packet and share it with your parent or guardian to discuss with a tax professional.
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="m-0 mb-4">Year-End Tax Packet</h3>
+    <p class="muted mb-4">
+      Download your financial summary to share with a tax professional. This includes your total income,
+      expenses, and net income for the year.
+    </p>
+    <div class="flex gap-3">
+      <%= link_to fuime_taxes_download_path(@event.slug, format: :csv), class: "btn btn--primary" do %>
+        <%= inline_icon "download", size: 16, class: "mr-1" %>
+        Download CSV
+      <% end %>
+      <%= link_to fuime_taxes_download_path(@event.slug, format: :json), class: "btn" do %>
+        <%= inline_icon "code", size: 16, class: "mr-1" %>
+        Download JSON
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card bg-snow">
+    <h4 class="m-0 mb-2">What is the $400 threshold?</h4>
+    <p class="muted m-0">
+      The IRS requires you to file a tax return and potentially pay self-employment tax if your
+      net earnings from self-employment are $400 or more. Fuime tracks this for you automatically
+      so you always know where you stand.
+    </p>
+  </div>
+</div>

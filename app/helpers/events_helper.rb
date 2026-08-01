@@ -61,6 +61,15 @@ module EventsHelper
       symbol: :home,
       available_proc: ->(event) { policy(event).show? }
     },
+    # Fuime: Tax Tracker nav item
+    {
+      name: "Taxes",
+      path_proc: ->(event_id) { fuime_taxes_path(event_slug: event_id) },
+      tooltip: "Track income toward IRS threshold",
+      icon: "money-dollar-box",
+      symbol: :taxes,
+      available_proc: ->(event) { policy(event).show? && organizer_signed_in? }
+    },
     {
       name: "Announcements",
       path_proc: ->(event_id) { event_announcement_overview_path(event_id:) },
