@@ -202,7 +202,7 @@
       </div>
     <% end %>
 
-    <%= render "static_pages/index/teenager_raffle" %>
+    <%# FUIME-DISABLED: Hack Club teenager raffle promo (upstream branding). %>
 
     <%# Latest Fuime announcement - hidden for now until we have announcements.
       NOTE: an ERB comment tag ends at the first closing delimiter, so the
@@ -215,7 +215,7 @@
       end
     %>
 
-    <%= render "static_pages/index/explore" %>
+    <%# FUIME-DISABLED: "Explore Hack Club" promo cards (upstream branding). %>
 
     <% valid_contracts = current_user.contracts.sent.select { |contract| contract.party(:signee).present? } %>
     <% if valid_contracts.any? %>
