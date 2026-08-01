@@ -20,6 +20,26 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 | Deleted hcb_laser.gif | Hack Club branding | `hcb_laser.gif` |
 | Added $fuime-blue color variable | Primary accent color | `app/assets/stylesheets/_variables.scss` |
 
+## M2: Guardianship System
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Created guardianships table | Parent-teen linking | `db/migrate/20260801100000_create_guardianships.rb` |
+| Added Guardianship model | Core guardianship logic | `app/models/guardianship.rb` |
+| Added guardianship associations to User | Link guardians and minors | `app/models/user.rb` |
+| Added guardian helper methods to User | Check guardian status | `app/models/user.rb` |
+| Under-13 validation | COPPA compliance | `app/models/user.rb` |
+| Guardianship controller | Invite/accept flows | `app/controllers/guardianships_controller.rb` |
+| Guardianship policy | Pundit authorization | `app/policies/guardianship_policy.rb` |
+| Guardian routes | Invite/accept URLs | `config/routes.rb` |
+| Guardian views | new.html.erb, show.html.erb | `app/views/guardianships/` |
+| Guardianship mailer | Invite/accepted emails | `app/mailers/guardianship_mailer.rb` |
+| Mailer views | invite.html.erb, accepted.html.erb | `app/views/guardianship_mailer/` |
+| Redirect minors to guardian invite | Onboarding flow | `app/controllers/users_controller.rb` |
+| Application mailer rebranding | HCB → Fuime emails | `app/mailers/application_mailer.rb` |
+| Onboarding button text | "Start using HCB" → "Start using Fuime" | `app/views/users/edit.html.erb` |
+| Settings data sharing text | HCB → Fuime | `app/views/users/edit.html.erb` |
+
 ## Render Deployment
 
 | Change | Why | Files |

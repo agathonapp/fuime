@@ -1,0 +1,40 @@
+<p>
+  Hello,
+</p>
+
+<p>
+  <strong><%= @minor.name || @minor.email %></strong> has invited you to be their guardian on Fuime,
+  the financial platform for teen businesses.
+</p>
+
+<p>
+  <strong>What this means:</strong> As their guardian, you'll be the legal signer for their business account.
+  You'll be able to see all their transactions, and you'll receive important notifications about their account.
+</p>
+
+<p>
+  <strong>Your responsibilities:</strong>
+</p>
+<ul>
+  <li>Oversee their business finances</li>
+  <li>Be the legal signer on the account</li>
+  <li>Help them with tax paperwork when needed</li>
+</ul>
+
+<p>
+  <%= link_to "Accept Guardian Invitation", @accept_url, class: "btn" %>
+</p>
+
+<p>
+  If you did not expect this invitation, or if you don't know <%= @minor.name || @minor.email %>,
+  you can safely ignore this email.
+</p>
+
+<p>
+  Questions? Reply to this email or contact us at support@fuime.com.
+</p>
+
+<p>
+  Best,<br>
+  The Fuime Team
+</p>

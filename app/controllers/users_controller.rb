@@ -426,7 +426,14 @@ class UsersController < ApplicationController
 
       if @user.full_name_before_last_save.blank?
         flash[:success] = "Profile created!"
-        redirect_to(return_to || root_path)
+
+        # Fuime: Redirect minors who need a guardian to the guardian invite page
+        if @user.needs_guardian?
+          flash[:info] = "One more step! Invite your parent or guardian to activate your account."
+          redirect_to new_guardianship_path
+        else
+          redirect_to(return_to || root_path)
+        end
       else
         if @payout_method&.saved_changes? && @user == current_user
           flash[:success] = "Your payout details have been updated. We'll use this information for all payouts going forward."
