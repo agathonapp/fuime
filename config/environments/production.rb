@@ -103,7 +103,12 @@ Rails.application.configure do
   config.active_support.report_deprecations = false
 
   # Replace the default in-process memory cache store with a durable alternative.
-  config.cache_store = :redis_cache_store, { url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE } }
+  # Fall back to REDIS_URL: on Render only REDIS_URL is provided, and a nil url
+  # leaves the cache store pointing at localhost.
+  config.cache_store = :redis_cache_store, {
+    url: ENV["REDIS_CACHE_URL"].presence || ENV["REDIS_URL"].presence,
+    ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }
+  }
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   # Use Sidekiq

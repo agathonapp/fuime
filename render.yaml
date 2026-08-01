@@ -29,6 +29,14 @@ services:
           name: fuime-redis
           type: redis
           property: connectionString
+      # config/cable.yml and the production cache_store read REDIS_CACHE_URL.
+      # Without it they silently fall back to redis://localhost:6379/1, which
+      # makes every ActionCable broadcast job fail with Redis::CannotConnectError.
+      - key: REDIS_CACHE_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
       - key: RAILS_ENV
         value: production
       - key: RACK_ENV
@@ -145,6 +153,14 @@ services:
           name: fuime-postgres
           property: connectionString
       - key: REDIS_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
+      # config/cable.yml and the production cache_store read REDIS_CACHE_URL.
+      # Without it they silently fall back to redis://localhost:6379/1, which
+      # makes every ActionCable broadcast job fail with Redis::CannotConnectError.
+      - key: REDIS_CACHE_URL
         fromService:
           name: fuime-redis
           type: redis
