@@ -108,6 +108,9 @@ services:
         sync: false
       - key: TAXBANDITS__DOMAIN_ID
         sync: false
+      # AWS
+      - key: AWS_REGION
+        value: us-east-1
       # AWS KMS
       - key: AWS_KMS__TIN_KEY_ID
         sync: false
@@ -215,6 +218,9 @@ services:
         sync: false
       - key: TAXBANDITS__DOMAIN_ID
         sync: false
+      # AWS
+      - key: AWS_REGION
+        value: us-east-1
       # AWS KMS
       - key: AWS_KMS__TIN_KEY_ID
         sync: false
