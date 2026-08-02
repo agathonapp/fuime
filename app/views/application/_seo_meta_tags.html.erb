@@ -1,6 +1,7 @@
-<%# Uses the existing apple-touch icon: /brand/fuime-*.png do not exist yet.
-    Swap this for a proper 1200x630 social card before launch. %>
-<% img = image_url("/apple-touch-icon.png") rescue "/apple-touch-icon.png" %>
+<%# Absolute URL required: link previews are fetched by other servers, which
+    can't resolve a relative path. Still the bare logo rather than a designed
+    1200x630 card — worth replacing before a real launch push. %>
+<% img = "#{root_url.chomp('/')}/brand/fuime-social.png" %>
 <% description = "Fuime is the financial platform for teen-run businesses: a real account, payments, receipts, and automatic tax tracking — with a parent or guardian as the legal signer." %>
 <meta name="description" content="<%= description %>">
 <meta property="og:site_name" content="Fuime">
