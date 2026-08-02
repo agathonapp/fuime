@@ -4,7 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "description": "fuime landing page + waitlist capture",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "node test/waitlist.test.mjs"
+    "start": "node server.js",
+    "test": "node test/waitlist.test.mjs && node test/server.test.mjs"
   }
 }
