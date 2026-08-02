@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Extensions that invert colours turn the night bands to mud. -->
+    <meta name="darkreader-lock" />
+    <title>fuime · invoicing for people who aren't 18 yet</title>
+    <meta
+      name="description"
+      content="Send a real invoice, get paid into an account you run day to day, and know what you owe at tax time. A parent co-signs once. After that it's yours."
+    />
+    <link rel="canonical" href="https://fuime.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/" />
+    <meta
+      property="og:title"
+      content="You're already working. Start billing."
+    />
+    <meta
+      property="og:description"
+      content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
+    />
+    <!-- Width and height let a scraper lay the card out before it has the
+         bytes, and alt is the only thing a screen reader gets when this is
+         shared into a feed. og.jpg is the same 1200x630 frame the old og.png
+         held, at 44KB instead of 567KB — the entire difference was a PNG
+         carrying a photograph. -->
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="You're already working. Start billing."
+    />
+    <meta
+      name="twitter:description"
+      content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="theme-color" content="#141420" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+
+    <!-- First paint. Inline and above every script, or the browser paints its
+         own white for one frame and the whole thing reads as a strobe. These
+         values are the literal night tokens; style.css must agree with them. -->
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <!-- Without JS nothing would ever lift the overlay off the page. -->
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- style.css parks every .rise block at opacity 0 and site.js adding
+         .is-in is the only thing that ever puts it back. With scripting off the
+         rule above lifts the boot overlay onto a page whose copy never arrives:
+         6.4k characters here, 10.2k on /parents, all painted at zero alpha. It
+         looks like a page that loaded with empty bands, which is worse than one
+         that visibly failed.
+
+         Has to sit after the stylesheet link to win on source order, and has to
+         name `.rise > .rise-i` rather than `.rise-i` to match the specificity of
+         the rule it is undoing. Same declarations prefers-reduced-motion
+         already uses to opt out of the same animation. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+    <!-- Organization and WebSite, on the homepage only — the two entities the
+         other pages reference by @id rather than restating. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://fuime.com/#org",
+            "name": "fuime",
+            "url": "https://fuime.com/",
+            "logo": "https://fuime.com/img/apple-touch-icon.png",
+            "email": "hi@fuime.com",
+            "description": "Invoicing and books for under-18 service businesses. A parent co-signs once, and the account is operated by the person doing the work."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://fuime.com/#site",
+            "url": "https://fuime.com/",
+            "name": "fuime",
+            "inLanguage": "en-US",
+            "publisher": {
+              "@id": "https://fuime.com/#org"
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <!-- The loader is a first-visit event, not a toll booth on every click. -->
+    <script>
+      try {
+        if (sessionStorage.getItem('fuime.booted')) {
+          document.documentElement.classList.add('booted')
+        }
+      } catch (e) {}
+    </script>
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── loader ──────────────────────────────────────────────────────────
+         The arch is the progress bar. It fills from the bottom against the
+         real manifest — fonts, then the hero photograph, then window load — so
+         the motion means something instead of counting down a timer. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--over">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing">What it costs</a>
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="nav__link" href="/login">Log in</a>
+          <a class="btn btn--accent" href="#join">Get early access</a>
+        </nav>
+      </div>
+      <div
+        class="split-mount split-mount--dock"
+        data-fx-split="dock"
+        data-you="90.0"
+        data-fuime="7.0"
+        data-stripe="3.0"
+        aria-hidden="true"
+      ></div>
+    </header>
+
+    <main>
+      <!-- ── hero ──────────────────────────────────────────────────────── -->
+      <section class="hero">
+        <div class="hero__media">
+          <picture>
+            <source
+              media="(max-width: 900px)"
+              type="image/avif"
+              srcset="/img/hero-m-700.avif 700w, /img/hero-m-1000.avif 1000w"
+              sizes="100vw"
+            />
+            <source
+              media="(max-width: 900px)"
+              type="image/webp"
+              srcset="/img/hero-m-700.webp 700w, /img/hero-m-1000.webp 1000w"
+              sizes="100vw"
+            />
+            <source
+              type="image/avif"
+              srcset="/img/hero-1600.avif 1600w, /img/hero-2400.avif 2400w"
+              sizes="100vw"
+            />
+            <source
+              type="image/webp"
+              srcset="/img/hero-1600.webp 1600w, /img/hero-2400.webp 2400w"
+              sizes="100vw"
+            />
+            <img
+              src="/img/hero-1600.webp"
+              alt="A teenager's bedroom at night, a desk pushed up to a wide window with a laptop open on it, a hoodie over the chair, and a town spread out in the dark below."
+              width="2400"
+              height="1029"
+              fetchpriority="high"
+              decoding="async"
+            />
+          </picture>
+          <!-- preload="none" so nothing is fetched until site.js decides the
+               connection and the reader's motion preference can afford it. -->
+          <video
+            class="hero__live"
+            muted
+            playsinline
+            preload="none"
+            aria-hidden="true"
+            tabindex="-1"
+          >
+            <source src="/vid/hero-live-web.webm" type="video/webm" />
+            <source src="/vid/hero-live-web.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="hero__glow"></div>
+        <div class="grain"></div>
+
+        <div class="wrap hero__in">
+          <div class="hero__body">
+            <h1>You're already working.<br />Start billing.</h1>
+            <p class="lead">
+              Send a real invoice, get paid into an account you run day to day,
+              and know what you owe at tax time. A parent co-signs once. After
+              that it's yours.
+            </p>
+
+            <div class="hero__cta">
+              <form class="capture" data-source="home-hero" novalidate>
+                <div class="capture__row">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="you@school.edu"
+                    autocomplete="email"
+                    aria-label="Email address"
+                    required
+                  />
+                  <button type="submit" class="btn btn--accent">
+                    Get early access
+                  </button>
+                </div>
+                <p class="capture__msg" role="status" aria-live="polite"></p>
+                <p class="capture__done">
+                  You're on the list. We'll email you once.
+                </p>
+              </form>
+              <p class="hero__note">
+                Built for tutoring, lawn care, photo, video, web, and DJ work.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrap hero__disclaimer">
+          <p class="disclaimer">
+            fuime is not a bank. Payments go from your client into your own
+            Stripe account — we never hold your money.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the dive ──────────────────────────────────────────────────────
+           Scroll flies into the laptop on that desk and lands inside the app.
+           What ships in the markup is the last frame of it — a still of the app
+           open on the screen — and fx/dive.js replaces that with the scrubbed
+           sequence only once it has the frames. The panel below is a real DOM
+           copy of the UI baked into those frames: it takes over from the pixels
+           at the end of the dolly, which is why the app is sharp at full size
+           and stays sharp on a retina display. It is decorative, so it is one
+           role="img" with a label and carries nothing focusable. -->
+      <section class="dive" data-fx-dive>
+        <div class="dive__track">
+          <div class="dive__stage">
+            <canvas class="dive__canvas" aria-hidden="true"></canvas>
+            <img
+              class="dive__still"
+              src="/img/dive-end.webp"
+              width="1920"
+              height="1080"
+              loading="lazy"
+              decoding="async"
+              alt="The same laptop, close up: fuime open on it at 11:48pm, showing $2,140.75 in the account, $312.40 set aside for taxes, and a list of invoices with what each job actually paid."
+            />
+            <div
+              class="dive__app"
+              role="img"
+              aria-label="The fuime app: $2,140.75 in your account, $312.40 set aside for taxes, and a list of invoices with the amount charged beside the amount kept."
+            >
+              <div class="dv-rail">
+                <div class="dv-brand">
+                  <span class="dv-brand__mark"></span>
+                  <span class="dv-brand__name">fuime</span>
+                </div>
+
+                <div class="dv-nav">
+                  <div class="dv-nav__label">Work</div>
+                  <span class="dv-nav__item is-on"
+                    >Money <span class="dv-nav__dot"></span
+                  ></span>
+                  <span class="dv-nav__item"
+                    >Invoices <span class="dv-nav__count">12</span></span
+                  >
+                  <span class="dv-nav__item"
+                    >Clients <span class="dv-nav__count">9</span></span
+                  >
+                  <span class="dv-nav__item">Jobs</span>
+                </div>
+
+                <div class="dv-nav">
+                  <div class="dv-nav__label">Keeping straight</div>
+                  <span class="dv-nav__item">Taxes</span>
+                  <span class="dv-nav__item">Guardian</span>
+                  <span class="dv-nav__item">Statements</span>
+                </div>
+
+                <div class="dv-rail__foot">
+                  <span class="dv-avatar"></span>
+                  <span class="dv-who"
+                    >Wren Delgado<span>Delgado Photo</span></span
+                  >
+                </div>
+              </div>
+
+              <div class="dv-main">
+                <div class="dv-top">
+                  <p class="dv-top__day">Tuesday, <em>11:48pm</em></p>
+                  <div class="dv-top__acts">
+                    <span class="dv-btn">Add a client</span>
+                    <span class="dv-btn dv-btn--accent">New invoice</span>
+                  </div>
+                </div>
+
+                <div class="dv-grid">
+                  <div class="dv-card">
+                    <div class="dv-card__hd">
+                      <span>In your account</span><span>Last 30 days</span>
+                    </div>
+                    <p class="dv-figure">$2,140<sup>75</sup></p>
+                    <p class="dv-sub">
+                      <b>+ $325.00</b> landed two minutes ago — Marisol R.
+                    </p>
+                    <svg
+                      class="dv-spark"
+                      viewBox="0 0 560 92"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <defs>
+                        <linearGradient
+                          id="dv-spark-fill"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0"
+                            stop-color="var(--accent-lit)"
+                            stop-opacity="0.34"
+                          />
+                          <stop
+                            offset="1"
+                            stop-color="var(--accent-lit)"
+                            stop-opacity="0"
+                          />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8 L560 92 L0 92 Z"
+                        fill="url(#dv-spark-fill)"
+                      />
+                      <path
+                        d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8"
+                        fill="none"
+                        stroke="var(--accent-lit)"
+                        stroke-width="2"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="560" cy="8" r="4" fill="var(--accent-lit)" />
+                    </svg>
+                  </div>
+
+                  <div class="dv-card dv-aside">
+                    <div>
+                      <div class="dv-card__hd">
+                        <span>Set aside for taxes</span>
+                      </div>
+                      <p class="dv-figure dv-figure--sm">$312<sup>40</sup></p>
+                      <div class="dv-bar"><i></i></div>
+                      <div class="dv-legend">
+                        <span>of $504 estimated</span><span>62%</span>
+                      </div>
+                    </div>
+                    <p class="dv-sub">
+                      You cross the $400 filing line in November at this pace.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="dv-card dv-ledger">
+                  <div class="dv-card__hd">
+                    <span>Invoices</span><span>All clients</span>
+                  </div>
+                  <table class="dv-rows">
+                    <thead>
+                      <tr>
+                        <th>Client</th>
+                        <th>Work</th>
+                        <th>Status</th>
+                        <th class="dv-num">Amount</th>
+                        <th class="dv-num">You keep</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">MR</span
+                            ><span
+                              >Marisol R.<span>Invoice 0031</span></span
+                            ></span
+                          >
+                        </td>
+                        <td class="dv-mu">Senior portraits</td>
+                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
+                        <td class="dv-num">$325.00</td>
+                        <td class="dv-num">$292.33</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">TH</span
+                            ><span>Theo H.<span>Invoice 0030</span></span></span
+                          >
+                        </td>
+                        <td class="dv-mu">Wedding highlight reel</td>
+                        <td><span class="dv-chip dv-chip--sent">Sent</span></td>
+                        <td class="dv-num">$680.00</td>
+                        <td class="dv-num">$612.68</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">CP</span
+                            ><span
+                              >Cedar Park HS<span>Invoice 0029</span></span
+                            ></span
+                          >
+                        </td>
+                        <td class="dv-mu">Team photos, fall</td>
+                        <td>
+                          <span class="dv-chip dv-chip--due">Due Friday</span>
+                        </td>
+                        <td class="dv-num">$240.00</td>
+                        <td class="dv-num">$215.68</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">JV</span
+                            ><span>June V.<span>Invoice 0028</span></span></span
+                          >
+                        </td>
+                        <td class="dv-mu">Headshots, two hours</td>
+                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
+                        <td class="dv-num">$180.00</td>
+                        <td class="dv-num">$161.06</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">AO</span
+                            ><span
+                              >Amara O.<span>Invoice 0027</span></span
+                            ></span
+                          >
+                        </td>
+                        <td class="dv-mu">Quinceañera, four hours</td>
+                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
+                        <td class="dv-num">$450.00</td>
+                        <td class="dv-num">$405.35</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">BK</span
+                            ><span
+                              >Bell &amp; Kline<span>Invoice 0026</span></span
+                            ></span
+                          >
+                        </td>
+                        <td class="dv-mu">Storefront photos</td>
+                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
+                        <td class="dv-num">$275.00</td>
+                        <td class="dv-num">$247.28</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="dv-cli"
+                            ><span class="dv-cli__ini">DM</span
+                            ><span>Dov M.<span>Invoice 0025</span></span></span
+                          >
+                        </td>
+                        <td class="dv-mu">Band promo, half day</td>
+                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
+                        <td class="dv-num">$320.00</td>
+                        <td class="dv-num">$287.90</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── the work ──────────────────────────────────────────────────── -->
+      <div class="band band--night" style="padding-block: 0">
+        <div class="strip">
+          <span class="artifact-label wrap">Examples of the work</span>
+          <div class="strip__row">
+            <span class="strip__item">Senior portraits</span>
+            <span class="strip__item">Lawn and hedges, weekly</span>
+            <span class="strip__item">SAT tutoring, two hours</span>
+            <span class="strip__item">Wedding highlight reel</span>
+            <span class="strip__item">A Shopify storefront</span>
+            <span class="strip__item">Birthday DJ set</span>
+            <span class="strip__item">Dog walking</span>
+            <span class="strip__item">Logo and brand kit</span>
+            <span class="strip__item">Car detailing</span>
+            <span class="strip__item">Piano lessons</span>
+            <span class="strip__item">Sneaker restoration</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── the artifact, live ────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise" data-calc>
+          <div class="bhead">
+            <p class="eyebrow">What the client gets</p>
+            <h2 class="h2">An invoice with your name on it.</h2>
+            <p class="lead mt-5" style="max-width: 54ch">
+              Not a Venmo request. A numbered invoice they can pay by card or
+              bank transfer, with every deduction shown before you agree to it.
+            </p>
+          </div>
+
+          <div class="calc mt-8">
+            <div>
+              <p class="calc__label">Move it. The math is the real math.</p>
+              <p class="calc__figure num" data-out="lands">$360.10</p>
+              <p class="calc__hint">
+                lands in your account on a
+                <span class="num" data-out="charged">$400.00</span> job.
+              </p>
+
+              <div class="calc__slider">
+                <input
+                  class="calc__range"
+                  type="range"
+                  min="25"
+                  max="2000"
+                  step="5"
+                  value="400"
+                  aria-label="Invoice amount"
+                />
+                <div class="calc__ticks">
+                  <span>$25</span>
+                  <span>$2,000</span>
+                </div>
+              </div>
+
+              <p class="calc__hint" data-out="monthly">
+                $15/mo once you clear $250 in 30 days
+              </p>
+            </div>
+
+            <div>
+              <span class="artifact-label">Worked example</span>
+              <div class="invoice">
+                <div class="invoice__head">
+                  <div>
+                    <strong>Invoice 0014</strong>
+                    <div class="muted small">Maya R. · Photography</div>
+                  </div>
+                  <span class="tag">Due on receipt</span>
+                </div>
+                <div class="invoice__body">
+                  <div class="invoice__row">
+                    <span>Senior portraits · 3 hr session</span>
+                    <span class="num" data-out="charged">$400.00</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span class="muted">Card processing (Stripe)</span>
+                    <span class="muted num" data-out="stripe">−$11.90</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span class="muted">fuime fee · 7%</span>
+                    <span class="muted num" data-out="fuime">−$28.00</span>
+                  </div>
+                  <div class="invoice__row invoice__row--total">
+                    <span>Lands in your account</span>
+                    <span class="num" data-out="lands">$360.10</span>
+                  </div>
+                </div>
+                <div class="invoice__foot">
+                  <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
+                  <span class="tag">Paid</span>
+                </div>
+              </div>
+              <!-- 28 — the split, at full scale, directly under the arithmetic
+                   it is a picture of. -->
+              <div
+                class="split-mount mt-5"
+                data-fx-split="full"
+                data-you="90.0"
+                data-fuime="7.0"
+                data-stripe="3.0"
+              ></div>
+            </div>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/pricing"
+              >See the full breakdown<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the problem ───────────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">How you get paid today</p>
+            <h2 class="h2">
+              Every option makes you look like a kid doing a favor.
+            </h2>
+            <p class="lead">
+              The work is real and the client is real. The payment method is a
+              group chat and somebody's mom.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="strike">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.5 16.5V16a4 4 0 0 1 4-4h1.5" />
+                <circle cx="7.25" cy="6" r="3" />
+                <path d="M12 16.5h6.5M15.5 13.5l3 3-3 3" />
+              </svg>
+              <h3 class="h4">Venmo → mom</h3>
+              <p>
+                It's her account, her name, her transaction history. You ask her
+                for your own money.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="2" y="5.5" width="18" height="11" rx="1.5" />
+                <circle cx="11" cy="11" r="2.75" />
+                <path d="M5 8.5h.01M17 13.5h.01" />
+              </svg>
+              <h3 class="h4">Cash</h3>
+              <p>
+                No record. Nothing to show a client who wants a receipt, or the
+                IRS if you clear $400.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.25V11l3.25 2" />
+              </svg>
+              <h3 class="h4">“I'll get you next week”</h3>
+              <p>
+                You have no invoice to point at, so following up feels like
+                begging.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="4" y="9.5" width="14" height="9.5" rx="1.5" />
+                <path d="M7.5 9.5V6.75a3.5 3.5 0 0 1 7 0V9.5" />
+                <path d="M11 13.25v2.5" />
+              </svg>
+              <h3 class="h4">A business account</h3>
+              <p>
+                Requires 18. That's the whole wall, and waiting it out costs you
+                two years of clients.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <picture>
+        <source
+          type="image/avif"
+          srcset="/img/keys-900.avif 900w, /img/keys-1600.avif 1600w"
+          sizes="100vw"
+        />
+        <source
+          type="image/webp"
+          srcset="/img/keys-900.webp 900w, /img/keys-1600.webp 1600w"
+          sizes="100vw"
+        />
+        <img
+          class="seam"
+          src="/img/keys-900.webp"
+          alt=""
+          width="1600"
+          height="686"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+
+      <!-- ── how it works ──────────────────────────────────────────────── -->
+      <section class="band band--cream" id="how">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">How fuime works</p>
+            <h2 class="h2">Three steps. One of them needs a parent.</h2>
+          </div>
+
+          <div class="grid grid--3 mt-8" data-fx-steps>
+            <article class="step">
+              <p class="step__n">01</p>
+              <h3 class="h4">Sign up and name your business</h3>
+              <p>
+                About a minute. You'll need a parent or guardian's email
+                address, because of step two.
+              </p>
+              <picture>
+                <source
+                  type="image/avif"
+                  srcset="
+                    /img/tile-invoice-480.avif 480w,
+                    /img/tile-invoice-800.avif 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <source
+                  type="image/webp"
+                  srcset="
+                    /img/tile-invoice-480.webp 480w,
+                    /img/tile-invoice-800.webp 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <img
+                  class="tile"
+                  src="/img/tile-invoice-800.webp"
+                  alt="A blank sheet of paper and a pen on a folding table, lit from one side by a laptop screen."
+                  width="800"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+            </article>
+
+            <article class="step">
+              <div class="step__meta">
+                <p class="step__n">02</p>
+                <span class="tag">Requires a guardian</span>
+              </div>
+              <h3 class="h4">A parent completes one ID check</h3>
+              <p>
+                Stripe lets a guardian own an account on behalf of someone 13 or
+                older. They verify once and they're the legal owner. You're the
+                operator: you send the invoices, you spend the money, you run
+                the business.
+              </p>
+              <picture>
+                <source
+                  type="image/avif"
+                  srcset="
+                    /img/tile-phone-480.avif 480w,
+                    /img/tile-phone-800.avif 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <source
+                  type="image/webp"
+                  srcset="
+                    /img/tile-phone-480.webp 480w,
+                    /img/tile-phone-800.webp 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <img
+                  class="tile"
+                  src="/img/tile-phone-800.webp"
+                  alt="A phone lying face up in the grass at night, its screen glowing."
+                  width="800"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+            </article>
+
+            <article class="step">
+              <p class="step__n">03</p>
+              <h3 class="h4">Invoice clients and get paid</h3>
+              <p>
+                Send a link. Clients pay by card or bank transfer. The money
+                settles into your account, and fuime keeps your books as it
+                goes: income, expenses, net, and a warning when you cross the
+                $400 the IRS cares about.
+              </p>
+              <picture>
+                <source
+                  type="image/avif"
+                  srcset="
+                    /img/tile-box-480.avif 480w,
+                    /img/tile-box-800.avif 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <source
+                  type="image/webp"
+                  srcset="
+                    /img/tile-box-480.webp 480w,
+                    /img/tile-box-800.webp 800w
+                  "
+                  sizes="(max-width: 900px) 92vw, 33vw"
+                />
+                <img
+                  class="tile"
+                  src="/img/tile-box-800.webp"
+                  alt="An open cardboard box and a camera lens on the grass at night."
+                  width="800"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── money ─────────────────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What it costs</p>
+            <h2 class="h2">
+              7% of what you collect. No monthly fee until you're earning.
+            </h2>
+            <p class="lead">
+              A flat monthly fee on a kid making $80 a month is a tax on
+              starting. So there isn't one until the business is real.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Rate on everything you collect</h3>
+                <p>If a client doesn't pay, there is no fee.</p>
+              </div>
+              <p class="price__fig">7%</p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Monthly fee, under $250 in 30 days</h3>
+                <p>Nothing. Not a trial, not an introductory rate.</p>
+              </div>
+              <p class="price__fig">$0<sub>/mo</sub></p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Monthly fee, over $250 in 30 days</h3>
+                <p>Billed to the guardian who owns the account.</p>
+              </div>
+              <p class="price__fig">$15<sub>/mo</sub></p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/pricing"
+              >The worked example, and what you're not charged for<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── parents ───────────────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap split rise">
+          <div>
+            <p class="eyebrow">For parents</p>
+            <h2 class="h2">You sign once. You keep the controls.</h2>
+            <p class="lead mt-5">
+              Your kid is going to keep taking money for work either way. This
+              is the version with a paper trail.
+            </p>
+            <div class="arch arch--portrait mt-7">
+              <picture>
+                <source
+                  type="image/avif"
+                  srcset="
+                    /img/parents-arch-640.avif   640w,
+                    /img/parents-arch-1000.avif 1000w
+                  "
+                  sizes="(max-width: 900px) 92vw, 44vw"
+                />
+                <source
+                  type="image/webp"
+                  srcset="
+                    /img/parents-arch-640.webp   640w,
+                    /img/parents-arch-1000.webp 1000w
+                  "
+                  sizes="(max-width: 900px) 92vw, 44vw"
+                />
+                <img
+                  src="/img/parents-arch-1000.webp"
+                  alt="A tall arched window at night seen from inside a dark room, two mugs on the sill, the lights of a town in the valley below."
+                  width="1000"
+                  height="1250"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+            </div>
+            <p class="mt-6">
+              <a class="tlink" href="/parents"
+                >Read what you're actually signing<svg
+                  class="arrow"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+              ></a>
+            </p>
+          </div>
+
+          <div class="grid grid--2">
+            <article class="card">
+              <h3 class="h4">The account is yours</h3>
+              <p>
+                A Stripe account in your name, with them as operator. Your own
+                Venmo and cards stay out of it.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">You see everything</h3>
+              <p>
+                Every invoice and every payment, in a read-only view. You can
+                shut it off.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">Tax time is legible</h3>
+              <p>
+                Income, expenses, and net for the year, with the $400
+                self-employment threshold flagged.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">We never hold the money</h3>
+              <p>
+                Payments go from the client to your Stripe account. fuime takes
+                its 7% and nothing else.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── join ──────────────────────────────────────────────────────── -->
+      <section class="band band--night" id="join" style="padding-bottom: 0">
+        <div class="wrap portal">
+          <div class="portal__media">
+            <picture>
+              <source
+                type="image/avif"
+                srcset="
+                  /img/arch-dusk-640.avif   640w,
+                  /img/arch-dusk-1000.avif 1000w
+                "
+                sizes="(max-width: 620px) 96vw, 520px"
+              />
+              <source
+                type="image/webp"
+                srcset="
+                  /img/arch-dusk-640.webp   640w,
+                  /img/arch-dusk-1000.webp 1000w
+                "
+                sizes="(max-width: 620px) 96vw, 520px"
+              />
+              <img
+                src="/img/arch-dusk-1000.webp"
+                alt="A stone archway standing alone on a hilltop at dusk, the lights of a town visible through the opening."
+                width="1000"
+                height="1250"
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
+          </div>
+
+          <div class="portal__in">
+            <p class="eyebrow">Early access</p>
+            <h2 class="h2">We're onboarding the first businesses now.</h2>
+            <p class="lead">One email when it's your turn. Nothing else.</p>
+            <form class="capture" data-source="home-foot" novalidate>
+              <div class="capture__row">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="you@school.edu"
+                  autocomplete="email"
+                  aria-label="Email address"
+                  required
+                />
+                <button type="submit" class="btn btn--accent">
+                  Get early access
+                </button>
+              </div>
+              <p class="capture__msg" role="status" aria-live="polite"></p>
+              <p class="capture__done">
+                You're on the list. We'll email you once.
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ── footer ──────────────────────────────────────────────────────── -->
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/pricing">What it costs</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="mailto:hi@fuime.com">hi@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <div class="lrow foot__status">
+          <span>Status</span>
+          <span class="lrow__lead" aria-hidden="true"></span>
+          <span class="lrow__val">Onboarding the first businesses</span>
+        </div>
+        <div class="foot__bot">
+          <span>fuime · invoicing for people who aren't 18 yet</span>
+          <span
+            >fuime is not a bank. Payments settle into your own Stripe
+            account.</span
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
