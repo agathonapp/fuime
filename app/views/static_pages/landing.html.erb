@@ -1,0 +1,124 @@
+<% title "Banking & payments for teen founders" %>
+<% content_for :head do %>
+  <meta name="description" content="Fuime is the financial home for teen-run businesses. Link parent authorization in 60 seconds, accept card payments instantly, and manage earnings.">
+<% end %>
+
+<%= render "static_pages/landing_nav" %>
+
+<section class="fl-hero" aria-label="Hero">
+  <div class="fl-hero__glow" aria-hidden="true"></div>
+  <div class="fl-hero__glow fl-hero__glow--secondary" aria-hidden="true"></div>
+
+  <div class="fl-hero__grid">
+    <div class="fl-hero__copy">
+      <p class="fl-brand">Fuime</p>
+
+      <div class="fl-badge">
+        <span class="fl-badge__bolt" aria-hidden="true">⚡</span>
+        The instant payment layer for young founders
+      </div>
+
+      <h1 class="fl-hero__headline">
+        Banking &amp; payments built for the
+        <span class="fl-hero__gradient">next generation of founders</span>.
+      </h1>
+
+      <p class="fl-hero__sub">
+        Skip the PayPal hassle. Link parent authorization in 60 seconds, accept customer card payments instantly, and manage business earnings.
+      </p>
+
+      <div class="fl-hero__actions">
+        <%= link_to auth_users_path(signup: true), class: "fl-btn fl-btn--primary fl-btn--lg fl-btn--glow" do %>
+          Start your business
+        <% end %>
+        <a href="#for-parents" class="fl-btn fl-btn--ghost fl-btn--lg">
+          <span class="fl-btn__play" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="8" r="7.25" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.5 5.5v5l4.5-2.5-4.5-2.5z" fill="currentColor"/>
+            </svg>
+          </span>
+          See How Parent Verification Works
+        </a>
+      </div>
+    </div>
+
+    <aside class="fl-dash" aria-label="Product preview">
+      <div class="fl-dash__top">
+        <div>
+          <p class="fl-dash__label">Live Business Account</p>
+          <p class="fl-dash__name">Lemonade Stand Co.</p>
+        </div>
+        <div class="fl-dash__status">
+          <span class="fl-dash__pulse" aria-hidden="true"></span>
+          Parent Approved
+        </div>
+      </div>
+
+      <div class="fl-dash__metric">
+        <div>
+          <p class="fl-dash__metric-label">Total Sales</p>
+          <p class="fl-dash__metric-value">$1,240.00</p>
+        </div>
+        <span class="fl-dash__growth">+24% this week</span>
+      </div>
+
+      <div class="fl-dash__checkout">
+        <p class="fl-dash__metric-label">Quick Checkout</p>
+        <div class="fl-dash__linkrow">
+          <div class="fl-dash__input">fuime.com/p/lemonade-stand</div>
+          <button type="button" class="fl-btn fl-btn--primary fl-btn--sm" tabindex="-1">Copy Link</button>
+        </div>
+      </div>
+
+      <div class="fl-dash__activity">
+        <p class="fl-dash__metric-label">Recent Activity</p>
+        <ul class="fl-dash__rows">
+          <li>
+            <span>Payment from Sarah</span>
+            <span class="fl-dash__amt">$45.00 <em>Card</em></span>
+          </li>
+          <li>
+            <span>Payment from Alex</span>
+            <span class="fl-dash__amt">$15.00 <em>Apple Pay</em></span>
+          </li>
+          <li>
+            <span>Payment from Jordan</span>
+            <span class="fl-dash__amt">$28.00 <em>Card</em></span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="fl-section" id="features">
+  <div class="fl-section__inner">
+    <h2>Built for teen businesses that need to move money</h2>
+    <p>Payment links, a clean ledger, and parent-signed legitimacy — without waiting until you’re 18.</p>
+  </div>
+</section>
+
+<section class="fl-section fl-section--alt" id="for-parents">
+  <div class="fl-section__inner">
+    <h2>Parents stay in the loop as the legal signer</h2>
+    <p>Approve the account in about a minute. See balances, payments, and tax progress without becoming the bookkeeper.</p>
+  </div>
+</section>
+
+<section class="fl-section" id="pricing">
+  <div class="fl-section__inner">
+    <h2>Simple platform pricing</h2>
+    <p>A transparent 4% platform fee on payments. No monthly subscription to get started.</p>
+    <%= link_to "Start Business", auth_users_path(signup: true), class: "fl-btn fl-btn--primary fl-btn--glow" %>
+  </div>
+</section>
+
+<footer class="fl-footer">
+  <div class="fl-footer__inner">
+    <p><strong>Fuime</strong> — the financial home for teen-run businesses.</p>
+    <p class="fl-footer__attr">
+      Forked from <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank", rel: "noopener" %> by Hack Club (AGPL-3.0).
+    </p>
+  </div>
+</footer>

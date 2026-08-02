@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en" data-dark="true">
+  <head>
+    <%= render "layouts/head", force_light: true, title_suffix: "Fuime" %>
+    <meta name="theme-color" content="#0B0F17">
+    <style>
+      html, body { background: #0B0F17; }
+    </style>
+  </head>
+  <body class="fuime-landing">
+    <%= yield %>
+  </body>
+</html>

@@ -2,6 +2,11 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Dark navy landing hero.** Branch `cursor/fuime-tailwind-theme-df1c`.
+Signed-out `/` now renders a Mercury/Linear-inspired dark marketing hero (glass nav,
+electric-blue CTAs, live-business dashboard mock) instead of redirecting straight to
+auth. `/?signup=true` still jumps to signup. Styles live in `_fuime_landing.scss`.
+
 **2026-08-02 — Fuime Tailwind theme tokens.** Branch `cursor/fuime-tailwind-theme-df1c`.
 Merged brand palette (`fuime.blue` `#0D6EFD`, navy, cyan, mint), Plus Jakarta Sans /
 Inter fonts, and `shadow-fuime-glow` into the existing Rails Tailwind config without

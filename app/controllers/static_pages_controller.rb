@@ -15,7 +15,12 @@ class StaticPagesController < ApplicationController
   def index
     return redirect_to first_index_path if current_user(allow_unverified: true)&.redirect_to_first_dashboard?
 
-    return redirect_to auth_users_path(require_reload: true, signup: params[:signup]) unless signed_in?
+    unless signed_in?
+      # Preserve legacy deep-link: /?signup=true still opens the auth signup flow.
+      return redirect_to auth_users_path(require_reload: true, signup: true) if params[:signup].present?
+
+      return render :landing, layout: "landing"
+    end
 
     @service = StaticPageService::Index.new(current_user:)
 

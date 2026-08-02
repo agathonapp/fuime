@@ -1,0 +1,19 @@
+<header class="fl-nav">
+  <div class="fl-nav__inner">
+    <a href="<%= root_path %>" class="fl-nav__brand" aria-label="Fuime home">
+      <%= image_tag "fuime-logo-dark.png", alt: "", height: 28, class: "fl-nav__mark" %>
+      <span class="fl-nav__wordmark">Fuime</span>
+    </a>
+
+    <nav class="fl-nav__links" aria-label="Primary">
+      <a href="#features">Features</a>
+      <a href="#for-parents">For Parents</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+
+    <div class="fl-nav__actions">
+      <%= link_to "Log in", auth_users_path, class: "fl-nav__login" %>
+      <%= link_to "Start Business", auth_users_path(signup: true), class: "fl-btn fl-btn--primary fl-btn--sm fl-btn--glow" %>
+    </div>
+  </div>
+</header>
