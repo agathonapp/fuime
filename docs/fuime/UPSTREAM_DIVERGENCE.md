@@ -1405,3 +1405,28 @@ opens. A second run added nothing.
 platform fee line from the webhook handler *and* HCB's 7% plan revenue fee from
 `FeeEngine` (visible on `mayas-cookies`: a $45 payment leaves $41.85 available).
 
+
+## Admins made by rake could never approve a transfer (2026-08-02)
+
+Approving a transfer requires a `Governance::Admin::Transfer::Limit` row for the
+approving admin; without one `GovernanceService::Admin::Transfer::Approval`
+refuses with "…does not have an admin transfer limit configured". `db/seeds.rb`
+grants one to the seeded user, **nothing else in the app creates one, and there
+is no UI or route for it** (`rg "Transfer::Limit" app/controllers app/views
+config/routes.rb` returns nothing). So every admin created by
+`fuime:make_admin` — which is how all Fuime admins are made — hit a wall with
+no way out of it from the browser.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `fuime:make_admin` now ensures a transfer limit | The task's whole job is producing a working admin, and it was producing one that could not approve a disbursement. Existing limits are left alone. | `lib/tasks/fuime.rake` |
+| Added `fuime:set_transfer_limit[email,dollars]` | The only way to set or raise a limit was a console session. Takes **dollars**, prints the before/after and the amount already used in the current window. | `lib/tasks/fuime.rake` |
+
+The default is $10,000 per rolling 24h (`Limit::WINDOW_DURATION`), not something
+enormous: the limit is a governance control, and defaulting it high would retire
+the control rather than configure it. Raise it deliberately.
+
+Verified against the dev database: the update path ($10,000,000 → $25,000 →
+back), the create path on a fresh admin, and the "already configured, left
+alone" path on an existing one. Both probe accounts were deleted and the seeded
+admin's limit restored to its original 1,000,000,000 cents. Rubocop clean.
