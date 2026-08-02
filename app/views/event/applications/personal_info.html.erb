@@ -61,7 +61,7 @@
 
     <% if @application.user.applications.many? || @application.user.events.any? %>
       <div class="mt-[-0.25rem] mb-4 rounded-b-lg h-2 border-solid border-smoke dark:border-slate border-t-0 w-full relative">
-        <div class="absolute max-w-full w-max bottom-0 left-1/2 bg-white dark:bg-darkless px-2 muted text-sm -translate-x-1/2 translate-y-1/2">Changes made here will also update your HCB profile</div>
+        <div class="absolute max-w-full w-max bottom-0 left-1/2 bg-white dark:bg-darkless px-2 muted text-sm -translate-x-1/2 translate-y-1/2">Changes made here will also update your Fuime profile</div>
       </div>
     <% end %>
 
@@ -99,7 +99,7 @@
         <%= form.label :address_country do %>
           Country <span class="text-primary">*</span>
         <% end %>
-        <% validate = "$el.setCustomValidity(disallowed_countries.includes(country) ? 'HCB is not supported in this country' : '')" %>
+        <% validate = "$el.setCustomValidity(disallowed_countries.includes(country) ? 'Fuime is not supported in this country' : '')" %>
         <%= form.country_select :address_country, { priority_countries: ["US"], priority_countries_divider: "", include_blank: "Select a country", required: true }, { class: "!min-h-[36px]", "x-model": "country", "x-on:change": validate, "x-init": validate } %>
       </div>
     </div>
@@ -107,7 +107,7 @@
     <template x-if="disallowed_countries.includes(country)">
       <div class="border border-1 border-primary/50 bg-primary/10 flex flex-row justify-start gap-2 items-center rounded-[6px] py-1 px-2 mt-4">
         <%= inline_icon "important", size: 20, class: "primary" %>
-        <p class="primary text-sm m-0 p-0">HCB is not supported in <span x-text="(country, event_application_address_country.selectedOptions[0].label)">that country</span>. This is because of regulatory restrictions, incompatible financial systems, or a combination of the two.</p>
+        <p class="primary text-sm m-0 p-0">Fuime is not supported in <span x-text="(country, event_application_address_country.selectedOptions[0].label)">that country</span>. This is because of regulatory restrictions, incompatible financial systems, or a combination of the two.</p>
       </div>
     </template>
 
@@ -115,7 +115,7 @@
 
     <div class="field">
       <%= form.label :referrer do %>
-        How did you hear about HCB? <span class="text-primary">*</span>
+        How did you hear about Fuime? <span class="text-primary">*</span>
       <% end %>
       <%= form.text_field :referrer, class: "w-full !max-w-full", required: true %>
     </div>
@@ -129,8 +129,8 @@
       <%= form.label :cosigner_email do %>
         Parent email <span class="text-primary">*</span>
       <% end %>
-      <p class="h5 muted mt0 mb1">We'll need a parent or legal guardian to sign the fiscal sponsorship agreement. They're giving you permission to create an organization on HCB but will not have access or control.</p>
-      <%= form.email_field :cosigner_email, class: "w-full !max-w-full", required: true, placeholder: "orpheus@hackclub.com", "x-bind:required": "minor", "x-on:input": "$el.value == '#{@application.user.email}' ? $el.setCustomValidity('You cannot use your own email') : $el.setCustomValidity('')" %>
+      <p class="h5 muted mt0 mb1">We&#39;ll need a parent or legal guardian to sign the Fuime agreement. They&#39;re giving you permission to run a business on Fuime, and they will be able to see your business activity.</p>
+      <%= form.email_field :cosigner_email, class: "w-full !max-w-full", required: true, placeholder: "parent@example.com", "x-bind:required": "minor", "x-on:input": "$el.value == '#{@application.user.email}' ? $el.setCustomValidity('You cannot use your own email') : $el.setCustomValidity('')" %>
     </div>
   </div>
 

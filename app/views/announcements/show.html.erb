@@ -18,7 +18,7 @@
   <% end %>
 
   <% if @announcement.template_draft? %>
-    <p class="font-bold">This draft announcement was created by HCB - edit it and add any details before publishing!</p>
+    <p class="font-bold">This draft announcement was created by Fuime - edit it and add any details before publishing!</p>
   <% end %>
 <% end %>
 
@@ -56,9 +56,9 @@
 <% if show_blocks_callout %>
   <%= render "callout", type: "info", title: "This announcement contains blocks", footer: :questions do %>
     <ul>
-      <li>Blocks are sections of your announcement that automatically update with the latest data from HCB.</li>
+      <li>Blocks are sections of your announcement that automatically update with the latest data from Fuime.</li>
       <li>You can change block options by editing the announcement and clicking the blue edit icon in the top-right corner of any block.
-      <li>Add new blocks by selecting a block from the HCB dropdown menu when editing an announcement.</li>
+      <li>Add new blocks by selecting a block from the Fuime dropdown menu when editing an announcement.</li>
     </ul>
   <% end %>
 <% end %>

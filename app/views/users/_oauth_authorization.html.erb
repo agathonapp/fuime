@@ -54,8 +54,9 @@
   <% end %>
   <% latest_token = authorization.tokens.max_by(&:created_at) %>
   <% if latest_token.present? %>
-    <% if latest_token.latitude.present? && latest_token.longitude.present? %>
-      <img class="w-full rounded mt-3 aspect-square" src="https://maps.hackclub.com/api/shipping?latitude=<%= latest_token.latitude %>&longitude=<%= latest_token.longitude %>">
+    <% map_url = latest_token.latitude.present? && latest_token.longitude.present? ? static_map_url(lat: latest_token.latitude, lng: latest_token.longitude) : nil %>
+    <% if map_url %>
+      <img class="w-full rounded mt-3 aspect-square" src="<%= map_url %>">
     <% else %>
       <div class="w-full rounded mt-3 aspect-square bg-smoke dark:bg-black opacity-50 flex items-center justify-center text-xl">
         Location unavailable

@@ -253,17 +253,37 @@ module ApplicationHelper
     end
   end
 
+  # Static map images of a user's location.
+  #
+  # Upstream HCB pointed this at maps.hackclub.com — a private Hack Club Vercel
+  # project. Fuime has no access to it, and rendering it would ship each user's
+  # coordinates to another organization's infrastructure on every session and
+  # login-notification render (CLAUDE.md Prime Directive 4). Returns nil until a
+  # Fuime-controlled tile provider is configured; every caller must handle nil by
+  # omitting the map.
+  def self.static_map_url(lat:, lng:)
+    base = ENV["STATIC_MAP_URL"]
+    return nil if base.blank?
+
+    "#{base}?latitude=#{lat}&longitude=#{lng}"
+  end
+
+  def static_map_url(lat:, lng:)
+    ApplicationHelper.static_map_url(lat:, lng:)
+  end
+
   def help_message
-    content_tag :span, "Contact the HCB team at #{help_email} or call #{help_phone} for urgent requests.".html_safe
+    content_tag :span, "Contact the Fuime team at #{help_email} for support.".html_safe
   end
 
   def help_email
-    mail_to "hcb@hackclub.com", class: "nowrap"
+    mail_to ApplicationMailer::OPERATIONS_EMAIL, class: "nowrap"
   end
 
-  def help_phone
-    phone_to "+18442372290", "+1 (844) 237 2290", class: "nowrap"
-  end
+  # Fuime has no support phone line. Upstream HCB pointed this at Hack Club's
+  # number (+1 844 237 2290) — routing Fuime users there would send them to a
+  # different organization's support desk, so the phone affordance is removed
+  # rather than re-pointed. Reinstate only when Fuime has its own line.
 
   def format_date(date)
     if date.nil?

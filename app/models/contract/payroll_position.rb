@@ -61,7 +61,7 @@ class Contract
             ]
           },
           {
-            role: "HCB",
+            role: "Fuime",
             email: hcb.email,
             send_email: false,
             fields: [
@@ -114,7 +114,7 @@ class Contract
       if organizer && !organizer.signed?
         { label: "Organizer", email: organizer.email }
       elsif hcb && !hcb.signed?
-        { label: "HCB point of contact", email: hcb.email }
+        { label: "Fuime point of contact", email: hcb.email }
       elsif contractor && !contractor.signed?
         { label: "You", email: contractor.email }
       else

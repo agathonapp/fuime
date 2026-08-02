@@ -13,7 +13,7 @@
 <%= render "application/callout",
     type: "info",
     title: "Important info about PayPal transfers" do %>
-    <p>HCB never charges fees to send transfers, however PayPal may charge processing fees to your organization or the recipient.</p>
+    <p>Fuime never charges fees to send transfers, however PayPal may charge processing fees to your organization or the recipient.</p>
     <strong>Domestic fees:</strong>
     <ul>
       <li>No fee charged to your organization</li>
@@ -48,7 +48,7 @@
   <div class="field">
     <%= form.label :payment_for, "What are you paying for with this transfer?" %>
     <%= form.text_field :payment_for, placeholder: "Event venue", required: true, disabled: %>
-    <span class="muted">This is to help HCB keep record of our transactions.</span>
+    <span class="muted">This is to help Fuime keep record of our transactions.</span>
   </div>
 
   <%= form.label :amount, "Amount" %>

@@ -86,12 +86,12 @@ class Contract
             }
           end,
           {
-            role: "HCB",
+            role: "Fuime",
             email: hcb.email,
             send_email: false,
             fields: [
               {
-                name: "HCB ID",
+                name: "Fuime ID",
                 default_value: prefills["public_id"],
                 readonly: true
               },
@@ -143,7 +143,7 @@ class Contract
       elsif cosigner && !cosigner.signed?
         { label: "Your parent/legal guardian", email: cosigner.email }
       elsif hcb && !hcb.signed?
-        { label: "HCB point of contact", email: hcb.email }
+        { label: "Fuime point of contact", email: hcb.email }
       else
         nil
       end

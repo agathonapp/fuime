@@ -55,11 +55,11 @@
       </ul>
       <h2>Info</h2>
       <ul class="grid text-left w-100 mt0" id="info-grid">
-        <%# Fuime: exclude the inherited HCB system orgs (fee routing, grant funds,
+        <%# Fuime: exclude the inherited Fuime system orgs (fee routing, grant funds,
             sweeps) — they are referenced by hardcoded id in the ledger and cannot
             be deleted, but they are not real Fuime businesses. %>
         <%= card_to "Organizations", events_admin_index_path, badge: Event.approved.where.not(id: EventMappingEngine::EventIds.constants.map { |c| EventMappingEngine::EventIds.const_get(c) }).count, subtle_badge: true %>
-        <%= card_to "Applications (HCB)", applications_admin_index_path, badge: Event::Application.under_review.count %>
+        <%= card_to "Applications (Fuime)", applications_admin_index_path, badge: Event::Application.under_review.count %>
         <%= card_to "Users", users_admin_index_path %>
         <%= card_to "Donations", donations_admin_index_path %>
         <%= card_to "Invoices", invoices_admin_index_path %>
@@ -106,9 +106,9 @@
           <%= render partial: "static_pages/card", locals: { task_path: admin_search_path, human_name: "Search by user" } %>
           <%= render partial: "static_pages/card", locals: { task_path: "https://hack.af/hcb-knowledgebase", human_name: "Knowledgebase" } %>
           <%= render partial: "static_pages/card", locals: { task_path: bank_accounts_path, human_name: "Bank accounts" } %>
-          <%= render partial: "static_pages/card", locals: { task_path: new_bank_account_path, human_name: "Setup HCB" } %>
+          <%= render partial: "static_pages/card", locals: { task_path: new_bank_account_path, human_name: "Setup Fuime" } %>
           <%= card_to "Bank accounts", bank_accounts_admin_index_path, badge: BankAccount.failing.count %>
-          <%= card_to "HCB codes", hcb_codes_admin_index_path %>
+          <%= card_to "Fuime codes", hcb_codes_admin_index_path %>
           <%= card_to "Raw transactions", raw_transactions_admin_index_path, badge: RawCsvTransaction.unhashed.count %>
         </ul>
       </details>

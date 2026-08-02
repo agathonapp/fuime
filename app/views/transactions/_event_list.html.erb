@@ -2,7 +2,7 @@
   <%= render t %>
 <% elsif t.is_a? EmburseTransaction %>
   <%= render t %>
-<% elsif t&.name&.include? 'HCB Gift' %>
+<% elsif t&.name&.include? 'Fuime Gift' %>
   <%= render "transactions/fancy_transaction", transaction: t %>
 <% elsif t&.name&.include? 'GitHub Grant' %>
   <%= render "transactions/github_transaction", transaction: t %>

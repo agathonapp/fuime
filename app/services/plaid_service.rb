@@ -23,7 +23,7 @@ class PlaidService
   end
 
   def client_name
-    "HCB"
+    "Fuime"
   end
 
   # env to provide to Plaid Link integration

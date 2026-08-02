@@ -105,7 +105,7 @@
 
         <div class="field m-0 mt-4">
           <%= form.label :previously_applied do %>
-            Have you applied for fiscal sponsorship with HCB in the past? <span class="text-primary">*</span>
+            Have you applied for fiscal sponsorship with Fuime in the past? <span class="text-primary">*</span>
           <% end %>
           <%= form.select :previously_applied, options_for_select([["No", "false"], ["Yes", "true"]], @application.previously_applied.to_s), {}, { class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null" } %>
         </div>
@@ -158,7 +158,7 @@
         </div>
 
         <div class="mt-[-0.25rem] mb-4 rounded-b-lg h-2 border-solid border-smoke dark:border-slate border-t-0 w-full relative">
-          <div class="absolute max-w-full w-max bottom-0 left-1/2 bg-white dark:bg-darkless px-2 muted text-sm -translate-x-1/2 translate-y-1/2">Changes made here will also update this user's HCB profile</div>
+          <div class="absolute max-w-full w-max bottom-0 left-1/2 bg-white dark:bg-darkless px-2 muted text-sm -translate-x-1/2 translate-y-1/2">Changes made here will also update this user's Fuime profile</div>
         </div>
 
         <hr class="col-span-2 mt-5 invisible mb-4">
@@ -210,7 +210,7 @@
 
           <div class="field">
             <%= form.label :referrer do %>
-              How did you hear about HCB? <span class="text-primary">*</span>
+              How did you hear about Fuime? <span class="text-primary">*</span>
             <% end %>
             <%= form.text_field :referrer, class: "w-full !max-w-full", required: true %>
           </div>
@@ -230,8 +230,8 @@
               <%= form.label :cosigner_email do %>
                 Parent email <span class="text-primary">*</span>
               <% end %>
-              <p class="h5 muted mt0 mb1">We'll need a parent or legal guardian to sign the fiscal sponsorship agreement. They're giving you permission to create an organization on HCB but will not have access or control.</p>
-              <%= form.email_field :cosigner_email, class: "w-full !max-w-full", required: true, placeholder: "orpheus@hackclub.com", "x-bind:required": "minor" %>
+              <p class="h5 muted mt0 mb1">We&#39;ll need a parent or legal guardian to sign the Fuime agreement. They&#39;re giving you permission to run a business on Fuime, and they will be able to see your business activity.</p>
+              <%= form.email_field :cosigner_email, class: "w-full !max-w-full", required: true, placeholder: "parent@example.com", "x-bind:required": "minor" %>
             </div>
           <% end %>
         </div>

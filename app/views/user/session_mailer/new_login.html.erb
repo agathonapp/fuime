@@ -3,7 +3,7 @@
 </p>
 
 <p>
-  We're writing to let you know that you just signed into HCB from a new device
+  We're writing to let you know that you just signed into Fuime from a new device
   <% if @session.device_info.present? %>
     on <b><%= @session.device_info %></b>
   <% end %>
@@ -24,20 +24,21 @@
   </b>
 </p>
 
-<% if @session.latitude %>
+<% map_url = @session.latitude ? ApplicationHelper.static_map_url(lat: @session.latitude, lng: @session.longitude) : nil %>
+<% if map_url %>
   <img
-    src="https://maps.hackclub.com/api/shipping?latitude=<%= @session.latitude %>&longitude=<%= @session.longitude %>&size=640x320"
+    src="<%= map_url %>&size=640x320"
     style="border-radius: 0.5rem; width: 80%">
 <% end %>
 
 <p>
   If this is unexpected, please review
-  <%= link_to "your HCB account's security settings", "https://hcb.hackclub.com/my/settings/security" %>
+  <%= link_to "your Fuime account's security settings", settings_security_url %>
   and contact us at
-  <%= link_to "hcb@hackclub.com", "mailto:hcb@hackclub.com" %>.
+  <%= link_to "support@fuime.com", "mailto:support@fuime.com" %>.
 </p>
 
 <p>
   Thanks,<br>
-  The HCB Team
+  The Fuime Team
 </p>

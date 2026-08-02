@@ -18,7 +18,7 @@ module Governance
                                   end
 
           mail to: report_recipients,
-               subject: "[HCB] Admin Transfer Denied: #{impersonation_snippet}#{@approval_attempt.user.name} for #{@approval_attempt.attempted_amount.format}"
+               subject: "[Fuime] Admin Transfer Denied: #{impersonation_snippet}#{@approval_attempt.user.name} for #{@approval_attempt.attempted_amount.format}"
         end
 
         private

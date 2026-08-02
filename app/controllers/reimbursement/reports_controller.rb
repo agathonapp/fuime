@@ -228,7 +228,7 @@ module Reimbursement
 
       begin
         @report.mark_reimbursement_requested!
-        flash[:success] = "Reimbursement requested; the HCB team will review the request promptly."
+        flash[:success] = "Reimbursement requested; the Fuime team will review the request promptly."
       rescue => e
         flash[:error] = e.message
       end

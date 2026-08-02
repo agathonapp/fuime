@@ -22,8 +22,9 @@
       <% end %>
     <% end %>
   </span>
-  <% if session.latitude %>
-    <img class="w-full rounded mb-3 aspect-square" src="https://maps.hackclub.com/api/shipping?latitude=<%= session.latitude %>&longitude=<%= session.longitude %>">
+  <% map_url = session.latitude ? static_map_url(lat: session.latitude, lng: session.longitude) : nil %>
+  <% if map_url %>
+    <img class="w-full rounded mb-3 aspect-square" src="<%= map_url %>">
   <% else %>
     <div class="w-full rounded mb-3 aspect-square bg-smoke dark:bg-black opacity-50 flex items-center justify-center text-xl">
       No location available

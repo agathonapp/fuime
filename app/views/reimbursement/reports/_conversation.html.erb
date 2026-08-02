@@ -29,7 +29,7 @@
              "submitted"               => ["send", "info", "submitted this report"],
              "rejected"                => ["thumbsdown", "error", "rejected this report"],
              "reimbursement_requested" => ["thumbsup", "success", "approved on behalf of #{Event.find_by_id(item.object&.[]("event_id") || @report.event_id)&.name}"],
-             "reimbursement_approved"  => ["admin", "warning", "approved this report on behalf of the HCB team"],
+             "reimbursement_approved"  => ["admin", "warning", "approved this report on behalf of the Fuime team"],
              "draft"                   => ["docs", "muted", "converted this report to a draft"],
              "draft_created"           => ["plus", "success", @report.card_grant.present? ? "converted a card grant into this draft report" : "created this draft report"],
              "reimbursed"              => ["payment-transfer", "purple", reimbursed_change_text],
@@ -61,10 +61,10 @@
                 </div>
                 <div class="conversation_item_text">
                   <span class="muted" style="margin-right: -0.25em;">
-                    <%= user_mention whodunnit, default_name: "HCB", default_image: "https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/010fba29b83bf91b_image.png" %>
+                    <%= user_mention whodunnit, default_name: "Fuime", default_image: "https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/010fba29b83bf91b_image.png" %>
                   </span>
                   <% if state_change == "reimbursement_requested" %>
-                    <span class="align-middle tooltipped tooltipped--n" aria-label="Still pending approval from the HCB team">
+                    <span class="align-middle tooltipped tooltipped--n" aria-label="Still pending approval from the Fuime team">
                       <%= message %>
                     </span>
                   <% else %>
@@ -89,7 +89,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 4px">
                   <span class="muted; margin-right: -0.25em;">
-                    <%= user_mention User.find_by(id: item.whodunnit), hide_avatar: true, default_name: "HCB", default_image: "https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/010fba29b83bf91b_image.png" %>
+                    <%= user_mention User.find_by(id: item.whodunnit), hide_avatar: true, default_name: "Fuime", default_image: "https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/010fba29b83bf91b_image.png" %>
                   </span>
                   <span class="align-middle">
                     <%= item.event %><%= item.event.ends_with?("e") ? "d" : "ed" %> this report

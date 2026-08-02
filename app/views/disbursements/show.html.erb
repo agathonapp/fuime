@@ -9,13 +9,13 @@
 <% if @disbursement.local_hcb_code %>
   <% admin_tool("mt1") do %>
     <p>
-      <strong>Outgoing HCB Code:</strong>
+      <strong>Outgoing Fuime Code:</strong>
       <span>
         <%= link_to(@disbursement.outgoing_hcb_code, hcb_code_path(@disbursement.outgoing_disbursement.local_hcb_code)) %>
       </span>
     </p>
     <p>
-      <strong>Incoming HCB Code:</strong>
+      <strong>Incoming Fuime Code:</strong>
       <span>
         <%= link_to(@disbursement.incoming_hcb_code, hcb_code_path(@disbursement.incoming_disbursement.local_hcb_code)) %>
       </span>
@@ -117,7 +117,7 @@
 
     <% if @disbursement.pending? %>
       <% admin_tool("mt2") do %>
-        <%= link_to "Mark fulfilled", disbursement_mark_fulfilled_path(@disbursement), data: { turbo_method: :post, turbo_confirm: "WOAH THERE! This will prevent HCB from auto-fulfilling this disbursement. I hope you know what you're doing!" }, class: "btn bg-success" %>
+        <%= link_to "Mark fulfilled", disbursement_mark_fulfilled_path(@disbursement), data: { turbo_method: :post, turbo_confirm: "WOAH THERE! This will prevent Fuime from auto-fulfilling this disbursement. I hope you know what you're doing!" }, class: "btn bg-success" %>
         <%= link_to "Reject", disbursement_reject_path(@disbursement), method: :post, class: "btn bg-error" %>
       <% end %>
     <% end %>

@@ -19,7 +19,7 @@
 #
 class User
   class Totp < ApplicationRecord
-    ISSUER = "HCB"
+    ISSUER = "Fuime"
 
     acts_as_paranoid
 

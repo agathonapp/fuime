@@ -7,22 +7,22 @@ class User
     default to: -> { @user.email_address_with_name }
 
     def new_codes_activated
-      mail subject: "You've generated new backup codes for HCB"
+      mail subject: "You've generated new backup codes for Fuime"
     end
 
     def code_used
-      subject = "You've used a backup code to login to HCB"
+      subject = "You've used a backup code to login to Fuime"
       case @user.backup_codes.active.size
       when 0
-        subject = "[Action Required] You've used all your backup codes for HCB"
+        subject = "[Action Required] You've used all your backup codes for Fuime"
       when 1..3
-        subject = "[Action Requested] You've almost used all your backup codes for HCB"
+        subject = "[Action Requested] You've almost used all your backup codes for Fuime"
       end
       mail subject: subject
     end
 
     def backup_codes_disabled
-      mail subject: "You've disabled your HCB backup codes"
+      mail subject: "You've disabled your Fuime backup codes"
     end
 
     private

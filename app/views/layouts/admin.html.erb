@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-dark="<%= @is_dark %>">
   <head>
-    <%= render "layouts/head", title_suffix: "HCB Admin", admin: true %>
+    <%= render "layouts/head", title_suffix: "Fuime Admin", admin: true %>
     <%= stylesheet_link_tag "admin", media: "all", "data-turbo-track": "reload" %>
     <%= javascript_include_tag "admin", "data-turbo-track": "reload", defer: true %>
   </head>
@@ -14,7 +14,7 @@
       <div class="p-6 pl-5 pb-2 flex items-center w-full gap-2">
         <%= render "application/logo" %>
 
-        <span class="text-xl font-bold ml-1 hidden sm:inline-block">HCB Admin</span>
+        <span class="text-xl font-bold ml-1 hidden sm:inline-block">Fuime Admin</span>
         <span style="color: var(--hcb-link-2); font-weight: 200;">/</span>
 
         <% if title %>

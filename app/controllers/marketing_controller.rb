@@ -11,6 +11,22 @@ class MarketingController < ApplicationController
   skip_before_action :redirect_to_onboarding
   skip_after_action :verify_authorized # not Pundit-managed
 
+  # FUIME-DISABLED: the /for/funders pages are HCB's funder marketing and cannot
+  # be rebranded line-by-line into something true of Fuime.
+  #
+  # They are public and deliberately *indexable*, and they assert as fact:
+  #   - JSON-LD "legalName": "The Hack Foundation" with taxID 81-2908499, so
+  #     search engines are told Fuime is Hack Club's 501(c)(3)
+  #   - "backed by a 501(c)(3)", "tax-deductible grants", "501(c)(3) since ..."
+  #   - platform totals ($ moved, organizations, countries) earned by HCB
+  #   - canonical/og URLs pointing at hcb.hackclub.com
+  #
+  # Fuime is a teen-business platform with no charitable status, so every one of
+  # those is false here. Nothing in the app links to these pages. Disabled
+  # wholesale (CLAUDE.md Rule 2 — not deleted) until there is a Fuime funder
+  # story worth writing; the views and helpers remain for reference.
+  before_action :block_disabled_marketing_pages
+
   invisible_captcha only: [:funder_inquiry], honeypot: :subtitle
 
   after_action :allow_indexing, only: [:funders, :funders_faq]
@@ -72,6 +88,17 @@ class MarketingController < ApplicationController
   end
 
   private
+
+  # See the FUIME-DISABLED note at the top of this class. Mirrors
+  # Fuime::DisabledModules: 404 for machines, a redirect for humans who follow
+  # an indexed link, so nobody lands on a blank error for a page that simply
+  # doesn't apply to Fuime.
+  def block_disabled_marketing_pages
+    respond_to do |format|
+      format.html { redirect_to root_path }
+      format.any  { head :not_found }
+    end
+  end
 
   # Headline figures for the funders page, computed live and cached so the page never
   # runs heavy aggregates inline.

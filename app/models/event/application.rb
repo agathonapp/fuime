@@ -57,6 +57,18 @@
 #
 class Event
   class Application < ApplicationRecord
+    # YouTube ids for the onboarding videos an applicant must watch.
+    #
+    # Upstream HCB hardcoded two Hack Club videos here (Ucz-QT2GPOk,
+    # LMh9FCm8iIE) explaining HCB's fiscal sponsorship rules. Those describe a
+    # nonprofit programme Fuime does not run, so the step is skipped entirely
+    # while this list is empty rather than showing another organization's
+    # onboarding as if it were Fuime's.
+    #
+    # To enable: set FUIME_ONBOARDING_VIDEO_IDS to a comma-separated list of
+    # YouTube ids. The step then reappears and is mandatory again.
+    ONBOARDING_VIDEO_IDS = ENV.fetch("FUIME_ONBOARDING_VIDEO_IDS", "").split(",").map(&:strip).reject(&:blank?).freeze
+
     has_paper_trail
 
     include PgSearch::Model
@@ -124,10 +136,12 @@ class Event
         after do
           update!(archived_at: nil)
 
-          if teen_led?
-            send_contract
+          if teen_led? && send_contract.present?
             Event::ApplicationMailer.with(application: self).confirmation.deliver_later
           else
+            # Either not teen-led, or no Fuime agreement is configured yet, so
+            # there is nothing to sign. Without this the application would sit
+            # in `submitted` forever waiting on a contract that never arrives.
             mark_under_review!
           end
         end
@@ -143,7 +157,7 @@ class Event
       event :mark_approved do
         transitions from: :under_review, to: :approved
         after do
-          if teen_led?
+          if teen_led? && contract.present?
             contract.party(:hcb).schedule_reminders
           else
             send_contract unless contract.present?
@@ -176,12 +190,12 @@ class Event
       generic = <<~MSG.strip
         Hi #{user.first_name},
 
-        Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time.
+        Thank you for expressing interest in using Fuime for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time.
 
-        If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
-        The HCB Team
+        The Fuime Team
       MSG
 
       adult = <<~MSG.strip
@@ -189,38 +203,38 @@ class Event
 
         Thank you so much for considering us to be your fiscal sponsor for [#{name}](#{Rails.application.routes.url_helpers.application_url(self)})!
 
-        Although your nonprofit's mission sounds incredible, we are refocusing our fiscal sponsorship platform to solely work with teen-led (high school specifically) initiatives within our Hack Club community. Our parent nonprofit, Hack Club, was founded to create a technical community for high schoolers, and HCB is migrating toward a similar mission in order to realign with our parent organization.
+        Although your nonprofit's mission sounds incredible, we are refocusing our fiscal sponsorship platform to solely work with teen-led (high school specifically) initiatives within our Hack Club community. Our parent nonprofit, Hack Club, was founded to create a technical community for high schoolers, and Fuime is migrating toward a similar mission in order to realign with our parent organization.
 
         While we tried to be a lifeline for groups outside of our normal mission, doing so caused us to drift away from our core focus of supporting teen-run orgs and to take on additional risk in areas we were less familiar with (teen-led STEM orgs are very different in nature from many others). Because of this, we've pulled back the reins and are working to refocus.
 
         Unfortunately, this means that unless a group is run by teens and is part of our Hack Club community, we don't have the capacity to take them on. If it would be helpful for us to send over some other fiscal sponsors, we'd be more than happy to do so, but at this time we are unable to sponsor your organization.
 
-        Sorry again for the bad news, and please let us know if there is anything else we can do to help. You can reach us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or simply reply to this email.
+        Sorry again for the bad news, and please let us know if there is anything else we can do to help. You can reach us at [support@fuime.com](mailto:support@fuime.com) or simply reply to this email.
 
         Best,
-        The HCB Team
+        The Fuime Team
       MSG
 
       mission = <<~MSG.strip
         Hi #{user.first_name},
 
-        Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time. Your project's mission doesn't align with HCB's guidelines, and as a result, we cannot approve your application.
+        Thank you for expressing interest in using Fuime for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time. Your project's mission doesn't align with Fuime's guidelines, and as a result, we cannot approve your application.
 
-        If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
-        The HCB Team
+        The Fuime Team
       MSG
 
       country = <<~MSG.strip
         Hi #{user.first_name},
 
-        Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). We really want to support projects from all around the world. However, due to regulatory restrictions and incompatible financial systems, we are unable to partner with organizations that operate in certain countries.
+        Thank you for expressing interest in using Fuime for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). We really want to support projects from all around the world. However, due to regulatory restrictions and incompatible financial systems, we are unable to partner with organizations that operate in certain countries.
 
-        We're sorry for not being able to support you on your journey and wish you all the best. If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        We're sorry for not being able to support you on your journey and wish you all the best. If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
-        The HCB team
+        The Fuime team
       MSG
 
       {
@@ -235,7 +249,8 @@ class Event
       return "Tell us about your project" if name.blank? || description.blank?
       return "Add your information" if address_line1.blank? || address_city.blank? || address_country.blank? || address_postal_code.blank?
       return "Review and submit" if draft?
-      return "Sign the fiscal sponsorship agreement" if (submitted? && teen_led?) || (approved? && !teen_led?)
+      return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
+      return "We're reviewing your application" if submitted? || under_review?
       return "Start spending!" if event.present?
       return "" if rejected?
     end
@@ -266,6 +281,12 @@ class Event
     end
 
     def send_contract(reissue_messages: {}, reissue_of: nil, **options)
+      # No Fuime agreement is configured (see Event::Plan#contract_docuseal_template_id).
+      # Returning nil rather than raising: an unconfigured contract is the
+      # expected state until Fuime has its own DocuSeal template, and callers
+      # skip the signing step on a nil contract.
+      return nil unless Event::Plan::Standard.new.contract_available?
+
       if name.nil? || description.nil?
         raise StandardError.new("Cannot create a contract for application #{hashid}: missing name and/or description")
       end
@@ -324,9 +345,14 @@ class Event
     end
 
     def activate_event!(risk_level:, tags: [], point_of_contact: nil)
-      contract.party(:hcb).sync_with_docuseal
-      contract.reload
-      raise "Contract must be signed before activation" unless contract.signed?
+      # With no Fuime agreement configured there is no contract to sign, so
+      # activation proceeds on admin approval alone. Once a real template is
+      # set, contracts exist again and the signed check below applies as before.
+      if contract.present?
+        contract.party(:hcb).sync_with_docuseal
+        contract.reload
+        raise "Contract must be signed before activation" unless contract.signed?
+      end
 
       self.with_lock do
         raise ArgumentError.new("Event was already created") if event.present?

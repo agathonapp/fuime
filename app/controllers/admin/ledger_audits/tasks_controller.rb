@@ -37,7 +37,7 @@ module Admin
           if @task.save
             flash[:success] = "Transaction flagged, thanks."
           else
-            flash[:error] = "Failed to flag this HCB code."
+            flash[:error] = "Failed to flag this Fuime code."
           end
         else
           flash[:success] = "This transaction has already flagged, thanks."

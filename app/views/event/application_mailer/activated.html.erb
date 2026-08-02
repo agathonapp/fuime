@@ -1,12 +1,12 @@
 <p>Hey <%= @application.user.name %>,</p>
 
 <p>
-  Welcome to HCB! You're now able to log into HCB and access your new organization, <%= link_to @application.name, @application.event %>!
+  Welcome to Fuime! You're now able to log into Fuime and access your new organization, <%= link_to @application.name, @application.event %>!
   Here are some next steps for you:
 </p>
 
 <ul>
-  <li><%= link_to "Invite other members of your team", event_team_url(@application.event) %>: You can invite them as managers, members, or readers. <%= link_to "Read more about roles on HCB here.", roles_url %></li>
+  <li><%= link_to "Invite other members of your team", event_team_url(@application.event) %>: You can invite them as managers, members, or readers. <%= link_to "Read more about roles on Fuime here.", roles_url %></li>
   <li><%= link_to "Configure your donation page", edit_event_url(@application.event, tab: "donations") %>: You can set a custom message to show on this page, add a donation goal, or enable donation tiers.</li>
   <li><%= link_to "Order a card", event_cards_overview_url(@application.event) %>: You can order a virtual or a plastic card that you can use to spend your funds.</li>
 </ul>
@@ -26,14 +26,14 @@
   </p>
 <% end %>
 
-<p>The signed fiscal sponsorship contract is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
+<p>The signed Fuime agreement is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
 
 <p>
   If you would like, you can <%= link_to "schedule an onboarding call", @application.event.onboarding_scheduling_link.presence || event_url(@application.event, request_call: "true") %> with a member of our team,
-  or you can contact us at <%= link_to "hcb@hackclub.com", "mailto:hcb@hackclub.com" %> if you have any questions.
+  or you can contact us at <%= link_to "support@fuime.com", "mailto:support@fuime.com" %> if you have any questions.
 </p>
 
 <p>
   Warmly,<br>
-  The HCB team
+  The Fuime team
 </p>

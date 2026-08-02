@@ -44,7 +44,7 @@ class Event
       @application.contract&.party(:signee)&.sync_with_docuseal
 
       contract_description = if @application.contract.nil?
-                               "We'll send you our fiscal sponsorship agreement, which sets the terms and conditions of your usage of HCB."
+                               "We'll send you the Fuime agreement, which sets the terms and conditions of your usage of Fuime."
                              elsif @application.contract.party(:cosigner)&.pending?
                                if @application.contract.party(:signee).signed?
                                  "Your parent or legal guardian (#{@application.cosigner_email}) needs to sign the agreement before we can review your application."
@@ -62,7 +62,7 @@ class Event
       contract_step = {
         label: "Sign agreement",
         shorthand: "Sign",
-        name: "Sign the Fiscal Sponsorship Agreement",
+        name: "Sign the Fuime agreement",
         description: contract_description,
         completed: contract_signed
       }
@@ -74,7 +74,7 @@ class Event
         @steps << {
           label: "Await review",
           shorthand: "Review",
-          name: "Wait for a response from the HCB team",
+          name: "Wait for a response from the Fuime team",
           description: "Our operations team will review your application and respond within #{helpers.pluralize(@application.response_business_days, "business day")}. You'll hear back soon on whether your application was approved or rejected.",
           completed: @application.approved? && (contract_signed || !@application.teen_led?)
         }
@@ -146,17 +146,34 @@ class Event
 
     def videos
       authorize @application
+
+      # The upstream onboarding videos are Hack Club's, about HCB's fiscal
+      # sponsorship rules. Skip the step until Fuime has its own — see
+      # Event::Application::ONBOARDING_VIDEO_IDS.
+      if Event::Application::ONBOARDING_VIDEO_IDS.empty?
+        @application.update!(videos_watched: true)
+        redirect_to agreement_application_path(@application)
+        nil
+      end
     end
 
     def agreement
       authorize @application
 
-      unless @application.videos_watched
+      if Event::Application::ONBOARDING_VIDEO_IDS.any? && !@application.videos_watched
         redirect_to videos_application_path(@application)
         return
       end
 
       @contract = @application.contract
+
+      # No Fuime agreement is configured, so there is nothing to sign here.
+      # See Event::Plan#contract_docuseal_template_id.
+      if @contract.nil?
+        redirect_to application_path(@application)
+        return
+      end
+
       @party = @contract.party :signee
     end
 

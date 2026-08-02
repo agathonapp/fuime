@@ -58,7 +58,7 @@ module StripeService
 
   module StatementDescriptor
     # stripe enforces that statement descriptors are limited to this long
-    PREFIX = "HCB* " # This must be the same as the prefix in the Stripe dashboard
+    PREFIX = "Fuime* " # This must be the same as the prefix in the Stripe dashboard
     CHAR_LIMIT = 22
     SUFFIX_CHAR_LIMIT = CHAR_LIMIT - PREFIX.length
 
@@ -67,7 +67,7 @@ module StripeService
                                     .to_s.gsub(/[^a-zA-Z0-9\-_ ]/, "")
       return str if str.present?
 
-      "HCB"
+      "Fuime"
     end
 
     def self.format(str, as: :full)

@@ -28,8 +28,8 @@
           <%= inline_icon "bank-account", size: 18 %>
         </div>
         <div class="text-left">
-          <p class="font-medium">HCB transfer</p>
-          <p class="text-sm muted">Send money to another HCB organization</p>
+          <p class="font-medium">Fuime transfer</p>
+          <p class="text-sm muted">Send money to another Fuime organization</p>
         </div>
         <%= inline_icon "view-forward", class: "ml-auto muted" %>
       <% end %>
@@ -58,7 +58,7 @@
         </div>
         <div class="flex justify-between flex-col sm:flex-row items-center gap-2">
           <%= label_tag :email, "Email" %>
-          <%= email_field_tag :email, params[:payee_email], placeholder: "orpheus@hackclub.com", required: true, form: "new-payee-form", data: { "manual-payee-target": "emailInput" } %>
+          <%= email_field_tag :email, params[:payee_email], placeholder: "parent@example.com", required: true, form: "new-payee-form", data: { "manual-payee-target": "emailInput" } %>
         </div>
         <div class="flex justify-between flex-col sm:flex-row items-center gap-2" data-manual-payee-target="manualOnly" <%= "hidden" unless manual %>>
           <%= label_tag :payee_entity_type, "Recipient type" %>
@@ -74,7 +74,7 @@
         </div>
 
         <div data-manual-payee-target="defaultBanner" <%= "hidden" if manual %>>
-          <%= render "application/callout", type: "info", title: "HCB will email the recipient", class: "mt-0 mb-0" do %>
+          <%= render "application/callout", type: "info", title: "Fuime will email the recipient", class: "mt-0 mb-0" do %>
             They'll be asked to submit their tax information and configure their payout method before receiving the payment.
           <% end %>
         </div>

@@ -6,12 +6,12 @@ class CardLockingMailer < ApplicationMailer
     @hcb_codes = user.card_locking_overdue_charges.to_a
     @count = @hcb_codes.size
     @show_org = user.events.size > 1
-    mail to: user.email, subject: "[Urgent] Your HCB cards are locked until you upload your receipts"
+    mail to: user.email, subject: "[Urgent] Your Fuime cards are locked until you upload your receipts"
   end
 
   def cards_unlocked(user:)
     @user = user
-    mail to: user.email, subject: "Your HCB cards work again"
+    mail to: user.email, subject: "Your Fuime cards work again"
   end
 
   def warning(user:)

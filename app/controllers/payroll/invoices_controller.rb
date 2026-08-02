@@ -72,7 +72,7 @@ module Payroll
         @invoice.mark_approved!(current_user)
       end
 
-      flash[:success] = "Invoice approved! #{helpers.possessive(@invoice.payroll_position.payee.display_name)} payment will be sent after HCB review."
+      flash[:success] = "Invoice approved! #{helpers.possessive(@invoice.payroll_position.payee.display_name)} payment will be sent after Fuime review."
       redirect_to contractor_page
     end
 

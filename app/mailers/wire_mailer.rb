@@ -6,14 +6,14 @@ class WireMailer < ApplicationMailer
 
     mail to: @wire.recipient_email,
          subject: "Your wire transfer from #{@wire.event.name} has been sent",
-         from: email_address_with_name("hcb@hackclub.com", "#{@wire.event.name} via HCB")
+         from: email_address_with_name("support@fuime.com", "#{@wire.event.name} via Fuime")
   end
 
   def notify_failed
     @wire = params[:wire]
     @reason = params[:reason]
 
-    mail subject: "[HCB] Wire to #{@wire.recipient_name} failed to send", to: @wire.user.email
+    mail subject: "[Fuime] Wire to #{@wire.recipient_name} failed to send", to: @wire.user.email
   end
 
 end

@@ -19,7 +19,7 @@ class StripeController < ActionController::Base
     rescue NoMethodError => e
       puts e
       Rails.error.report(e)
-      head :ok # success so that stripe doesn't retry (method is unsupported by HCB)
+      head :ok # success so that stripe doesn't retry (method is unsupported by Fuime)
       return
     rescue Stripe::SignatureVerificationError
       head :bad_request

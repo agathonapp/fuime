@@ -32,7 +32,7 @@ class CanonicalPendingTransaction
                          when "webhook_declined"
                            case @webhook_declined_reason
                            when "merchant_not_allowed_globally"
-                             "because this merchant is blocked on all HCB cards"
+                             "because this merchant is blocked on all Fuime cards"
                            when "merchant_not_allowed"
                              "because this card isn't allowed to make purchases at #{@merchant}"
                            when "cash_withdrawals_not_allowed"

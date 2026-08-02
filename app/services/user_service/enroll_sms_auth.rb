@@ -23,7 +23,7 @@ module UserService
 
       TwilioVerificationService.new.send_verification_request(@user.phone_number)
     rescue TwilioVerificationService::CountryNotSupported
-      raise SMSEnrollmentError, "SMS verification is not available in your country. Please contact support at hcb@hackclub.com."
+      raise SMSEnrollmentError, "SMS verification is not available in your country. Please contact support at support@fuime.com."
     end
 
     # Completing the phone number verification by checking that exchanging code works
@@ -63,7 +63,7 @@ module UserService
       return if count <= 3
 
       Rails.error.report(Errors::TwilioAbuseError.new("User #{@user.id} exceeded SMS verification send limit (count: #{count})."))
-      raise SMSEnrollmentError, "You've requested too many verification codes. Please try again tomorrow or contact support at hcb@hackclub.com."
+      raise SMSEnrollmentError, "You've requested too many verification codes. Please try again tomorrow or contact support at support@fuime.com."
     end
 
     def has_verified_phone_number_before?

@@ -3,7 +3,7 @@
 <%= render partial: "initial_message", locals: { payment: @payment } %>
 
 <p>
-  In order to process this payment, please <%= link_to "configure your payout method on HCB", legal_entity_url(@payment.legal_entity) %>.
+  In order to process this payment, please <%= link_to "configure your payout method on Fuime", legal_entity_url(@payment.legal_entity) %>.
 </p>
 
 <p>
@@ -13,7 +13,7 @@
 <p>
   Sincerely,
   <br><br>
-  The HCB Team
+  The Fuime Team
 </p>
 
-<p><i class="muted"><%= @payment.event.name %> is fiscally sponsored by The Hack Foundation (d.b.a. HCB), a 501(c)(3) nonprofit (EIN: 81-2908499).</i></p>
+<p><i class="muted"><%= @payment.event.name %> is fiscally sponsored by The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit (EIN: 81-2908499).</i></p>

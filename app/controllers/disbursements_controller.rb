@@ -25,7 +25,7 @@ class DisbursementsController < ApplicationController
       end
 
       format.pdf do
-        render pdf: "HCB Transfer ##{@disbursement.id} Confirmation Letter (#{@disbursement.source_event.name} to #{@disbursement.destination_event.name} on #{@disbursement.created_at})", page_height: "11in", page_width: "8.5in"
+        render pdf: "Fuime Transfer ##{@disbursement.id} Confirmation Letter (#{@disbursement.source_event.name} to #{@disbursement.destination_event.name} on #{@disbursement.created_at})", page_height: "11in", page_width: "8.5in"
       end
 
       # not being used at the moment
@@ -91,7 +91,7 @@ class DisbursementsController < ApplicationController
     options = events.map do |e|
       disabled_message = nil
       disabled_message = "Insufficient balance" if sending && !admin_signed_in? && e.balance_available <= 0
-      disabled_message = "HCB transfers disabled" if sending && !policy(e).create_transfer?
+      disabled_message = "Fuime transfers disabled" if sending && !policy(e).create_transfer?
 
       name_label = admin_signed_in? ? "#{e.name} (#{e.id})" : e.name
       {

@@ -2,7 +2,7 @@
 
 <p>
   <%= @g_suite.event.name %> currently has Google Workspace
-  for <code><%= @g_suite.domain %></code> provided by HCB.
+  for <code><%= @g_suite.domain %></code> provided by Fuime.
 </p>
 
 <% if @g_suite_revocation.because_of_other? %>
@@ -16,7 +16,7 @@
     Please export your data
     before <%= @g_suite_revocation.scheduled_at.strftime("%B %d, %Y") %>. After
     this date, all accounts and data will be permanently deleted, and you will
-    no longer be able to access Google Workspace through HCB.
+    no longer be able to access Google Workspace through Fuime.
   </p>
 <% else %>
   <p>
@@ -38,5 +38,5 @@
 
 <p>
   Best,<br>
-  The HCB Team
+  The Fuime Team
 </p>

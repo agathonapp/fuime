@@ -72,7 +72,7 @@
               Block suspected fraud on pre-authorizations
             </span>
             <p class="h5 muted m-0">
-              When HCB suspects a fraudulent pre-authorization submission, automatically block the grant
+              When Fuime suspects a fraudulent pre-authorization submission, automatically block the grant
             </p>
           </div>
           <div class="field--checkbox--switch" style="flex-shrink:0">
@@ -108,10 +108,10 @@
         <div class="field mb-0">
           <%= card_grant_setting_fields.label :support_url, "Support URL" %>
           <p class="h5 muted m-0">
-            HCB will automatically detect email addresses and Slack channel links.
+            Fuime will automatically detect email addresses and Slack channel links.
           </p>
 
-          <%= card_grant_setting_fields.text_field :support_url, placeholder: "mailto:orpheus@hackclub.com", value: event.card_grant_setting.support_url, disabled: %>
+          <%= card_grant_setting_fields.text_field :support_url, placeholder: "mailto:parent@example.com", value: event.card_grant_setting.support_url, disabled: %>
         </div>
 
         <%= form.submit "Update", disabled:, class: "mt-4" %>

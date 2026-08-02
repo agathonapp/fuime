@@ -47,7 +47,7 @@ class CommentMailer < ApplicationMailer
 
   def message_id(comment)
     # "<comment-cmt_Sl3ns3@fuime.com>" — threading identifier, must be on a
-    # Fuime domain so threads don't collide with upstream HCB's.
+    # Fuime domain so threads don't collide with upstream Fuime's.
     "<comment-#{comment.public_id}@#{ApplicationMailer::DOMAIN}>"
   end
 

@@ -169,7 +169,7 @@ module Payroll
 
       [
         { key: :organizer_signature, label: "Contract signed by organizer", complete: contract_signed_by?(:organizer) },
-        { key: :hcb_review, label: "Contract reviewed by HCB operations", complete: !under_review? && !rejected? },
+        { key: :hcb_review, label: "Contract reviewed by Fuime operations", complete: !under_review? && !rejected? },
         { key: :tax_form, label: "W-9 / W-8BEN submitted", complete: legal_entity&.completed_tax_form? || false },
         { key: :contractor_signature, label: "Contract signed by contractor", complete: contract_signed_by?(:contractor) },
         { key: :payout_method, label: "Payout method configured", complete: legal_entity&.default_payout_method.present? },

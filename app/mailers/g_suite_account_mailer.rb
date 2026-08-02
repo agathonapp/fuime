@@ -5,7 +5,7 @@ class GSuiteAccountMailer < ApplicationMailer
     @recipient = params[:recipient]
 
     mail to: @recipient,
-         subject: "[Action Requested] Verify your HCB Google Workspace account"
+         subject: "[Action Requested] Verify your Fuime Google Workspace account"
   end
 
   def notify_user_of_activation(params)
@@ -15,7 +15,7 @@ class GSuiteAccountMailer < ApplicationMailer
     @event = params[:event]
 
     mail to: @recipient,
-         subject: "Your Google Workspace account via HCB is ready!"
+         subject: "Your Google Workspace account via Fuime is ready!"
   end
 
   def notify_user_of_reset(params)
@@ -24,7 +24,7 @@ class GSuiteAccountMailer < ApplicationMailer
     @password = params[:password]
 
     mail to: @recipient,
-         subject: "Your HCB Google Workspace password was reset"
+         subject: "Your Fuime Google Workspace password was reset"
   end
 
 end

@@ -61,7 +61,7 @@ module HasWireRecipient
 
     validate on: :create do
       if recipient_information[:purpose_code].present? && RESTRICTED_PURPOSE_CODES[recipient_country.to_sym]&.include?(recipient_information[:purpose_code])
-        errors.add(:purpose_code, "can not be used on HCB, please use a more specific purpose code or contact us.")
+        errors.add(:purpose_code, "can not be used on Fuime, please use a more specific purpose code or contact us.")
       end
     end
 

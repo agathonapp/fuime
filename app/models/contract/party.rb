@@ -81,7 +81,7 @@ class Contract
       when "cosigner"
         "Cosigner"
       when "hcb"
-        "HCB"
+        "Fuime"
       when "organizer"
         "Organizer"
       when "contractor"
@@ -93,20 +93,20 @@ class Contract
 
     def notify_email_subject
       if hcb?
-        "Sign #{contract.event_name}'s agreement as HCB Operations"
+        "Sign #{contract.event_name}'s agreement as Fuime Operations"
       elsif cosigner?
-        "#{contract.party(:signee).user.name} invited you to sign a fiscal sponsorship agreement for #{contract.event_name} on HCB 📝"
+        "#{contract.party(:signee).user.name} invited you to sign the Fuime agreement for #{contract.event_name} on Fuime 📝"
       else
-        "You've been invited to sign an agreement for #{contract.event_name} on HCB 📝"
+        "You've been invited to sign an agreement for #{contract.event_name} on Fuime 📝"
       end
     end
 
     def reissue_email_subject
-      "There was an issue in the agreement you signed for #{contract.event_name} on HCB 📝"
+      "There was an issue in the agreement you signed for #{contract.event_name} on Fuime 📝"
     end
 
     def reminder_email_subject
-      "[Action Needed] Sign the #{contract.agreement_name} for #{contract.event_name} on HCB 📝"
+      "[Action Needed] Sign the #{contract.agreement_name} for #{contract.event_name} on Fuime 📝"
     end
 
     # We may miss a webhook or load a page before we've received the webhook,
@@ -144,7 +144,7 @@ class Contract
 
     def signee_is_user
       if signee? && user.nil?
-        errors.add(:base, "signee parties must have a user on HCB")
+        errors.add(:base, "signee parties must have a user on Fuime")
       end
     end
 

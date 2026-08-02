@@ -27,7 +27,7 @@ class DiscordController < ApplicationController
       user_id = params[:event][:data][:user][:id]
 
       channel = Discord::Bot.bot.pm_channel(user_id)
-      Discord::Bot.bot.send_message(channel, "Welcome to HCB! Link your Discord account to your HCB account by going to #{discord_link_url(discord_id: user_id)}")
+      Discord::Bot.bot.send_message(channel, "Welcome to Fuime! Link your Discord account to your Fuime account by going to #{discord_link_url(discord_id: user_id)}")
     end
 
     head :no_content
@@ -107,7 +107,7 @@ class DiscordController < ApplicationController
     end
 
     if event.update(discord_guild_id: @guild_id, discord_channel_id: @channel_id)
-      Discord::Bot.bot.send_message(@channel_id, "The HCB organization #{event.name} has been successfully linked to this Discord server by #{current_user.name}! Notifications and announcements will be sent in this channel, <\##{@channel_id}>.")
+      Discord::Bot.bot.send_message(@channel_id, "The Fuime organization #{event.name} has been successfully linked to this Discord server by #{current_user.name}! Notifications and announcements will be sent in this channel, <\##{@channel_id}>.")
       flash[:success] = "Successfully linked the organization #{event.name} to your Discord server"
     else
       flash[:error] = event.errors.full_messages.to_sentence
@@ -163,7 +163,7 @@ class DiscordController < ApplicationController
     cid = event.discord_channel_id
 
     if event.update(discord_guild_id: nil, discord_channel_id: nil)
-      Discord::Bot.bot.send_message(cid, "The HCB organization #{event.name} has been unlinked from this Discord server by #{current_user.name}, and notifications/announcements will no longer be sent here.")
+      Discord::Bot.bot.send_message(cid, "The Fuime organization #{event.name} has been unlinked from this Discord server by #{current_user.name}, and notifications/announcements will no longer be sent here.")
       flash[:success] = "Successfully unlinked the organization #{event.name} from your Discord server"
     else
       flash[:error] = event.errors.full_messages.to_sentence

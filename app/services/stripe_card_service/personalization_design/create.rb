@@ -22,12 +22,12 @@ module StripeCardService
       end
 
       def carrier_text_header_title
-        text = "HCB card for #{@event&.name}"
+        text = "Fuime card for #{@event&.name}"
 
         if @event.present? && text.length <= 30
           text
         else
-          "Your new HCB card is here"
+          "Your new Fuime card is here"
         end
       end
 
