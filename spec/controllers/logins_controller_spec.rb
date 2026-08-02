@@ -16,14 +16,14 @@ RSpec.describe LoginsController do
       get(:new)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(
-        "You’re currently signed into HCB, would you like to head to your dashboard?"
+        "You're currently signed into Fuime, would you like to head to your dashboard?"
       )
     end
 
     it "renders a login form when logged out" do
       get(:new)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Sign in to HCB")
+      expect(response.body).to include("Sign in to Fuime")
     end
   end
 
@@ -441,7 +441,7 @@ RSpec.describe LoginsController do
         }
       )
 
-      expect(flash[:error]).to eq("Your HCB account has been locked.")
+      expect(flash[:error]).to eq("Your Fuime account has been locked.")
       expect(response).to redirect_to(auth_users_path)
     end
   end

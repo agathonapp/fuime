@@ -1313,3 +1313,53 @@ watchers. Under sustained crawling the CSS watcher OOMs
 it — 244 of 314 URLs then return connection-refused, which looks like a mass
 regression. Crawl against `bundle exec rails server` with prebuilt assets. A
 killed foreman also leaves a stale `tmp/pids/server.pid` that blocks the next boot.
+
+## Security keys, take three: a nil RP ID and an unreachable 2FA toggle (2026-08-02)
+
+Reported as "security keys aint working", from behind the red "Admin users are
+required to enable two-factor authentication" banner. Two independent bugs, both
+invisible to the suite.
+
+**1. The RP ID was `nil` in production, so every key failed.**
+`webauthn-ruby` only infers the Relying Party ID from the origin when *exactly
+one* origin is allowed — `AuthenticatorResponse#rp_id_from_origin` returns `nil`
+for a list of two or more. The previous fix (`6161f48ef`) listed both the custom
+domain and `RENDER_EXTERNAL_HOSTNAME`, hoping keys registered on the Render URL
+would survive the move to a custom domain. They can't: the RP ID is baked into
+the credential at registration. Listing both made the inferred RP ID `nil`,
+`valid_rp_id?` returned false, and every registration *and* sign-in raised
+`WebAuthn::RpIdVerificationError`. The test environment only ever has one origin
+— precisely the case where inference works — so nothing caught it.
+
+**2. The 2FA toggle was inside a card that Fuime never renders.**
+`use_two_factor_authentication`'s only control lived in the SMS/"Login
+preferences" card, which `6161f48ef` gated behind `phone_verification_available?`
+— false for Fuime, which has no Twilio and isn't getting any. So the banner
+pointed admins at a page with no way to enable 2FA, and `admins_cannot_disable_2fa`
+kept nagging no matter how many keys they registered. Registering a key worked;
+it just never became a second factor and was never demanded at login
+(`Login#required_authentication_factors_count` reads the flag, not the keys).
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Set `config.rp_id` explicitly from a single canonical origin | Removes the dependency on origin-count inference that broke every key. `CanonicalHost` already 301s every other hostname, so one origin is the design, not a limitation. RP IDs are bare domains, so the host is parsed out of the origin (`TEST_URL_HOST` carries `:3000`). | `config/initializers/webauthn.rb` |
+| Moved the 2FA toggle into its own "Two-factor authentication" card | A security key or TOTP is a second factor on its own; the toggle has no business depending on Twilio. Shows explanatory copy until a factor exists, since the validation would reject the change anyway. | `app/views/users/edit_security.html.erb` |
+| Added `User#second_factor_available?` | The view needs the same rule `second_factor_present_for_2fa` enforces; the validation now calls it instead of duplicating the condition. | `app/models/user.rb` |
+| Left the SMS card gated, minus the 2FA toggle | Rule 2 — Twilio stays disabled, not deleted. It renders again if credentials ever appear. | `app/views/users/edit_security.html.erb` |
+| Fixed three stale rebrand assertions | `logins_controller_spec` still asserted "Sign in to HCB", "signed into HCB", and "Your HCB account has been locked" against copy Milestone 3 already changed. Sanctioned by Milestone 3's verification step. | `spec/controllers/logins_controller_spec.rb` |
+
+New specs, each verified to fail against the old code:
+`spec/config/webauthn_configuration_spec.rb` (5, three of which fail with the old
+initializer — one reproducing `WebAuthn::RpIdVerificationError` directly),
+`UsersController#edit_security` (2, both fail against the old view), and two
+`User#use_two_factor_authentication` cases covering enabling 2FA with only a
+security key and with only TOTP.
+
+157 examples across `spec/config`, `webauthn_credentials_controller`,
+`logins_controller`, `sudo_mode_handler`, `users_controller`,
+`process_login_service`, `user`, and `login` specs: 0 failures.
+
+**Not verified:** a physical key against the deployed app. The fake client covers
+the protocol, not the hardware. **Consequence of the RP ID fix:** any key
+registered on the deployed app before this change was stored under a `nil`-RP-ID
+verification path or a different host and must be re-registered.

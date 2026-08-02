@@ -2,6 +2,18 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Security keys, third attempt.** Two bugs, both hidden from the
+suite. (1) `webauthn-ruby` only infers the RP ID when *exactly one* origin is
+allowed; we listed two, so the RP ID was `nil` and every registration and
+sign-in raised `WebAuthn::RpIdVerificationError` in production. `config.rp_id` is
+now explicit. (2) The `use_two_factor_authentication` toggle lived inside the SMS
+card, which is hidden without Twilio — so the "admins must enable 2FA" banner
+pointed at a page with no way to enable it. It's now its own card, gated on
+`User#second_factor_available?`. 157 auth-related examples green (this includes
+fixing three stale `logins_controller_spec` assertions that still said "HCB").
+**Any key registered on the deployed app before this must be re-registered** —
+the RP ID is baked into a credential. Untested against physical hardware.
+
 **2026-08-02 — Milestone 3 close-out.** Branch `fuime/m3-finish-brand-sweep`.
 Finished the brand sweep and wrote the missing `docs/fuime/BRAND_STRINGS.md`
 (read that before touching any `HCB`/`Hack Club` string — it classifies which

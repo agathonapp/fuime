@@ -708,6 +708,14 @@ class User < ApplicationRecord
     admin_override_pretend? && !use_two_factor_authentication
   end
 
+  # Whether the user has a factor that can act as their second one. Two-factor
+  # authentication can't be turned on before one of these exists — see
+  # `second_factor_present_for_2fa`, which rejects the change — so the settings
+  # UI asks this before offering the toggle.
+  def second_factor_available?
+    use_sms_auth? || totp.present? || webauthn_credentials.any?
+  end
+
 
   def managed_active_teenagers_count
     User.active_teenager.joins(organizer_positions: :event).where(events: { id: managed_events }).distinct.count
@@ -916,7 +924,7 @@ class User < ApplicationRecord
   end
 
   def second_factor_present_for_2fa
-    if use_two_factor_authentication? && !use_sms_auth? && !totp.present? && webauthn_credentials.none?
+    if use_two_factor_authentication? && !second_factor_available?
       errors.add(:use_two_factor_authentication, "can not be enabled without a second authentication factor")
     end
   end

@@ -261,6 +261,37 @@ RSpec.describe UsersController do
     end
   end
 
+  # Fuime has no Twilio credentials, so `phone_verification_available?` is false
+  # and the SMS card never renders. The 2FA toggle used to live inside that card,
+  # which meant the "admins must enable two-factor authentication" banner pointed
+  # at a page with no way to enable it. These pin the toggle's independence.
+  describe "#edit_security" do
+    render_views
+
+    it "offers the two-factor toggle to a user whose only factor is a security key" do
+      user = create(:user)
+      user.webauthn_credentials.create!(name: "YubiKey", webauthn_id: "credential-id", public_key: "public-key", sign_count: 0)
+      create_session(user, verified: true)
+
+      get(:edit_security, params: { id: user.slug })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Two-factor authentication")
+      expect(response.body).to include("user[use_two_factor_authentication]")
+    end
+
+    it "explains what to set up first when the user has no second factor" do
+      user = create(:user)
+      create_session(user, verified: true)
+
+      get(:edit_security, params: { id: user.slug })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Two-factor authentication")
+      expect(response.body).not_to include("user[use_two_factor_authentication]")
+    end
+  end
+
   describe "settings access for unverified users" do
     def sign_in_unverified
       user = create(:user, verified: false)
