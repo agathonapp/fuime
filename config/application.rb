@@ -6,6 +6,7 @@ require "rails/all"
 require_relative "../app/lib/credentials"
 require_relative "../lib/active_storage/previewer/document_previewer"
 require_relative "../app/middleware/set_current_request_ip"
+require_relative "../app/middleware/canonical_host"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -75,6 +76,17 @@ module Bank
 
     # Track request IP for all requests
     config.middleware.insert_after ActionDispatch::RemoteIp, SetCurrentRequestIp
+
+    # Redirect the Render hostname (and any other alias) to the canonical
+    # domain in production. Only active once LIVE_URL_HOST is set — before
+    # that the fallback IS the Render hostname, and redirecting it to itself
+    # would loop.
+    if Rails.env.production?
+      canonical = Credentials.fetch(:LIVE_URL_HOST)
+      if canonical.present? && canonical != ENV["RENDER_EXTERNAL_HOSTNAME"]
+        config.middleware.insert_before 0, CanonicalHost, canonical_host: canonical
+      end
+    end
 
     config.active_storage.variant_processor = :mini_magick
 
