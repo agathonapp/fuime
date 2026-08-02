@@ -164,6 +164,35 @@ services:
       - key: AWS_KMS__SECRET_ACCESS_KEY
         sync: false
 
+  # The marketing site on fuime.com. Separate from fuime-web because it shares
+  # nothing with it: no database, no Redis, no Rails. A node service rather
+  # than a Render static site because /api/waitlist needs a process, and
+  # serving it from the same origin as the pages avoids CORS entirely.
+  - type: web
+    name: fuime-site
+    runtime: node
+    plan: starter
+    rootDir: site
+    buildCommand: "" # No dependencies and no build step. The files ship as-is.
+    startCommand: node server.js
+    healthCheckPath: /robots.txt
+    envVars:
+      # Where /login sends people. The Rails app.
+      - key: APP_ORIGIN
+        value: https://app.fuime.com
+      # Waitlist sinks. At least one group must be set or /api/waitlist
+      # answers 503 rather than showing a green check over a dropped address.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: WAITLIST_NOTIFY_TO
+        sync: false
+      - key: WAITLIST_NOTIFY_FROM
+        value: fuime <rushil@fuime.com>
+
   - type: worker
     name: fuime-worker
     runtime: docker

@@ -516,7 +516,7 @@
         })
         .catch(function () {
           say(
-            'That did not send. Email hi@fuime.com and we will add you.',
+            'That did not send. Email rushil@fuime.com and we will add you.',
             'error'
           )
         })

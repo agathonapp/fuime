@@ -16,6 +16,49 @@ const LIST_KEY = 'fuime:waitlist'
 const RATE_MAX = 5
 const RATE_WINDOW_S = 600
 
+// In-process fallback for when Upstash is not configured. Without it the
+// Redis-backed limiter below never runs and a Resend-only deployment is an
+// open mail relay: no counter, and no isNew to suppress duplicates.
+//
+// Per-process and lost on restart, which is fine at one instance and still
+// the right shape at several — a flood large enough to matter hits every
+// instance. Both maps are swept on write so they cannot grow without bound.
+const memHits = new Map() // ip -> { n, resetAt }
+const memSeen = new Map() // email -> firstSeenAt
+const MEM_SEEN_MAX = 5000
+
+function sweep(map, now) {
+  for (const [k, v] of map) {
+    if ((typeof v === 'number' ? v + RATE_WINDOW_S * 1000 : v.resetAt) <= now) {
+      map.delete(k)
+    }
+  }
+}
+
+function underRateLimitMemory(ip, now) {
+  if (!ip) return true
+  if (memHits.size > 1000) sweep(memHits, now)
+  const hit = memHits.get(ip)
+  if (!hit || hit.resetAt <= now) {
+    memHits.set(ip, { n: 1, resetAt: now + RATE_WINDOW_S * 1000 })
+    return true
+  }
+  hit.n += 1
+  return hit.n <= RATE_MAX
+}
+
+// Mirrors SADD's return: true the first time this address is seen.
+function markNewMemory(email, now) {
+  if (memSeen.has(email)) return false
+  if (memSeen.size >= MEM_SEEN_MAX) {
+    sweep(memSeen, now)
+    // Still full of live entries: drop the oldest rather than stop deduping.
+    if (memSeen.size >= MEM_SEEN_MAX) memSeen.delete(memSeen.keys().next().value)
+  }
+  memSeen.set(email, now)
+  return true
+}
+
 // Fails OPEN: if the limiter itself errors we take the signup rather than
 // lose a real one to a Redis blip. The isNew gate below is the backstop that
 // keeps a flood from becoming a mailstorm even when this is unavailable.
@@ -144,7 +187,11 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: 'not_configured' })
   }
 
-  if (haveStore && !(await underRateLimit(kvUrl, kvToken, meta.ip))) {
+  const now = Date.parse(meta.at)
+  const withinLimit = haveStore
+    ? await underRateLimit(kvUrl, kvToken, meta.ip)
+    : underRateLimitMemory(meta.ip, now)
+  if (!withinLimit) {
     return res.status(429).json({ ok: false, error: 'rate_limited' })
   }
 
@@ -162,9 +209,13 @@ export default async function handler(req, res) {
     }
   }
 
-  // With no store to dedupe against, every accepted address mails. The rate
-  // limiter is the only ceiling in that configuration.
-  const shouldMail = haveMail && (!haveStore || storeErr || stored?.isNew)
+  // Without Upstash the in-process set answers "is this new?" instead, so a
+  // resubmitted address still does not re-send. A store that errored is the
+  // one case we mail anyway: better a duplicate than a lost signup.
+  const isNew = haveStore
+    ? storeErr || stored?.isNew
+    : markNewMemory(email, now)
+  const shouldMail = haveMail && Boolean(isNew)
   let mailErr = null
   if (shouldMail) {
     try {
