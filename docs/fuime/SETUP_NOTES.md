@@ -32,8 +32,17 @@ metadata, so a refund would have left a teen net negative by the fee).
 `SELECT pg_terminate_backend(...)` before `rails db:schema:load`. Also note
 `db:test:prepare` can exit 0 having left the schema unloaded; `db:schema:load`
 is the reliable call.
+Also fixed the other half of that outage: approved applications never became
+businesses. `activate_event!` raised on a nil contract *inside* `with_lock`, so
+`Event.create!` rolled back with it; `tags:` blew up on `params[:tags]` being nil
+(a Ruby default does not apply to an explicit nil — this failed on ANY activation
+with no tags selected, contract or not); and the only Activate button in the app
+lived on the contract-party page, which does not exist without a contract.
 **Next:** click the payment through against live test-mode Stripe
 (`STRIPE__TEST__*` + `stripe listen`) — that is the one part not yet executed.
+**Also note:** the dashboard card bug reported this session was reproduced on the
+deployed Render app, which lags this branch. Check what is deployed before
+debugging a symptom you cannot reproduce locally.
 
 **2026-08-01 — Production hardening pass.** Branch `fuime/production-hardening`.
 Closed every *engineering* blocker from `PRODUCTION_READINESS.md`: guardianship is

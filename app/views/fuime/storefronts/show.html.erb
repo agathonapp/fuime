@@ -56,15 +56,50 @@
     </div>
   </div>
 
-  <%# Payment button %>
+  <%# Payment %>
   <div class="card text-center mb-6 bg-snow">
-    <h3 class="m-0 mb-2">Support this business</h3>
-    <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
-    <button class="btn btn--primary btn--lg" disabled>
-      <%= inline_icon "payment", size: 20, class: "mr-2" %>
-      Pay <%= @event.name %>
-    </button>
-    <p class="text-sm muted mt-2">(Payment links coming soon)</p>
+    <% if params[:paid].present? %>
+      <div class="badge bg-success text-white px-3 py-1.5 rounded-full mb-3 inline-flex items-center gap-1">
+        <%= inline_icon "checkmark", size: 16 %>
+        Payment received
+      </div>
+      <p class="muted m-0">Thank you for supporting <%= @event.name %>.</p>
+      <p class="text-sm muted mt-2">
+        It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+      </p>
+    <% else %>
+      <h3 class="m-0 mb-2">Support this business</h3>
+      <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
+
+      <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
+                    class: "flex flex-col items-center gap-3" do |form| %>
+        <div class="field w-full" style="max-width: 20rem;">
+          <%= form.label :amount, "Amount (USD)", class: "text-left block" %>
+          <%= form.text_field :amount, placeholder: "25.00", inputmode: "decimal",
+                              required: true, class: "w-full" %>
+        </div>
+        <div class="field w-full" style="max-width: 20rem;">
+          <%= form.label :description, "What's this for?", class: "text-left block" %>
+          <%= form.text_field :description, placeholder: "Custom print",
+                              class: "w-full" %>
+        </div>
+        <%= form.submit "Pay #{@event.name}", class: "btn btn--primary btn--lg" %>
+      <% end %>
+
+      <p class="text-sm muted mt-3 m-0">
+        Secure checkout by Stripe.
+        <%# Fuime takes its platform fee out of the payment; the business's
+            ledger line is the net. Stated up front so a customer paying a
+            teenager knows exactly where their money goes. %>
+        Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>%
+        to run the platform.
+      </p>
+      <% if StripeService.mode == :test %>
+        <p class="text-sm muted mt-1 m-0">
+          <strong>Test mode</strong> — use card 4242 4242 4242 4242.
+        </p>
+      <% end %>
+    <% end %>
   </div>
 
   <%# Business stats %>

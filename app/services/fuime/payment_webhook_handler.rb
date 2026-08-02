@@ -119,8 +119,68 @@ module Fuime
           "$#{amount_cents.to_i / 100.0} (cpt=#{cpt.id})"
         )
 
+        record_platform_fee(object:, event:, gross_cents: raw.amount_cents)
+
         raw
       end
+    end
+
+    # Fuime's cut, posted as its own negative ledger line.
+    #
+    # The fee was previously only written into Stripe metadata, so a business's
+    # ledger showed the gross payment and the teen's net was never reduced —
+    # which also overstated the income the Tax Tracker reported to their family.
+    # Posting it as a visible line means the ledger reconciles to what actually
+    # lands, and the teen can see exactly what Fuime charged.
+    #
+    # Runs inside the caller's transaction: a payment and its fee post together
+    # or not at all.
+    def record_platform_fee(object:, event:, gross_cents:)
+      fee_cents = platform_fee_cents(object, gross_cents)
+      return nil if fee_cents <= 0
+
+      fee_key = "fuime_fee_#{object.id}"
+      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: fee_key)
+      return existing if existing
+
+      raw = ::RawPendingDonationTransaction.create!(
+        donation_transaction_id: fee_key,
+        amount_cents: -fee_cents,
+        date_posted: Time.at(object.created).to_date
+      )
+
+      cpt = ::CanonicalPendingTransaction.create!(
+        date: raw.date,
+        memo: "Fuime platform fee (#{::Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT}%)",
+        amount_cents: raw.amount_cents,
+        raw_pending_donation_transaction_id: raw.id,
+        fronted: false
+      )
+
+      ::CanonicalPendingEventMapping.create!(
+        canonical_pending_transaction_id: cpt.id,
+        event_id: event.id
+      )
+
+      Rails.logger.info(
+        "[Fuime] Recorded platform fee for #{event.name}: -$#{fee_cents / 100.0} (cpt=#{cpt.id})"
+      )
+
+      raw
+    end
+
+    # Prefer the fee Stripe recorded at checkout, so the ledger matches what the
+    # payer was quoted even if the rate changes later. Fall back to computing it
+    # for payments created before the fee was stamped into metadata.
+    def platform_fee_cents(object, gross_cents)
+      from_metadata = object.metadata && object.metadata["fuime_fee_cents"]
+      fee = from_metadata.presence&.to_i
+      fee = nil if fee&.negative?
+
+      fee ||= (gross_cents * ::Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT / 100.0).round
+
+      # Never let a bad metadata value claw back more than the payment.
+      [fee, gross_cents].min
     end
 
     # Post a negative ledger line reversing a payment that was refunded or
@@ -198,8 +258,74 @@ module Fuime
           "-$#{reversal_cents / 100.0} (cpt=#{cpt.id})"
         )
 
+        refund_platform_fee(
+          object:, event:, intent_id:,
+          reversal_cents:, gross_cents: original.amount_cents
+        )
+
         raw
       end
+    end
+
+    # Give back Fuime's cut in proportion to what was refunded or charged back.
+    #
+    # Without this the fee is charged on money the business never kept: a fully
+    # refunded payment would leave the teen's ledger negative by the fee, and a
+    # chargeback would have them pay Fuime for the privilege of being defrauded.
+    def refund_platform_fee(object:, event:, intent_id:, reversal_cents:, gross_cents:)
+      return nil if gross_cents <= 0
+
+      fee_raw = ::RawPendingDonationTransaction.find_by(donation_transaction_id: "fuime_fee_#{intent_id}")
+      return nil if fee_raw.nil?
+
+      original_fee = fee_raw.amount_cents.abs
+      return nil if original_fee <= 0
+
+      # Proportional to this increment, then capped by whatever fee is left so
+      # incremental refunds can never rebate more than was charged.
+      rebate = (original_fee * reversal_cents / gross_cents.to_f).round
+      already_rebated = fee_rebated_cents_for(intent_id)
+      rebate = [rebate, original_fee - already_rebated].min
+      return nil if rebate <= 0
+
+      rebate_key = "#{fee_rebate_key_prefix(intent_id)}#{object.id}_#{reversal_cents}"
+      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: rebate_key)
+      return existing if existing
+
+      raw = ::RawPendingDonationTransaction.create!(
+        donation_transaction_id: rebate_key,
+        amount_cents: rebate,
+        date_posted: Time.at(object.created).to_date
+      )
+
+      cpt = ::CanonicalPendingTransaction.create!(
+        date: raw.date,
+        memo: "Fuime platform fee refunded",
+        amount_cents: raw.amount_cents,
+        raw_pending_donation_transaction_id: raw.id,
+        fronted: false
+      )
+
+      ::CanonicalPendingEventMapping.create!(
+        canonical_pending_transaction_id: cpt.id,
+        event_id: event.id
+      )
+
+      Rails.logger.info(
+        "[Fuime] Refunded platform fee for #{event.name}: +$#{rebate / 100.0} (cpt=#{cpt.id})"
+      )
+
+      raw
+    end
+
+    def fee_rebate_key_prefix(intent_id)
+      "fuime_feerev_#{intent_id}_"
+    end
+
+    def fee_rebated_cents_for(intent_id)
+      ::RawPendingDonationTransaction
+        .where("donation_transaction_id LIKE ?", "#{sanitize_like(fee_rebate_key_prefix(intent_id))}%")
+        .sum(:amount_cents)
     end
 
     # Reversal rows are keyed "fuime_rev_<intent_id>_<kind>_<obj>_<amount>", so

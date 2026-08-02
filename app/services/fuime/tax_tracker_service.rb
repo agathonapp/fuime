@@ -192,6 +192,12 @@ module Fuime
       "owner deposit",
       "initial balance",
       "correction",
+      # The rebate of Fuime's fee on a refunded payment. It is a reversal of an
+      # expense, not revenue — counting it as income would inflate the tax
+      # figure shown to a teen's family. Must precede "adjustment" in intent:
+      # the fee CHARGE (memo "Fuime platform fee (4%)") is deliberately NOT
+      # excluded, because it is a genuine deductible business expense.
+      "platform fee refunded",
       "adjustment",
     ].freeze
   end

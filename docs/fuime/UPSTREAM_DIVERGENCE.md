@@ -1211,3 +1211,41 @@ the fix.
 - Everything in PRODUCTION_READINESS §1.5 (money transmission) is untouched and
   still gates real money. Posting the fee as a ledger line does not make the
   pooled-custody model lawful; it only makes it honest on screen.
+
+---
+
+## The other half of the outage: approved applications never became businesses
+
+The nil-contract guard in `admin_approve` stopped the 500, but the flow was
+still dead one step later — an approved application could not be activated, so
+no `Event` was ever created. Four separate defects, all downstream of the same
+assumption that a contract always exists.
+
+| Change | Why | Files |
+|---|---|---|
+| `activate_event!` nil-guards `contract.create_document!` | Only a signed contract yields a countersigned PDF to file. On nil this raised **inside `with_lock`**, so `Event.create!` rolled back with it — the visible symptom being "approval worked but no business appeared" | `app/models/event/application.rb` |
+| Point-of-contact fallback nil-guarded, with an explicit error | `point_of_contact.presence \|\| contract.party(:hcb).user` raised on nil rather than saying what was missing | `app/models/event/application.rb` |
+| `tags:` defaults to `nil`, coerced with `Array()` | The controller passes `params[:tags]`, which is **nil** when an admin selects no tags. A Ruby default only applies to an *omitted* argument, never an explicit nil, so `tags.filter` raised `undefined method 'filter' for nil`. This one bit even when a contract existed | `app/models/event/application.rb` |
+| Inline Activate form on the submission page | The only Activate control in the app lived on the contract-party page (`submission.html.erb:108` required `contract.present?`). With no contract there was no page and no button — `admin_activate` was reachable only by hand-crafting a POST | `app/views/event/applications/submission.html.erb` |
+
+The tags bug is worth singling out: it was not specific to the no-contract path
+and would have failed any activation where the admin picked no tags.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `spec/controllers/event/applications_controller_spec.rb` (5, incl. `Event.count` change) | **0 failures** |
+| `spec/controllers/guardianships_render_spec.rb` (new, 6, `render_views`) | **0 failures** |
+| `submission.html.erb` ERB compile | OK |
+
+The guardianship specs are new coverage for demo steps 2–3: the invite and
+accept screens had thorough model and policy specs but **nothing that rendered
+them**, the same blind spot the storefront had.
+
+### Note on the reported symptom
+
+The dashboard card reading "We're reviewing your application" beside an
+**Approved** badge was reproduced from the deployed Render app, which does not
+carry any of this work. The `next_step` fix addresses it; it needs deploying,
+not further debugging.

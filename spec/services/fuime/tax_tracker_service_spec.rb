@@ -132,4 +132,32 @@ RSpec.describe Fuime::TaxTrackerService do
       expect(packet[:net_earnings]).to eq(923.5)
     end
   end
+
+  # Fuime's 4% cut posts as its own ledger line. How it lands in the tax figures
+  # is a money-advice question, not a cosmetic one.
+  describe "the Fuime platform fee" do
+    it "deducts the fee as a business expense" do
+      post(100_00, memo: "Customer payment")
+      post(-4_00, memo: "Fuime platform fee (4%)")
+
+      expect(tracker.income_cents).to eq(100_00)
+      expect(tracker.expenses_cents).to eq(4_00)
+      expect(tracker.net_income_cents).to eq(96_00)
+    end
+
+    # The rebate reverses an expense; treating it as revenue would inflate the
+    # taxable income reported to a teen's family.
+    it "does not count a refunded fee as income" do
+      post(100_00, memo: "Customer payment")
+      post(-4_00, memo: "Fuime platform fee (4%)")
+      post(-100_00, memo: "Refunded payment")
+      post(4_00, memo: "Fuime platform fee refunded")
+
+      # The rebate must not appear in income at all.
+      expect(tracker.income_cents).to eq(100_00)
+      # And the fee expense stays excluded once rebated, so the pair nets out
+      # rather than leaving a phantom deduction.
+      expect(tracker.expenses_cents).to eq(4_00)
+    end
+  end
 end
