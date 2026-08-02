@@ -1,0 +1,10 @@
+# Everything here is regenerable from the scripts and the keys, and all of it is
+# huge: raw/ and comp/ are 90MB of PNG apiece, shots/ is the takes plus the verify
+# walk. What the repo keeps is the recipe (jobs, track, composite, build) plus
+# keys/, which holds the seeds and the plates the whole dive is built from.
+raw/
+raw.prev.*/
+comp/
+frames/
+shots/
+master.mp4

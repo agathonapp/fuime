@@ -1,0 +1,11 @@
+# fuime — invoicing for people who aren't 18 yet
+# Three pages, all of them meant to be found.
+
+User-agent: *
+Allow: /
+
+# The waitlist endpoint is a POST handler. There is nothing to read there and a
+# crawler hitting it just burns a function invocation.
+Disallow: /api/
+
+Sitemap: https://fuime.com/sitemap.xml
