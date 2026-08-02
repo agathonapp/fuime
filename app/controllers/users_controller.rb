@@ -144,9 +144,14 @@ class UsersController < ApplicationController
   end
 
   def edit_address
+    # Authorize BEFORE redirecting. With the old order, viewing someone else's
+    # address redirected first, then `authorize` raised NotAuthorized, and the
+    # `user_not_authorized` handler redirected again — AbstractController::
+    # DoubleRenderError, a 500 where the answer should be "not authorized".
+    authorize @user
+
     @states = ISO3166::Country.new("US").subdivisions.values.map { |s| [s.translations["en"], s.code] }
     redirect_to edit_user_path(@user) unless @user.stripe_cardholder
-    authorize @user
   end
 
   def edit_payout

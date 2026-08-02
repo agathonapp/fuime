@@ -34,6 +34,11 @@ module Fuime
       "checks",
       "check_deposits",
       "wires",
+      # Wise is outbound international transfer — the same category as wires,
+      # and it was the one member of it not on this list, so Fuime could still
+      # originate one. Reaching it also raised Faraday::BadRequestError from a
+      # live Wise API call rather than being refused: a policy gap and a 500.
+      "wise_transfers",
       "disbursements",
 
       # NOTE: reimbursements are deliberately NOT here. FUIME_HACKATHON_SPEC

@@ -1279,3 +1279,37 @@ account has been locked").
 
 Not verified: a physical key against a browser. The fake client covers the
 protocol, not the hardware.
+
+## Crash test — 500s found by crawling every route as every persona
+
+Method: seeded a teen/guardian/adult/unguarded-minor/admin scenario with an
+approved business, signed in as each through the app's own `sign_in`, and
+requested all 314 reachable GET routes per persona, recording every 5xx.
+All of these were live on `main`, i.e. on the deployed app.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Guardianship filter exempts admins and auditors | `minor_or_unknown_age?` treats a nil birthday as a minor, so every staff account (no birthday on file) was redirected to `/guardian/new` on **every** page, including the admin console. `EventPolicy` already exempted staff; the request filter did not. | `app/controllers/concerns/fuime/guardianship_enforcement.rb` |
+| `include RolesHelper` in ApplicationHelper | `include_all_helpers = false`, so `role_label` (added by the brand sweep) was undefined in the 5 views that call it — `/:business/team`, `/:business/invites/new` and `/roles` all 500'd. | `app/helpers/application_helper.rb` |
+| `edit_address` authorizes before redirecting | Redirect-then-`authorize` meant a non-owner got redirect → NotAuthorized → second redirect = `AbstractController::DoubleRenderError`. | `app/controllers/users_controller.rb` |
+| `email_updates` rescues redirect and `skip_authorization` | An expired email-change link 500'd: `#verify` set a flash but never redirected and has no template (`MissingExactTemplate`), and `find_by!` raises before `authorize`, so Pundit's `verify_authorized` fired too. | `app/controllers/users/email_updates_controller.rb` |
+| `SponsorPolicy#record_event` guards class-vs-instance | `index?` authorizes the Sponsor **class**, which has no `#event`; `record.event` raised NoMethodError so any non-admin got a 500 instead of a denial. | `app/policies/sponsor_policy.rb` |
+| Added `SponsorsController#new` | The action did not exist though the route and the index's "New Sponsor" link did, so Rails rendered the view with `@sponsor` nil → 500 for everyone, admins included. | `app/controllers/sponsors_controller.rb` |
+| `wise_transfers` added to disabled modules | Wise is outbound international transfer — the same category as `wires`, and the only member of it missing, so Fuime could still originate one. It also 500'd on a live Wise API call rather than being refused. | `app/controllers/concerns/fuime/disabled_modules.rb` |
+| Storefront attribution says "HCB by Hack Club" | The brand sweep replaced "HCB" inside the attribution itself, leaving the public-facing "Fuime is forked from Fuime by Hack Club" — nonsense, and it stopped the attribution naming what it attributes (Rule 7). | `app/views/fuime/storefronts/show.html.erb` |
+
+Regression specs: `spec/controllers/fuime/crash_regressions_spec.rb` (new) and
+two admin/auditor cases in `spec/controllers/fuime/guardianship_enforcement_spec.rb`.
+Each was confirmed to fail before its fix.
+
+**Not fixed, deliberately** — these 500 only when requested with no params,
+which no view does (`/receipts/link_modal`, `/:id/comments/new`,
+`/admin_task_size`); or they are island-mode artifacts with no credentials
+configured (`/discord/unlink_user`), or a deliberate test endpoint (`/timeout`).
+
+**Measurement trap:** `bin/dev` runs Rails under foreman with the JS/CSS
+watchers. Under sustained crawling the CSS watcher OOMs
+(`Reached heap limit`), foreman SIGTERMs the whole group, and Rails dies with
+it — 244 of 314 URLs then return connection-refused, which looks like a mass
+regression. Crawl against `bundle exec rails server` with prebuilt assets. A
+killed foreman also leaves a stale `tmp/pids/server.pid` that blocks the next boot.

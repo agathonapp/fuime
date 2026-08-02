@@ -66,6 +66,35 @@ RSpec.describe EventsController, type: :controller do
     end
   end
 
+  # Staff are not teen business owners. "Unknown age counts as minor" is correct
+  # for the legal control, but admin accounts have no birthday on file, so
+  # without an explicit exemption the filter bounced every admin to
+  # /guardian/new on every page — including the admin console. EventPolicy
+  # already exempted admins; the request filter did not.
+  context "as an admin with no birthday on file" do
+    let(:staff) { create(:user, :unknown_age, access_level: :admin) }
+
+    before { sign_in_as(staff) }
+
+    it "is not bounced to the guardian invite" do
+      get :show, params: { id: event.slug }
+
+      expect(response).not_to redirect_to(new_guardianship_path)
+    end
+  end
+
+  context "as an auditor with no birthday on file" do
+    let(:auditor) { create(:user, :unknown_age, access_level: :auditor) }
+
+    before { sign_in_as(auditor) }
+
+    it "is not bounced to the guardian invite" do
+      get :show, params: { id: event.slug }
+
+      expect(response).not_to redirect_to(new_guardianship_path)
+    end
+  end
+
   # FUIME-DIVERGENCE: applying must stay reachable for a teen who has no
   # guardian yet — the application is where the parent's email is collected and
   # the agreement is sent. Blocking it deadlocked the platform's core user: no

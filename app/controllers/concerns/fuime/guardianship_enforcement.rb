@@ -68,6 +68,12 @@ module Fuime
 
     def enforce_guardianship_requirement
       return unless current_user
+      # Staff are not teen business owners. EventPolicy already exempts them
+      # (see EventPolicy#permitted_to_operate_business?); without the same
+      # exemption here the filter bounces every admin to /guardian/new, because
+      # "unknown age counts as minor" also captures staff accounts, which have
+      # no birthday on file. That locked admins out of the admin console itself.
+      return if current_user.admin? || current_user.auditor?
       return if current_user.permitted_to_operate_business?
       return if allowed_while_awaiting_guardian?
 
