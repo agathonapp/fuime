@@ -7,26 +7,17 @@
 
 <ul>
   <li><%= link_to "Invite other members of your team", event_team_url(@application.event) %>: You can invite them as managers, members, or readers. <%= link_to "Read more about roles on Fuime here.", roles_url %></li>
-  <li><%= link_to "Configure your donation page", edit_event_url(@application.event, tab: "donations") %>: You can set a custom message to show on this page, add a donation goal, or enable donation tiers.</li>
-  <li><%= link_to "Order a card", event_cards_overview_url(@application.event) %>: You can order a virtual or a plastic card that you can use to spend your funds.</li>
+  <li><%= link_to "Review your business details", edit_event_url(@application.event) %>: Set how your business appears and keep your information up to date.</li>
 </ul>
 
-<% if @application.event.event_tags.include?(EventTag.find_by(name: EventTag::Tags::HACKATHON)) %>
-  <p>
-    Also, check out <%= link_to "our guide to organizing a hackathon", "https://hackclub.com/how-to-organize-a-hackathon/" %>.
-    We're excited to see your event come to life!
-  </p>
-<% elsif @application.event.event_tags.include?(EventTag.find_by(name: EventTag::Tags::ROBOTICS_TEAM)) %>
-  <p>
-    Also, if your team is on Discord, check out <%= link_to "our Discord integration", "https://blog.hcb.hackclub.com/posts/discord-bot" %>!
-  </p>
-<% elsif @application.event.event_tags.include?(EventTag.find_by(name: EventTag::Tags::HACK_CLUB)) %>
-  <p>
-    Also, check out the <%= link_to "Hack Club toolbox", "https://toolbox.hackclub.com/" %> for help running your club!
-  </p>
-<% end %>
+<%# FUIME-DIVERGENCE: upstream promoted Hack Club's hackathon guide, Discord bot,
+    and club toolbox here. Those are Hack Club resources for a nonprofit program
+    Fuime does not run, so the tag-specific promo block is removed rather than
+    pointed at a Fuime equivalent that does not exist yet. %>
 
-<p>The signed Fuime agreement is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
+<% if @application.contract&.document.present? %>
+  <p>The signed Fuime agreement is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
+<% end %>
 
 <p>
   If you would like, you can <%= link_to "schedule an onboarding call", @application.event.onboarding_scheduling_link.presence || event_url(@application.event, request_call: "true") %> with a member of our team,

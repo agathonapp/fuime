@@ -1,8 +1,8 @@
 <p>Hi <%= @application.user.name %>,</p>
 
-<p>Thank you for applying to Fuime, Hack Club's fiscal sponsorship program!</p>
+<p>Thank you for applying to Fuime, the financial platform for teen-run businesses!</p>
 
-<p>Before we can review your application, you <%= "and your parent (#{@application.cosigner_email})" if @application.cosigner_email.present? %> will need to sign the Fuime Fiscal Sponsorship Agreement.</p>
+<p>Before we can review your application, you <%= "and your parent or legal guardian (#{@application.cosigner_email})" if @application.cosigner_email.present? %> will need to sign the Fuime agreement.</p>
 <p>Go to your <%= link_to "application status page", application_url(@application) %> to sign the agreement. <%= "You can also resend the agreement to your parent or legal guardian on this page." if @application.cosigner_email.present? %></p>
 
 <p>

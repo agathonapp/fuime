@@ -66,6 +66,22 @@ RSpec.describe EventsController, type: :controller do
     end
   end
 
+  # FUIME-DIVERGENCE: applying must stay reachable for a teen who has no
+  # guardian yet — the application is where the parent's email is collected and
+  # the agreement is sent. Blocking it deadlocked the platform's core user: no
+  # application without a guardian, no guardian without an application.
+  describe "the application flow" do
+    it "allowlists the applications controller" do
+      expect(Fuime::GuardianshipEnforcement::ALLOWED_CONTROLLER_PATHS)
+        .to include("event/applications")
+    end
+
+    it "still denies business pages, so the control is not weakened" do
+      expect(Fuime::GuardianshipEnforcement::ALLOWED_CONTROLLER_PATHS)
+        .not_to include("events")
+    end
+  end
+
   describe "EventPolicy" do
     let(:teen)  { create(:user, :minor) }
     let(:adult) { create(:user, birthday: 30.years.ago.to_date) }

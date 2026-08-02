@@ -855,3 +855,103 @@ visitor).
 - `help.hcb.hackclub.com` / `blog.hcb.hackclub.com` / `graph.hcb.hackclub.com`
   links, and `cdn.hackclub.com` assets (fonts, images) still load from Hack Club.
 - Logos/favicons partially done; `docs/fuime/BRAND_STRINGS.md` still not written.
+
+---
+
+## Application flow: unblock submission and finish the rebrand (2026-08-01)
+
+The apply flow could not be completed by the users Fuime exists for. Three
+independent defects, two of them hard blockers.
+
+### 1. Guardianship enforcement deadlocked the application flow (hard blocker)
+
+**Files:** `app/controllers/concerns/fuime/guardianship_enforcement.rb`
+
+`GuardianshipEnforcement` is a deny-by-default filter: any signed-in user who is
+a minor (or whose age is unknown) without an *accepted* guardianship is
+redirected to `/guardian/new`. `event/applications` was not on the allowlist, so
+every page of the apply flow bounced.
+
+That is a closed loop for Fuime's core user. A teen cannot apply without an
+active guardianship, and the application *is* where the parent's email is
+collected and the agreement is sent — so they cannot obtain one either. The
+platform's primary onboarding path was unreachable for 13–17 year olds.
+
+Allowlisted `event/applications`, `event/affiliations` (the affiliations subform),
+`contracts`, and `contract/parties` (signing the agreement that produces the
+guardianship). The control is **not** weakened: `events` stays blocked,
+`EventPolicy` still denies writes to an unguarded minor, and `activate_event!`
+still requires the signed contract. A teen can now fill in an application but
+still cannot operate a business until a guardian actually signs.
+
+### 2. `teen_led` was never persisted, so no teen could submit (hard blocker)
+
+**Files:** `app/controllers/event/applications_controller.rb`
+
+The intro screen's "Are you under 18?" radio is rendered by `form_with model:`,
+so it posts as `event_application[teen_led]`. `create` read only the bare
+`params[:teen_led]`, which was always nil — every application was created
+`teen_led: false`.
+
+Consequence: teens were silently routed down the *adult* branch of
+`application_ready_to_submit?`, which additionally requires `planning_duration`,
+`team_size`, `annual_budget_cents`, and `committed_amount_cents`. The teen form
+never renders those four fields, so they could never be filled — the submit
+button stayed disabled forever with no explanation. Reproduced and pinned in
+`spec/controllers/event/applications_spec.rb`.
+
+`create` now reads the nested field, still accepting the bare param used by the
+post-sign-in `start` redirect.
+
+### 3. The submit gate gave no reason for refusing
+
+**Files:** `app/models/event/application.rb`, `app/views/event/applications/review.html.erb`
+
+`may_mark_submitted?` returns only a boolean, so the review page disabled the
+button and pointed at a summary that marks missing fields but omits cross-field
+rules entirely. Added `Event::Application#submission_blockers`, which returns
+human-readable labels for each unmet requirement including the disallowed-country
+and cosigner-email-collision rules. The review page renders them as a checklist.
+
+`application_ready_to_submit?` and `submission_blockers` now share one
+`required_submission_fields` list, so the displayed checklist and the actual gate
+cannot drift apart — pinned by a spec asserting the two agree.
+
+### 4. Residual Hack Club branding in the apply flow
+
+Rule 6 respected throughout: user-facing strings only, no class/table/route renames.
+
+| File | Change |
+|---|---|
+| `applications/_summary.html.erb` | "No affiliations added for any VEX teams, FIRST teams, or Hack Club chapters" → "No affiliations added" |
+| `applications/project_info.html.erb` | `https://hackclub.com` placeholder → `https://mayasartprints.com` |
+| `applications/edit.html.erb` | `hackclub.com` placeholder; "Project name"/"Leosia Hacks" → business framing; nonprofit "charitable purpose" description → "What does your business do?"; "applied for fiscal sponsorship with Fuime" → "used Fuime before" |
+| `applications/show.html.erb` | "fiscal sponsorship agreement" → "Fuime agreement"; fixed "your contact" → "your contract" typo |
+| `application_mailer/confirmation.html.erb` | "Fuime, Hack Club's fiscal sponsorship program" → "the financial platform for teen-run businesses"; "Fuime Fiscal Sponsorship Agreement" → "Fuime agreement" |
+| `application_mailer/under_review.html.erb` | same rebrand; removed P.S. linking `hackclub.com/fiscal-sponsorship/directory` |
+| `application_mailer/approved.html.erb` | "activate your organization"/"Fiscal Sponsorship Agreement" → "activate your business"/"Fuime agreement" |
+| `application_mailer/incomplete.html.erb` | removed "Learn more about Fuime's features" → `hackclub.com/fiscal-sponsorship` |
+| `application_mailer/activated.html.erb` | removed the tag-conditional block promoting Hack Club's hackathon guide, Discord bot, and club toolbox; dropped the donation-page bullet (donations are a disabled module) |
+
+**Also fixed a latent crash** in `activated.html.erb`: it called
+`@application.contract.document` unguarded. With no DocuSeal template configured
+(the current state — see "Still outstanding") `contract` is nil, so activating an
+application would raise. Now guarded on `contract&.document`.
+
+### Verification
+
+Docker, clean-worktree baseline at `d7645cf4b` vs. working tree, same scopes,
+failure sets diffed by example id:
+
+| Scope | Baseline | After |
+|---|---|---|
+| `spec/models spec/controllers spec/policies spec/mailers` | 1390 examples, **38 failures** | 1409 examples, **38 failures** |
+| `spec/requests spec/jobs spec/services spec/helpers spec/views` | 512 examples, **14 failures** | 512 examples, **14 failures** |
+
+**Failure sets are identical — zero regressions.** The 38 and 14 are pre-existing
+(ACH, payroll/DocuSeal, wires, G Suite, invoices, FIRST, logins). The +19 examples
+are the new application specs, all passing.
+
+New specs: `spec/controllers/event/applications_spec.rb` (7), additions to
+`spec/models/event/application_spec.rb` (10) and
+`spec/controllers/fuime/guardianship_enforcement_spec.rb` (2).

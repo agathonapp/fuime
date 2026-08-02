@@ -417,7 +417,73 @@ class Event
       tags
     end
 
+    # Human-readable list of what is still blocking submission.
+    #
+    # `may_mark_submitted?` only returns a boolean, so the review page used to
+    # disable the submit button with no way for the applicant to discover what
+    # was wrong. This drives an explicit checklist instead.
+    def submission_blockers
+      blockers = []
+
+      FIELD_LABELS.each do |field, label|
+        next unless required_submission_fields.include?(field)
+
+        blockers << label if self[field].nil? || self[field] == ""
+      end
+
+      USER_FIELD_LABELS.each do |field, label|
+        blockers << label unless user[field].present?
+      end
+
+      if address_country.present? && address_country.in?(DISALLOWED_COUNTRIES)
+        blockers << "Fuime is not available in the country you selected"
+      end
+
+      if cosigner_email.present? && cosigner_email == user.email
+        blockers << "Your parent's email cannot be the same as your own"
+      end
+
+      blockers
+    end
+
     private
+
+    FIELD_LABELS = {
+      "name"                   => "Business name",
+      "description"            => "What your business does",
+      "address_line1"          => "Street address",
+      "address_city"           => "City",
+      "address_state"          => "State",
+      "address_postal_code"    => "Zip code",
+      "address_country"        => "Country",
+      "referrer"               => "How you heard about Fuime",
+      "previously_applied"     => "Whether you've used Fuime before",
+      "cosigner_email"         => "Parent or guardian email",
+      "planning_duration"      => "How long you've been planning",
+      "team_size"              => "Team size",
+      "annual_budget_cents"    => "Annual budget",
+      "committed_amount_cents" => "Committed amount",
+      "funding_source"         => "Source of your funding"
+    }.freeze
+
+    USER_FIELD_LABELS = {
+      "full_name"    => "Your full name",
+      "phone_number" => "Your phone number",
+      "birthday"     => "Your birthday"
+    }.freeze
+
+    def required_submission_fields
+      fields = ["name", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
+
+      fields.push("cosigner_email") if user.is_minor?
+
+      unless teen_led?
+        fields += ["planning_duration", "team_size", "annual_budget_cents", "committed_amount_cents"]
+        fields.push("funding_source") if committed_amount&.positive?
+      end
+
+      fields
+    end
 
     def cosigner_cannot_change_after_sign
       if cosigner_email_changed? && contract&.party(:cosigner)&.signed?
@@ -430,21 +496,7 @@ class Event
     end
 
     def application_ready_to_submit?
-      required_fields = ["name", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
-
-      if user.is_minor?
-        required_fields.push("cosigner_email")
-      end
-
-      unless teen_led?
-        required_fields += ["planning_duration", "team_size", "annual_budget_cents", "committed_amount_cents"]
-
-        if committed_amount&.positive?
-          required_fields.push("funding_source")
-        end
-      end
-
-      missing_fields = required_fields.any? do |field|
+      missing_fields = required_submission_fields.any? do |field|
         self[field].nil? || self[field] == ""
       end
 

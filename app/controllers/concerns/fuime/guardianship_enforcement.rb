@@ -38,11 +38,23 @@ module Fuime
       "users",                # profile / settings / date of birth
       "users/email_updates",  # confirming an email change
       "logins",               # sign in AND sign out — there is no separate
-                              # sessions controller in this app
+      # sessions controller in this app
       "static_pages",         # home, legal, help
       "errors",
       "fuime/storefronts",    # public pages
       "rails/health",
+      # Applying is how a teen STARTS, and the application itself is where the
+      # parent's email is collected and the guardian agreement is sent. Blocking
+      # it until a guardianship is already active deadlocks the exact user Fuime
+      # exists for: they cannot apply without a guardian and cannot get one
+      # attached without applying. The control still holds where it matters —
+      # `activate_event!` requires the signed agreement, and EventPolicy guards
+      # the business itself, so a teen can fill in an application but cannot
+      # operate a business until a guardian has actually signed.
+      "event/applications",
+      "event/affiliations",   # the affiliations sub-form on the application
+      "contracts",            # signing the agreement that creates the guardianship
+      "contract/parties",
       # Active Storage's real routed controller names — "active_storage/blobs"
       # and "active_storage/representations" are NOT routed and matched nothing.
       "active_storage/blobs/proxy",

@@ -54,7 +54,7 @@
       <% if !@application.approved? || @application.contract&.party(:signee)&.pending? || @application.contract&.party(:cosigner)&.pending? %>
         Here's what's next for <%= @application.name %>
       <% elsif @application.approved? && @application.contract&.party(:hcb)&.pending? %>
-        Fuime is finalizing your contact
+        Fuime is finalizing your contract
       <% else %>
         You're ready to start spending
       <% end %>
@@ -111,7 +111,7 @@
     <section data-behavior="modal" role="dialog" id="parent_agreement" class="modal modal--scroll">
       <%= modal_header "Manage parent's agreement" %>
       <p>
-        The fiscal sponsorship agreement has been sent to <span class="font-bold"><%= @application.cosigner_email %></span> for them to sign.
+        The Fuime agreement has been sent to <span class="font-bold"><%= @application.cosigner_email %></span> for them to sign.
         You can change your parent or legal guardian's email here, or resend it to the same address.
         <% if @application.contract.party(:signee).signed? %>
           <span class="font-bold">If you change the email, you'll need to sign the agreement again.</span>

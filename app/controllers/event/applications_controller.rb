@@ -126,11 +126,17 @@ class Event
     end
 
     def create
+      # The "Are you under 18?" radio on the intro screen is rendered by
+      # form_with model:, so it arrives as event_application[teen_led], not as a
+      # bare :teen_led param. Reading only params[:teen_led] silently created
+      # every application as teen_led=false, which pushed teen applicants onto
+      # the adult branch of `application_ready_to_submit?` and made the submit
+      # button permanently unclickable.
       unless signed_in?
-        redirect_to auth_users_path(return_to: start_applications_path(teen_led: params[:teen_led].presence), require_reload: true, purpose: "application") and return
+        redirect_to auth_users_path(return_to: start_applications_path(teen_led: teen_led_param), require_reload: true, purpose: "application") and return
       end
 
-      authorize(@application = Event::Application.new(user: current_user, teen_led: params[:teen_led] == "true", referral_code: params[:referral_code]))
+      authorize(@application = Event::Application.new(user: current_user, teen_led: teen_led_param == "true", referral_code: params[:referral_code] || params.dig(:event_application, :referral_code)))
       @application.save!
 
       redirect_to project_info_application_path(@application)
@@ -275,6 +281,13 @@ class Event
 
     def set_application
       @application = Application.find(params[:id])
+    end
+
+    # Accepts the answer from either shape: the nested form field the intro
+    # screen actually submits, or the bare query param used when we bounce an
+    # anonymous applicant through sign-in and back to `start`.
+    def teen_led_param
+      params.dig(:event_application, :teen_led).presence || params[:teen_led].presence
     end
 
     def application_params
