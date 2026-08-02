@@ -7,34 +7,24 @@
 <turbo-frame id="settings" autoscroll data-autoscroll-behavior="smooth">
   <%= render "settings_header", active: "security" %>
   <fieldset>
-    <% if phone_verification_available? && @user.phone_number.present? %>
-      <%= turbo_frame_tag :sms_auth_card do %>
+    <%# This toggle used to live inside the SMS card below, which is hidden when     %>
+    <%# Twilio isn't configured — as it isn't on Fuime. That left admins with a      %>
+    <%# banner telling them to enable 2FA and no control anywhere to enable it,      %>
+    <%# no matter how many security keys they registered. It's its own card now:     %>
+    <%# a security key or TOTP is a second factor on its own, phone or no phone.     %>
+    <%= turbo_frame_tag :two_factor_card do %>
+      <div id="two-factor-authentication">
         <legend class="flex flex-row justify-start items-center mt0 pb2">
-          <span class="h2 bold">Login preferences</span>
+          <span class="h2 bold">Two-factor authentication</span>
         </legend>
         <div class="card border b--info mt0 mb3">
-          <% if @user.phone_number_verified %>
-            <%= form_with(model: @user, local: true, html: { onsubmit: "onSubmit()" }, data: { turbo_frame: "_top" }) do |form| %>
+          <% if @user.second_factor_available? %>
+            <%= form_with(model: @user, local: true, data: { turbo_frame: "_top" }) do |form| %>
               <div class="field field--checkbox mt1">
-                <span style="font-weight: 700">Prefer login codes via SMS</span>
-                <div class="field--checkbox--switch ml-auto" style="flex-shrink:0">
-                  <%= form.label :use_sms_auth do %>
-                    <%= form.check_box :use_sms_auth,
-                      data: { action: "change->accordion#toggle", target: "accordion.checkbox" },
-                      switch: true,
-                      disabled: %>
-                    <span class="slider"></span>
-                  <% end %>
-                </div>
-              </div>
-              <div class="field field--checkbox">
-                <span style="font-weight: 700">Enable two factor authentication</span>
+                <span style="font-weight: 700">Require a second factor when signing in</span>
                 <div class="field--checkbox--switch ml-auto" style="flex-shrink:0">
                   <%= form.label :use_two_factor_authentication do %>
-                    <%= form.check_box :use_two_factor_authentication,
-                      data: { action: "change->accordion#toggle", target: "accordion.checkbox" },
-                      switch: true,
-                      disabled: %>
+                    <%= form.check_box :use_two_factor_authentication, switch: true, disabled: %>
                     <span class="slider"></span>
                   <% end %>
                 </div>
@@ -42,21 +32,56 @@
               <%= form.submit "Update preferences", disabled: %>
             <% end %>
           <% else %>
-            <% if disabled %>
-              <p><%= @user.name %> doesn't have their phone number verified.</p>
-            <% else %>
-              <p>
-                To send login codes to your phone or enable two factor authentication, first
-                <action data-behavior="modal_trigger" data-modal="verify_phone">
-                  <a class="underline">
-                    verify your phone number.
-                  </a>
-                </action>
-              </p>
-            <% end %>
+            <p class="my0">
+              <% if disabled %>
+                <%= @user.name %> hasn't set up a second factor yet.
+              <% else %>
+                Set up a security key or time-based one time passwords below, then come
+                back here to turn on two-factor authentication.
+              <% end %>
+            </p>
           <% end %>
-        <% end %>
+        </div>
       </div>
+    <% end %>
+
+    <% if phone_verification_available? && @user.phone_number.present? %>
+      <%= turbo_frame_tag :sms_auth_card do %>
+        <div>
+          <legend class="flex flex-row justify-start items-center mt0 pb2">
+            <span class="h2 bold">Login preferences</span>
+          </legend>
+          <div class="card border b--info mt0 mb3">
+            <% if @user.phone_number_verified %>
+              <%= form_with(model: @user, local: true, data: { turbo_frame: "_top" }) do |form| %>
+                <div class="field field--checkbox mt1">
+                  <span style="font-weight: 700">Prefer login codes via SMS</span>
+                  <div class="field--checkbox--switch ml-auto" style="flex-shrink:0">
+                    <%= form.label :use_sms_auth do %>
+                      <%= form.check_box :use_sms_auth, switch: true, disabled: %>
+                      <span class="slider"></span>
+                    <% end %>
+                  </div>
+                </div>
+                <%= form.submit "Update preferences", disabled: %>
+              <% end %>
+            <% else %>
+              <% if disabled %>
+                <p class="my0"><%= @user.name %> doesn't have their phone number verified.</p>
+              <% else %>
+                <p class="my0">
+                  To send login codes to your phone, first
+                  <action data-behavior="modal_trigger" data-modal="verify_phone">
+                    <a class="underline">
+                      verify your phone number.
+                    </a>
+                  </action>
+                </p>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
     <% end %>
 
       <%= turbo_frame_tag :totp_auth_card do %>

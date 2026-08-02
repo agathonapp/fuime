@@ -326,9 +326,29 @@ RSpec.describe User, type: :model do
       expect(user.update(use_two_factor_authentication: true)).to eq(true)
     end
 
+    # The Fuime path: no Twilio, so a security key is the only second factor a
+    # user can have. If this breaks, admins are stuck behind the "enable 2FA"
+    # banner with nothing they can do about it.
+    it "can be enabled with only a security key" do
+      user = create(:user)
+      user.webauthn_credentials.create!(name: "YubiKey", webauthn_id: "credential-id", public_key: "public-key", sign_count: 0)
+
+      expect(user.second_factor_available?).to eq(true)
+      expect(user.update(use_two_factor_authentication: true)).to eq(true)
+    end
+
+    it "can be enabled with only TOTP" do
+      user = create(:user)
+      User::Totp.create!(user:, aasm_state: :verified)
+
+      expect(user.second_factor_available?).to eq(true)
+      expect(user.update(use_two_factor_authentication: true)).to eq(true)
+    end
+
     it "cannot be enabled without any second factor" do
       user = create(:user)
 
+      expect(user.second_factor_available?).to eq(false)
       expect(user.update(use_two_factor_authentication: true)).to eq(false)
       expect(user.errors[:use_two_factor_authentication]).to contain_exactly("can not be enabled without a second authentication factor")
     end
