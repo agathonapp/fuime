@@ -1,12 +1,14 @@
-<% img = "/brand/hcb-icon-icon-original.png" %>
-<% description = "Start your nonprofit with our fiscal sponsorship program, HCB: a 501(c)(3) legal entity, bank account, automatic taxes & accounting, and best-in-class app." %>
+<%# Uses the existing apple-touch icon: /brand/fuime-*.png do not exist yet.
+    Swap this for a proper 1200x630 social card before launch. %>
+<% img = image_url("/apple-touch-icon.png") rescue "/apple-touch-icon.png" %>
+<% description = "Fuime is the financial platform for teen-run businesses: a real account, payments, receipts, and automatic tax tracking — with a parent or guardian as the legal signer." %>
 <meta name="description" content="<%= description %>">
-<meta property="og:site_name" content="HCB">
-<meta property="og:url" content="https://hcb.hackclub.com">
-<meta property="og:title" content="HCB by Hack Club">
+<meta property="og:site_name" content="Fuime">
+<meta property="og:url" content="<%= root_url %>">
+<meta property="og:title" content="Fuime — the financial home for teen businesses">
 <meta property="og:description" content="<%= description %>">
 <meta property="og:image" content="<%= img %>">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="HCB by Hack Club">
+<meta name="twitter:title" content="Fuime — the financial home for teen businesses">
 <meta name="twitter:description" content="<%= description %>">
 <meta name="twitter:image" content="<%= img %>">
