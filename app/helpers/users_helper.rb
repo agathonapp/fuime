@@ -1,6 +1,17 @@
 # frozen_string_literal: true
 
 module UsersHelper
+  # Fuime: SMS login codes and phone-based 2FA run through Twilio Verify. No
+  # Twilio credentials are configured (TWILIO__SMS_VERIFY__* are unset), so
+  # every "verify your phone" attempt fails. Hide the UI rather than offer a
+  # control that cannot work.
+  #
+  # Flip this on by setting the Twilio credentials — the UI returns with them.
+  def phone_verification_available?
+    Credentials.fetch(:TWILIO, :SMS_VERIFY, :ACCOUNT_SID).present? &&
+      Credentials.fetch(:TWILIO, :SMS_VERIFY, :AUTH_TOKEN).present?
+  end
+
   def users_nav(selected: nil)
     items = [
       {

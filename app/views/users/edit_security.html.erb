@@ -7,7 +7,7 @@
 <turbo-frame id="settings" autoscroll data-autoscroll-behavior="smooth">
   <%= render "settings_header", active: "security" %>
   <fieldset>
-    <% unless @user.phone_number.blank? %>
+    <% if phone_verification_available? && @user.phone_number.present? %>
       <%= turbo_frame_tag :sms_auth_card do %>
         <legend class="flex flex-row justify-start items-center mt0 pb2">
           <span class="h2 bold">Login preferences</span>
@@ -115,7 +115,7 @@
     <% else %>
       <div class="secondary center mb4">
         <%= inline_icon "fingerprint", width: "40px", class: "secondary block mx-auto mb1" %>
-        Sign in to HCB using your fingerprint or a hardware security key.
+        Sign in to Fuime using your fingerprint or a hardware security key.
       </div>
     <% end %>
     <div class="flex items-center justify-between flex-wrap gap-x-5 gap-y-2 mt3 pb2" id="backup-codes">
@@ -198,7 +198,7 @@
     <% end %>
   </fieldset>
 
-  <% if @user.phone_number.present? %>
+  <% if phone_verification_available? && @user.phone_number.present? %>
     <section class="modal modal--scroll bg-snow" data-behavior="modal" role="dialog" id="verify_phone">
       <%= modal_header "Verify phone number" %>
       <%= react_component "settings/SmsVerification",

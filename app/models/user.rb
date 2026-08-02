@@ -215,7 +215,9 @@ class User < ApplicationRecord
 
   after_update_commit :send_onboarded_email, if: -> { was_onboarding? && !onboarding? }
 
-  after_update :queue_sync_with_loops_job, if: :verified?
+  # FUIME-DIVERGENCE: upstream synced every verified user to Loops.so (a marketing
+  # CRM) on update. Fuime keeps user attributes in Postgres and sends its mail
+  # through Resend, so there is no contact sync.
 
   after_update :update_draft_applications, if: -> { birthday_previously_changed? }
 
@@ -626,11 +628,6 @@ class User < ApplicationRecord
 
   def sms_charge_notifications_enabled?
     charge_notifications_sms? || charge_notifications_email_and_sms?
-  end
-
-  def queue_sync_with_loops_job
-    new_user = was_onboarding? && !onboarding?
-    User::SyncUserToLoopsJob.perform_later(user_id: id, new_user:)
   end
 
   def only_card_grant_user?
