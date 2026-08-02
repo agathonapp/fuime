@@ -31,11 +31,6 @@ RSpec.describe EventPolicy, type: :policy do
 
     subject(:policy) { described_class.new(manager, event) }
 
-    it "denies the Cards overview even though the plan enables cards" do
-      expect(event.plan.cards_enabled?).to eq(true)
-      expect(policy.card_overview?).to eq(false)
-    end
-
     it "denies the Donations overview even though the plan enables donations" do
       expect(event.plan.donations_enabled?).to eq(true)
       expect(policy.donation_overview?).to eq(false)
@@ -66,7 +61,6 @@ RSpec.describe EventPolicy, type: :policy do
     it "denies all of them to an admin" do
       admin_policy = described_class.new(create(:user, :make_admin), event)
 
-      expect(admin_policy.card_overview?).to eq(false)
       expect(admin_policy.donation_overview?).to eq(false)
       expect(admin_policy.g_suite_overview?).to eq(false)
       expect(admin_policy.promotions?).to eq(false)
@@ -78,6 +72,40 @@ RSpec.describe EventPolicy, type: :policy do
     it "does not disable unrelated predicates on the same policy" do
       expect(policy.show?).to eq(true)
       expect(policy.reimbursements?).to eq(true)
+    end
+  end
+
+  # Cards were on the list above until test-mode issuing was turned back on.
+  # These pin the upstream conditions the stub used to swallow, so the page
+  # cannot quietly come back for organizations that should not have it.
+  describe "#card_overview? (re-enabled for test-mode issuing)" do
+    let(:manager) { create(:user) }
+    let(:event) { create(:event, plan_type: Event::Plan::Standard) }
+
+    before { create(:organizer_position, event:, user: manager, role: :manager) }
+
+    it "allows a manager on an approved organization whose plan enables cards" do
+      expect(event.plan.cards_enabled?).to eq(true)
+      expect(described_class.new(manager, event).card_overview?).to eq(true)
+    end
+
+    # Terminated is the only plan that switches cards off, which makes it the
+    # only subject that can prove the plan condition is still consulted.
+    it "denies it when the plan does not enable cards" do
+      terminated = create(:event, plan_type: Event::Plan::Terminated)
+      create(:organizer_position, event: terminated, user: manager, role: :manager)
+
+      expect(terminated.plan.cards_enabled?).to eq(false)
+      expect(described_class.new(manager, terminated).card_overview?).to eq(false)
+    end
+
+    # Not simply "a stranger": `show?` is satisfied by transparency, so on a
+    # public organization an outsider legitimately sees the card list upstream.
+    # A private organization is what proves `show?` is still being consulted.
+    it "denies it to an outsider on a private organization" do
+      private_event = create(:event, plan_type: Event::Plan::Standard, is_public: false)
+
+      expect(described_class.new(create(:user), private_event).card_overview?).to eq(false)
     end
   end
 

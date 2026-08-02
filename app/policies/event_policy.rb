@@ -104,16 +104,16 @@ class EventPolicy < ApplicationPolicy
     is_public || auditor_or_reader?
   end
 
-  # FUIME-DISABLED: the org Cards page.
+  # Re-enabled for test-mode card issuing (2026-08-02), reverting the
+  # FUIME-DISABLED stub added during the brand sweep — which was written to be
+  # undone exactly this way. Upstream's implementation, unmodified.
   #
-  # Card issuing is explicitly a later phase (CLAUDE.md Milestone 5: "hide,
-  # don't delete, the Stripe Issuing/cards UI"). Fuime::DisabledModules already
-  # blocks stripe_cards/stripe_cardholders writes, but writes-only meant the
-  # nav item and overview page still rendered, offering a "Create card" button
-  # that could not work. Hidden here; nothing is deleted, so reviving this is
-  # reverting one method.
+  # This is Stripe Issuing in TEST MODE ONLY, per CLAUDE.md Rule 4. Card issuing
+  # remains out of scope for a real Phase 0 launch (custody, KYC and the
+  # merchant-of-record structure all gate it); this makes it demonstrable, not
+  # shippable.
   def card_overview?
-    false
+    show? && record.approved? && record.plan.cards_enabled?
   end
 
   def card_overview_in_v4?

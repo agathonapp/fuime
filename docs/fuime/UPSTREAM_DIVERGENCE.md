@@ -1462,3 +1462,40 @@ Verified against the dev database: the update path ($10,000,000 → $25,000 →
 back), the create path on a fresh admin, and the "already configured, left
 alone" path on an existing one. Both probe accounts were deleted and the seeded
 admin's limit restored to its original 1,000,000,000 cents. Rubocop clean.
+
+## Test-mode card issuing turned back on (2026-08-02)
+
+Requested explicitly: "yes I wanna be able to generate cards (cause its all
+test mode)". This reverses part of the brand-sweep disablement. Card issuing
+stays out of scope for a real Phase 0 launch — custody, KYC and the
+merchant-of-record structure all gate it — but Stripe Issuing in **test mode**
+spends nothing, and the demo needs to show a card.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `EventPolicy#card_overview?` restored to upstream (`show? && record.approved? && record.plan.cards_enabled?`) | It was a hardcoded `false`, written to be undone by reverting one method. Without this there is no nav item, no overview page and no Create-card button — for anyone, admins included. | `app/policies/event_policy.rb` |
+| `stripe_cards` and `stripe_cardholders` removed from `DisabledModules` | That list blocks writes only. Re-enabling the page while leaving the POST blocked would have rebuilt the exact trap page the list was written to close: a Create button that 302s with "That feature isn't available on Fuime." | `app/controllers/concerns/fuime/disabled_modules.rb` |
+| Added `fuime:verify_phone[email,phone]` | `StripeCardholderService::Create` refuses without a verified number, and Fuime cannot send one: the Twilio SMS_VERIFY credentials are placeholders. Gated on `StripeService.live?` rather than `Rails.env`, because this fork runs test-mode Stripe *in production* — a RAILS_ENV guard would refuse on the deployed demo, the one place it is needed. | `lib/tasks/fuime.rake` |
+| "Order a card" trigger and its modal now gated on `policy(@event).new_stripe_card?` | The CTA was gated on bare membership (`organizer_signed_in?(as: :member)`), but `create_stripe_card?` also requires `is_not_demo_mode?` — so on a Playground Mode org a member saw a button whose action refuses, and the modal left a live POST target behind it. The trap page this codebase keeps having to close. | `app/views/events/card_overview.html.erb` |
+
+Verified in-process as a manager of both orgs: on `mayas-cookies` the Cards
+page, the Order-a-card trigger and the modal form all render; on
+`fuime-playground` the page renders with **neither** trigger nor form.
+
+`api/v4/stripe_cards` stays disabled. The UI is what was asked for, and the API
+is a separate surface with its own reachability story.
+
+Specs: the Cards case moved out of the `FUIME-DISABLED overview pages` group in
+`spec/policies/event_policy_spec.rb` into its own group, which now pins the
+three upstream conditions the stub had swallowed — allowed for a manager on an
+approved cards-enabled org, denied when the plan disables cards (`Terminated`
+is the only such plan), denied to an outsider on a *private* org. Not "denied
+to a stranger": `show?` is satisfied by transparency, so on a public org an
+outsider legitimately sees the card list upstream, and asserting otherwise
+failed for the right reason.
+
+**Two walls remain, neither of them code.** Issuing must be enabled on the
+Stripe test account (the local `STRIPE__TEST__SECRET_KEY` is the literal
+placeholder `sk...`; `Stripe::Account.retrieve` returns AuthenticationError),
+and `create_stripe_card?` requires `is_not_demo_mode?` — so cards cannot be
+issued on `fuime-playground` or any other Playground Mode org.

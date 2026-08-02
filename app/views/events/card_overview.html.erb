@@ -22,7 +22,10 @@
         <%= render "events/filters/filter_cards_menu" unless @has_filter %>
         <%= pop_icon_to @view == "list" ? "grid" : "list",
                         "?view=#{@view == 'list' ? 'grid' : 'list'}#{"&q=#{@q}" if @q}#{"&status=#{@status}" if @status}" %>
-        <% if organizer_signed_in?(as: :member) %>
+        <%# Policy, not bare membership: create_stripe_card? also requires the org
+            not be in Playground Mode, and a button whose action refuses is the
+            trap page this codebase keeps having to close. %>
+        <% if policy(@event).new_stripe_card? %>
           <%= link_to event_cards_new_path(event_id: @event.slug), class: "btn bg-success", data: { behavior: "modal_trigger", modal: "order_card" } do %>
             <%= inline_icon "card-add" %>
             Order a card
@@ -103,7 +106,7 @@
         description: "Automatically categorize and track expenses, making budgeting and financial reporting a breeze."
       }
     ] do %>
-    <% if organizer_signed_in?(as: :member) %>
+    <% if policy(@event).new_stripe_card? %>
       <%= link_to event_cards_new_path(event_id: @event.slug), class: "btn bg-success", data: { behavior: "modal_trigger", modal: "order_card" } do %>
         <%= inline_icon "card-add" %>
         Order a card
@@ -113,7 +116,9 @@
   <% end %>
 <% end %>
 
-<% if organizer_signed_in? %>
+<%# Same policy as the trigger above. Rendering the form for an org that
+    cannot be issued cards leaves a live POST target behind a hidden button. %>
+<% if policy(@event).new_stripe_card? %>
   <section class="modal modal--scroll bg-snow" data-behavior="modal" role="dialog" id="order_card">
     <%= modal_header "Order a card" %>
     <%= render "stripe_cards/form", stripe_card: StripeCard.new %>

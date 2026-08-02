@@ -60,9 +60,12 @@ module Fuime
       "g_suite_accounts",
       "g_suite_aliases",
 
-      # Physical/virtual card issuing — explicitly a later phase.
-      "stripe_cards",
-      "stripe_cardholders",
+      # NOTE: stripe_cards and stripe_cardholders were here and are deliberately
+      # not any more (2026-08-02). Issuing runs in Stripe TEST MODE, so a card
+      # created here spends nothing real, and leaving the writes blocked while
+      # EventPolicy#card_overview? was re-enabled would have rebuilt the exact
+      # trap page that list was written to close: a Create button that 302s.
+      # Blocked again the moment this fork points at anything but test keys.
       "emburse_cards",
       "emburse_card_requests",
       "emburse_transactions",
