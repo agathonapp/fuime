@@ -580,7 +580,8 @@ class EventsController < ApplicationController
     authorize @event
 
     @g_suite = @event.g_suites.first
-    @waitlist_form_submitted = GWaitlistTable.all(filter: "{OrgID} = '#{@event.id}'").any? unless Flipper.enabled?(:google_workspace, @event) || Rails.env.development?
+    # FUIME-DISABLED: the Google Workspace waitlist lived in a Hack Club Airtable base.
+    @waitlist_form_submitted = false
 
     if @g_suite.present?
       @results = GSuiteService::Verify.new(g_suite_id: @g_suite.id).results(skip_g_verify: true)
@@ -1142,7 +1143,6 @@ class EventsController < ApplicationController
     if @event.update(event_params.except(:files, :plan).merge({ demo_mode: false }))
       flash[:success] = "Organization successfully activated."
       redirect_to event_path(@event)
-      @event.set_airtable_status("Onboarded")
     else
       render :activation_flow, status: :unprocessable_content
     end

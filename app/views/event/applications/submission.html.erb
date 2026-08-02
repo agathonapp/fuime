@@ -38,16 +38,16 @@
         <hr class="my-1">
         <section class="details details--wide">
           <p>
-            <strong>Airtable ID</strong>
-            <code><%= @application.airtable_record_id %></code>
+            <strong>Application ID</strong>
+            <code><%= @application.id %></code>
           </p>
           <p>
-            <strong>Airtable status</strong>
-            <span class="badge w-max m-0 bg-muted"><%= @application.airtable_status %></span>
+            <strong>Status</strong>
+            <span class="badge w-max m-0 bg-muted"><%= @application.aasm.human_state %></span>
           </p>
           <p>
-            <strong>Airtable last synced at</strong>
-            <span><%= @application.airtable_synced_at.present? ? format_datetime(@application.airtable_synced_at) : "Not synced" %></span>
+            <strong>Submitted at</strong>
+            <span><%= @application.submitted_at.present? ? format_datetime(@application.submitted_at) : "Not submitted" %></span>
           </p>
           <% if @application.contract.present? %>
             <p>
@@ -97,10 +97,6 @@
   </div>
 
   <div class="flex items-center justify-end gap-4">
-    <% admin_tool do %>
-      <%= link_to "View in Airtable", airtable_application_path(@application), class: "btn bg-blue", target: "_blank" %>
-    <% end %>
-
     <% pending_parties = @application.contract&.parties&.not_hcb&.select(&:pending?)&.map(&:role) || [] %>
     <% if @application.may_mark_approved? %>
       <% admin_tool do %>

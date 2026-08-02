@@ -103,10 +103,6 @@
     </div>
 
     <div class="flex items-center gap-4">
-      <% admin_tool do %>
-        <%= link_to "View in Airtable", airtable_application_path(@application), class: "btn bg-blue", target: "_blank" %>
-      <% end %>
-
       <%= link_to "View submission", submission_application_path(@application), class: "btn bg-muted" %>
     </div>
   <% end %>

@@ -229,6 +229,18 @@ class User < ApplicationRecord
   # Fuime: Block under-13 signups (COPPA compliance)
   validate :minimum_age_requirement, if: -> { birthday_changed? && birthday.present? }
 
+  # Fuime: close the "omit the birthday" bypass.
+  #
+  # Only on the :onboarding context, driven by UsersController#update. Users are
+  # also created programmatically — organizer invites, guardian stubs built from
+  # an email address, seeds — and those legitimately have no birthday yet, so a
+  # blanket validation would break account creation rather than protect anyone.
+  #
+  # The control that actually matters does not depend on this: a user with no
+  # birthday is treated as a minor (see #minor_or_unknown_age?), so they are
+  # blocked from operating a business until they supply one.
+  validate :birthday_required_for_onboarding, on: :onboarding
+
   validates :full_name, format: {
     with: /\A[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,'-]+ [a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,' -]+\z/,
     message: "must contain your first and last name, and only contain characters in the latin alphabet.", allow_blank: true,
@@ -497,8 +509,26 @@ class User < ApplicationRecord
     first_robotics_student?
   end
 
+  # Upstream tri-state: true / false / nil when no birthday is recorded.
+  # Fuime code should prefer #minor_or_unknown_age? — see below.
   def is_minor?
     age&.<(18)
+  end
+
+  # Fuime: fail-closed age check.
+  #
+  # `is_minor?` returns nil when no birthday is on file, which is falsy — so
+  # every `if user.is_minor?` guard silently passes for a user who simply never
+  # entered a date of birth. For a platform whose core legal control is "minors
+  # need a guardian", unknown age must be treated as minor until proven
+  # otherwise, or the control is opt-out.
+  def minor_or_unknown_age?
+    is_minor? != false
+  end
+
+  # Fuime: true once we positively know the user is an adult.
+  def known_adult?
+    is_minor? == false
   end
 
   # Fuime: Check if this minor has an active guardian
@@ -506,9 +536,21 @@ class User < ApplicationRecord
     guardianships_as_minor.active.exists?
   end
 
-  # Fuime: Check if this minor needs a guardian (under 18 and no active guardian)
+  # Fuime: Does this user require a guardian before they can operate a business?
+  #
+  # Unknown age counts as requiring one (see #minor_or_unknown_age?). Adults and
+  # minors with an ACTIVE guardianship do not.
   def needs_guardian?
-    is_minor? && !has_active_guardian?
+    minor_or_unknown_age? && !has_active_guardian?
+  end
+
+  # Fuime: may this user create, own, or move money in a business?
+  #
+  # This is the single predicate the guardianship control hangs off. It is
+  # enforced in EventPolicy and in a controller-level filter so that neither a
+  # direct URL nor a missed view conditional can bypass it.
+  def permitted_to_operate_business?
+    !needs_guardian?
   end
 
   # Fuime: Get the active guardian for this minor
@@ -519,6 +561,43 @@ class User < ApplicationRecord
   # Fuime: Check if user is a guardian for any minors
   def is_guardian?
     guardianships_as_guardian.active.exists?
+  end
+
+  # Fuime: what kind of account is this, in Fuime's own vocabulary?
+  #
+  # Admin and support staff kept having to reverse-engineer this from a birthday
+  # and two association counts, which is how you end up revoking the wrong
+  # person's guardianship. One symbol, computed the same way everywhere:
+  #
+  #   :guardian  — an adult who actively signs for at least one teen
+  #   :teen      — under 18 (or unknown age, which we treat as under 18)
+  #   :adult     — a confirmed 18+ user with no wards
+  #
+  # Ordering matters: an adult with wards is a guardian first. Unknown age
+  # resolves to :teen for the same fail-closed reason as #minor_or_unknown_age?
+  # — guessing "adult" on missing data is the guess that skips the guardian
+  # requirement entirely.
+  def account_type
+    return :guardian if is_guardian?
+    return :teen if minor_or_unknown_age?
+
+    :adult
+  end
+
+  def account_type_label
+    case account_type
+    when :guardian then "Parent / guardian"
+    when :teen then "Teen"
+    else "Adult"
+    end
+  end
+
+  # The guardianship this user's teen account hangs off — active if there is
+  # one, otherwise the most recent pending invite so admins can see a teen who
+  # has invited someone but is still waiting.
+  def primary_guardianship
+    guardianships_as_minor.active.first ||
+      guardianships_as_minor.where(status: :pending).order(created_at: :desc).first
   end
 
   def was_teenager_on_join?
@@ -727,13 +806,38 @@ class User < ApplicationRecord
     legal_entities.create!(entity_type: :person, name: full_name)
   end
 
-  # Fuime: COPPA compliance - must be 13+ to use the platform
+  # Fuime: COPPA compliance — must be 13+ to use the platform.
+  #
+  # Fuime does not collect data from under-13s at all, which is why this is a
+  # hard floor rather than a verifiable-parental-consent flow.
+  #
+  # Note the guard on the *validation* (not here): it runs whenever birthday is
+  # present, and MIN_AGE_REQUIRED_ONBOARDING below closes the "just don't enter
+  # a birthday" bypass by requiring one to finish onboarding.
   def minimum_age_requirement
     return unless birthday.present?
 
     if age.present? && age < 13
       errors.add(:birthday, "indicates you are under 13. You must be at least 13 years old to use Fuime.")
     end
+  end
+
+  # Fuime: a user cannot complete onboarding without a date of birth.
+  #
+  # Age drives the guardianship requirement and the COPPA floor. Leaving it
+  # optional made both controls opt-out: no birthday meant `is_minor?` was nil,
+  # so the under-13 validation never ran and the guardian redirect never fired.
+  #
+  # Runs only on the :onboarding validation context — see the validation.
+  def birthday_required_for_onboarding
+    return if birthday.present?
+    return if system_user?
+
+    errors.add(:birthday, "is required. Fuime needs your date of birth to know whether you need a parent or guardian on the account.")
+  end
+
+  def system_user?
+    email == SYSTEM_USER_EMAIL
   end
 
   def auditors_must_be_verified

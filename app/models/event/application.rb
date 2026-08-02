@@ -82,7 +82,6 @@ class Event
     validate :cosigner_cannot_change_after_sign
 
     after_save :check_cosigner_update
-    after_commit :schedule_airtable_sync, unless: :saved_change_to_airtable_synced_at?
 
     monetize :annual_budget_cents, allow_nil: true
     monetize :committed_amount_cents, allow_nil: true
@@ -291,8 +290,6 @@ class Event
       fs_contract.send!(reissue_messages:)
       fs_contract.party(:cosigner)&.notify unless reissue_of.present?
 
-      set_airtable_status("Documents sent") if reissue_of.present?
-
       fs_contract
     end
 
@@ -320,12 +317,6 @@ class Event
         contract.mark_voided!
         send_contract
       end
-    end
-
-    def airtable_url
-      return nil unless airtable_record_id.present?
-
-      "https://airtable.com/#{ApplicationsTable.base_key}/#{ApplicationsTable.table_name}/#{airtable_record_id}"
     end
 
     def record_pageview(last_page_viewed)
@@ -364,10 +355,6 @@ class Event
         end
       end
 
-      set_airtable_status("Onboarded")
-
-      schedule_airtable_sync
-
       Event::ApplicationMailer.with(application: self).activated.deliver_later
 
       self
@@ -404,16 +391,7 @@ class Event
       tags
     end
 
-    def airtable_record
-      app = ApplicationsTable.all(filter: "{recordID} = \"#{airtable_record_id}\"").first if airtable_record_id.present?
-      app ||= ApplicationsTable.all(filter: "{HCB Application ID} = \"#{hashid}\"").first
-    end
-
     private
-
-    def schedule_airtable_sync
-      Event::ApplicationSyncToAirtableJob.perform_later(self)
-    end
 
     def cosigner_cannot_change_after_sign
       if cosigner_email_changed? && contract&.party(:cosigner)&.signed?
@@ -455,17 +433,6 @@ class Event
       end
 
       !missing_fields
-    end
-
-    def set_airtable_status(status)
-      airrecord = airtable_record
-
-      if airrecord.present?
-        airrecord["Status"] = status
-        airrecord.save
-      end
-    rescue => e
-      Rails.error.report(e)
     end
 
   end

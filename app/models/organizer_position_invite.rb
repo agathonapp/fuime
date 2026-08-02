@@ -237,7 +237,7 @@ class OrganizerPositionInvite < ApplicationRecord
         prefills: {
           "public_id"   => event.public_id,
           "name"        => event.name,
-          "description" => event.airtable_record&.[]("Tell us about your event")
+          "description" => event.description
         },
         reissue_of:
       )

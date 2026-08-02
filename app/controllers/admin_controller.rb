@@ -80,9 +80,6 @@ class AdminController < Admin::BaseController
   def event_new
   end
 
-  def event_new_from_airtable
-  end
-
   def event_create
     emails = [params[:organizer_email]].reject(&:empty?)
 
@@ -105,37 +102,6 @@ class AdminController < Admin::BaseController
     redirect_to events_admin_index_path, flash: { success: "Successfully created #{params[:name]}" }
   rescue => e
     redirect_to event_new_admin_index_path, flash: { error: e.message }
-  end
-
-  def event_create_from_airtable
-    record = ApplicationsTable.find(params[:airtable_record_id])
-    application = record.fields
-    country = ISO3166::Country.find_country_by_any_name(application["Event Location"])
-
-    tags = []
-    tags << EventTag::Tags::ORGANIZED_BY_TEENAGERS if application["TEEN"]
-
-    if ["Robotics", "FIRST/Robotics", "FIRST - Argosy"].include?(application["Org Type"])
-      tags << EventTag::Tags::ROBOTICS_TEAM
-    end
-
-    event = ::EventService::Create.new(
-      name: application["Event Name"],
-      country: country&.alpha2,
-      point_of_contact_id: current_user.id,
-      approved: true,
-      tags:,
-      demo_mode: true
-    ).run
-
-    record["HCB account URL"] = "https://hcb.hackclub.com/#{event.slug}"
-    record["HCB ID"] = event.id
-
-    record.save
-
-    redirect_to event_path(event), flash: { success: "Successfully created #{event.name}" }
-  rescue => e
-    redirect_to event_new_from_airtable_admin_index_path, flash: { error: e.message }
   end
 
   def event_balance
@@ -1771,24 +1737,6 @@ class AdminController < Admin::BaseController
     end
   end
 
-  include StaticPagesHelper # for airtable_info
-
-  def airtable_task_size(task_name)
-    info = airtable_info[task_name]
-
-    client = Faraday.new do |c|
-      c.response :json
-      c.response :raise_error
-      c.authorization :Bearer, Credentials.fetch(:AIRTABLE)
-    end
-
-    task = client.get("https://api.airtable.com/v0/#{info[:id]}/#{info[:table]}", info[:query]).body["records"]
-    task.size
-  rescue => e
-    Rails.error.report(e)
-    9999 # return something invalidly high to get the ops team to report it
-  end
-
   def pending_identity_vault_verifications_task_size
     client = Faraday.new(request: { open_timeout: 5, timeout: 8 }) do |c|
       c.response :json
@@ -1801,46 +1749,10 @@ class AdminController < Admin::BaseController
     9999 # return something invalidly high to get the ops team to report it
   end
 
-  def hackathons_task_size
-    hackathons = Faraday
-                 .new(ssl: { verify: false }, request: { open_timeout: 5, timeout: 8 }) { |c| c.response :json }
-                 .get("https://dash.hackathons.hackclub.com/api/v1/stats/hackathons")
-                 .body
-
-    hackathons.dig("status", "pending", "meta", "count")
-  rescue => e
-    Rails.error.report(e)
-    9999
-  end
-
   def pending_task(task_name)
     @pending_tasks ||= {}
     @pending_tasks[task_name] ||= begin
       case task_name
-      when :pending_hackathons_airtable
-        hackathons_task_size
-      when :pending_bank_applications_airtable
-        airtable_task_size :bank_applications
-      when :pending_stickers_airtable
-        airtable_task_size :stickers
-      when :pending_onepassword_airtable
-        airtable_task_size :onepassword
-      when :pending_domains_airtable
-        airtable_task_size :domains
-      when :pending_pvsa_airtable
-        airtable_task_size :pvsa
-      when :pending_theeventhelper_airtable
-        airtable_task_size :theeventhelper
-      when :pending_wire_transfers_airtable
-        airtable_task_size :wire_transfers
-      when :pending_disputed_transactions_airtable
-        airtable_task_size :disputed_transactions
-      when :pending_feedback_airtable
-        airtable_task_size :feedback
-      when :pending_google_workspace_waitlist_airtable
-        airtable_task_size :google_workspace_waitlist
-      when :pending_you_ship_we_ship_airtable
-        airtable_task_size :you_ship_we_ship
       when :pending_identity_vault_verifications
         pending_identity_vault_verifications_task_size
       when :emburse_card_requests
@@ -1874,17 +1786,8 @@ class AdminController < Admin::BaseController
 
   def pending_tasks
     # This method could take upwards of 10 seconds. USE IT SPARINGLY
-    pending_task :pending_hackathons_airtable
-    pending_task :pending_bank_applications_airtable
-    pending_task :pending_stickers_airtable
-    pending_task :pending_onepassword_airtable
-    pending_task :pending_domains_airtable
-    pending_task :pending_pvsa_airtable
-    pending_task :pending_theeventhelper_airtable
-    pending_task :pending_feedback_airtable
     pending_task :wire_transfers
     pending_task :paypal_transfers
-    pending_task :disputed_transactions_airtable
     pending_task :emburse_card_requests
     pending_task :checks
     pending_task :ach_transfers

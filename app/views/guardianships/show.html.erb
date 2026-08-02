@@ -1,11 +1,12 @@
 <% title "Guardian Invitation" %>
 <% page_full %>
 
-<main class="center max-w-xl card mt4 md-p3 mx-auto">
-  <h1 class="mt0 border-0 mb-2">You've been invited!</h1>
+<main class="center max-w-2xl card mt4 md-p3 mx-auto">
+  <h1 class="mt0 border-0 mb-2">You've been invited</h1>
 
   <p class="text-lg mb-3">
-    <strong><%= @guardianship.minor.name || @guardianship.minor.email %></strong> has invited you to be their guardian on Fuime.
+    <strong><%= @guardianship.minor.name || @guardianship.minor.email %></strong>
+    has asked you to be their parent or guardian on Fuime.
   </p>
 
   <div class="bg-smoke rounded-lg p-4 mb-4">
@@ -15,23 +16,64 @@
       <li class="mb-1">You can view all their transactions and business activity</li>
       <li class="mb-1">You'll receive important notifications about their account</li>
       <li class="mb-1">At tax time, you'll get a summary to share with your accountant</li>
+      <li class="mb-1">You can withdraw your consent at any time</li>
     </ul>
   </div>
 
-  <%= render "application/callout", type: "warning" do %>
-    <strong>Responsibility Notice:</strong> By accepting, you agree to serve as the responsible adult
-    for this minor's business activities on Fuime. You should only accept if you are
-    this person's parent or legal guardian.
+  <%# Preconditions — chiefly a confirmed 18+ date of birth. A guardian invited
+      by email is a stub user with no birthday, so this is the common path.
+      Surfacing it here means they fix it before signing, not after. %>
+  <% blockers = @guardianship.activation_blockers %>
+  <% if blockers.any? %>
+    <%= render "application/callout", type: "warning", title: "Before you can sign" do %>
+      <ul class="list-disc pl-5 mb-2">
+        <% blockers.each do |blocker| %>
+          <li><%= blocker %></li>
+        <% end %>
+      </ul>
+      <%= link_to "Update my details",
+                  edit_user_path(current_user, return_to: guardianship_path(@guardianship.invite_token)),
+                  class: "btn bg-accent" %>
+    <% end %>
   <% end %>
 
-  <div class="flex justify-center items-center flex-wrap mt-4 gap-3">
-    <%= link_to "Accept & Sign", accept_guardianship_path(@guardianship.invite_token),
-                method: :post,
-                class: "btn bg-success text-lg px-6 py-3",
-                data: { confirm: "I confirm that I am the parent or legal guardian of #{@guardianship.minor.name || 'this minor'} and accept responsibility for their Fuime account." } %>
+  <h2 class="mb-2 mt-4">Guardian agreement</h2>
+  <div class="border rounded-lg p-4 mb-4 overflow-y-auto" style="max-height: 24rem">
+    <% if (partial = @guardianship.agreement_partial) %>
+      <%= render partial, minor: @guardianship.minor, guardian: @guardianship.guardian %>
+    <% else %>
+      <p class="error mb-0">
+        The agreement text could not be loaded. Please contact
+        <%= mail_to "support@fuime.com" %> before signing.
+      </p>
+    <% end %>
   </div>
 
+  <% if blockers.empty? && @guardianship.agreement_partial.present? %>
+    <%= form_with url: accept_guardianship_path(@guardianship.invite_token), method: :post do |f| %>
+      <div class="field field--checkbox mb-3" data-controller="accordion">
+        <%= check_box_tag :agree, "1", false,
+                          required: true,
+                          id: "agree" %>
+        <%= label_tag :agree do %>
+          I confirm I am the parent or legal guardian of
+          <strong><%= @guardianship.minor.name || "this minor" %></strong>,
+          that I am 18 or older, and I agree to the guardian agreement above.
+        <% end %>
+      </div>
+
+      <div class="flex justify-center items-center flex-wrap gap-3">
+        <%= f.submit "Agree & activate their account", class: "btn bg-success text-lg px-6 py-3" %>
+      </div>
+    <% end %>
+
+    <p class="text-sm muted mt-3 text-center">
+      We'll record the date, your IP address, and the version of the agreement
+      you signed.
+    </p>
+  <% end %>
+
   <p class="text-sm muted mt-4 text-center">
-    Questions? Contact us at support@fuime.com
+    Questions? Contact us at <%= mail_to "support@fuime.com" %>
   </p>
 </main>

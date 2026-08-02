@@ -72,12 +72,7 @@
       <h2>Perks</h2>
       <ul class="grid text-left w-100 mt0" id="perks-grid">
         <%= card_to "Google Workspaces", google_workspaces_admin_index_path, badge: GSuite.needs_ops_review.count %>
-        <%= card_to "Stickers", link_to_airtable_task(:stickers), async_badge: :pending_stickers_airtable %>
-        <%= card_to "Hackathons", "https://dash.hackathons.hackclub.com/sign_in", async_badge: :pending_hackathons_airtable %>
-        <%= card_to "1Password", link_to_airtable_task(:onepassword), async_badge: :pending_onepassword_airtable %>
-        <%= card_to "Domains", link_to_airtable_task(:domains), async_badge: :pending_domains_airtable %>
-        <%= card_to "The Event Helper", link_to_airtable_task(:theeventhelper), async_badge: :pending_theeventhelper_airtable %>
-        <%= card_to "Google Workspace waitlist", link_to_airtable_task(:google_workspace_waitlist), async_badge: :pending_google_workspace_waitlist_airtable %>
+        <%# FUIME-DISABLED (Hack Club perks, backed by Hack Club Airtable): Stickers, Hackathons, 1Password, Domains, The Event Helper, Google Workspace waitlist %>
       </ul>
       <h2>Accounting</h2>
       <ul class="grid text-left w-100 mt0" id="accounting-grid">
@@ -99,8 +94,7 @@
       <details>
         <summary>Old cards</summary>
         <ul class="grid text-left w-100 pt-2" id="old-card-grid">
-          <%= card_to "YSWS verification", link_to_airtable_task(:you_ship_we_ship), async_badge: :pending_you_ship_we_ship_airtable %>
-          <%= card_to "PVSA", link_to_airtable_task(:pvsa), async_badge: :pending_pvsa_airtable %>
+          <%# FUIME-DISABLED (Hack Club programs, backed by Hack Club Airtable): YSWS verification, PVSA %>
           <%= render partial: "static_pages/card", locals: { task_path: events_path, human_name: "Organizations" } %>
           <%= render partial: "static_pages/card", locals: { task_path: negative_events_path, human_name: "Negative organizations" } %>
           <%= render partial: "static_pages/card", locals: { task_path: sponsors_path, human_name: "Sponsors" } %>

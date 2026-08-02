@@ -38,7 +38,10 @@
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
         <p class="m-0 font-medium">IRS Self-Employment Threshold</p>
-        <p class="m-0 muted">$<%= render_money_amount(@tax_tracker.net_income_cents) %> / $400.00</p>
+        <%# Net EARNINGS (net profit x 92.35%) is the figure the $400 test
+            applies to — showing net income here would disagree with the
+            verdict below for profits between $400 and ~$433. %>
+        <p class="m-0 muted">$<%= render_money_amount(@tax_tracker.net_earnings_cents) %> / $400.00</p>
       </div>
       <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
         <div class="h-4 rounded-full transition-all duration-500 <%= @tax_tracker.over_threshold? ? 'bg-error' : 'bg-primary' %>"
@@ -55,15 +58,19 @@
         <% end %>
         <div>
           <p class="m-0 font-medium"><%= @tax_tracker.status_message %></p>
-          <% if @tax_tracker.over_threshold? %>
-            <p class="m-0 mt-2 muted text-sm">
-              When you earn over $400 in net self-employment income, you may owe self-employment tax.
-              Download your year-end packet and share it with your parent or guardian to discuss with a tax professional.
-            </p>
+          <% if @tax_tracker.quarterly_estimates_warning.present? %>
+            <p class="m-0 mt-2 muted text-sm"><%= @tax_tracker.quarterly_estimates_warning %></p>
           <% end %>
         </div>
       </div>
     </div>
+
+    <%# Fuime is not a tax preparer. Every number on this page is an estimate
+        derived from the ledger, and must be presented as one. %>
+    <p class="muted text-sm mt-4 mb-0">
+      <%= inline_icon "info", size: 14, class: "mr-1" %>
+      <%= @tax_tracker.disclaimer %>
+    </p>
   </div>
 
   <div class="card">

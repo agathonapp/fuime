@@ -42,8 +42,6 @@ gem "yellow_pages", github: "hackclub/yellow_pages"
 
 gem "aws-sdk-s3", require: false
 
-gem "airrecord", "~> 1.0" # Airtable API for internal operations
-
 gem "twilio-ruby" # SMS notifications
 
 gem "google-apis-admin_directory_v1", "~> 0.67.0" # GSuite

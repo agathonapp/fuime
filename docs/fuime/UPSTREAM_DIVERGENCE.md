@@ -334,3 +334,238 @@ showing a `$41.85` balance (net of the 4% fee) and a public ledger.
 Render, so no real Checkout session can be created yet.
 
 Audited all 137 `inline_icon` names across `app/views`: no missing icons.
+
+## Production Hardening (real-user readiness)
+
+Driven by the full sweep in `docs/fuime/PRODUCTION_READINESS.md`. This is the
+work that turns a working demo into something that can face real teenagers and
+real parents. Engineering blockers only — the legal items (§1.2 identity
+verification, §1.5 money transmission, §1.6 CPA review) remain open and gate
+launch independently of any code here.
+
+### Guardianship is now an enforced control, not a redirect (§1.1, §1.2)
+
+Previously `needs_guardian?` was consulted in exactly one place — a redirect
+after profile creation. A teen could dismiss it and then create, own, and
+transact on a business freely. Two further bypasses compounded it: `is_minor?`
+returns **nil** when no birthday is recorded (falsy, so every guard passed), and
+the under-13 COPPA validation only ran `if birthday.present?` — so omitting the
+date of birth disabled both controls at once.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `minor_or_unknown_age?` / `known_adult?` / `permitted_to_operate_business?` | Fail closed: unknown age is treated as a minor. `is_minor?` keeps its upstream tri-state so HCB code is unaffected | `app/models/user.rb` |
+| Request-level `GuardianshipEnforcement` filter (deny-by-default allowlist) | A redirect on one happy path is a suggestion; this blocks every URL | `app/controllers/concerns/fuime/guardianship_enforcement.rb`, `app/controllers/application_controller.rb` |
+| Gate `member?` / `manager?` in EventPolicy | Every write path resolves through these two, so one change covers ~40 predicates and any added later. Read access deliberately NOT gated | `app/policies/event_policy.rb` |
+| Birthday required to finish onboarding (`:onboarding` context) | Closes the "skip the DOB field" bypass. Scoped to the user's own onboarding so invites, guardian stubs, and seeds still work | `app/models/user.rb`, `app/controllers/users_controller.rb` |
+| `activation_blockers` / `activatable?`; `accept!` refuses unless guardian is a confirmed adult | A stub guardian with no birthday could previously sign as the responsible adult | `app/models/guardianship.rb`, `app/controllers/guardianships_controller.rb` |
+| Consent record: agreement version, IP, user agent | "They clicked accept" is not evidence of informed consent | `db/migrate/20260801170000_*`, `..._170001_*`, `..._170002_*` |
+| Invite token expiry (7 days) + `resend_invite!` | Invite links are bearer tokens over a minor's account; they never expired | `app/models/guardianship.rb` |
+| `revoke!` records who and when | Withdrawing consent is a legal requirement and must be auditable | `app/models/guardianship.rb` |
+
+### Money path (§1.3, §1.4)
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `STRIPE_MODE` env var; default `:test` everywhere incl. production | Upstream hardcoded `:live` in production, but only `STRIPE__TEST__*` keys exist — so every Stripe call in production read credentials that were never set | `app/services/stripe_service.rb`, `render.yaml` |
+| Handle `payment_intent.succeeded` only; ignore `checkout.session.completed` | Both fire for one Checkout payment with different object ids, so keying idempotency on the object id **double-posted every payment** | `app/services/fuime/payment_webhook_handler.rb` |
+| `fronted: false` | `fronted` means the platform advances spendable credit against unsettled money — backed by Hack Club's reserves upstream. Fuime has none, and Stripe is T+2 with refund/chargeback risk after | `app/services/fuime/payment_webhook_handler.rb` |
+| Handle `charge.refunded` and `charge.dispute.created` | A refunded payment stayed on the ledger as income and inflated the family's tax number. Reversals are capped at the outstanding amount so cumulative refund events don't stack | `app/services/fuime/payment_webhook_handler.rb` |
+| Refuse unsigned webhooks (503, not "accept anything") | This endpoint writes to business ledgers; an unverified event is an attacker-controlled ledger line | `app/controllers/fuime/webhooks_controller.rb` |
+| `FUIME_STRIPE_WEBHOOK_SECRET` added to Render | Was never set, so production rejected **every** Stripe webhook | `render.yaml` |
+
+### Data durability + boot safety (§1.7)
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `ACTIVE_STORAGE_SERVICE=amazon` + `S3__*` on web and worker | Default was `:local` with no persistent disk on Render — every deploy **permanently destroyed every uploaded receipt**, silently and unrecoverably | `render.yaml` |
+| Boot-time safety check: raises on `:local` storage, half-configured live keys, or a hackclub.com host; warns on test mode and missing webhook secret | CLAUDE.md Milestone 2. Misconfiguration here is data loss or unauthorised money movement, not degraded service | `config/initializers/fuime_safety_check.rb` |
+
+### Honest claims + privacy (§1.6, §2.2, §2.4)
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Tax threshold applied to **net earnings** (net profit x 92.35%), not raw net income | IRS Schedule SE. The $400 test bites at ~$433.14 of profit; businesses between $400 and $433 were told they owed when they may not | `app/services/fuime/tax_tracker_service.rb` |
+| Income classification excludes transfers, owner deposits, refund/dispute reversals | Every positive ledger line counted as taxable income | `app/services/fuime/tax_tracker_service.rb` |
+| Copy reframed from determinations to estimates; disclaimer + quarterly-estimates warning | Fuime is not a tax preparer and must not state obligations as fact | `app/services/fuime/tax_tracker_service.rb`, `app/views/fuime/taxes/show.html.erb`, `app/controllers/fuime/taxes_controller.rb` |
+| Progress bar reads net earnings | It compared net income to $400 while the verdict used net earnings — the two disagreed | `app/views/fuime/taxes/show.html.erb` |
+| Storefront: balance removed, owner name shown only for adult owners, tax figures never public | A minor's first name + live balance + ledger is a targeting profile. HCB's transparency page was built for nonprofit *organisations* | `app/controllers/fuime/storefronts_controller.rb`, `app/views/fuime/storefronts/show.html.erb` |
+| Badge "Parent-signed account" → "Guardian on account" | Accepting an invite proves control of an email and a self-asserted birthday, not a verified parental relationship. Restore when §1.2 ships | `app/views/fuime/storefronts/show.html.erb` |
+| Comment mailer `from`/`reply_to`/`Message-ID` moved off hcb.hackclub.com | Fuime users' replies were routed into Hack Club's inbound parser | `app/mailers/comment_mailer.rb` |
+| `receipt_upload_email` returns nil unless `FUIME_RECEIPT_PARSE_DOMAIN` is set | Was advertising an hcb.hackclub.com address that delivered Fuime users' receipts to a third party | `app/models/hcb_code.rb`, `app/views/hcb_codes/show.html.erb` |
+| Admin alert recipients from `FUIME_ENGINEER_EMAILS` | Was a hardcoded list of Hack Club staff | `app/mailers/admin_mailer.rb` |
+
+### Disabled modules are actually blocked (§2.3)
+
+Upstream money-out modules were "disabled" by not rendering nav links, leaving
+~60 routes live to anyone who types a URL — and the people typing URLs here are
+teenagers. Now blocked at the request level (admins exempt); nothing deleted,
+per Rule 2.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `DisabledModules` filter: ACH, checks, wires, disbursements, reimbursements, donations, card grants, G Suite, card issuing | Nav hiding is not enforcement | `app/controllers/concerns/fuime/disabled_modules.rb`, `app/controllers/application_controller.rb` |
+
+Deliberately still enabled: invoices (Fuime's money-in), receipts, comments,
+the ledger, transparency mode, admin console, auth.
+
+### Secrets hygiene (§2.6)
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Removed the real-looking 64-hex `LOCKBOX` value | Anyone copying the example inherited a publicly-known encryption key | `.env.development.example` |
+| `LIVE_URL_HOST` example no longer hcb.hackclub.com | Pointed local dev at Hack Club production (Rule 4) | `.env.development.example` |
+| Documented the new Fuime env vars | Setup was undiscoverable | `.env.development.example` |
+
+### Tests (§2.7)
+
+Fuime previously had **zero** specs — no coverage on guardianship, payments,
+taxes, or the storefront, despite Prime Directive #1. Added 68:
+
+- `spec/models/guardianship_spec.rb` — activation preconditions, consent record, token expiry, revocation
+- `spec/models/user_guardianship_spec.rb` — fail-closed age logic, COPPA floor, onboarding DOB requirement
+- `spec/services/fuime/tax_tracker_service_spec.rb` — threshold arithmetic against hand-computed values, incl. the $400/$433 boundary
+- `spec/services/fuime/payment_webhook_handler_spec.rb` — idempotency, no double-post, refunds/disputes, cumulative-refund capping
+- `spec/controllers/fuime/guardianship_enforcement_spec.rb` — the control actually blocks, at request and policy level
+- `spec/controllers/fuime/disabled_modules_spec.rb` — blocked list is real and doesn't over-reach
+
+`spec/factories/user_factory.rb` now defaults users to adults (with `:minor`,
+`:minor_with_guardian`, `:unknown_age` traits). Without this, every unrelated
+spec would silently become a test of the guardianship gate.
+
+---
+
+## Parent/child roles, admin visibility, and the guardian agreement
+
+### Role vocabulary (§3.x, Rule 6-compliant)
+
+The `role` enum keeps upstream's values — `reader` / `member` / `manager` are
+woven through policies, `OrganizerPosition.role_at_least?`, spending controls,
+invites, and team filters, and renaming them would end our ability to merge
+upstream fixes. Only the words a teenager or parent reads changed.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| New `RolesHelper` mapping manager→Owner, member→Team member, reader→Parent | Role names were rendered ad-hoc with `.capitalize` / `.humanize` / `.titleize` in five partials, so a rename would land half-applied | `app/helpers/roles_helper.rb` |
+| Replaced every ad-hoc role render with `role_label` | Single source of truth | `organizer_positions/_organizer_position*.html.erb`, `organizer_position_invites/_organizer_position_invite.html.erb`, `_role_and_control_form.html.erb`, `organizer_position_mailer/role_change.html.erb` |
+| Team filter tabs relabelled; `filter` **param values unchanged** | `EventsController` maps the param to a role enum value — only the tab text is Fuime's | `app/views/events/team.html.erb` |
+| Rewrote the roles explainer, which was an HCB changelog post from March 2024 | Described a feature launch to HCB users, in HCB's vocabulary | `app/views/static_pages/roles.html.erb` |
+| `helper :roles` added to `ApplicationMailer` | `role_change.html.erb` needs `role_label`; mailers only had `:application` and `:logo` | `app/mailers/application_mailer.rb` |
+
+Deliberately NOT done: a real guardianship-derived "Parent" seat on an org. The
+Parent role is a read-only view, not proof of guardianship — the actual legal
+link is the `Guardianship` record. Noted so nobody later mistakes the seat for
+the control.
+
+### Admin user page (§5 — "no guardian revocation UI")
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `User#account_type` / `#account_type_label` / `#primary_guardianship` | `/users/:id/admin` could not answer "is this a parent or a kid?" — admins reverse-engineered it from a birthday and two association counts, which is how you revoke the wrong person's guardianship | `app/models/user.rb` |
+| Guardianship panel: account type, age, status, guardian/wards, consent record, resend + revoke | Closes the §5 gap. A parent could not withdraw consent through any UI, though `revoke!` existed on the model | `app/views/users/_admin_guardianship.html.erb`, `users/edit_admin.html.erb` |
+| `revoke` / `resend_invite` / `record` actions + policies | Revoke excludes the **minor** by design: a teen must not be able to remove their own supervision | `guardianships_controller.rb`, `guardianship_policy.rb`, `config/routes.rb` |
+
+`:show` and `:accept` stay token-addressed (a guardian follows them from email
+before having an account); the three new actions are id-addressed and
+authenticated.
+
+### Guardian agreement (in-app, no DocuSeal)
+
+HCB's `Contract` machinery is DocuSeal-backed, which needs a third-party
+credential Phase 0 forbids (Rule 4), so the guardian agreement is in-app.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Versioned agreement text as a partial per version | The schema already stored `agreement_version` / `_ip` / `_user_agent` / `_signed_at`, but no agreement text existed anywhere — "Accept & Sign" was a JS `confirm()` | `app/views/guardianships/agreements/_2026_08_01_v1.html.erb` |
+| `Guardianship.agreement_partial_for` resolves a version to its file | A guardian who signed v1 must always see v1, not today's terms. Version strings come from the DB, so the slug is allowlisted (`/\A[a-z0-9_]+\z/`) before being interpolated into a path | `app/models/guardianship.rb` |
+| Accept page renders the agreement + a checkbox, re-checked server-side | `required` is a client-side hint; consent is the entire legal product of the action | `guardianships/show.html.erb`, `guardianships_controller.rb` |
+| `record` page — permanent, re-readable proof of what was signed | Consent you cannot review is not meaningful consent. Stays readable after revocation | `app/views/guardianships/record.html.erb` |
+
+**Bug fixed:** `guardianships.revoked_by_id` and its foreign key shipped in
+migration `20260801170001` with **no `belongs_to :revoked_by`**, so any
+`guardianship.revoked_by` call raised `NoMethodError`. Added the association
+(`optional: true`) and refreshed the stale schema annotation on the model.
+
+### Tests
+
+- `spec/models/user_account_type_spec.rb` — classification incl. fail-closed unknown age and guardian-before-teen ordering
+- `spec/models/guardianship_agreement_spec.rb` — version resolution, path-traversal rejection, historical versions, `revoked_by`
+- `spec/policies/guardianship_policy_spec.rb` — added `#record?` coverage
+
+**Also fixed:** two `return_to` redirects pointed at `accept_guardianship_path`,
+which is POST-only — a guardian who signed out, or who had to go add a date of
+birth first, would be GET-redirected there and 404. Both now return to the
+invite page.
+
+## Airtable Removal (HCB admin is the only system of record)
+
+Upstream HCB mirrored applications, user PII, and ops queues into Hack Club's
+Airtable bases via the `airrecord` gem. Fuime reviews business applications
+entirely in the HCB admin console, so Airtable is gone rather than disabled.
+
+**Why removal, not a feature flag:** the five table constants in
+`config/initializers/airrecord.rb` were *hardcoded Hack Club base IDs*. Left in
+place, any `AIRTABLE` credential entering the environment would have made this
+fork read and write Hack Club's production Airtable — a Prime Directive 4
+violation waiting on a single env var. Deleting the initializer removes the
+possibility, not just the default.
+
+Airtable was only ever a mirror: approve/reject/activate already operated on
+Postgres `aasm_state`, and the admin list at `admin#applications` already
+queried `Event::Application` directly. Nothing about the review workflow moved.
+
+| Change | Why | Files |
+|---|---|---|
+| Deleted `airrecord` gem + the 5-table initializer | Hardcoded Hack Club base IDs; see above | `Gemfile`, `Gemfile.lock`, `config/initializers/airrecord.rb` |
+| Deleted the 3 sync jobs and the nightly cron | Mirror had no consumer in Fuime | `app/jobs/event/*_airtable*.rb`, `app/jobs/event/sync_to_airtable*.rb`, `config/schedule.yml` |
+| Dropped the `after_commit :schedule_airtable_sync` hook | Every application save enqueued a doomed outbound job | `app/models/event/application.rb` |
+| Removed `set_airtable_status` / `sync_to_airtable` / `airtable_record` / `airtable_url` | Writers to a mirror that no longer exists | `app/models/event.rb`, `app/models/event/application.rb`, `app/controllers/events_controller.rb` |
+| Removed the `airtable` redirect action, route, and policy method | Pointed at a Hack Club Airtable record | `app/controllers/event/applications_controller.rb`, `config/routes.rb`, `app/policies/event/application_policy.rb` |
+| Removed `event_new/create_from_airtable` | Orgs come from approving an application; `event_create` (manual) already exists | `app/controllers/admin_controller.rb`, `config/routes.rb`, `app/views/admin/event_new_from_airtable.html.erb`, `app/views/admin/events.html.erb` |
+| Removed `airtable_task_size` + all `*_airtable` pending-task badges | Each badge was a live authenticated call to Hack Club's Airtable API on admin dashboard load | `app/controllers/admin_controller.rb` |
+| Removed `airtable_info` / `link_to_airtable_task` (12 Hack Club base IDs) | Hack Club perk queues with no Fuime equivalent | `app/helpers/static_pages_helper.rb` |
+| Command bar: "Applications (Airtable)" → in-app `/admin/applications`; dropped 8 Hack Club perk entries | Admin actions are all in-app now | `app/javascript/components/command_bar/actions.js`, `app/views/application/_command_bar.html.erb` |
+| Also removed `hackathons_task_size` | Orphaned with the badge block, and called `dash.hackathons.hackclub.com` with TLS verification disabled | `app/controllers/admin_controller.rb` |
+
+### Behaviour changes (not just deletions)
+
+- **Submission page admin panel** showed Airtable ID / status / last-synced.
+  Now shows application ID, `aasm.human_state`, and `submitted_at` — the real
+  Postgres state, which is strictly more accurate than the mirror ever was.
+- **Contract reminder job** skipped reminders when the Airtable status was
+  "Interview Scheduled"/"Invited to Interview". Interview state existed *only*
+  in Airtable and has no Postgres equivalent, so the check is gone and reminders
+  always send. Left as-is, `airtable_record["Status"]` would have raised
+  `NoMethodError` on nil and killed every contract reminder.
+- **`UserService::SyncWithLoops`** sent teenagers' legal name, date of birth and
+  home address to a Hack Club Airtable base, and only adults to Loops. Since
+  every Fuime user is a teenager, that was the hot path *and* the worst leak.
+  All users now sync to Loops; `userGroup` is `"Teen"`/`"Adult"`, source `"Fuime"`.
+- **`OrganizerPositionInvite#send_contract`** prefilled the contract description
+  from Airtable's "Tell us about your event". Now uses `event.description`.
+- **`Event#onboarding_scheduling_link`** returned a Hack Club onboarder's
+  scheduling link; stubbed to `nil` (Fuime has no onboarding calls).
+- **G Suite waitlist** check (`GWaitlistTable`) now `false`; G Suite is a
+  Milestone 5 DISABLE target anyway.
+
+### Tests
+
+- `spec/models/event/application_spec.rb` — rewritten: the file previously tested
+  only the Airtable sync. Now asserts saving enqueues **no** background job and
+  that `Event::ApplicationSyncToAirtableJob` is undefined, so the outbound sync
+  cannot be reintroduced silently.
+- `spec/controllers/organizer_position_invites_controller_spec.rb` — dropped the
+  `ApplicationsTable` stub; only Docuseal is stubbed now.
+- `bundle exec rails zeitwerk:check` passes (whole app eager-loads), RuboCop
+  clean on all touched files.
+
+### Known remaining Hack Club endpoints (NOT part of this change)
+
+- `disputed_transactions_airtable_form_url` (`app/helpers/hcb_code_helper.rb`)
+  and `paypal_transfers_airtable_form_url` (`app/helpers/events_helper.rb`) send
+  users to `forms.hackclub.com`. Despite the names these hit Hack Club's form
+  host, not the Airtable API, and the dispute flow is live and user-facing —
+  replacing it is its own task.
+- `pending_identity_vault_verifications_task_size` calls
+  `identity.hackclub.com`. Already `FUIME-DISABLED` in the admin_tools view, but
+  the method remains.

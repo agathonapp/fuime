@@ -10,25 +10,26 @@
       <%= inline_icon "question-mark", size: 18 %>
     </button>
     <div class="menu__content menu__content--2 menu__content--compact px-4 py-3" data-menu-target="content">
-      <p class="muted mb1 mt-0"><span class="bold info">Managers</span> can do everything
-        in the organization.</p>
+      <p class="muted mb1 mt-0"><span class="bold info">Owners</span> can do everything
+        in the business, including inviting people and changing settings.</p>
       <div class="muted mb1">
-        <p class="m0"><span class="bold info">Members</span> can:</p>
+        <p class="m0"><span class="bold info">Team members</span> can:</p>
         <ul class="m0">
           <li>View transactions and finances</li>
           <li>Create & use cards (with a limit if spending controls are enabled)
           </li>
           <li>Not transfer money</li>
-          <li>Not change the organization's settings</li>
+          <li>Not change the business's settings</li>
         </ul>
       </div>
-      <p class="muted mb-0"><span class="bold info">Readers</span> have read-only access to the organization.</p>
+      <p class="muted mb-0"><span class="bold info">Parents</span> can see everything and
+        change nothing &mdash; the seat for a parent or guardian keeping an eye on things.</p>
     </div>
   </div>
   <%= form.select :role,
-                  OrganizerPositionInvite.roles.keys.map { |role| [role.titleize, role] },
+                  role_options_for_select(OrganizerPositionInvite.roles.keys),
                   {},
-                  style: "max-width:120px !important",
+                  style: "max-width:150px !important",
                   "x-model": "role" %>
 </div>
 

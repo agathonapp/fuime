@@ -886,10 +886,6 @@ class Event < ApplicationRecord
     raise Errors::InvalidStripeCardLogoError, e.message
   end
 
-  def airtable_record
-    ApplicationsTable.all(filter: "{HCB ID} = '#{id}'").first
-  end
-
   def default_stripe_card_personalization_design
     stripe_card_personalization_designs.where("stripe_name like ?", "#{name} Black Card%").order(created_at: :desc).first
   end
@@ -948,32 +944,6 @@ class Event < ApplicationRecord
     eligible_for_transparency? && !risk_level.in?(%w[moderate high])
   end
 
-  def sync_to_airtable
-    # Sync stats to application's airtable record
-    ApplicationsTable.all(filter: "{HCB ID} = \"#{self.id}\"").each do |app| # rubocop:disable Rails/FindEach
-      app["Active Teens (last 30 days)"] = users.where(teenager: true).active.size
-      app["HCB POC Email"] = point_of_contact.email
-
-      # For Anish's TUB
-      app["Referral New Signee Under 18"] = organizer_positions.includes(:user).where(is_signee: true, user: { teenager: true }).any?
-      app["Referral Raised 25"] = total_raised > 25_00
-      app["Referral Transparent"] = is_public
-      app["Referral 2 Teen Members"] = organizer_positions.includes(:user).where(user: { teenager: true }).count > 2
-
-      app.save
-    end
-  end
-
-  def set_airtable_status(status)
-    app = ApplicationsTable.all(filter: "{HCB ID} = \"#{id}\"").first
-
-    return unless app.present?
-
-    app["Status"] = status unless app["Status"] == "Onboarded"
-
-    app.save
-  end
-
   def active_teenagers
     users.active_teenager.count
   end
@@ -1024,16 +994,10 @@ class Event < ApplicationRecord
     name
   end
 
+  # FUIME-DISABLED: this returned a Hack Club onboarder's scheduling link from Airtable.
+  # Fuime has no onboarding-call scheduling, so there is no link to offer.
   def onboarding_scheduling_link
-    return unless point_of_contact.present?
-
-    Rails.cache.fetch("scheduling_link_#{point_of_contact.id}", expires_in: 5.minutes) do
-      begin
-        OnboardersTable.all(filter: "{HCB ID} = #{point_of_contact.id}").first&.[]("Scheduling Link")
-      rescue
-        nil
-      end
-    end
+    nil
   end
 
   def contracts_pending_on_hcb

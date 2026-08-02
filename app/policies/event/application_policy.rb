@@ -10,10 +10,6 @@ class Event
       record.user == user || user.auditor?
     end
 
-    def airtable?
-      user.auditor?
-    end
-
     def admin_approve?
       user.admin?
     end

@@ -45,15 +45,19 @@ module Fuime
         csv << ["Tax Year", packet[:year]]
         csv << ["Generated", packet[:generated_at]]
         csv << []
+        csv << ["ESTIMATE ONLY — NOT TAX ADVICE"]
+        csv << []
         csv << ["Summary"]
         csv << ["Total Income", "$#{'%.2f' % packet[:total_income]}"]
         csv << ["Total Expenses", "$#{'%.2f' % packet[:total_expenses]}"]
-        csv << ["Net Income", "$#{'%.2f' % packet[:net_income]}"]
+        csv << ["Net Income (net profit)", "$#{'%.2f' % packet[:net_income]}"]
+        csv << ["Net Earnings (net profit x 92.35%)", "$#{'%.2f' % packet[:net_earnings]}"]
         csv << []
-        csv << ["IRS Self-Employment Threshold", "$#{'%.2f' % packet[:threshold]}"]
-        csv << ["Over Threshold?", packet[:over_threshold] ? "Yes" : "No"]
+        csv << ["IRS Self-Employment Threshold (on net earnings)", "$#{'%.2f' % packet[:threshold]}"]
+        csv << ["Equivalent net profit", "$#{'%.2f' % packet[:net_profit_filing_threshold]}"]
+        csv << ["Likely over threshold?", packet[:over_threshold] ? "Yes" : "No"]
         csv << []
-        csv << ["Note: This is a summary for your records. Consult a tax professional for filing requirements."]
+        csv << [packet[:disclaimer]]
       end
     end
   end

@@ -36,10 +36,16 @@
         <%= inline_icon "check-circle", size: 16 %>
         Official on Fuime
       </span>
+      <%# Fuime: this claims only what we can actually evidence. Accepting a
+          guardian invite currently proves control of an email address and a
+          self-asserted date of birth — NOT a verified parental relationship.
+          Restore the stronger "Parent-signed account" wording once guardian
+          identity verification ships (PRODUCTION_READINESS.md §1.2). %>
       <% if @has_guardian %>
-        <span class="badge bg-primary text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+        <span class="badge bg-primary text-white px-3 py-1.5 rounded-full flex items-center gap-1"
+              title="A parent or guardian has accepted responsibility for this account on Fuime.">
           <%= inline_icon "people-2", size: 16 %>
-          Parent-signed account
+          Guardian on account
         </span>
       <% end %>
       <% if @event.business_category.present? %>
@@ -64,16 +70,20 @@
   <%# Business stats %>
   <div class="card mb-6">
     <h3 class="m-0 mb-4">Business Overview</h3>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      <div class="p-3 bg-snow rounded-lg text-center">
-        <p class="muted m-0 mb-1 text-sm">Balance</p>
-        <p class="m-0 text-xl font-bold">$<%= render_money_amount(@event.balance_available_v2_cents) %></p>
-      </div>
+    <%# Fuime: the account balance of a child's business is NOT published.
+        HCB shows it because its orgs are nonprofits publishing accountability
+        data; here it would tell the internet how much money a named teenager
+        has. Same reasoning for the owner's name, shown only for adult owners. %>
+    <div class="grid grid-cols-2 gap-4">
       <div class="p-3 bg-snow rounded-lg text-center">
         <p class="muted m-0 mb-1 text-sm">On Fuime since</p>
         <p class="m-0 text-xl font-bold"><%= @event.created_at.strftime("%b %Y") %></p>
       </div>
-      <% if @owner.present? %>
+      <div class="p-3 bg-snow rounded-lg text-center">
+        <p class="muted m-0 mb-1 text-sm">Status</p>
+        <p class="m-0 text-xl font-bold"><%= @has_guardian ? "Parent-signed" : "Active" %></p>
+      </div>
+      <% if @show_owner_name %>
         <div class="p-3 bg-snow rounded-lg text-center">
           <p class="muted m-0 mb-1 text-sm">Owner</p>
           <p class="m-0 text-xl font-bold"><%= @owner.first_name %></p>

@@ -12,6 +12,9 @@ class ApplicationMailer < ActionMailer::Base
   # allow usage of application helper
   helper :application
   helper :logo
+  # Fuime: role_change.html.erb names roles in Fuime's vocabulary (Owner /
+  # Team member / Parent) rather than upstream's enum values.
+  helper :roles
 
   def self.deliver_mail(mail)
     # Our SMTP service will throw an error if we attempt

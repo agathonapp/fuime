@@ -49,6 +49,30 @@ services:
         value: "true"
       - key: LANG
         value: en_US.UTF-8
+      # Uploaded receipts MUST go to S3. Render's filesystem is ephemeral, so
+      # the previous :local default destroyed every receipt on each deploy —
+      # the records families need for tax filing. The boot-time safety check
+      # (config/initializers/fuime_safety_check.rb) refuses to start on :local.
+      - key: ACTIVE_STORAGE_SERVICE
+        value: amazon
+      - key: S3__BUCKET
+        sync: false
+      - key: S3__REGION
+        sync: false
+      - key: S3__ACCESS_KEY_ID
+        sync: false
+      - key: S3__SECRET_ACCESS_KEY
+        sync: false
+      # Stripe mode. Fuime defaults to test mode everywhere, including
+      # production, because the money-transmission structure is not yet
+      # legally settled (docs/fuime/PRODUCTION_READINESS.md §1.5).
+      # Set to "live" ONLY alongside STRIPE__LIVE__* credentials.
+      - key: STRIPE_MODE
+        value: test
+      # Signing secret for the Fuime payment webhook endpoint. Without it every
+      # Stripe webhook is rejected and payments never reach a ledger.
+      - key: FUIME_STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: SECRET_KEY_BASE
         generateValue: true
       - key: RAILS_MASTER_KEY
@@ -175,6 +199,21 @@ services:
         value: "true"
       - key: LANG
         value: en_US.UTF-8
+      # See the web service for why these are required.
+      - key: ACTIVE_STORAGE_SERVICE
+        value: amazon
+      - key: S3__BUCKET
+        sync: false
+      - key: S3__REGION
+        sync: false
+      - key: S3__ACCESS_KEY_ID
+        sync: false
+      - key: S3__SECRET_ACCESS_KEY
+        sync: false
+      - key: STRIPE_MODE
+        value: test
+      - key: FUIME_STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: SECRET_KEY_BASE
         fromService:
           name: fuime-web

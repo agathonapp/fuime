@@ -13,13 +13,13 @@
           <% if policy(organizer_position).change_position_role? %>
             <div data-controller="menu" data-menu-placement-value="bottom-start">
               <div class="flex items-center cursor-pointer" data-menu-target="toggle" data-action="click->menu#toggle click@document->menu#close keydown@document->menu#keydown">
-                <p class="h4 medium info"><%= organizer_position.role.capitalize %></p>
+                <p class="h4 medium info"><%= role_label organizer_position.role %></p>
                 <%= inline_icon "down-caret", class: "info menu__toggle" %>
               </div>
               <div data-menu-target="content" class="menu__content menu__content--2 menu__content--compact">
                 <% OrganizerPosition.roles.keys.each do |role| %>
                   <%= link_to change_position_role_organizer_path(id: organizer_position.id, to: role), class: ("menu__action--active" if organizer_position.role == role).to_s, data: { turbo_method: :post, turbo_frame: "_top" }, aria: { current: organizer_position.role == role } do %>
-                    <%= role.humanize %>
+                    <%= role_label role %>
                   <% end %>
                 <% end %>
                 <div class="menu__divider"></div>
@@ -27,7 +27,7 @@
               </div>
             </div>
           <% else %>
-            <p class="h4 medium info"><%= organizer_position.role.capitalize %></p>
+            <p class="h4 medium info"><%= role_label organizer_position.role %></p>
           <% end %>
         </div>
       </div>

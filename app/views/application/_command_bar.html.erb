@@ -1,17 +1,8 @@
 <% if signed_in? %>
-   <% @admin_urls = auditor_signed_in? ? {
-        "Applications"              => "https://airtable.com/tblctmRFEeluG4do7/viwGhv19cV1ZRj61a",
-        "OnBoard ID"                => "https://airtable.com/app4Bs8Tjwvk5qcD4/tblVZwB8QMUSDAd41/viwJ15CT6VHCZ0UZ4",
-        "Disputes"                  => "https://airtable.com/appEzv7w2IBMoxxHe/tblTqbwz5AUkzOcVb",
-        "Feedback"                  => "https://airtable.com/tblOmqLjWtJZWXn4O/viwuk2j4xsKJo5EqA",
-        "Stickers"                  => "https://airtable.com/tblyhkntth4OyQxiO/viwHcxhOKMZnPXUUU",
-        "Hackathons"                => "https://dash.hackathons.hackclub.com/sign_in",
-        "1Password"                 => "https://airtable.com/tblcHEZyos3V9DoeI/viwSapKZ8C4ByBuqT",
-        "Domains"                   => "https://airtable.com/tbl22cXd3Bo9uo0wp/viwcnZyoctJTFGVY2",
-        "PVSA"                      => "https://airtable.com/tbl4ffIbyaEa2fIYW/viw2OPTziXEqOpaLA",
-        "The Event Helper"          => "https://airtable.com/tblWlQxkf6L7mEjC4/viwzbku7oWsw5GFEa",
-        "Google Workspace Waitlist" => "https://airtable.com/appEzv7w2IBMoxxHe/tbl9CkfZHKZYrXf1T/viwgfJvrrD9Jn9VLj"
-      } : {} %>
+   <%# FUIME-DIVERGENCE: upstream pointed these command bar entries at Hack Club
+       Airtable bases. Fuime's admin actions are all in-app, so there are no
+       external admin URLs to pass through. %>
+   <% @admin_urls = {} %>
 
    <%= react_component "command_bar/CommandBar", { admin: auditor_signed_in?, admin_override_pretend: current_user.admin_override_pretend?, adminUrls: @admin_urls, has_followed_events: current_user.followed_events.any? }, { camelize_props: false } %>
 <% end %>

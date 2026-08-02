@@ -95,7 +95,9 @@ class GuardianshipsController < ApplicationController
   def accept
     unless signed_in?
       skip_authorization
-      return redirect_to auth_users_path(return_to: accept_guardianship_path(@guardianship.invite_token))
+      # Return to the invite page, not to `accept` — that route is POST-only, so
+      # a post-login GET redirect there would 404.
+      return redirect_to auth_users_path(return_to: guardianship_path(@guardianship.invite_token))
     end
 
     authorize @guardianship
@@ -106,7 +108,33 @@ class GuardianshipsController < ApplicationController
       return
     end
 
-    if @guardianship.accept!
+    # The agreement checkbox is `required` in the form, but that is a client-side
+    # hint only. Consent is the entire legal product of this action, so it is
+    # confirmed again here where it cannot be skipped.
+    unless ActiveModel::Type::Boolean.new.cast(params[:agree])
+      flash[:error] = "Please confirm you agree to the guardian agreement."
+      redirect_to guardianship_path(@guardianship.invite_token)
+      return
+    end
+
+    # Preconditions for signing as the responsible adult — chiefly a confirmed
+    # 18+ date of birth. A guardian invited by email starts as a stub user with
+    # no birthday, so this is the common path, not an edge case.
+    blockers = @guardianship.activation_blockers
+    if blockers.any?
+      flash[:error] = blockers.to_sentence
+      # Return them to the invite page, not back here: `accept` is POST-only, so
+      # a GET return_to would 404 the moment they finish filling in their DOB.
+      redirect_to edit_user_path(current_user, return_to: guardianship_path(@guardianship.invite_token))
+      return
+    end
+
+    accepted = @guardianship.accept!(
+      consent_ip: request.remote_ip,
+      consent_user_agent: request.user_agent
+    )
+
+    if accepted
       flash[:success] = "You are now #{@guardianship.minor.name}'s guardian on Fuime!"
       redirect_to root_path
     else
@@ -115,7 +143,51 @@ class GuardianshipsController < ApplicationController
     end
   end
 
+  # The permanent record of a signed agreement: what was agreed, when, under
+  # which version, and by whom. A guardian must be able to go back and read the
+  # thing they signed — consent you cannot review is not meaningful consent.
+  def record
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship
+  end
+
+  # Withdraw consent. A guardian must be able to do this at any time — it is a
+  # legal requirement, not a feature — and it takes effect immediately, because
+  # `User#permitted_to_operate_business?` reads guardianship status live.
+  def revoke
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship
+
+    @guardianship.revoke!(revoked_by: current_user)
+
+    flash[:success] = "Guardianship revoked. #{@guardianship.minor.name || @guardianship.minor.email} can no longer operate a business on Fuime."
+    redirect_back_or_to post_action_path_for(@guardianship)
+  end
+
+  # Re-issue a fresh token for a pending invite whose link has gone stale.
+  def resend_invite
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship
+
+    if @guardianship.resend_invite!
+      flash[:success] = "Invitation resent to #{@guardianship.guardian.email}."
+    else
+      flash[:error] = "This invitation is no longer pending, so it can't be resent."
+    end
+
+    redirect_back_or_to post_action_path_for(@guardianship)
+  end
+
   private
+
+  # Where to land after revoking or resending. Admins came from the admin user
+  # page and should return to it; a guardian or teen cannot load that page at
+  # all, so they get the agreement record instead.
+  def post_action_path_for(guardianship)
+    return admin_user_path(guardianship.minor) if current_user&.admin?
+
+    record_guardianship_path(guardianship)
+  end
 
   def set_guardianship
     @guardianship = Guardianship.find_by_token(params[:id])

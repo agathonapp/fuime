@@ -157,7 +157,9 @@ module Users
     end
 
     def macbook_qr_code
-      raffle_link = current_user(allow_unverified: true).raffles.find_by(program: "first-worlds-2026-macbook")&.referral_link
+      # This controller skips :signed_in_user, so current_user can be nil —
+      # without the safe navigation a logged-out request 500s here.
+      raffle_link = current_user(allow_unverified: true)&.raffles&.find_by(program: "first-worlds-2026-macbook")&.referral_link
 
       if raffle_link.nil?
         head :not_found

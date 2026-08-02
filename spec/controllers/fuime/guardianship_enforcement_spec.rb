@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+# Fuime: proves the guardianship requirement is enforced at the request level.
+#
+# The original control was a redirect after profile creation — a suggestion a
+# teen could simply navigate away from. These specs assert that a minor without
+# an active guardianship is actually blocked, whatever URL they type.
+# See docs/fuime/PRODUCTION_READINESS.md §1.1.
+RSpec.describe EventsController, type: :controller do
+  include SessionSupport
+
+  let(:event) { create(:event) }
+
+  def sign_in_as(user)
+    create_session(user, verified: true)
+  end
+
+  context "as a minor with no guardian" do
+    let(:teen) { create(:user, :minor) }
+
+    before { sign_in_as(teen) }
+
+    it "blocks the business page and redirects to the guardian invite" do
+      get :show, params: { id: event.slug }
+
+      expect(response).to redirect_to(new_guardianship_path)
+    end
+  end
+
+  context "as a user whose age is unknown" do
+    # The bypass: no birthday meant is_minor? was nil (falsy), so nothing fired.
+    let(:ageless) { create(:user, :unknown_age) }
+
+    before { sign_in_as(ageless) }
+
+    it "is treated as a minor and blocked" do
+      get :show, params: { id: event.slug }
+
+      expect(response).to redirect_to(new_guardianship_path)
+    end
+  end
+
+  context "as a minor with an active guardianship" do
+    let(:teen) { create(:user, :minor_with_guardian) }
+
+    before { sign_in_as(teen) }
+
+    it "is not blocked by the guardianship filter" do
+      get :show, params: { id: event.slug }
+
+      expect(response).not_to redirect_to(new_guardianship_path)
+    end
+  end
+
+  context "as an adult" do
+    let(:adult) { create(:user, birthday: 30.years.ago.to_date) }
+
+    before { sign_in_as(adult) }
+
+    it "is not blocked" do
+      get :show, params: { id: event.slug }
+
+      expect(response).not_to redirect_to(new_guardianship_path)
+    end
+  end
+
+  describe "EventPolicy" do
+    let(:teen)  { create(:user, :minor) }
+    let(:adult) { create(:user, birthday: 30.years.ago.to_date) }
+
+    # Defence in depth: even if a request reached the policy directly, a minor
+    # without a guardian cannot act on a business.
+    it "denies write access to a minor with no guardian" do
+      create(:organizer_position, user: teen, event:, role: :manager)
+
+      policy = EventPolicy.new(teen, event)
+
+      expect(policy.update?).to be false
+      expect(policy.create_transfer?).to be false
+    end
+
+    it "allows write access once a guardian is active" do
+      guarded = create(:user, :minor_with_guardian)
+      create(:organizer_position, user: guarded, event:, role: :manager)
+
+      expect(EventPolicy.new(guarded, event).update?).to be true
+    end
+
+    it "still allows a blocked minor to READ their own business" do
+      create(:organizer_position, user: teen, event:, role: :manager)
+
+      expect(EventPolicy.new(teen, event).show?).to be true
+    end
+
+    it "does not restrict adults" do
+      create(:organizer_position, user: adult, event:, role: :manager)
+
+      expect(EventPolicy.new(adult, event).update?).to be true
+    end
+  end
+end

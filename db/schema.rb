@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_160241) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1141,6 +1141,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_160241) do
     t.string "aasm_state", null: false
     t.datetime "activated_at"
     t.text "address"
+    t.string "business_category"
     t.boolean "can_front_balance", default: true, null: false
     t.integer "country"
     t.datetime "created_at", precision: nil, null: false
@@ -1177,6 +1178,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_160241) do
     t.boolean "show_recent_donors", default: false, null: false
     t.boolean "show_top_donors", default: false, null: false
     t.text "slug"
+    t.string "storefront_tagline"
     t.integer "stripe_card_shipping_type", default: 0, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.string "website"
@@ -1371,6 +1373,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_160241) do
     t.index ["ip_address"], name: "index_governance_request_contexts_on_ip_address"
     t.index ["request_id"], name: "index_governance_request_contexts_on_request_id", unique: true
     t.index ["user_id"], name: "index_governance_request_contexts_on_user_id"
+  end
+
+  create_table "guardianships", force: :cascade do |t|
+    t.string "agreement_ip"
+    t.datetime "agreement_signed_at"
+    t.string "agreement_user_agent"
+    t.string "agreement_version"
+    t.datetime "created_at", null: false
+    t.bigint "guardian_id", null: false
+    t.datetime "invite_sent_at"
+    t.string "invite_token"
+    t.bigint "minor_id", null: false
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["guardian_id", "minor_id"], name: "index_guardianships_on_guardian_id_and_minor_id", unique: true
+    t.index ["guardian_id"], name: "index_guardianships_on_guardian_id"
+    t.index ["invite_token"], name: "index_guardianships_on_invite_token", unique: true
+    t.index ["minor_id"], name: "index_guardianships_on_minor_id"
+    t.index ["revoked_by_id"], name: "index_guardianships_on_revoked_by_id"
   end
 
   create_table "hashed_transactions", force: :cascade do |t|
@@ -3127,6 +3150,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_160241) do
   add_foreign_key "governance_admin_transfer_limits", "users"
   add_foreign_key "governance_request_contexts", "users"
   add_foreign_key "governance_request_contexts", "users", column: "impersonator_id"
+  add_foreign_key "guardianships", "users", column: "guardian_id"
+  add_foreign_key "guardianships", "users", column: "minor_id"
+  add_foreign_key "guardianships", "users", column: "revoked_by_id"
   add_foreign_key "hashed_transactions", "raw_plaid_transactions"
   add_foreign_key "hcb_code_personal_transactions", "hcb_codes"
   add_foreign_key "hcb_code_personal_transactions", "invoices"
