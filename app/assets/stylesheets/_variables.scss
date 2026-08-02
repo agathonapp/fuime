@@ -15,7 +15,13 @@ $green-dark: #1f8164;
 $cyan: #5bc0de;
 $blue: #338eda;
 $purple: #a633d6;
-$fuime-blue: #2242FF;
+$fuime-blue: #0D6EFD;
+$fuime-blue-hover: #0B5ED7;
+$fuime-navy: #0F172A;
+$fuime-background: #F8FAFC;
+$fuime-card: #FFFFFF;
+$fuime-cyan: #06B6D4;
+$fuime-mint: #10B981;
 
 $dark: #17171d;
 $darker: #121217;
@@ -55,6 +61,15 @@ $palette: (
 }
 
 :root {
+  --fuime-blue: #{$fuime-blue};
+  --fuime-blue-hover: #{$fuime-blue-hover};
+  --fuime-navy: #{$fuime-navy};
+  --fuime-background: #{$fuime-background};
+  --fuime-card: #{$fuime-card};
+  --fuime-cyan: #{$fuime-cyan};
+  --fuime-mint: #{$fuime-mint};
+  --fuime-glow: 0 0 20px rgba(13, 110, 253, 0.25);
+
   --shadow-border: inset 0 0 0 0.5px rgba(0, 0, 0, 0.125);
   --shadow-border-xs: inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
   --shadow-xs: 0 2px 2px rgba(0, 0, 0, 0.02);

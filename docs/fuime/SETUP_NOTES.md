@@ -2,6 +2,13 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Fuime Tailwind theme tokens.** Branch `cursor/fuime-tailwind-theme-df1c`.
+Merged brand palette (`fuime.blue` `#0D6EFD`, navy, cyan, mint), Plus Jakarta Sans /
+Inter fonts, and `shadow-fuime-glow` into the existing Rails Tailwind config without
+replacing HCB content paths or `preflight: false`. Primary accent now follows the new
+electric blue via `$fuime-blue` / Tailwind `primary`. Use `bg-fuime-blue`,
+`font-heading`, `font-body`, `shadow-fuime-glow` in views.
+
 **2026-08-01 — Production hardening pass.** Branch `fuime/production-hardening`.
 Closed every *engineering* blocker from `PRODUCTION_READINESS.md`: guardianship is
 now an enforced control rather than a redirect, the webhook no longer double-posts

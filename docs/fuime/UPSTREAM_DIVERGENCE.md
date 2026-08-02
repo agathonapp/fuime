@@ -9,7 +9,9 @@ Purpose: preserve ability to merge upstream ledger/security fixes later.
 |--------|-----|-------|
 | Title suffix "HCB" → "Fuime" | Brand identity | `app/views/layouts/_head.html.erb` |
 | Console ASCII art updated | Brand identity | `app/views/layouts/_head.html.erb` |
-| Primary color #ec3750 → #2242FF | Fuime blue branding | `app/views/layouts/_head.html.erb`, `app/assets/stylesheets/_variables.scss` |
+| Primary color #ec3750 → #0D6EFD | Fuime electric blue branding | `app/views/layouts/_head.html.erb`, `app/assets/stylesheets/_variables.scss`, `tailwind.config.js` |
+| Fuime Tailwind theme tokens | Brand palette, fonts, glow | `tailwind.config.js`, `app/assets/stylesheets/_variables.scss`, `app/assets/stylesheets/application.scss` |
+| Plus Jakarta Sans + Inter fonts | Heading/body brand typography | `app/views/layouts/_head.html.erb`, `application.scss` |
 | Removed Plausible analytics | Points to hcb.hackclub.com | `app/views/layouts/_head.html.erb` |
 | Footer text updated | Attribution to HCB/Hack Club | `app/views/application/_footer.html.erb` |
 | Logo alt text "HCB" → "Fuime" | Brand identity | `app/views/application/_logo.html.erb` |

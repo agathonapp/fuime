@@ -3,8 +3,12 @@
 <title><%= yield(:title).concat(" – ") if content_for?(:title) %><%= title_suffix %></title>
 <%= csrf_meta_tags %>
 <%= csp_meta_tag %>
-<meta name="theme-color" content="<%= @is_dark && !force_light ? "#17171d" : "#f9fafc" %>">
+<meta name="theme-color" content="<%= @is_dark && !force_light ? "#0F172A" : "#F8FAFC" %>">
 <meta name="apple-itunes-app" content="app-id=6465424810">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
 
 <%# Marketing pages force light, so skip the system-theme script that would flip them to dark. %>
 <%= javascript_include_tag "dark", 'data-turbo-track': "reload" unless force_light %>
@@ -31,7 +35,7 @@
     Forked from HCB by Hack Club (AGPL-3.0)
 
     <%= Rails.configuration.constants.github_url %> <%# erb_lint:disable ErbSafety %>
-      `, 'color: #2242FF; font-weight: bold; font-size: 10px;')
+      `, 'color: #0D6EFD; font-weight: bold; font-size: 10px;')
     </script>
   <% end %>
 
@@ -43,8 +47,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2242FF">
-<meta name="msapplication-TileColor" content="#2242FF">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#0D6EFD">
+<meta name="msapplication-TileColor" content="#0D6EFD">
 
 <% if content_for?(:favicon) %>
   <%= yield :favicon %>
