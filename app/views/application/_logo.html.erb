@@ -9,31 +9,33 @@
       "",
     data: { "controller" => "analytics #{"ar" if current_page?(auth_users_path)}", "analytics-event-name-value" => "Icon right-clicked", "ar-usdz-href-value" => "/bank.usdz", "action" => "contextmenu->menu#toggle contextmenu->analytics#track click@document->menu#close keydown@document->menu#keydown", "menu-target" => "toggle" } do %>
 
-    <%# Fuime: Use SVG logos instead of PNGs %>
-    <% logo_env = Rails.env.local? ? "development" : (Rails.env.production? ? "" : Rails.env) %>
-    <% logo_suffix = logo_env.present? ? "-#{logo_env}" : "" %>
-
-    <%= image_tag "logo#{logo_suffix}-dark.svg",
+    <%# Fuime: the real wordmark. Two variants because the logo is a single
+        dark slate colour — it disappears on a dark background. The .logo /
+        .logo-dark classes are what the stylesheet toggles by colour scheme.
+        The mark is wider than it is tall (512x425), so height is the fixed
+        dimension and width is left to scale, otherwise it renders squashed. %>
+    <%= image_tag "fuime-logo-dark.png",
         name: "header-logo",
         class: "logo-dark",
-        width: @home_size || 36,
         height: @home_size || 36,
-        alt: "Fuime logo" %>
-    <%= image_tag "logo#{logo_suffix}.svg",
+        alt: "Fuime" %>
+    <%= image_tag "fuime-logo.png",
         name: "header-logo",
         class: "logo",
-        width: @home_size || 36,
         height: @home_size || 36,
-        alt: "Fuime logo" %>
+        alt: "Fuime" %>
   <% end %>
 
   <div data-menu-target="content" class="menu__content menu__content--2 menu__content--compact z-50">
-    <%# FUIME-DISABLED: brand download links. /brand/fuime-logo-light.png and
-        -dark.png do not exist, so these 404'd — on the public storefront, where
-        customers see them. Restore once the real PNGs are added to public/brand.
-        <a href="/brand/fuime-logo-light.png" download>Download light PNG</a>
-        <a href="/brand/fuime-logo-dark.png" download>Download dark PNG</a>
-    %>
+    <a href="/brand/fuime-logo-light.png" download class="flex">
+      <%= image_tag "fuime-logo.png", height: 24 %>
+      Download light PNG
+    </a>
+    <a href="/brand/fuime-logo-dark.png" download class="flex">
+      <%= image_tag "fuime-logo-dark.png", height: 24 %>
+      Download dark PNG
+    </a>
+    <div class="menu__divider"></div>
     <a href="/" target="_blank">Open home in new tab</a>
     <% if current_user&.admin_override_pretend? %>
       <div class="menu__divider" data-label="Admin"></div>
