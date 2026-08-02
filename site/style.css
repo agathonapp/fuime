@@ -1956,11 +1956,31 @@ section[id] {
   .grid--4 {
     grid-template-columns: 1fr;
   }
+  /* height: 100svh is a desktop idea — it makes the photograph fill the screen
+     on a machine where the copy is three short lines. On a phone the same copy
+     is nine wrapped lines and the hero has to be as tall as its contents, or
+     overflow: hidden eats the bottom of them. 660 stays as the floor so a short
+     hero still reads as a full frame. */
   .hero {
     min-height: 660px;
+    height: auto;
+    max-height: none;
   }
   .hero__body {
     max-width: none;
+  }
+  /* The disclaimer is pinned to the bottom of the photograph on desktop, where
+     there is a clear band of night under the note to pin it to. On a phone the
+     capture row stacks and the lead wraps to four lines, so the flow column
+     grows past the pin and the note lands on top of the fine print. Measured at
+     390 the two overlap by 19px. Dropping it back into flow lets the column push
+     it down instead; margin-top: auto keeps it on the floor of the hero while
+     the content is short enough for that to mean anything. */
+  .hero__disclaimer {
+    position: static;
+    transform: none;
+    margin-top: auto;
+    padding-top: var(--s6);
   }
   .capture__row {
     flex-direction: column;
