@@ -1,20 +1,32 @@
 [
   {
     "engine": "kling25-pro-i2v",
-    "out": "shots/a1.mp4",
-    "image": "keys/k0.png",
+    "out": "shots/c1.mp4",
+    "image": "keys/k1.png",
+    "tail": "keys/k2-tail.png",
     "duration": "5",
     "cfg": 0.5,
-    "prompt": "Slow steady cinematic dolly-in. The camera glides forward through the dark bedroom toward the desk at the window, closing in on the open laptop until its glowing screen fills most of the frame. The teenager in the grey hoodie stays completely still, seen from behind, and slips out of the bottom of frame as the camera passes. Nothing else moves: the city lights below the window stay fixed, the desk lamp holds a steady warm glow, the bed and lamp stay where they are. Photoreal night interior, cinematic shallow depth of field, level horizon, smooth constant speed, no camera shake.",
-    "negative": "zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, person turning around, face, hands, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
+    "prompt": "Slow steady cinematic dolly-in. The camera glides forward through the dark bedroom toward the desk at the window, closing in on the open laptop until its glowing screen fills most of the frame and the room falls away behind it. The room is empty: nobody is in it, the wooden desk chair stays empty and bare the whole time and slips out of the bottom of frame as the camera passes it. Nothing else moves: the San Francisco skyline and the city lights below the window stay fixed and go soft as the focus settles on the screen, the desk lamp holds a steady warm glow, the bed and the table lamp stay where they are. Photoreal night interior, cinematic shallow depth of field, level horizon, smooth constant speed, no camera shake.",
+    "negative": "person, human, figure, someone sitting, hoodie, jacket on chair, arms, hands, head, silhouette walking in, zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
   },
   {
     "engine": "kling25-pro-i2v",
-    "out": "shots/a2.mp4",
-    "image": "keys/k0.png",
+    "out": "shots/c2.mp4",
+    "image": "keys/k1.png",
+    "tail": "keys/k2-tail.png",
     "duration": "5",
     "cfg": 0.35,
-    "prompt": "Cinematic push-in on a laptop. Static subject, moving camera: the camera travels forward in a straight line toward the open laptop on the desk, ending close on the glowing screen. The hooded teenager seen from behind does not move and passes below the frame. The window, the town lights, the lamp and the bed remain perfectly still. Photoreal, night, dark interior lit only by the screen and the desk lamp, smooth constant dolly speed, level horizon, no shake.",
-    "negative": "zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, person turning around, face, hands, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
+    "prompt": "Cinematic push-in on a laptop in an empty bedroom. Static subject, moving camera: the camera travels forward in a straight line toward the open laptop on the desk, accelerating in, ending right up close with the bright screen filling the frame and the window blurred out behind it. No people anywhere; the wooden chair in front of the desk is empty and stays empty, and passes below the frame as the camera moves over it. The window, the San Francisco night skyline, the bridge lights, the desk lamp and the bed remain perfectly still. Photoreal, night, dark interior lit only by the screen and the desk lamp, smooth dolly, level horizon, no shake.",
+    "negative": "person, human, figure, someone sitting, hoodie, jacket on chair, arms, hands, head, silhouette walking in, zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
+  },
+  {
+    "engine": "kling25-pro-i2v",
+    "out": "shots/c3.mp4",
+    "image": "keys/k1.png",
+    "tail": "keys/k2-tail.png",
+    "duration": "5",
+    "cfg": 0.28,
+    "prompt": "A locked, smooth forward dolly across an empty dark bedroom and straight into the open laptop on the desk by the big window, finishing hard in on the bright screen so it fills the frame. Nobody is present and no one enters; the empty wooden chair simply passes beneath the camera. Everything in the room is completely still — the San Francisco skyline through the glass, the lit bridge, the warm desk lamp, the bedding — only the camera moves, travelling the whole distance to the desk. Photoreal cinematic night interior, level horizon, no shake, no cuts.",
+    "negative": "person, human, figure, someone sitting, hoodie, jacket on chair, arms, hands, head, silhouette walking in, zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
   }
 ]

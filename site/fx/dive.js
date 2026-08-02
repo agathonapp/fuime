@@ -1,7 +1,7 @@
 /* fx/dive.js — the dive. Scroll flies the camera into the laptop on the desk
  * and lands inside the app.
  *
- * The footage is 121 pre-rendered frames of a dolly-in, generated from the hero
+ * The footage is 122 pre-rendered frames of a dolly-in, generated from the hero
  * photograph itself, so the room you leave is the room you were just looking at.
  * Frames are scrubbed on a canvas rather than played from a <video>: browsers
  * will not seek a video at scroll rate, and an image ladder is the only way this
@@ -95,12 +95,16 @@ function span(v, r) {
   return (v - r[0]) / (r[1] - r[0] || 1)
 }
 
-/* Mirrors composite.py's FADE_FULL and its bloom lift. The baked plate is
-   lifted toward the light it replaces and decays to nothing by the last frame;
-   the DOM panel has to carry the same lift or the cross-fade is a brightness
-   pop. Same numbers, same curve, deliberately duplicated with this note. */
-const LIFT_FROM = 0.86
-const LIFT_MAX = 0.22
+/* Mirrors composite.py's bloom lift. The baked plate is pushed toward the
+   screen light it replaces, hard at the head of the shot where a laptop across
+   a dark room is a block of light rather than a readable page, decaying to
+   nothing by LIFT_END. The DOM panel has to carry the same lift or the
+   cross-fade is a brightness pop. Same numbers, same curve, deliberately
+   duplicated with this note — by the time the panel exists the lift is
+   already spent, and it stays in the maths so the two cannot drift apart if
+   LIFT_END ever moves. */
+const LIFT_END = 0.86
+const LIFT_MAX = 0.55
 
 const LOAD_CONC = 6
 const NEAR_VH = 2 // start fetching the ladder this many viewports out
@@ -598,7 +602,7 @@ function tick() {
     const seam = inst.phone ? SEAM.phone : SEAM.desk
     const rev = seam.ease(span(hs, seam.panel))
     const t = f / (n || 1)
-    const lift = LIFT_MAX * (1 - smoothstep((t - LIFT_FROM) / (1 - LIFT_FROM)))
+    const lift = LIFT_MAX * (1 - smoothstep(t / LIFT_END))
     const room = 1 - seam.ease(span(hs, seam.room))
 
     const s = inst.section.style
@@ -638,7 +642,7 @@ function put(inst, style, prop, key, value) {
 }
 
 /* Draw the frame under the scroll, mixing in the next one where that helps.
-   121 frames is thin for a scrub, and an interpolated ladder would have cost
+   122 frames is thin for a scrub, and an interpolated ladder would have cost
    3MB and a pile of minterpolate artefacts on a fast dolly, so the fractional
    part is spent on a blend instead — but only where the blend is honest. See
    blendGate. */

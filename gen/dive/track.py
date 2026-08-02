@@ -21,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from scipy import ndimage
 
 # The cyan plate, sampled off the source render rather than guessed.
 KEY_RGB = np.array([98, 233, 243], dtype=np.float32)
@@ -29,6 +30,27 @@ TOL = 78.0
 # Corner jitter from the keyer is a pixel or two per frame. Unsmoothed it makes
 # the pasted UI shimmer against a screen that is visibly rock steady.
 SMOOTH = 2  # frames either side
+
+
+def screen_blob(mask):
+    """The screen, and nothing else that happens to be that colour.
+
+    The key is a colour distance over the whole frame, and the corners below are
+    global extremes of whatever it returns. So one stray patch of in-tolerance
+    cyan anywhere — screen light spilling onto the chair back, a rim on the desk
+    edge, a reflection in the window — does not add a little noise, it takes a
+    corner. The quad snaps off the laptop and composite.py paints the sign-up
+    across the furniture. Worse, spill drifts in and out of tolerance frame to
+    frame, so the failure is an intermittent crawl rather than something you
+    catch in one still. Keeping only the largest connected region makes that
+    whole class of failure impossible: the screen is by far the biggest thing
+    the key can find, and spill is never contiguous with it.
+    """
+    lab, n = ndimage.label(mask)
+    if n <= 1:
+        return mask
+    sizes = ndimage.sum(mask, lab, range(1, n + 1))
+    return lab == (int(np.argmax(sizes)) + 1)
 
 
 def quad_from_mask(mask):
@@ -58,7 +80,7 @@ def track_frames(src):
     tracks, masks = [], []
     for f in frames:
         arr = np.asarray(Image.open(f).convert("RGB"), dtype=np.float32)
-        mask = np.linalg.norm(arr - KEY_RGB, axis=2) < TOL
+        mask = screen_blob(np.linalg.norm(arr - KEY_RGB, axis=2) < TOL)
         masks.append(mask)
         tracks.append(quad_from_mask(mask))
 
