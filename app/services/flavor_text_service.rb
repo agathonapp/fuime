@@ -1,5 +1,17 @@
 # frozen_string_literal: true
 
+# Rotating tagline shown beside the dashboard heading for every signed-in user
+# (static_pages#index), plus avatar tooltips and the API's `flavor` field.
+#
+# Fuime: 29 entries were removed from the upstream lists. They were in-jokes
+# about Hack Club that read as nonsense on Fuime ("The Hack Club Federal
+# Reserve", "From the makers of Hack Club"), links out to Hack Club properties
+# (hcb.hackclub.com/docs, zephyr.hackclub.com, assemble.hackclub.com), or
+# images served from cdn.hackclub.com — a request to Hack Club's CDN rendered
+# on the main dashboard (Prime Directive 4).
+#
+# Add Fuime's own jokes here; the lists are just arrays and nothing depends on
+# their length.
 class FlavorTextService
   include ActionView::Helpers::NumberHelper
   include SeasonalHelper
@@ -26,7 +38,6 @@ class FlavorTextService
       "Puts the 'dev' in 'financially devious'!",
       "Rails.env.fun?",
       "Let's rewrite Fuime in #{Faker::ProgrammingLanguage.name}!",
-      "Here's a secret: Fuime stands for Hack Club Bonk",
       "recommended by 100% of fraudsters"
     ]
   end
@@ -71,7 +82,6 @@ class FlavorTextService
       "Recommended by Santa",
       "Recommended by Santa's elves",
       "Built by Santa's elves",
-      "Built by Santa's elves at Hack Club",
       "Built by Santa's elves at the North Pole",
       "Handcrafted by Santa's elves",
       "feelin' the holiday spirit yet?",
@@ -100,7 +110,7 @@ class FlavorTextService
       "🎃",
       "Pumpkin spice is the pumpkin spice of life.",
       "Happy Easter - Oh wait wrong holiday.",
-      "<a href='https://www.youtube.com/watch?v=PmzwhVE5Ly4' target='_blank' style='color: inherit'>ITS A SPOOKY MONTH!</a>".html_safe,
+      "<a href='https://www.youtube.com/watch?v=PmzwhVE5Ly4' target='_blank' style='color: inherit'>ITS A SPOOKY MONTH!</a>".html_safe
     ]
   end
 
@@ -135,17 +145,11 @@ class FlavorTextService
       "How often does time happen?",
       "To an extent",
       "A cloud full of money",
-      "Hack Club's pot of gold",
       "A sentient stack of dollars",
-      "The Hack Club Federal Reserve",
       "money money money money money",
       "A cloud raining money",
       "A pile of money in the cloud",
-      "Hack Club Smoothmunny",
-      "Hack Club ezBUCKS",
-      "Hack Club Money Bucket",
       "A mattress stuffed with 100 dollar bills", # this is the max length allowed for this header
-      "Hack Club Dollaringos",
       "The Hack Foundation dba The Dolla Store",
       "Hack on.",
       "Open on weekends",
@@ -156,7 +160,6 @@ class FlavorTextService
       "Fuime– Huge Cellophane Boats",
       "Fuime– Hydrofoils Chartered by Bandits",
       "The best thing since sliced bread",
-      "Hack Club Bink",
       "Hack 👏 Club 👏 B--- 👏",
       "💻 ♣ 🏦",
       "aka Hack Bank",
@@ -164,7 +167,6 @@ class FlavorTextService
       "AKA dolla dolla billz",
       "AKA the nonprofit-atorium",
       "Open late",
-      "From the makers of Hack Club",
       "Now in color!",
       "Filmed on location",
       "From the makers of Fuime",
@@ -179,9 +181,6 @@ class FlavorTextService
       "#{@random.rand 4..9}0% bug free!",
       "#{@random.rand 1..4}0% fewer bugs!",
       "Ask your doctor if Fuime is right for you",
-      "Now with an&nbsp;<a href='https://hcb.hackclub.com/docs/api/v3'>API</a>!".html_safe,
-      "<a href='https://hcb.hackclub.com/docs/api/v3'>README</a>".html_safe,
-      "Read the&nbsp;<a href='https://hcb.hackclub.com/docs/api/v3'>docs</a>!".html_safe,
       'Now with "code"',
       "Closed source!",
       "Finally complete!",
@@ -214,8 +213,6 @@ class FlavorTextService
       "it protec, and also attac, but most importantly it pay fees back",
       "it secures the bag",
       "Protec but also attac",
-      "As seen on hcb.hackclub.com",
-      "As seen on hackclub.com",
       "2 cool 4 scool",
       "Now running in production!",
       "put money in computer",
@@ -286,7 +283,6 @@ class FlavorTextService
       "If you can read this, the page has loaded",
       "Now go and buy yourself something nice",
       "[Insert splash text here]",
-      "<img src='https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/f29fda0f6d79f687_image.png' style='transform:translateX(-1rem);width:2rem;height:auto;margin-right:-1.4em;'>".html_safe,
       "Absolutely financial!",
       "Positively financial!",
       "Financially fantastic!",
@@ -331,10 +327,8 @@ class FlavorTextService
       "Made in 🇺🇸",
       "Your move IRS!",
       "The buck stops here",
-      "Hack Club Moneybucks",
       "If you know, you know",
       "We put the 'ants' in 'pants'",
-      "We used this&nbsp;<a href='https://zephyr.hackclub.com' target='_blank'>to buy a train</a>".html_safe,
       "🚂 choo choo!",
       "To the moon! 🚀",
       "Do Only Good Everyday",
@@ -376,7 +370,6 @@ class FlavorTextService
       "Recommended by people in some places!",
       "Recommended by non-profits on this site!",
       "Recommended by me!",
-      "Recommended by Hack Club!",
       "Recommended by the recommend-o-tron 3000",
       "Recommended! (probably)",
       "We don't accept tips, but we do take advice!",
@@ -425,9 +418,6 @@ class FlavorTextService
       "Your ad here!",
       "Make sure your homework is submitted and readable! 👀",
       "What the dollar doin?",
-      "Did you mean \"Hack Club Bonk\"?",
-      "Did you mean \"Hack Club is jank\"?",
-      "Did you mean \"<a href='https://zephyr.hackclub.com' target='_blank'>Hack Club Train</a>\"?".html_safe,
       "Are you feeling lucky?",
       "Not our fault if it ain't in the vault!",
       "...and you can take that to the bank",
@@ -452,15 +442,12 @@ class FlavorTextService
       "I was gonna tell a Bank joke, but ran out of interest",
       "If money talks, why do we need bank tellers?",
       "We’ll be here all week",
-      "Honk club <img src='https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/eb0858637571153f_goose-honk-right-intensifies.gif' style='height:1.25em;margin-left:0.5em;'/>".html_safe,
       "Handle with care",
       "This side up",
       "if it makes sense it’ll make dollars",
       "<a href='https://www.dinosaurbbq.org' target='_blank' style='color: inherit'>dinosaurbbq.org</a>".html_safe,
       "<a href='/my/settings#security-keys'>☝️ You can sign in with your fingerprint!</a>".html_safe,
       "Totally fungible!",
-      "For Hack Clubbers everywhere",
-      "<a href='https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/c2fab2b03f8a0ece_img_7439.mp4' target='_blank'>Now a currency?</a>".html_safe,
       "Not responsible for any major financial collapse!",
       "In today’s economy?!",
       "Send us your best haiku!",
@@ -475,7 +462,6 @@ class FlavorTextService
       "a #{%w[megabyte megabit].sample(random: @random)} of #{%w[mulah money].sample(random: @random)}",
       "byte me",
       "now only 2 ticks short of a clock cycle!",
-      "not running on the <a href='https://github.com/hackclub/the-hacker-zephyr' target='_blank' style='color: inherit'>zephyrnet</a>!".html_safe,
       "not available offline!",
       "as seen online",
       "online only!",
@@ -485,9 +471,6 @@ class FlavorTextService
       "same classic taste",
       "you can account on us!",
       "accountants, assemble!",
-      "<a href='https://assemble.hackclub.com' target='_blank' style='color: inherit'>we ran our own hackathon on it!</a>".html_safe,
-      "<a href='https://assemble.hackclub.com' target='_blank' style='color: inherit'>good enough for us to use!</a>".html_safe,
-      "<a href='https://assemble.hackclub.com' target='_blank' style='color: inherit'>dogfooded by us!</a>".html_safe,
       "<strike>Runs on Airtable™</strike>".html_safe,
       "Got a hankering for some bankering?",
       "<marquee scrollamount='5'>💸💸💸</marquee>".html_safe,

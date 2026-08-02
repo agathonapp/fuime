@@ -79,13 +79,13 @@ class Announcement
                       {
                         type: "link",
                         attrs: {
-                          href: "https://hcb.hackclub.com/#{@event.slug}",
+                          href: "#{Rails.application.routes.url_helpers.root_url.chomp("/")}/#{@event.slug}",
                           target: "_blank",
                           rel: "noopener noreferrer nofollow",
                         },
                       },
                     ],
-                    text: "https://hcb.hackclub.com/#{@event.slug}",
+                    text: "#{Rails.application.routes.url_helpers.root_url.chomp("/")}/#{@event.slug}",
                   },
                   { type: "text", text: "." }
                 ],

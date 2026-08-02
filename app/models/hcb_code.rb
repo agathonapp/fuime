@@ -90,7 +90,9 @@ class HcbCode < ApplicationRecord
     hcb_code "HCB Code"
     created_at "Created at"
     date "Transaction date"
-    hashid "URL" do |hashid| "https://hcb.hackclub.com/hcb/#{hashid}" end
+    # See the note on Event's comma block: this is the URL column in a user's
+    # CSV export, and it pointed at hcb.hackclub.com rather than at Fuime.
+    hashid "URL" do |hashid| Rails.application.routes.url_helpers.root_url.chomp("/") + "/hcb/#{hashid}" end
     memo
     receipts size: "Receipt count"
     receipts "Has receipt?" do |receipts| receipts.exists? end

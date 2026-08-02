@@ -955,3 +955,259 @@ are the new application specs, all passing.
 New specs: `spec/controllers/event/applications_spec.rb` (7), additions to
 `spec/models/event/application_spec.rb` (10) and
 `spec/controllers/fuime/guardianship_enforcement_spec.rb` (2).
+
+## 2026-08-02 — Milestone 3 (close-out): the rest of the brand surface (`fuime/m3-finish-brand-sweep`)
+
+Closes the three items the previous M3 pass recorded as outstanding (residual
+`Hack Club` literals, upstream `hcb.hackclub.com` links, missing
+`BRAND_STRINGS.md`) and, in the process, four things that were worse than
+branding. `docs/fuime/BRAND_STRINGS.md` is the full classification; this is the
+change log.
+
+### Documents that made claims Fuime cannot make
+
+| Change | Why | Files |
+|---|---|---|
+| `fiscal_sponsorship_letter` + `verification_letter` routes removed; Documents-page tiles removed | Two downloadable PDFs on **Hack Club letterhead** — their logo, a real employee's scanned signature, EIN 81-2908499 — certifying The Hack Foundation as the business's fiscal sponsor. The verification letter also attested an account "in good standing with **Column N.A.**, a Member of the FDIC" and printed the account + routing numbers: a bank-verification document. Both were linked from every org's Documents page. The half-finished rebrand had made it worse — the contact line read `support@fuime.com` under Hack Club's letterhead, so anyone calling to verify reached Fuime about a claim only Hack Club could make | `config/routes.rb`, `app/views/documents/index.html.erb` |
+| `EventPolicy#termination?` → false | Generates a legal agreement terminating "the Agreement between The Hack Foundation ('Hack Club') and \<business\>", under which "Hack Club shall… transfer the balance of assets in Hack Club's restricted Fund" — successor defaulting to The Hack Foundation. Auditor-gated and unlinked, so never teen-reachable, but the same class of document as the letters above | `app/policies/event_policy.rb` |
+| `zach_signature.png` removed as prefilled countersignature | The scanned signature of Hack Club's founder was the `default_value` on the "Signature" field of Fuime's contracts, fetched from `hcb.hackclub.com`, and was drawn on the check template. Latent (DocuSeal is gated off by default) but configuring a template would have countersigned Fuime agreements on his behalf | `app/models/contract/fiscal_sponsorship.rb`, `app/models/contract/payroll_position.rb`, `app/views/increase_checks/_paper_check.html.erb` |
+
+### Live calls to Hack Club infrastructure (Prime Directive 4)
+
+| Change | Why | Files |
+|---|---|---|
+| Changelog widget renders nothing; `blog_controller#updateBadge` no-ops | The widget sat in the header of **every authenticated page** plus the admin layout, user menu and docs header. It iframed `blog.hcb.hackclub.com/embed` and fetched `/api/unreads` **with `credentials: 'include'`** on every page load — a credentialed cross-origin request to another organization's server, showing HCB's changelog under the label "See what's new with Fuime" | `app/views/application/_blog_widget.html.erb`, `app/javascript/controllers/blog_controller.js` |
+| Phantom Sans `@font-face` removed; marketing headings fall back to the system stack | Hack Club's brand typeface, fetched from `assets.hackclub.com` on every marketing page load. A trademark use the AGPL does not license (Rule 7) as well as a Prime Directive 4 violation. The preconnect/preload pair went with it | `app/assets/stylesheets/components/_marketing.scss`, `app/views/marketing/funders.html.erb` |
+| Default avatar now `icons/person.svg`, served locally | `profile_picture_for` defaulted to a `cdn.hackclub.com` placeholder, so nearly every authenticated page requested an image from Hack Club's CDN | `app/helpers/users_helper.rb`, `app/views/public_activity/_common.html.erb`, `app/views/reimbursement/reports/_conversation.html.erb` |
+| ~40 `cdn.hackclub.com` images/backgrounds neutralised | Promo card backgrounds, the `card--sunset` pair (no callers), the seasonal "witch orpheus" sprite (also their mascot), the FIRST dashboard screenshot, the Wise and Discord logos, and 3 flavor-text images. Tailwind arbitrary-value classes compiled some of these into **all three CSS bundles**, so they shipped to pages that never rendered them | `_promos.scss`, `_cards.scss`, `_dark.scss`, `components/_marketing.scss`, `layouts/_seasonal.html.erb`, `users/first/index.html.erb`, `integrations/_discord_integration.html.erb`, `reimbursement/reports/wise_transfer_breakdown.html.erb` |
+| `LoginsHelper::HACKATHONS` emptied | A `cdn.hackclub.com` photo of their 2022 "Assemble" hackathon, used as a login background, linking to a `/assemble` route that does not exist here. `sample_hackathon` has zero callers, so nothing rendered either way | `app/helpers/logins_helper.rb` |
+
+After this pass `grep -c hackclub app/assets/builds/*.css` is **1 per bundle** —
+a `github.com/hackclub/hcb` issue link in a source comment (legitimate attribution).
+
+### URLs and copy pointing users at HCB
+
+| Change | Why | Files |
+|---|---|---|
+| CSV export URL columns derive from `root_url` | The `comma` blocks hardcoded `https://hcb.hackclub.com/…`, so a Fuime user's CSV export handed them links into Hack Club's app, where their records do not exist. **Scoped strictly to the export blocks** — `HCB_CODE = "HCB"` and every ledger scope are untouched | `app/models/event.rb`, `app/models/hcb_code.rb`, `app/models/user.rb` |
+| Twilio SMS + Discord notification links derive from `root_url` | A teen texting in a receipt was told to visit `hcb.hackclub.com/my/settings`; the receipt-bin confirmation linked to `hcb.hackclub.com/my/inbox`; Discord notifications rewrote relative hrefs to absolute HCB URLs. The Twilio job already `include`d `url_helpers` and used `hcb_code_url` elsewhere, so the hardcoded strings were inconsistent with the file's own convention | `app/jobs/twilio/process_webhook_job.rb`, `app/jobs/discord/process_notification_job.rb`, `app/models/announcement/templates/monthly.rb` |
+| ~20 "Learn more … **on Fuime** →" links removed | Every one pointed at `help.hcb.hackclub.com` — a Fuime label on Hack Club's help centre, documenting HCB's products. Removed rather than repointed; Fuime has no help centre. Also the transfer wizard's four per-answer article links, whose "learn more" element is now hidden rather than rendering `href="undefined"` | 13 files, listed in `BRAND_STRINGS.md` |
+| One-pager empty states: `screenshots:` and `support_article:` now optional | All 13 callers passed screenshots **of hcb.hackclub.com** hosted on `cdn.hackclub.com` / `user-cdn.hackclub-assets.com`. On Invoices — Fuime's own money-in feature — a teen saw a picture of a different product. The copy column now widens to fill the row when absent | `app/views/events/_one_pager.html.erb` + 13 callers |
+| 29 flavor-text entries removed | Dashboard taglines that were Hack Club in-jokes ("The Hack Club Federal Reserve", "From the makers of Hack Club"), links to zephyr/assemble.hackclub.com, or `cdn.hackclub.com` images. One read "Here's a secret: **Fuime** stands for Hack Club Bonk" — a half-applied rebrand | `app/services/flavor_text_service.rb` |
+| `onboarding_gallery` emptied; panel hidden when empty | 8 screenshots of real Hack Club organizations on the signup screen, each linking to that org on `hcb.hackclub.com` — reading as Fuime's own customers, and sending a teenager mid-signup to another company's product | `app/helpers/users_helper.rb`, `app/views/users/edit.html.erb` |
+
+### The "trap page" pattern — three nav items for products Fuime does not offer
+
+`Fuime::DisabledModules` blocks **writes only**, by design, to preserve read
+access to inherited records. But the nav entries for Cards, Donations and
+Google Workspace were gated on `EventPolicy` predicates checking only plan
+features — and `Event::Plan::Standard`, the default for every new org via
+`EventService::Create`, enables all three.
+
+So a normal member saw three sidebar entries for products Fuime does not offer,
+clicked through to fully-rendered pages, and found out only when a submission
+bounced with "That feature isn't available on Fuime."
+
+| Change | Why |
+|---|---|
+| `card_overview?`, `donation_overview?`, `g_suite_overview?`, `promotions?` → false | Gating at the policy closes the page *and* the nav link together, because each controller action authorizes on the predicate the nav is built from. Cards specifically is "hide, don't delete" per CLAUDE.md Milestone 5 |
+
+The Perks page (`promotions?`) had the loosest gate in the app —
+`auditor_or_reader?` — and every perk on it is a Hack Club program Fuime cannot
+deliver: HCB stickers, their 1Password / StickerNinja / StickerMule / Replit /
+GitHub partnerships, hackathon grants, free domains. The PVSA card told the
+user "Since you run on Fuime, you can issue Presidential Volunteer Service
+Awards" — eligibility that depends on 501(c)(3) status Fuime does not have.
+
+Section headers survive: "Spend" still has Reimbursements, "Receive" still has
+Invoices. `donation_overview?` is distinct from `donation_page?`, so the public
+donation page is unaffected.
+
+### Bug fix: the admin header logo covered the page
+
+Reported mid-session with a screenshot — the Fuime wordmark rendering at full
+size over the admin console.
+
+`admin.scss` does not import `components/_header.scss`, so the `.logo {
+display: block }` half of the light/dark pair never existed in that bundle —
+only `.logo-dark { display: none }`. Two failures followed:
+
+1. The admin bundle's preflight reset sets `img { max-width: 100%; height:
+   auto }`. A CSS declaration **beats the presentational `height="36"`
+   attribute** the logo partial sets, so the mark rendered at its intrinsic
+   512×425.
+2. In dark mode `_dark.scss` sets `.logo-dark { display: block }`, overriding
+   the local `display: none` and showing that unsized image.
+
+`application.css` has no such `img … height: auto` reset, which is why the logo
+only broke in admin. Fixed by pinning `height: 36px; width: auto` on both
+variants and adding the missing `.logo { display: block }`. The dark-mode swap
+still wins on specificity (`html[data-dark=true] .logo` is 0,2,0 vs 0,1,0).
+
+Verified against the rebuilt bundle by enumerating every `.logo` rule in
+declaration order.
+
+### Not mine: `app/controllers/event/applications_controller.rb`
+
+This file was already modified in the working tree at the start of the session
+— leftover uncommitted work from `cafd73bba`, adding a `contract&.party(:hcb)`
+nil-guard consistent with the `contract_available?` gating in
+`app/models/event/application.rb:288`. Correct and complementary, so it is
+carried along rather than reverted, but it is not part of this change.
+
+### Verification
+
+Executed in Docker against a clean worktree baseline at `cafd73bba`. **Both
+trees had assets built from their own source** (`yarn build && yarn build:css`)
+— without that, the missing-stylesheet artifact described in
+`known-failures.md` swamps every view-rendering spec and the comparison says
+nothing.
+
+| Scope | Baseline `cafd73bba` | This branch |
+|---|---|---|
+| `spec/models spec/controllers spec/policies spec/mailers` | 1409 examples, **38 failures** | 1416 examples, **38 failures** |
+| `spec/requests spec/jobs spec/helpers spec/views` (seed 1234) | 99 examples, **4 failures** | 104 examples, **4 failures** |
+| The 9 `spec/services` files that fail at baseline, + their siblings (seed 1234) | 79 examples, **10 failures** | 79 examples, **10 failures** |
+
+**Failure sets diffed by example id in all three scopes: zero new, zero fixed.**
+The +7 and +5 examples are the new specs below, all passing. The pre-existing
+failures are the usual set — ACH/outgoing-ach import, G Suite mailers, invoices,
+payroll/DocuSeal, wires, FIRST, logins.
+
+New specs, executed:
+
+| Spec | Result |
+|---|---|
+| `spec/requests/documents_letters_spec.rb` (new, 5) | **0 failures** |
+| `spec/policies/event_policy_spec.rb` (+6, file total 24) | **0 failures** |
+
+`documents_letters_spec` pins both letter routes as removed and asserts no route
+helper matching either name exists. The policy specs pin the five disabled
+predicates false **for the subject upstream would have allowed** — a manager on
+an approved Standard-plan org, and an auditor for `termination?` — assert the
+plan really does enable each feature so the examples cannot pass vacuously, and
+check `show?` / `reimbursements?` still pass so the denial is not overbroad.
+
+Non-suite checks:
+
+| Check | Result |
+|---|---|
+| `ruby -c` on all 15 modified `.rb` files; `node --check` on both `.js` | pass |
+| ERB compile, **differentially** vs each file's pristine `HEAD` version | **0 regressions** across 28 templates |
+| `yarn build` + `yarn build:css` | both compile; `hackclub` refs 20 → 1 in `application.css`, 1 per bundle overall |
+| Every `.logo` rule enumerated in the rebuilt `admin.css` in declaration order, specificity checked | correct in both colour schemes |
+| Grep audits: no dangling letter path helpers; no callers of the disabled predicates outside nav gates; `HCB_CODE` and all ledger scopes byte-identical | pass |
+
+#### Two measurement traps hit on the way — read before trusting a run
+
+1. **A naive ERB checker reports 28 false failures.**
+   `ERB.new(src, trim_mode: "-")` fails on 28 templates *that fail identically
+   before any edit*: Rails uses its own Erubi handler with different trim
+   semantics, and `action_view` will not load on this host (the Ruby version
+   mismatch in SETUP_NOTES). Comparing each file to its own pristine version
+   under the same checker is the sound test. Never read a raw count from it.
+
+2. **A run can end early and still print a clean summary.** One
+   `spec/services` run reported "33 examples, 3 failures" with no error and no
+   DB disconnect; `--dry-run` confirmed the same selection loads **79**. Re-run
+   with `--seed 1234` gave 79/10, matching baseline exactly. An example count
+   that disagrees with the baseline's is the tell — **compare counts before
+   comparing failures**, and pin the seed on both sides.
+
+   Relatedly: `spec/services` alone exceeds a 10-minute timeout, and
+   backgrounding `docker run` with `nohup … &` from a tool shell dies with the
+   parent, leaving an empty log that reads as "0 failures". Both cost a round
+   here.
+
+---
+
+## Approval flow: nil-contract crash + the DocuSeal path back on
+
+Clicking **Approve** on a teen-led application 500'd (`ERR-54A66FEA`). The
+approval itself succeeded — state moved to `approved`, the mailer fired — and
+then the redirect raised, which is why the error page carried a green
+"Application approved." flash.
+
+| Change | Why | Files |
+|---|---|---|
+| `admin_approve` nil-guards the contract | It did `@application.contract.party :hcb` whenever `teen_led?`. Since `send_contract` returns nil while no template is configured, teen-led applications have no contract and this dereferenced nil. The model's own `mark_approved` callback already guards with `teen_led? && contract.present?` — the controller was the one place that missed it | `app/controllers/event/applications_controller.rb` |
+| `next_step` returns a string when approved-but-not-activated | Every branch missed that state, so it returned nil and `_application_card` fell through to its hardcoded "We're reviewing your application" — displayed directly beside an **Approved** badge | `app/models/event/application.rb` |
+| `docs/fuime/DOCUSEAL_SETUP.md` written | `Event::Plan#contract_docuseal_template_id` already told readers to "see docs/fuime/DOCUSEAL_SETUP.md". The file did not exist | new file |
+| Three DocuSeal vars added to the env example | `FUIME_DOCUSEAL_TEMPLATE_ID`, `DOCUSEAL`, `DOCUSEAL__WEBHOOK_SECRET`, all blank | `.env.development.example` |
+
+**No integration code was written.** The DocuSeal client, webhook receiver,
+party sync, reminders, and document archival are all upstream and intact; the
+only things missing were the template and the credentials. The setup doc pins
+the exact role strings (`Contract Signee` / `Cosigner` / `Fuime`) and field
+names the code matches literally, because a mismatch fails at send or webhook
+time rather than at template creation.
+
+**Known gap, unresolved by these changes:** with no contract configured, an
+approved application has no route to activation. The Activate button lives on
+the contract-party page, and the submission page's fallback branch requires
+`contract.present?` (`submission.html.erb:108`). Configuring DocuSeal per the
+new doc closes this. Leaving it unconfigured means approval is terminal in the
+UI — `admin_activate` works but has no button.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `ruby -c` on both modified `.rb` files | pass |
+| Grepped `spec/` for `next_step`, `contract_available`, `FUIME_DOCUSEAL` | no specs assert on these; nothing to update |
+| Audited every `contract.` dereference in the application flow | `submission.html.erb` (52, 108) and `applications_controller#show` (46) are already guarded; no other unguarded call sites |
+
+Not executed: the suite and the flow itself. The Gemfile pins Ruby 3.4.9; this
+host has 3.4.6 / 3.4.10 / 4.0.6 and Bundler rejects the patch mismatch, and the
+Docker daemon is not running. Both changes are verified by reading and syntax
+check only — re-run the approval once a working environment is up.
+
+---
+
+## Money-in wired up: the storefront can actually take a payment
+
+`PaymentLinkService` and `PaymentWebhookHandler` were both already written and
+correct, but **nothing called the service** — the storefront's Pay button was
+hardcoded `disabled` with "(Payment links coming soon)". The receiving half of
+the payment flow existed; the sending half did not. This closes
+PRODUCTION_READINESS §2.1.
+
+| Change | Why | Files |
+|---|---|---|
+| New `Fuime::CheckoutsController` + `POST /b/:slug/pay` | The missing entry point. Public and unauthenticated (the payer is a customer, not a user), so it validates: storefront must be published, amount clamped to $1–$10,000, non-numeric input rejected rather than raising, and Stripe errors are logged but never surfaced to the payer | `app/controllers/fuime/checkouts_controller.rb`, `config/routes.rb` |
+| Storefront Pay form replaces the disabled button | Amount + description, composed from existing HCB form partials and classes per spec §4. Shows the fee up front, and a test-mode hint with card 4242 while `STRIPE_MODE=test` | `app/views/fuime/storefronts/show.html.erb` |
+| Payer-supplied description is bounded and sanitised | It reaches the Stripe product and then the ledger memo a teenager reads. Control characters stripped, truncated to 120 chars, so an anonymous stranger cannot write arbitrary text onto a child's ledger | `app/controllers/fuime/checkouts_controller.rb` |
+| The 4% fee posts as its own ledger line | It was only ever written into Stripe metadata. The teen's ledger showed the gross, so their net was overstated — and so was the income the Tax Tracker reported to their family. Now visible, labelled, and `fronted: false` like every other Fuime line | `app/services/fuime/payment_webhook_handler.rb` |
+| Refunds and chargebacks rebate the fee proportionally | Without it, a fully refunded payment left the business **net negative by the fee** — a teen would pay Fuime for being defrauded on a chargeback. Keyed `fuime_feerev_*` (distinct from the `fuime_rev_*` reversal prefix, so the two prefix-sums can't contaminate each other) and capped at the fee actually charged | `app/services/fuime/payment_webhook_handler.rb` |
+| `"platform fee refunded"` added to `EXCLUDED_MEMO_PATTERNS` | The rebate is the reversal of an expense, not revenue. Counting it as income would inflate a teen's taxable income. The fee **charge** is deliberately NOT excluded — it is a genuine deductible business expense | `app/services/fuime/tax_tracker_service.rb` |
+
+### Verification — all executed, in Docker on the pinned Ruby 3.4.9
+
+| Suite | Result |
+|---|---|
+| `spec/services/fuime/payment_webhook_handler_spec.rb` | **16 examples, 0 failures** |
+| `spec/services/fuime/tax_tracker_service_spec.rb` | **15 examples, 0 failures** |
+| `spec/controllers/fuime/checkouts_controller_spec.rb` (new, 10) | **0 failures** |
+| `spec/controllers/fuime/storefronts_controller_spec.rb` (new, 7, `render_views`) | **0 failures** |
+| `spec/services/fuime/payment_flow_integration_spec.rb` (new, 3) | **0 failures** |
+| `spec/controllers/event/applications_controller_spec.rb` (new, 3) | **0 failures** |
+| Fuime feature suite (guardianship, services, controllers) | **81 examples, 0 failures** |
+
+Eight webhook specs asserted exact ledger-line counts and legitimately failed
+when the fee added a line. They were rewritten to assert the business's **net**
+rather than a raw count — a stronger assertion, since it pins what the teen
+actually keeps.
+
+The approval-crash fix from the previous entry is now **executed-verified**: the
+new regression spec was run against the reverted code and reproduces
+`NoMethodError: undefined method 'party' for nil` exactly, then passes against
+the fix.
+
+### Still open
+
+- The storefront renders `render_views`-clean, but the flow has **not** been
+  clicked through against live test-mode Stripe — that needs `STRIPE__TEST__*`
+  keys and `stripe listen`, which this environment doesn't have.
+- Everything in PRODUCTION_READINESS §1.5 (money transmission) is untouched and
+  still gates real money. Posting the fee as a ledger line does not make the
+  pooled-custody model lawful; it only makes it honest on screen.

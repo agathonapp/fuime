@@ -1,24 +1,21 @@
-<div class="relative" data-controller="blog menu" id="blog-widget">
-  <a
-    href="https://blog.hcb.hackclub.com"
-    target="_blank"
-    class="w-8 h-8 relative menu__action muted tooltipped tooltipped--n p-0 justify-center"
-    aria-label="See what’s new with Fuime"
-    id="changelog-icon"
-    data-menu-target="toggle"
-    data-action="menu#toggle click@document->menu#close keydown@document->menu#keydown">
-    <%= inline_icon "rep", style: "transform:scale(1.25)", size: home_action_size %>
-    <span class="badge !bg-red !text-white hidden absolute top-[-8px] right-[-7px] m-0 py-[2px] px-1" data-blog-target="badge"></span>
-  </a>
-  <div
-    class="absolute top-10 card py-3 px-0 w-80 z-10 flex-col items-center justify-start leading-normal hidden blog-menu"
-    data-menu-target="content">
-    <p class="font-bold text-lg my-0 pb-3 w-full text-center">✨ What's new?</p>
+<%# FUIME-DISABLED: the "What's new?" changelog widget.
 
-    <iframe id="blog-widget-embed" loading="lazy" src="<%= "#{Rails.env.development? ? "http://localhost:3001" : "https://blog.hcb.hackclub.com"}/embed?theme=light" %>" class="border-0 w-full min-h-96" style="zoom: 0.9;"></iframe>
+    Upstream this rendered in the header of every authenticated page, plus the
+    admin layout, the user menu, and the docs header. All three of its parts
+    pointed at Hack Club:
 
-    <div class="px-5 pt-2 w-full">
-      <a href="https://blog.hcb.hackclub.com" target="_blank" class="flex justify-center items-center"><%= inline_icon :external, size: 26 %> See all posts</a>
-    </div>
-  </div>
-</div>
+      - the icon linked to blog.hcb.hackclub.com, under the label
+        "See what's new with Fuime"
+      - the dropdown embedded blog.hcb.hackclub.com/embed in an iframe, so
+        opening it loaded a document from Hack Club's server
+      - blog_controller.js fetched blog.hcb.hackclub.com/api/unreads with
+        `credentials: 'include'` on every page load, to draw an unread badge
+
+    That is a live dependency on another organization's infrastructure across
+    Fuime's most-visited surface, and the content is HCB's changelog rather
+    than Fuime's (Prime Directive 4).
+
+    Rendering nothing until Fuime has a changelog of its own. The four render
+    sites are left in place so restoring it means editing this file alone; the
+    Stimulus controller is kept for the same reason.
+%>

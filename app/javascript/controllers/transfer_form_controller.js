@@ -36,11 +36,9 @@ export default class extends Controller {
       question: 'Do you have their account & routing number?',
       yes: {
         type: 'ACH transfer',
-        link: 'https://help.hcb.hackclub.com/en/articles/15410090-how-do-i-send-an-ach-transfer',
       },
       no: {
         type: 'Mailed check',
-        link: 'https://help.hcb.hackclub.com/en/articles/15410094-how-do-i-send-a-check',
       },
     },
     {
@@ -48,11 +46,9 @@ export default class extends Controller {
       question: 'Is your transfer amount over $500?',
       yes: {
         type: 'International wire',
-        link: 'https://help.hcb.hackclub.com/en/articles/15410092-how-do-i-send-a-wire-transfer',
       },
       no: {
         type: 'Wise transfer',
-        link: 'https://help.hcb.hackclub.com/en/articles/15410093-how-do-i-send-a-wise-transfer',
       },
     },
   ]
@@ -85,7 +81,17 @@ export default class extends Controller {
     } else {
       this.answerTextTarget.innerHTML = payload.type
       this.answerCTATarget.dataset.answer = payload.type
-      this.learnMoreTarget.href = payload.link
+
+      // The per-answer `link` values were help.hcb.hackclub.com articles —
+      // Hack Club's help centre, documenting HCB's transfer products — so they
+      // were removed. Hide the "learn more" affordance rather than render an
+      // `href="undefined"`; restore it when Fuime has its own docs.
+      if (payload.link) {
+        this.learnMoreTarget.href = payload.link
+        this.learnMoreTarget.hidden = false
+      } else {
+        this.learnMoreTarget.hidden = true
+      }
 
       this.answerTarget.hidden = false
       this.wizardTarget.hidden = true

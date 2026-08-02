@@ -867,8 +867,35 @@ summary {
   flex-grow: 1;
 }
 
+// Header logo.
+//
+// admin.scss does not import components/_header.scss, so the `.logo`
+// (display: block) half of the light/dark pair that stylesheet defines is
+// missing here — only `.logo-dark { display: none }` existed. Two bugs fell
+// out of that:
+//
+//   1. This bundle's preflight reset sets `img { max-width: 100%; height:
+//      auto }`. A CSS declaration beats the presentational `height="36"`
+//      attribute the logo partial sets, so the mark rendered at its intrinsic
+//      512x425 and covered the page.
+//   2. In dark mode `_dark.scss` sets `.logo-dark { display: block }`, which
+//      overrode the rule below and showed the dark logo — unsized, per (1).
+//
+// Pinning the height on both variants restores the intended 36px header mark
+// in either colour scheme. `width: auto` keeps the 512x425 aspect ratio, since
+// the reset would otherwise let `max-width` squash it.
+.logo,
+.logo-dark {
+  height: 36px;
+  width: auto;
+}
+
 .logo-dark {
   display: none;
+}
+
+.logo {
+  display: block;
 }
 
 #admin-theme-toggle,

@@ -43,7 +43,12 @@
         <% end %>><%= memo %></div>
     </div>
 
-    <%= image_tag "zach_signature.png", height: 64, class: "dark:invert row-span-2 place-self-end" %>
+    <%# Signature line left blank. This rendered zach_signature.png — the
+        scanned signature of Hack Club's founder — onto the check image. Check
+        sending is FUIME-DISABLED (Fuime::DisabledModules) so this preview is
+        the only thing that draws it, but a Fuime check must never carry
+        another person's signature. %>
+    <div class="row-span-2 place-self-end w-48 border-b border-[#1f2d3d] dark:border-slate"></div>
 
     <p class="my-0 font-check">
         &#9286;

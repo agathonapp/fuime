@@ -131,13 +131,10 @@
     <%= inline_icon "clock" %>
   <% end %>
 
-  <%= link_to "https://help.hcb.hackclub.com/en/articles/14061706-how-do-i-limit-organization-members-spending", class: "card flex justify-between" do %>
-    <div class="flex flex-col">
-      <p class="bold black">More info</p>
-      <p class="muted">Learn about Fuime's spending controls feature</p>
-    </div>
-    <%= inline_icon "link" %>
-  <% end %>
+  <%# "More info" card removed. It was labelled "Learn about Fuime's spending
+      controls feature" but linked to help.hcb.hackclub.com — Hack Club's help
+      centre, documenting HCB. Restore this pointing at Fuime's own docs when
+      they exist. %>
 </div>
 
 <% unless @inactive_control_count.zero? %>

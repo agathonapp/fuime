@@ -25,7 +25,7 @@ module Discord
         node.remove if node.name == "svg"
         node.name = "p" if node.name == "li"
         node.remove if node.comment?
-        node.set_attribute(:href, "https://hcb.hackclub.com#{node[:href]}") if node[:href].present?
+        node.set_attribute(:href, "#{Rails.application.routes.url_helpers.root_url.chomp("/")}#{node[:href]}") if node[:href].present?
       end
 
       begin

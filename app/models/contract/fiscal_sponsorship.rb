@@ -96,8 +96,12 @@ class Contract
                 readonly: true
               },
               {
+                # No prefilled countersignature. Upstream defaulted this to
+                # zach_signature.png — the scanned signature of Hack Club's
+                # founder — fetched from hcb.hackclub.com, which would have
+                # countersigned a Fuime contract on his behalf. Fuime's
+                # countersignatory signs for themselves.
                 name: "Signature",
-                default_value: ActionController::Base.helpers.asset_url("zach_signature.png", host: "https://hcb.hackclub.com"),
                 readonly: false
               }
             ]

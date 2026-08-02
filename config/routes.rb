@@ -81,6 +81,7 @@ Rails.application.routes.draw do
 
   # Fuime: Public storefront
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
+  post "/b/:slug/pay", to: "fuime/checkouts#create", as: :fuime_storefront_pay
 
   resources :receipts, only: [:create, :destroy] do
     collection do
@@ -1104,8 +1105,18 @@ Rails.application.routes.draw do
     resources :ach_transfers, only: [:new, :create]
     resources :g_suites, only: [:new, :create, :edit, :update]
     resources :documents, only: [:index]
-    get "fiscal_sponsorship_letter", to: "documents#fiscal_sponsorship_letter"
-    get "verification_letter", to: "documents#verification_letter"
+    # FUIME-DISABLED: fiscal_sponsorship_letter, verification_letter.
+    #
+    # Both rendered on Hack Club letterhead — their logo, a real employee's
+    # scanned signature, and EIN 81-2908499 — asserting that The Hack
+    # Foundation fiscally sponsors the business. Fuime is not a fiscal sponsor
+    # and has no 501(c)(3), so there is no truthful Fuime version of either.
+    # The verification letter additionally attested an account "in good
+    # standing with Column N.A., a Member of the FDIC" and printed account and
+    # routing numbers: a bank-verification document Fuime cannot substantiate.
+    #
+    # Routes removed rather than the actions deleted (CLAUDE.md Rule 2); the
+    # controller actions and templates remain for upstream diffability.
     resources :invoices, only: [:new, :create, :index]
     resources :tags, only: [:create, :update, :destroy]
     resources :event_tags, only: [:create, :destroy]

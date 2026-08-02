@@ -280,7 +280,7 @@ class User < ApplicationRecord
   comma do
     id
     name
-    slug "url" do |slug| "https://hcb.hackclub.com/users/#{slug}/admin" end
+    slug "url" do |slug| Rails.application.routes.url_helpers.root_url.chomp("/") + "/users/#{slug}/admin" end
     email
     transactions_missing_receipt_count "Missing Receipts"
   end
