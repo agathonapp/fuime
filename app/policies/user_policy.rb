@@ -13,6 +13,15 @@ class UserPolicy < ApplicationPolicy
     user.auditor? || record == user
   end
 
+  # Registering or removing a security key changes how an account authenticates,
+  # so it is self-only — not something an auditor may do on someone else's
+  # behalf. `edit?` (auditor OR self) backs read-oriented settings views and is
+  # too broad here: it let an auditor mint registration options for another user
+  # and attach a key to their login.
+  def manage_webauthn_credentials?
+    record == user
+  end
+
   def generate_totp?
     user.admin? || record == user
   end

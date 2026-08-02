@@ -1249,3 +1249,33 @@ The dashboard card reading "We're reviewing your application" beside an
 **Approved** badge was reproduced from the deployed Render app, which does not
 carry any of this work. The `next_step` fix addresses it; it needs deploying,
 not further debugging.
+
+---
+
+## Security keys could not be registered by anyone
+
+Reported as "I can't register a security key as an admin." It was not
+admin-specific: **every** request to `WebauthnCredentialsController` raised
+before reaching an action, so no user could register a key at all.
+
+| Change | Why | Files |
+|---|---|---|
+| Removed two `skip_*_action ... only: [:auth_options]` callbacks | The controller has no `auth_options` action — it lives on `UsersController` as `webauthn_options`. Rails 7.1 raises `AbstractController::ActionNotFound` when a callback names an action the controller does not define, so the whole controller was dead. All three actions require a signed-in user and authorize, so the skips had nothing to do anyway | `app/controllers/webauthn_credentials_controller.rb` |
+| Normalise `params[:type]` before the enum | The form radio posts `cross_platform`; the Stimulus controller overwrites it with `cross-platform`, the hyphenated spelling the WebAuthn API requires for `authenticator_attachment`. Passing that to the enum raised `'cross-platform' is not a valid authenticator_type`, so **roaming keys (YubiKey, phone) failed while platform keys worked** | `app/controllers/webauthn_credentials_controller.rb` |
+| New `UserPolicy#manage_webauthn_credentials?` (self-only) | Both actions authorized on `edit?`, which is `auditor? \|\| record == user`. An auditor could mint registration options for another user and **attach their own security key to that user's login** — a persistent authentication backdoor. Registering a credential is an auth change, not a read; `edit?` is correct for read-oriented settings views and too broad here | `app/policies/user_policy.rb`, `app/controllers/webauthn_credentials_controller.rb` |
+
+`WebauthnCredentialPolicy#destroy?` (`admin? || record.user == user`) was
+reviewed and left alone — deleting a key is recoverable and admins legitimately
+need it for account recovery.
+
+### Verification
+
+`spec/controllers/webauthn_credentials_controller_spec.rb` (new, 5) — **0
+failures**. Two of the five pin the auditor privilege boundary and fail against
+the old policy. `logins_controller`, `users_controller`, and
+`sudo_mode_handler` re-run: the only failures are the 3 pre-existing
+`logins_controller` ones in the baseline's 34 (stale copy asserting "Your HCB
+account has been locked").
+
+Not verified: a physical key against a browser. The fake client covers the
+protocol, not the hardware.
