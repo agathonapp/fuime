@@ -44,6 +44,27 @@ RSpec.describe AchTransfersController, type: :controller do
       expect(disabled).not_to include("invoices", "receipts", "comments", "canonical_transactions")
     end
 
+    # Reimbursements are "hide nav", not disable (FUIME_HACKATHON_SPEC §WON'T).
+    # Blocking them silently no-opped report PATCHes — success responses that
+    # changed nothing.
+    it "does NOT disable reimbursements" do
+      expect(disabled).not_to include("reimbursement", "reimbursements")
+    end
+
+    # The v4 API exposes the same capabilities under a different path. Blocking
+    # only the HTML controller leaves the API as an open back door.
+    it "disables the API twin of every disabled HTML module that has one" do
+      api_controllers = Dir.glob(Rails.root.join("app/controllers/api/v4/*_controller.rb"))
+                           .map { |f| "api/v4/#{File.basename(f, '_controller.rb')}" }
+
+      unguarded = api_controllers.reject { |api| disabled.include?(api) }.select do |api|
+        disabled.include?(api.sub("api/v4/", ""))
+      end
+
+      expect(unguarded).to be_empty,
+                           "API endpoints left open while their HTML module is disabled: #{unguarded.join(', ')}"
+    end
+
     # A typo here silently disables nothing, so assert each prefix resolves to
     # a real controller or namespace on disk.
     it "only lists prefixes that exist" do
@@ -53,6 +74,30 @@ RSpec.describe AchTransfersController, type: :controller do
       end
 
       expect(missing).to be_empty, "unknown controller prefixes: #{missing.join(', ')}"
+    end
+  end
+
+  describe "the guardianship allowlist" do
+    subject(:allowed) { Fuime::GuardianshipEnforcement::ALLOWED_CONTROLLER_PATHS }
+
+    # An entry naming a controller that isn't routed is dead weight that reads
+    # as protection. Three of these shipped ("sessions",
+    # "active_storage/blobs", "active_storage/representations") and matched
+    # nothing — this is the check that finds them.
+    it "only lists controllers that are actually routed" do
+      routed = Rails.application.routes.routes.filter_map { |r| r.defaults[:controller] }.uniq
+
+      expect(allowed - routed).to be_empty
+    end
+
+    # The allowlist is the escape hatch from the platform's central legal
+    # control, so it must stay small and deliberate.
+    it "does not include anything a parked teen doesn't need" do
+      expect(allowed).not_to include("users/wrapped", "users/first", "events")
+    end
+
+    it "lets a parked teen reach the invite page and their own settings" do
+      expect(allowed).to include("guardianships", "users", "logins")
     end
   end
 end
