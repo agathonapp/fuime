@@ -2,6 +2,16 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Playground org with money.** Playground Mode was already here:
+it is upstream's `Event#demo_mode`, per-org, and it blocks money movement while
+leaving the ledger fully readable. Added
+`bundle exec rails runner script/seed_playground_org.rb` — creates
+`/fuime-playground` (demo_mode on, same demo teen + guardian as
+`seed_demo_business.rb`) and funds it with 8 fabricated ledger lines through the
+seeds' own import path. $417.88 on the ledger, $373.46 available. Idempotent.
+No app code changed, so rspec was not re-run. Note `RawCsvTransactionService`'s
+`amount:` is **dollars, not cents** — `db/seeds.rb` gets this wrong.
+
 **2026-08-02 — Security keys, third attempt.** Two bugs, both hidden from the
 suite. (1) `webauthn-ruby` only infers the RP ID when *exactly one* origin is
 allowed; we listed two, so the RP ID was `nil` and every registration and

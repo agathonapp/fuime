@@ -1363,3 +1363,45 @@ security key and with only TOTP.
 the protocol, not the hardware. **Consequence of the RP ID fix:** any key
 registered on the deployed app before this change was stored under a `nil`-RP-ID
 verification path or a different host and must be re-registered.
+
+## Playground org seed: a funded sandbox to demo (2026-08-02)
+
+Playground Mode itself is **upstream**, not new: it is HCB's `Event#demo_mode`
+boolean, renamed in the UI to "Playground Mode" in 2022 with the column left
+alone (which is also our Rule 6 position — do not rename it). It is per-org, not
+a global app mode: the ledger, balances, receipts and comments render normally
+while everything that touches money is refused (account numbers, disbursements,
+invoices, check deposits, reimbursements, card actions), and demo orgs are
+excluded from `Event.indexable`. Turning it off is what stamps `activated_at`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Added `script/seed_playground_org.rb` | There was no Fuime playground org and nothing in the app had a believable balance — `devhacks` (HCB's demo seed) is empty, and the two HCB seed orgs holding money are nonprofit-flavoured with $7M in them. Creates `fuime-playground`, demo_mode on, owned by the same demo teen + guardian as `seed_demo_business.rb`, and funds it with 8 teen-scale ledger lines. | `script/seed_playground_org.rb` |
+
+Money is fed in through the ledger's front door — `RawCsvTransactionService::Create`
+→ `HashedTransactionService::RawCsvTransaction::Import` →
+`CanonicalTransactionService::Import::All` → `CanonicalEventMapping` — the same
+path `db/seeds.rb` uses, so no pipeline internals are touched (Rule 3).
+
+Deliberately kept apart from `script/seed_demo_business.rb`: fake rows go in the
+org that cannot move money, and `mayas-cookies` keeps its real test-mode Stripe
+payment. Idempotent — it will not fund an org that already has mappings.
+
+Two things that bite when writing seeds against this pipeline:
+
+* `RawCsvTransactionService::Create`'s `amount:` is **monetized — dollars, not
+  cents**. `db/seeds.rb` passes `8992898` and thereby books an $8.9M donation.
+* Resolve each canonical transaction from its raw row
+  (`raw.reload.canonical_transaction`), not via `CanonicalTransaction.last` as
+  the seeds do — that only holds if nothing else imported in between.
+
+Verified on the dev database: balance $417.88, available $373.46 (the gap is
+HCB's 7% plan revenue fee, posted automatically by `FeeEngine` on mapping);
+`/fuime-playground` and its ledger both 200 with the Playground Mode badge, all
+8 memos render in the `transactions_list` frame, and the transaction detail page
+opens. A second run added nothing.
+
+**Worth a decision, not fixed here:** a real sale is charged twice — Fuime's 4%
+platform fee line from the webhook handler *and* HCB's 7% plan revenue fee from
+`FeeEngine` (visible on `mayas-cookies`: a $45 payment leaves $41.85 available).
+
