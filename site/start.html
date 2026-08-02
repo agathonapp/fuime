@@ -83,10 +83,33 @@
         z-index: 999;
         display: grid;
         place-items: center;
-        gap: 22px;
         background: #141420;
       }
       #boot[hidden] {
+        display: none;
+      }
+      /* The loader is one big mark on this page and nothing else. Sized here
+         rather than in style.css because index.html's loader still flies its
+         arch and wordmark into the nav, and that FLIP is measured against a
+         62px glyph. There is no nav on /start to fly to, so the mark has the
+         viewport to itself and gets to be the size it deserves. vmin, not vw,
+         so a short landscape window shrinks it rather than letting it run off
+         the top and bottom.
+
+         Selected through #boot for the specificity, not for the descent:
+         style.css sets .boot__arch to 62px and is linked below this block,
+         because the background above it has to paint before any stylesheet
+         arrives. At equal specificity the later sheet would win and this rule
+         would silently do nothing. */
+      #boot .boot__arch {
+        width: clamp(132px, 21vmin, 240px);
+      }
+      /* handoff.js's byte receipt, off here. fx/boot.js calls initHandoff()
+         with no arguments for both pages, so the cfg.receipt flag cannot be
+         set per page and this is the page-scoped switch. index.html keeps it,
+         where it collapses rightward into the nav on the way out. The filling
+         arch is still the progress meter, so what goes is the commentary. */
+      #boot .fx-handoff__receipt {
         display: none;
       }
     </style>
@@ -136,7 +159,13 @@
 
     <!-- ── first-visit loader ───────────────────────────────────────────
          The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
+         the rest of the session by the sessionStorage guard above.
+
+         No wordmark under it, unlike index.html. The arch is already the
+         brand and at this size it is legible as one, so spelling the name
+         out underneath is the loader saying the same thing twice. Both
+         handoff.js and style.css guard every .boot__word rule and lookup,
+         so its absence costs nothing. -->
     <div id="boot" role="status" aria-label="Loading fuime">
       <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
         <defs>
@@ -147,7 +176,6 @@
         <use href="#arch" class="boot__ghost" />
         <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
       </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
     </div>
 
     <main>
