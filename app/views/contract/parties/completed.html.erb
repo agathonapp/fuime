@@ -1,7 +1,7 @@
-<% title "Thanks for signing the HCB agreement" %>
+<% title "Thanks for signing the Fuime agreement" %>
 
 <div class="card mt-4">
-  <h2>Thank you for signing the HCB agreement!</h2>
+  <h2>Thank you for signing the Fuime agreement!</h2>
 
   <% if @party.cosigner? %>
     <p>
@@ -13,7 +13,7 @@
     </p>
   <% elsif @party.signee? %>
     <% if @contract.party(:cosigner).nil? || @contract.party(:cosigner).signed? %>
-      <p>The HCB team will finalize the agreement and activate your project within one business day.</p>
+      <p>The Fuime team will finalize the agreement and activate your project within one business day.</p>
     <% else %>
       <p>
         Your cosigner still needs to sign the agreement that we sent to their email (<%= @contract.party(:cosigner).email %>).

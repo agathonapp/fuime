@@ -1,4 +1,4 @@
-<% content_for :title, "The HCB Money Printer" %>
+<% content_for :title, "The Fuime Money Printer" %>
 <% content_for :head do %>
   <style>
     .money-printer-page { margin: 0; }
@@ -129,7 +129,7 @@
   <div class="mp mp__warming"
        data-controller="money-printer"
        data-money-printer-warming-value="true">
-    <p class="mp__eyebrow">The HCB money printer</p>
+    <p class="mp__eyebrow">The Fuime money printer</p>
     <p class="mp__figure" data-money-printer-target="counter">$ _ _ _</p>
     <p class="mp__caption">Warming up the printer. This page will refresh in a moment.</p>
   </div>
@@ -148,7 +148,7 @@
       </div>
     <% end %>
 
-    <p class="mp__eyebrow">The HCB money printer</p>
+    <p class="mp__eyebrow">The Fuime money printer</p>
     <div class="mp__printer" aria-hidden="true">🖨️</div>
     <p class="mp__figure" data-money-printer-target="counter"><%= render_money(@stats[:net_delta_cents].abs) %></p>
     <p class="mp__ticker" data-money-printer-target="ticker"><%= seed_phrase %></p>

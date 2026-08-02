@@ -461,11 +461,11 @@ class StripeCard < ApplicationRecord
     event_cards_today = event.stripe_cards.where(subledger_id: nil, created_at: 1.day.ago..).count
 
     if user_cards_today > 20
-      errors.add(:base, "Your account has been rate-limited from creating new cards. Please try again tomorrow; for help, email hcb@hackclub.com.")
+      errors.add(:base, "Your account has been rate-limited from creating new cards. Please try again tomorrow; for help, email support@fuime.com.")
     end
 
     if event_cards_today > 20
-      errors.add(:base, "Your organization has been rate-limited from creating new cards. Please try again tomorrow; for help, email hcb@hackclub.com.")
+      errors.add(:base, "Your organization has been rate-limited from creating new cards. Please try again tomorrow; for help, email support@fuime.com.")
     end
   end
 

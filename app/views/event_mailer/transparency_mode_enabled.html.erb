@@ -1,13 +1,13 @@
 <p><%= @emails.length > 1 ? "Hi all," : "Hi there," %></p>
 
 <p>
-  <%= @whodunnit.name %> <%= "(an #{@is_manager ? "organization manager" : "HCB admin"})" unless @whodunnit == User.system_user %> has enabled transparency mode for <%= @event.name %>.
+  <%= @whodunnit.name %> <%= "(an #{@is_manager ? "organization manager" : "Fuime admin"})" unless @whodunnit == User.system_user %> has enabled transparency mode for <%= @event.name %>.
   With transparency mode enabled:
 </p>
 
 <ul>
   <li>Unauthenticated users will be able to access a <strong>read-only</strong> version of your organization.</li>
-  <li>None of HCB&apos;s pages will change for signed in team members.</li>
+  <li>None of Fuime&apos;s pages will change for signed in team members.</li>
   <li>We&apos;ll do our best to redact contact info, but we can&apos;t guarantee it doesn't show up in these
     fields:
     <ul>
@@ -28,11 +28,11 @@
 
 <p>
   Additionally, managers can enable monthly announcements in <%= link_to "your organization settings", edit_event_url(@event) %>.
-  If enabled, HCB will generate a new announcement each month that includes summarized data about your organization from the past month.
+  If enabled, Fuime will generate a new announcement each month that includes summarized data about your organization from the past month.
   For more information, check out <%= link_to "our blog post", "https://blog.hcb.hackclub.com/posts/monthly-announcements" %>.
 </p>
 
 <p>
   From,<br>
-  The HCB Team
+  The Fuime Team
 </p>

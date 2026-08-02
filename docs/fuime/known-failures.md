@@ -82,3 +82,25 @@ and service-level specs are green and directly comparable to baseline; the
 view-rendering specs are dominated by the asset artifact above and need a build
 step before they say anything useful. Run both scopes with assets built, at
 `f51302a54` and at `main`, to close this out.
+
+### `16a003485` — "Document canonical domain migration" (2026-08-01)
+
+Measured from a clean worktree, per the procedure above.
+
+| Scope | Result |
+|---|---|
+| `spec/views spec/mailers spec/helpers` | **37 examples, 19 failures** |
+
+**rspec does run locally** — the "local toolchain could not run rspec" note at
+the top of this file is stale as of this measurement. The `fuime-web` image
+against the running `fuime_default` network works; the two-file subset
+`spec/models/event_spec.rb spec/models/user_spec.rb` gives 95 examples / 0
+failures in ~4 minutes.
+
+Most of the 19 failures are one environmental cause: mailer specs render
+`stylesheet_link_tag "mailer"` and die on `LoadError: cannot load such file --
+sassc`. The gem is missing from the test image. Fixing that would likely clear
+most of these; it was not attempted here.
+
+Full-suite baseline at this commit: **still not measured** (the suite is slow —
+budget well over an hour). This subset is not a claim about the suite as a whole.

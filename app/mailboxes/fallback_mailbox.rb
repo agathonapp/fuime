@@ -5,7 +5,7 @@ class FallbackMailbox < ApplicationMailbox
   # inbound_email => ActionMailbox::InboundEmail record --> the active storage record
 
   def process
-    bounce_with MailboxMailer.forward(inbound_email:, to: "hcb@hackclub.com")
+    bounce_with MailboxMailer.forward(inbound_email:, to: "support@fuime.com")
   end
 
 end

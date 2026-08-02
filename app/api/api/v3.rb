@@ -947,10 +947,10 @@ module Api
                       enabled.
                       <br><br><strong>Questions or suggestions?</strong>
                       <br>Reach us in the #hcb channel on the <a href='https://hackclub.com/slack'>Hack Club Slack</a>
-                      or email <a href='mailto:hcb@hackclub.com'>hcb@hackclub.com</a>.
+                      or email <a href='mailto:support@fuime.com'>support@fuime.com</a>.
                       <br><br>Happy hacking! ✨",
         contact_name: "HCB",
-        contact_email: "hcb@hackclub.com",
+        contact_email: "support@fuime.com",
       },
       doc_version: "3.0.0",
       models: [

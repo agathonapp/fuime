@@ -71,7 +71,7 @@
 <p>This transfer's status is <b><%= @paypal_transfer.aasm.current_state.to_s.humanize(capitalize: false) %></b>.</p>
 
 <% if @paypal_transfer.may_mark_approved? %>
-  <%= button_to "💸 Approve and send transfer", approve_paypal_transfer_path(@paypal_transfer), method: :post, data: { turbo_confirm: "Have you manually sent this transfer? HCB doesn't programmatically send PayPal transfers." } %>
+  <%= button_to "💸 Approve and send transfer", approve_paypal_transfer_path(@paypal_transfer), method: :post, data: { turbo_confirm: "Have you manually sent this transfer? Fuime doesn't programmatically send PayPal transfers." } %>
 <% end %>
 
 <% if @paypal_transfer.may_mark_rejected? %>

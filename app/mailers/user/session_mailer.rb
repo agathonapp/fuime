@@ -6,7 +6,7 @@ class User
       @session = user_session
       @user = user_session.user
 
-      mail to: @user.email, subject: "New login to your HCB account"
+      mail to: @user.email, subject: "New login to your Fuime account"
     end
 
   end

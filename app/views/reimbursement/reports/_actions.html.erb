@@ -5,7 +5,7 @@
   <% button_hint = "" %>
   <% button_hint = "This report has been approved and is pending reimbursement." if report.reimbursement_approved? %>
   <% button_hint = "The creator of this report has been reimbursed." if report.reimbursed? %>
-  <% button_hint = "This report has been approved by #{@event.name}, but it's still pending approval from the HCB team." if report.reimbursement_requested? %>
+  <% button_hint = "This report has been approved by #{@event.name}, but it's still pending approval from the Fuime team." if report.reimbursement_requested? %>
 
   <% unless (report.closed? && !report.payout_holding&.failed?) || member_viewing %>
     <div class="flex flex-col sm:flex-row !gap-2" id="actions">
@@ -52,7 +52,7 @@
               <%= inline_icon "reply" %>
               Mark as draft
               <% button_hint = capture do %>
-                <span class="bold">Status:</span> the HCB team is reviewing this report. This may take up to <strong>2 business days</strong>. To make further changes, mark it as a draft.
+                <span class="bold">Status:</span> the Fuime team is reviewing this report. This may take up to <strong>2 business days</strong>. To make further changes, mark it as a draft.
               <% end %>
             <% end %>
           <% elsif current_user == report.user && report.submitted? %>
@@ -60,7 +60,7 @@
               <%= inline_icon "reply" %>
               Mark as draft
               <% button_hint = capture do %>
-                <span class="bold">Status:</span> your report is currently under review by the <%= report.event.name %> team. Once it is approved by them, it will take the HCB team <strong>2 business days</strong> to review. To make further changes, mark it as a draft.
+                <span class="bold">Status:</span> your report is currently under review by the <%= report.event.name %> team. Once it is approved by them, it will take the Fuime team <strong>2 business days</strong> to review. To make further changes, mark it as a draft.
               <% end %>
             <% end %>
           <% elsif !report.closed? %>
@@ -98,7 +98,7 @@
                   <% if report.payout_method.present? && report.payout_method.unsupported? %>
                     update your payout information. <%= report.payout_method.unsupported_details[:reason] %>
                   <% else %>
-                    provide HCB your payout information.
+                    provide Fuime your payout information.
                   <% end %>
                 <% end %>
               <% end %>
@@ -140,11 +140,11 @@
           <% if report.payout_holding&.failed? %>
             <% if user == current_user %>
               <% button_hint = capture do %>
-                <span class="bold">Warning:</span> your <%= report.payout_method&.human_kind || "payout" %> information was flagged as invalid, please edit your payout settings and HCB will retry the payment.
+                <span class="bold">Warning:</span> your <%= report.payout_method&.human_kind || "payout" %> information was flagged as invalid, please edit your payout settings and Fuime will retry the payment.
               <% end %>
             <% else %>
               <% button_hint = capture do %>
-                <span class="bold">Warning:</span> <%= user.first_name %>'s <%= report.payout_method&.human_kind || "payout" %> information was flagged as invalid, please ask them to edit their payout settings and HCB will retry the payment.
+                <span class="bold">Warning:</span> <%= user.first_name %>'s <%= report.payout_method&.human_kind || "payout" %> information was flagged as invalid, please ask them to edit their payout settings and Fuime will retry the payment.
               <% end %>
             <% end %>
           <% end %>
@@ -236,7 +236,7 @@
         <% elsif report.reimbursement_requested? && !admin_signed_in? %>
           <div class="btn bg-info disabled" style="opacity: 0.75" disabled>
             <%= inline_icon "clock" %>
-            Pending HCB team review
+            Pending Fuime team review
           </div>
         <% elsif report.reimbursement_requested? %>
           <% admin_tool("overflow-visible") do %>
@@ -265,7 +265,7 @@
                   Preferred: Process as reimbursement report
                 </button>
 
-                <p>Alternatively, because of ongoing disruptions with Wise and side effects with HCB's reimbursement system, we are providing the option to convert this reimbursement report into a standard Wise transfer and sending funds directly from <%= report.event.name %>. Only do this if you are encountering issues with the standard reimbursement flow.</p>
+                <p>Alternatively, because of ongoing disruptions with Wise and side effects with Fuime's reimbursement system, we are providing the option to convert this reimbursement report into a standard Wise transfer and sending funds directly from <%= report.event.name %>. Only do this if you are encountering issues with the standard reimbursement flow.</p>
 
                 <p>Doing this will:</p>
 

@@ -6,12 +6,12 @@
 <% admin_tool("mt3") do %>
   <section class="details">
     <p>
-      <strong>HCB Code:</strong>
+      <strong>Fuime Code:</strong>
       <span>
         <% if @canonical_pending_transaction.local_hcb_code.present? %>
           <%= link_to @canonical_pending_transaction.hcb_code, @canonical_pending_transaction.local_hcb_code %>
         <% else %>
-          <span class="text-red">No HCB Code</span>
+          <span class="text-red">No Fuime Code</span>
         <% end %>
       </span>
     </p>

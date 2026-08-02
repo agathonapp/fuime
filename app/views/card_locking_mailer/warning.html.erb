@@ -2,6 +2,6 @@
   You have <%= @count %> <%= "receipt".pluralize(@count) %> we still need. Charges that go more than 7 days without a receipt can lock your cards. Upload these to stay ahead.
 </p>
 <p>
-  Every charge needs a receipt within 7 days. Manage your receipts on the HCB <%= link_to "receipts page", my_inbox_url %>.
+  Every charge needs a receipt within 7 days. Manage your receipts on the Fuime <%= link_to "receipts page", my_inbox_url %>.
 </p>
 <%= render "transactions_table", hcb_codes: @hcb_codes, show_org: @show_org %>

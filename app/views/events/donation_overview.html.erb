@@ -202,9 +202,6 @@
         description: "Track who's supporting your work and enable recurring donations so supporters can contribute monthly."
       }
     ] do %>
-    <% content_for :caption do %>
-      <span class="text-sm text-muted">See <a href="https://hcb.hackclub.com/hq/donations" target="_blank" class="underline">our HQ's donations!</a></span>
-    <% end %>
     <div class="flex flex-row-reverse gap-2 justify-end">
       <%= pop_icon_to "settings", edit_event_path(@event, tab: "donations") %>
       <%= render partial: "events/donations/share_page", is_blankslate: true %>

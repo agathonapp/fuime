@@ -16,10 +16,10 @@
       icon: "wise",
       title: "Heads up!",
       class: "my-4 !border-[#9FE870] [&>div.flex]:text-[#163300] dark:[&>div.flex]:text-[#9FE870]",
-      footer: link_to("Learn more about Wise on HCB →", "https://help.hcb.hackclub.com/article/65-wise") do %>
+      footer: link_to("Learn more about Wise on Fuime →", "https://help.hcb.hackclub.com/article/65-wise") do %>
     <ul>
-      <li>We've integrated Wise into HCB to offer international transfers to over 100 countries.</li>
-      <li>HCB never charges fees to send transfers, however Wise will charge processing fees to your organization.</li>
+      <li>We've integrated Wise into Fuime to offer international transfers to over 100 countries.</li>
+      <li>Fuime never charges fees to send transfers, however Wise will charge processing fees to your organization.</li>
       <li><i>Sending over $500? Avoid all fees by sending an international wire.</i></li>
     </ul>
   <% end %>
@@ -86,14 +86,14 @@
 
         <div x-show="!(usd_quote == null || currency == null || currency == '' || amount == null || amount == '') && !Number.isNaN(usd_quote) && parseFloat(String(usd_quote).replace('$', '').replace(',', '')) > 500">
           <%= render "application/callout", type: "info", title: "You can save money by sending a wire." do %>
-            <p><%= link_to "Wire transfers", new_event_wire_path(@event) %> are available for all transfers above $500 (USD) and are entirely fee-free for HCB users.</p>
+            <p><%= link_to "Wire transfers", new_event_wire_path(@event) %> are available for all transfers above $500 (USD) and are entirely fee-free for Fuime users.</p>
           <% end %>
         </div>
       </div>
 
       <div class="field">
         <%= form.label :payment_for, "What are you paying for with this transfer?" %>
-        <span class="muted">This is to help HCB keep record of our transactions.</span>
+        <span class="muted">This is to help Fuime keep record of our transactions.</span>
         <%= form.text_field :payment_for, placeholder: "Event venue", required: true, disabled: %>
       </div>
 

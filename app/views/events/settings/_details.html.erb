@@ -77,7 +77,7 @@
           <div class="field flex-1">
             <%= form.label :short_name, "Nickname" %>
             <p class="h5 muted mt0 mb1">
-              At most sixteen characters long; used on statement descriptors and printed on your event's HCB card.
+              At most sixteen characters long; used on statement descriptors and printed on your event's Fuime card.
             </p>
             <%= form.text_field :short_name, placeholder: "#{event.name[0...Event::MAX_SHORT_NAME_LENGTH]}...", maxlength: Event::MAX_SHORT_NAME_LENGTH, disabled: %>
           </div>
@@ -124,7 +124,7 @@
     </div>
     <ul class="mt0 pl4 mb2">
       <li>Unauthenticated users will be able to access a <strong>read-only</strong> version of your account.</li>
-      <li>None of HCB’s pages will change for signed in team members.</li>
+      <li>None of Fuime’s pages will change for signed in team members.</li>
       <li>We’ll do our best to redact contact info, but we can’t guarantee it doesn't show up in these
         fields:
         <ul>
@@ -145,7 +145,7 @@
       </div>
       <div class="field field--checkbox">
         <%= form.check_box :is_indexable, disabled:, switch: true %>
-        <%= form.label :is_indexable, "List #{event.name} in HCB’s public directory" %>
+        <%= form.label :is_indexable, "List #{event.name} in Fuime’s public directory" %>
       </div>
       <% unless !winter?(override_preference: true) %>
         <div class="field field--checkbox">
@@ -157,7 +157,7 @@
     <%= form.submit "Update", disabled: %>
   </div>
 
-  <h3 class="mb1" id="cards_heading">HCB card</h3>
+  <h3 class="mb1" id="cards_heading">Fuime card</h3>
   <div class="card mb3">
     <div class="field">
       <%= form.label :stripe_card_logo, "Card logo" %>
@@ -207,7 +207,7 @@
       <%= form.fields_for :config do |config| %>
         <%= config.label :contact_email, "Organization contact email" %>
         <p class="h5 muted mt0 mb1">
-          If you’d prefer for the HCB operations team to reach out to a shared email, configure that here.
+          If you’d prefer for the Fuime operations team to reach out to a shared email, configure that here.
         </p>
         <%= config.email_field :contact_email, placeholder: "team@lioncityhacks.com", disabled: %>
       <% end %>

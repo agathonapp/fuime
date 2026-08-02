@@ -24,7 +24,7 @@
         <%= form.radio_button :recipient_org_type, "existing_hcb_account", required: true, "x-model" => "recipient_org_type" %>
         <%= form.label :recipient_org_type, class: "pointer justify-center", value: "existing_hcb_account" do %>
           <%= inline_icon "bank-account", size: 28 %>
-          <strong>Deposit into an existing HCB account</strong>
+          <strong>Deposit into an existing Fuime account</strong>
         <% end %>
 
         <%= form.radio_button :recipient_org_type, "international", required: true, "x-model" => "recipient_org_type" %>
@@ -46,7 +46,7 @@
       </div>
 
       <div class="field" x-cloak x-show="recipient_org_type && recipient_org_type == 'existing_hcb_account'">
-        <%= form.label :event_id, "HCB organization" %>
+        <%= form.label :event_id, "Fuime organization" %>
         <%= form.collection_select :event_id, current_user.events.not_hidden.not_demo_mode, :id, :name, ":required": "recipient_org_type && recipient_org_type == 'existing_hcb_account'" %>
       </div>
 

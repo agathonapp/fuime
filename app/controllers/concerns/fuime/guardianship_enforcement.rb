@@ -29,9 +29,14 @@ module Fuime
 
     # Controllers a minor awaiting a guardian may still reach. Matched against
     # `controller_path`, so a namespace entry covers everything beneath it.
+    # Matched against `controller_path`. Entries are EXACT — a namespace is not
+    # implied, because "users" would otherwise pull in every controller beneath
+    # it (users/wrapped, and anything added later) without anyone deciding it
+    # belonged in a legal-control allowlist.
     ALLOWED_CONTROLLER_PATHS = [
       "guardianships",        # the whole point: invite your guardian
       "users",                # profile / settings / date of birth
+      "users/email_updates",  # confirming an email change
       "logins",               # sign in
       "sessions",             # sign out
       "static_pages",         # home, legal, help
@@ -69,10 +74,11 @@ module Fuime
       end
     end
 
+    # Exact match only — see ALLOWED_CONTROLLER_PATHS. Adding a controller under
+    # an already-allowed namespace should require listing it deliberately, not
+    # inherit access from its parent.
     def allowed_while_awaiting_guardian?
-      ALLOWED_CONTROLLER_PATHS.any? do |allowed|
-        controller_path == allowed || controller_path.start_with?("#{allowed}/")
-      end
+      ALLOWED_CONTROLLER_PATHS.include?(controller_path)
     end
 
     def guardianship_required_message

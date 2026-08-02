@@ -112,7 +112,7 @@
       <% end %>
       <% if @type %>
         <div class="badge badge-large bg-muted">
-          <%= @type.humanize.gsub("Ach", "ACH").gsub("Paypal", "PayPal").gsub("Hcb", "HCB") %>
+          <%= @type.humanize.gsub("Ach", "ACH").gsub("Paypal", "PayPal").gsub("Hcb", "Fuime") %>
           <%= link_to event_ledger_path(@event, upsert_query_params(type: nil)), class: "flex items-center", data: { turbo_prefetch: "false" } do %>
             <%= inline_icon "view-close", size: 20 %>
           <% end %>

@@ -83,7 +83,7 @@
 <% end %>
 
 <% if @g_suite.verifying? %>
-  <p>HCB is now trying to automatically verify if the user has configured their domain correctly with the TXT record. This happens once every hour.</p>
+  <p>Fuime is now trying to automatically verify if the user has configured their domain correctly with the TXT record. This happens once every hour.</p>
   <p>If you would like to manually attempt to verify this domain:</p>
   <%= form_with(model: false, local: true, url: google_workspace_verify_admin_path(@g_suite), method: :post) do |form| %>
     <%= form.submit "Click Here" %>

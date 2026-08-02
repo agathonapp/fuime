@@ -74,7 +74,7 @@
 <section data-behavior="wire_payout_method_inputs" class="<%= "hidden" unless pm_is.call(LegalEntity::PayoutMethod::Wire) %>">
   <%= form.fields_for :payout_method_wire, detail_for.call(LegalEntity::PayoutMethod::Wire) do |form| %>
     <p class="muted mt-2 mb-5">
-      International wire transfers can take between 1 and 5 business days to arrive in your account. HCB does not charge fees for transfers, but your financial institution may choose to charge fees to receive wire transfers.
+      International wire transfers can take between 1 and 5 business days to arrive in your account. Fuime does not charge fees for transfers, but your financial institution may choose to charge fees to receive wire transfers.
     </p>
 
     <%= render partial: "transfers/recipient_details", locals: { form:, disabled: false, required: false } %>
@@ -84,7 +84,7 @@
       <%= form.text_field :recipient_name,
           required: false,
           placeholder: user.full_name %>
-      <span class="muted">If the name on the bank account differs from your legal name on HCB.</span>
+      <span class="muted">If the name on the bank account differs from your legal name on Fuime.</span>
     </div>
 
     <%= render partial: "wires/account_details", locals: { form:, disabled: false, required: false, account_number_field_name: :account_number } %>
@@ -102,8 +102,8 @@
 <section data-behavior="wise_transfer_payout_method_inputs" class="<%= "hidden" unless pm_is.call(LegalEntity::PayoutMethod::WiseTransfer) %>" x-data="{ currency: <%= payout_method.try(:currency) ? "'#{payout_method.currency}'" : "null" %>, amount: null, account_type: <%= payout_method.try(:account_type) ? "'#{payout_method.account_type}'" : "null" %>, use_same_email_for_interac: <%= payout_method.try(:use_same_email_for_interac) ? "'#{payout_method.use_same_email_for_interac}'" : "false" %>, email: null }">
   <%= form.fields_for :payout_method_wise_transfer, detail_for.call(LegalEntity::PayoutMethod::WiseTransfer) do |form| %>
     <p class="muted mt-2 mb-5">
-      We've integrated Wise into HCB to offer international reimbursements to over 100 countries. HCB never charges fees on reimbursements, however Wise will charge processing fees to the organization reimbursing you. An account with Wise is not required; funds will be sent directly via a local bank transfer.
-      <%= link_to "Learn more about Wise on HCB →", "https://help.hcb.hackclub.com/article/65-wise" %>
+      We've integrated Wise into Fuime to offer international reimbursements to over 100 countries. Fuime never charges fees on reimbursements, however Wise will charge processing fees to the organization reimbursing you. An account with Wise is not required; funds will be sent directly via a local bank transfer.
+      <%= link_to "Learn more about Wise on Fuime →", "https://help.hcb.hackclub.com/article/65-wise" %>
     </p>
 
     <%= render partial: "transfers/recipient_details", locals: { form:, disabled: false, required: false } %>

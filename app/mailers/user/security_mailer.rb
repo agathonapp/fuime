@@ -6,7 +6,7 @@ class User
       @user = user
       @change = change
 
-      mail to: @user.email, subject: "Security settings changed on your HCB account"
+      mail to: @user.email, subject: "Security settings changed on your Fuime account"
     end
 
   end

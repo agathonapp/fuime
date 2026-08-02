@@ -9,7 +9,7 @@ class ReceiptableMailer < ApplicationMailer
 
     @hcb_ids = params[:hcb_ids]
     @hcb_codes = HcbCode.where(id: @hcb_ids)
-    @subject = "[WEEKLY] Missing #{"receipt".pluralize(@hcb_ids.size)} on HCB"
+    @subject = "[WEEKLY] Missing #{"receipt".pluralize(@hcb_ids.size)} on Fuime"
 
     @show_flavor_text = Flipper.enabled?(:flavored_receipt_report_2023_05_12, @user)
     @flavor_text = flavor_text.sample if @show_flavor_text

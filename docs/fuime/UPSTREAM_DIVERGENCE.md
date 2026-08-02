@@ -689,3 +689,97 @@ Verified: old host 301s in a single hop with path+query intact; `/up` still
 - WebAuthn credentials bind to the domain. `allowed_origins` lists both hosts,
   but any key registered on the Render hostname must be re-registered on
   fuime.com. Currently zero keys exist, so there is nothing to migrate.
+
+## Regression coverage: impersonation activity feed
+
+The fix in `189cdfeab` (dashboard 500 after impersonating an unverified user)
+landed without a spec. Added one, since the failure mode is high blast radius:
+the partial renders inside the dashboard activity feed, so a single
+unrenderable row 500s every load of `/` for the admin.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Add view spec for the session-create activity partial | The nil-user crash had no test pinning it and could silently return | `spec/views/public_activity/user_session/create_spec.rb` |
+
+Verified by reverting the guard to `activity.trackable.user.name`: 3 of 5
+examples fail with the original `undefined method 'name' for nil`. Restored the
+guard; all 5 pass, plus the existing `spec/requests/users/unimpersonate_spec.rb`.
+
+Notes for future sessions:
+- `spec/rails_helper.rb:21` sets `PublicActivity.enabled = false` suite-wide, so
+  any spec asserting on activity records must wrap them in
+  `PublicActivity.with_tracking { ... }`.
+- Tested at the view layer, not through `StaticPagesController`: the dashboard
+  layout requires a compiled `bundle.js`, which the test environment does not
+  build, so a `render_views` controller spec fails on the asset pipeline before
+  reaching the partial.
+- `user(allow_unverified: true)` resolves an unverified target's real name, so
+  the `|| "an account"` fallback only fires for a session with no user row at
+  all. Both branches are covered.
+- `SessionSupport#create_session` writes `cookies.encrypted[...]` with an
+  options hash, which only controller-spec cookie jars accept — it does not work
+  in `type: :request` specs.
+
+## 2026-08-01 — Milestone 3: surface rebrand (`fuime/m3-surface-rebrand`)
+
+User-facing identity becomes Fuime; internals untouched per Rule 6. 336 files.
+
+| Change | Why | Files |
+|---|---|---|
+| `hcb@hackclub.com` → `support@fuime.com` (62 sites) | Support mail was routed to Hack Club's inbox. Matches the existing `ApplicationMailer::OPERATIONS_EMAIL` convention already used by the guardianship code | `app/views`, `app/mailers`, `app/models`, `app/api`, `app/services`, `app/controllers`, `app/mailboxes`, `app/jobs` |
+| `help_email` reads `OPERATIONS_EMAIL`; `help_phone` removed | Single source of truth. The phone number was Hack Club's support line — routing Fuime users there sends them to another org's desk. Removed rather than re-pointed; Fuime has no line | `app/helpers/application_helper.rb`, `app/views/layouts/apply.html.erb` |
+| Standalone `HCB` → `Fuime` in display text (703 sites) | Brand surface. Applied only to the bare uppercase word; `hcb_code`, `HcbCode`, `hcb_*` helpers and `*.hcb.hackclub.com` domains excluded by the pattern and verified intact afterwards (2181 `hcb_code` refs still present) | `app/views`, `app/mailers` |
+| Static location maps gated behind `STATIC_MAP_URL`, default off | **Privacy leak.** `maps.hackclub.com` is a private Hack Club Vercel project; every session list and login-notification email shipped the user's lat/long to another org's infrastructure on render. Now returns nil and callers omit the map (Prime Directive 4) | `app/helpers/application_helper.rb`, `app/helpers/stripe_cards_helper.rb`, `app/views/users/_user_session.html.erb`, `app/views/users/_oauth_authorization.html.erb`, `app/views/user/session_mailer/new_login.html.erb` |
+| Login-alert security link → `settings_security_url` | Pointed at `hcb.hackclub.com/my/settings/security` — sent Fuime users to a different company's site to secure their account | `app/views/user/session_mailer/new_login.html.erb` |
+| Removed "see how we do X on HQ!" promo captions (8 sites) | Linked into Hack Club's live production orgs. No Fuime equivalent exists, so removed rather than repointed | `app/views/events/*`, `app/views/invoices/index.html.erb`, `app/views/my/cards.html.erb` |
+
+### Reverted mid-pass — do not redo
+
+The blanket `HCB → Fuime` pass rewrote text where "HCB" named the *upstream
+project* or Hack Club's *legal entity*. Both were correct before and false
+after. Restored verbatim:
+
+- **Attribution** (Rule 7, AGPL): `app/views/application/_footer.html.erb`,
+  `app/views/layouts/_head.html.erb`, `app/views/layouts/mailer/_footer.html.erb`
+  had become "Fuime is a fork of **Fuime** by Hack Club". These three lines name
+  the upstream project and must never be rebranded.
+- **Legal disclosure** (12 mailers): "fiscally sponsored by The Hack Foundation
+  (d.b.a. **Fuime**), a 501(c)(3) nonprofit (EIN: 81-2908499)" asserted Fuime is
+  a d.b.a. of Hack Club's charity and claimed their EIN. Restored to
+  "d.b.a. Hack Club".
+
+Lesson: a find-and-replace over brand strings cannot distinguish "our product"
+from "the upstream project" or "the sponsoring legal entity". Audit any such
+pass for proper nouns and legal text before trusting it.
+
+### Still outstanding (NOT done in this pass)
+
+- **~90 `Hack Club` literals and the fiscal-sponsorship copy remain.** These
+  describe a 501(c)(3) fiscal-sponsorship product Fuime is not — the FAQ at
+  `app/views/contract/parties/_fs_contract_faq.html.erb`, the marketing pages
+  under `app/views/marketing/`, and the contract mailers. Rewriting them is a
+  product/legal decision about what Fuime actually offers, not a string swap.
+- `help.hcb.hackclub.com` article links, `blog.hcb.hackclub.com`,
+  `graph.hcb.hackclub.com`, and `cdn.hackclub.com/rescue` still point upstream.
+- Logos/favicons not swapped; `docs/fuime/BRAND_STRINGS.md` not yet written.
+
+### Verification
+
+Baseline measured from a clean worktree at `16a003485` (**not** the working
+tree — mounting the edited tree invalidates the comparison):
+
+| Scope | Baseline @ `16a003485` | After this change |
+|---|---|---|
+| `spec/views spec/mailers spec/helpers` | 37 examples, **19 failures** | 37 examples, **18 failures** |
+
+Failure sets diffed by example id: **zero new failures.** The one fixed example
+is `spec/views/public_activity/user_session/create_spec.rb:107`, from
+uncommitted work already in the tree, not from this pass.
+
+Most baseline failures are environmental — `cannot load such file -- sassc` in
+the mailer specs' `stylesheet_link_tag`. The test image is missing that gem;
+this is the toolchain problem `known-failures.md` describes, still unresolved.
+
+All 303 modified ERB templates compile through Rails' own ERB handler. Three
+layouts report "Invalid yield" both before and after the change — an artifact of
+compiling a layout outside a render context, confirmed against pristine copies.

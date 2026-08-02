@@ -29,7 +29,7 @@ module Twilio
       if @attachments.none?
         send_reply(<<~MSG.squish)
           Hey! Are you trying to upload receipts? We couldn't find any attachments in your message.
-          If you're looking for HCB support, please reach out to hcb@hackclub.com.
+          If you're looking for HCB support, please reach out to support@fuime.com.
         MSG
         return
       end

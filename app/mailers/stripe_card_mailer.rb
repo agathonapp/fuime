@@ -8,17 +8,17 @@ class StripeCardMailer < ApplicationMailer
     @eta = @card.shipping_eta
 
     mail to: @recipient,
-         subject: "Your new HCB card for #{@event.name} is on its way"
+         subject: "Your new Fuime card for #{@event.name} is on its way"
   end
 
   def lost_in_shipping
     mail to: @recipient,
-         subject: "Your HCB card for #{@event.name} was lost in shipping."
+         subject: "Your Fuime card for #{@event.name} was lost in shipping."
   end
 
   def virtual_card_ordered
     mail to: @recipient,
-         subject: "New virtual HCB card (ending in #{@card.last4}) for #{@event.name}"
+         subject: "New virtual Fuime card (ending in #{@card.last4}) for #{@event.name}"
   end
 
   private

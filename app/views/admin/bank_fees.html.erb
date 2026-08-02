@@ -1,4 +1,4 @@
-<% title "HCB Fees" %>
+<% title "Fuime Fees" %>
 
 <%= form_with local: true, class: "card overflow-visible", url: bank_fees_admin_index_path, method: :get do |form| %>
   <div class="flex flex-col sm:flex-row items-center gap-2">
@@ -11,7 +11,7 @@
 
 <div class="flex items-center mb2 flex-col sm:flex-row">
   <div class="flex-grow">
-    <%= page_entries_info @bank_fees, entry_name: "HCB fees" %>
+    <%= page_entries_info @bank_fees, entry_name: "Fuime fees" %>
     (<%= render_money @sum %>)
   </div>
   <%= paginate @bank_fees %>
@@ -23,7 +23,7 @@
       <th>ID</th>
       <th>Date</th>
       <th>Status</th>
-      <th>HCB Code</th>
+      <th>Fuime Code</th>
       <th>Memo</th>
       <th>Amount</th>
       <th>Event</th>

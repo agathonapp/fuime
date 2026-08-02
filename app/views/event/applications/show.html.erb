@@ -54,7 +54,7 @@
       <% if !@application.approved? || @application.contract&.party(:signee)&.pending? || @application.contract&.party(:cosigner)&.pending? %>
         Here's what's next for <%= @application.name %>
       <% elsif @application.approved? && @application.contract&.party(:hcb)&.pending? %>
-        HCB is finalizing your contact
+        Fuime is finalizing your contact
       <% else %>
         You're ready to start spending
       <% end %>
@@ -122,7 +122,7 @@
         <%= form.label :cosigner_email do %>
           Parent email <span class="text-primary">*</span>
         <% end %>
-        <p class="h5 muted mt0 mb1">We'll need a parent or legal guardian to sign the fiscal sponsorship agreement. They're giving you permission to create an organization on HCB but will not have access or control.</p>
+        <p class="h5 muted mt0 mb1">We'll need a parent or legal guardian to sign the fiscal sponsorship agreement. They're giving you permission to create an organization on Fuime but will not have access or control.</p>
         <%= form.email_field :cosigner_email, required: true, placeholder: "orpheus@hackclub.com" %>
         <%= form.submit "Resend parent's agreement", class: "btn mt-2" %>
       <% end %>

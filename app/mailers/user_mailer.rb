@@ -4,7 +4,7 @@ class UserMailer < ApplicationMailer
   def onboarded(user:)
     @user = user
 
-    mail to: @user.email, subject: "Welcome to HCB!"
+    mail to: @user.email, subject: "Welcome to Fuime!"
   end
 
 end

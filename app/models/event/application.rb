@@ -178,7 +178,7 @@ class Event
 
         Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time.
 
-        If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
         The HCB Team
@@ -195,7 +195,7 @@ class Event
 
         Unfortunately, this means that unless a group is run by teens and is part of our Hack Club community, we don't have the capacity to take them on. If it would be helpful for us to send over some other fiscal sponsors, we'd be more than happy to do so, but at this time we are unable to sponsor your organization.
 
-        Sorry again for the bad news, and please let us know if there is anything else we can do to help. You can reach us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or simply reply to this email.
+        Sorry again for the bad news, and please let us know if there is anything else we can do to help. You can reach us at [support@fuime.com](mailto:support@fuime.com) or simply reply to this email.
 
         Best,
         The HCB Team
@@ -206,7 +206,7 @@ class Event
 
         Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). After careful consideration, we're unable to move forward with your application at this time. Your project's mission doesn't align with HCB's guidelines, and as a result, we cannot approve your application.
 
-        If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
         The HCB Team
@@ -217,7 +217,7 @@ class Event
 
         Thank you for expressing interest in using HCB for your project, [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}). We really want to support projects from all around the world. However, due to regulatory restrictions and incompatible financial systems, we are unable to partner with organizations that operate in certain countries.
 
-        We're sorry for not being able to support you on your journey and wish you all the best. If you have any questions, feel free to reach out to us at [hcb@hackclub.com](mailto:hcb@hackclub.com) or reply to this email.
+        We're sorry for not being able to support you on your journey and wish you all the best. If you have any questions, feel free to reach out to us at [support@fuime.com](mailto:support@fuime.com) or reply to this email.
 
         Best,
         The HCB team

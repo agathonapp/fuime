@@ -76,12 +76,6 @@ module StripeCardsHelper
 
     lng = geo.data.dig("geometry", "coordinates", 0)
 
-    # this uses our own wrapper for Apple's Map Web Snapshots API
-    # https://developer.apple.com/documentation/snapshots
-    # we have 25,000 unique requests per day
-    # the Vercel project is at https://vercel.com/hackclub/maps/ (incl. private keys)
-    # the GitHub project is at https://github.com/hackclub/maps/ (private)
-
-    "https://maps.hackclub.com/api/shipping?latitude=#{lat}&longitude=#{lng}"
+    ApplicationHelper.static_map_url(lat:, lng:)
   end
 end

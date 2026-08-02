@@ -55,6 +55,22 @@ The full suite takes a long time. Run the Fuime-specific specs first:
 
 ## Gotchas hit
 
+- **Build the JS bundle before running controller or request specs.** They
+  render real views, and `app/views/layouts/_head.html.erb` calls
+  `javascript_include_tag "bundle"`. In a fresh container with no bundle,
+  *every* view-rendering spec fails with `ActionView::Template::Error: The
+  asset "bundle.js" is not present in the asset pipeline` — 118 of them —
+  which looks exactly like a mass regression and is not one.
+
+  ```bash
+  docker compose run --rm -e RAILS_ENV=test \
+    -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
+    web bash -c 'yarn install && yarn build'   # ~4 min
+  ```
+
+  Webpack writes to `app/assets/builds/bundle.js` (see `webpack.config.js`),
+  not `public/`. CI runs this as part of setup, so it never shows up there.
+
 - **`DATABASE_URL` must be passed explicitly** to `docker compose run`. The
   compose file only sets `REDIS_URL`; without the override, Rails looks for a
   local socket and fails.

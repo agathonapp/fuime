@@ -16,10 +16,10 @@
     <% if hcb_decline_reason.present? || stripe_decline_reason == "webhook_declined" %>
       <span><%= this_transaction %> was declined
       <%= {
-            merchant_not_allowed_globally: "by HCB because this merchant is not allowed",
+            merchant_not_allowed_globally: "by Fuime because this merchant is not allowed",
             merchant_not_allowed: "by #{hcb_code.event.name} because this merchant is not allowed",
-            cash_withdrawals_not_allowed: "by HCB because cash withdrawals were not enabled on this card",
-            user_cards_locked: "by HCB because you have overdue receipts"
+            cash_withdrawals_not_allowed: "by Fuime because cash withdrawals were not enabled on this card",
+            user_cards_locked: "by Fuime because you have overdue receipts"
           }[hcb_decline_reason] || "due to insufficient funds" %>.</span>
     <% else %>
       <span>
@@ -78,13 +78,13 @@
     <% elsif hcb_decline_reason == :merchant_not_allowed %>
       If you believe that this merchant should be enabled, please reach out to the <%= hcb_code.event.name %> team.
     <% elsif hcb_decline_reason == :cash_withdrawals_not_allowed %>
-      Cash withdrawals are disabled for most HCB cards. If you need to make a purchase with cash, try using personal funds and submitting a reimbursement report.
+      Cash withdrawals are disabled for most Fuime cards. If you need to make a purchase with cash, try using personal funds and submitting a reimbursement report.
     <% elsif hcb_decline_reason == :user_cards_locked %>
       Upload your overdue receipts and your card will work again in seconds. Manage them on the <%= link_to "receipts page", my_inbox_url %>.
     <% elsif stripe_decline_reason == :authorization_controls %>
       This transaction exceeded daily limits set by our card issuer. Please try again later, or use a different card for this transaction.
     <% elsif stripe_decline_reason == :webhook_timeout %>
-      HCB experienced a network issue while processing this transaction. Please try again.
+      Fuime experienced a network issue while processing this transaction. Please try again.
     <% elsif stripe_decline_reason == :card_inactive %>
       <% if hcb_code.stripe_card.initially_activated? %>
         You can defrost your card at any time <%= link_to "here", stripe_card_url(hcb_code.stripe_card) %>.
@@ -100,7 +100,7 @@
     <% elsif stripe_decline_reason == :card_expired %>
       Try again using a different card.
     <% elsif stripe_decline_reason.in? %i[cardholder_verification_required insufficient_funds] %>
-      This could be a persistent issue affecting many of your transactions. Please contact the HCB team at <%= mail_to "hcb@hackclub.com" %>.
+      This could be a persistent issue affecting many of your transactions. Please contact the Fuime team at <%= mail_to "support@fuime.com" %>.
     <% elsif stripe_decline_reason == :insecure_authorization_method %>
       <% auth_method = pt&.raw_pending_stripe_transaction&.stripe_transaction&.[]("authorization_method") %>
       <% if auth_method == "swipe" %>
@@ -154,7 +154,7 @@
 
       <span class="mt-2 block">If this transaction was intentional, double check the card details and try again. If you don't recognize this transaction, <%= link_to "freeze your card", stripe_card_url(hcb_code.stripe_card), method: :post %>.</span>
     <% elsif hcb_decline_reason != :inadequate_balance %>
-      Try again, or contact the HCB team at <%= mail_to "hcb@hackclub.com" %>.
+      Try again, or contact the Fuime team at <%= mail_to "support@fuime.com" %>.
 
       <% if stripe_decline_reason %>
 

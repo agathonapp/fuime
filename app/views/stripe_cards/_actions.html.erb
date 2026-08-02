@@ -17,7 +17,7 @@
         lang="en"
         class="white"
         padding="compact"
-        data-cc-title="<%= stripe_card.name.presence || "HCB card for #{stripe_card.event.name}" %>"
+        data-cc-title="<%= stripe_card.name.presence || "Fuime card for #{stripe_card.event.name}" %>"
         data-cc-name="<%= stripe_card.stripe_cardholder.stripe_name %>"
         data-cc-number="<%= stripe_card.full_card_number %>"
         data-cc-exp="<%= stripe_card.stripe_exp_year %><%= stripe_card.stripe_exp_month.to_s.rjust(2, "0") %>"

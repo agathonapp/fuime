@@ -1,21 +1,21 @@
 <% content_for :title, "For funders: deploy capital as grants" %>
 
 <% content_for :head do %>
-  <% description = "HCB by Hack Club lets funders deploy capital as tax-deductible grants to nonprofits or brand-new initiatives, in days, at any scale. Backed by a 501(c)(3)." %>
+  <% description = "Fuime by Hack Club lets funders deploy capital as tax-deductible grants to nonprofits or brand-new initiatives, in days, at any scale. Backed by a 501(c)(3)." %>
   <% share_image = "#{request.base_url}/brand/hcb-icon-icon-original.png" %>
   <meta name="description" content="<%= description %>">
   <link rel="canonical" href="<%= funders_url %>">
 
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="HCB">
+  <meta property="og:site_name" content="Fuime">
   <meta property="og:url" content="<%= funders_url %>">
-  <meta property="og:title" content="HCB for funders: deploy capital as grants">
+  <meta property="og:title" content="Fuime for funders: deploy capital as grants">
   <meta property="og:description" content="<%= description %>">
   <%# TODO(seo): swap in a purpose-built 1200×630 share image, then set twitter:card to summary_large_image. %>
   <meta property="og:image" content="<%= share_image %>">
-  <meta property="og:image:alt" content="HCB: deploy your capital as grants">
+  <meta property="og:image:alt" content="Fuime: deploy your capital as grants">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="HCB for funders: deploy capital as grants">
+  <meta name="twitter:title" content="Fuime for funders: deploy capital as grants">
   <meta name="twitter:description" content="<%= description %>">
   <meta name="twitter:image" content="<%= share_image %>">
 
@@ -31,7 +31,7 @@
       "@graph": [
         {
           "@type": "Organization",
-          "name": "HCB",
+          "name": "Fuime",
           "legalName": "The Hack Foundation",
           "url": "https://hcb.hackclub.com",
           "logo": "https://hcb.hackclub.com/brand/hcb-icon-icon-original.png",
@@ -57,7 +57,7 @@
         Deploy your capital as grants. In days, at any scale.
       </h1>
       <p class="mk-hero__subtitle">
-        HCB by <a href="https://hackclub.com">Hack Club</a> is a financial
+        Fuime by <a href="https://hackclub.com">Hack Club</a> is a financial
         technology platform, backed by a <span class="whitespace-nowrap">501(c)(3)</span>,
         that turns your capital into tax-deductible grants for established
         nonprofits and brand-new initiatives that aren't 501(c)(3)s yet, with you
@@ -83,7 +83,7 @@
           to a flat, static diagram with no JS / reduced motion, and stacks into
           a plain list on narrow screens. %>
       <div class="mk-flow" data-controller="funders-flow"
-           role="img" aria-label="A funder directing capital as tax-deductible grants to many kinds of organizations of their choosing on HCB.">
+           role="img" aria-label="A funder directing capital as tax-deductible grants to many kinds of organizations of their choosing on Fuime.">
         <div class="mk-flow__scene" data-funders-flow-target="scene">
           <div class="mk-flow__atmosphere" data-funders-flow-target="atmosphere" aria-hidden="true"></div>
 
@@ -135,7 +135,7 @@
   <div class="mk-container">
     <dl class="mk-stats">
       <div class="mk-stats__item">
-        <dt><%= @stats[:moved] %></dt><dd>moved through HCB</dd>
+        <dt><%= @stats[:moved] %></dt><dd>moved through Fuime</dd>
       </div>
       <div class="mk-stats__item">
         <dt><%= @stats[:organizations] %></dt><dd>organizations</dd>
@@ -161,7 +161,7 @@
       Philanthropy is changing. Technologists, founders, and institutions want to put capital
       to work now: back fast-moving projects, fund them at any scale, and see the work happen
       in the open. Private foundations and donor-advised funds serve traditional giving well,
-      but weren't built for that pace. <strong>We built HCB to counter that</strong>, so you
+      but weren't built for that pace. <strong>We built Fuime to counter that</strong>, so you
       can move fast, adapt, and fund the projects you believe in.
     </p>
   </div>
@@ -171,14 +171,14 @@
 <section class="mk-section">
   <div class="mk-container">
     <div class="mk-section__head">
-      <p class="mk-eyebrow">Why funders choose HCB</p>
+      <p class="mk-eyebrow">Why funders choose Fuime</p>
       <h2 class="mk-section__title">Built for conviction, speed, and transparency.</h2>
     </div>
     <%# Interactive explorer (funders_explorer_controller): pick a value prop to
         expand it. Falls back to all panels shown when JS is unavailable. %>
     <div class="mk-explore" data-controller="funders-explorer"
          data-action="keydown->funders-explorer#keydown mouseenter->funders-explorer#hoverIn mouseleave->funders-explorer#hoverOut">
-      <div class="mk-explore__tabs" role="tablist" aria-label="Why funders choose HCB" aria-orientation="vertical">
+      <div class="mk-explore__tabs" role="tablist" aria-label="Why funders choose Fuime" aria-orientation="vertical">
         <button type="button" class="mk-explore__tab" role="tab" id="mk-exp-tab-0"
                 aria-controls="mk-exp-panel-0" aria-selected="true" data-index="0"
                 data-funders-explorer-target="tab"
@@ -245,7 +245,7 @@
             paperwork are ours to handle, not yours.</p>
           <div class="mk-explore__proof mk-explore__proof--badge">
             <%= image_tag "/brand/hcb-icon-icon-original.svg", class: "mk-explore__badge-mark", alt: "", width: 40, height: 40 %>
-            <span class="mk-explore__stat-label">HCB by Hack Club<br><span>501(c)(3) nonprofit · EIN 81-2908499</span></span>
+            <span class="mk-explore__stat-label">Fuime by Hack Club<br><span>501(c)(3) nonprofit · EIN 81-2908499</span></span>
           </div>
         </div>
 
@@ -287,7 +287,7 @@
         <span class="mk-step__num">1</span>
         <h3>Fund your account</h3>
         <p>Contribute cash, appreciated stock, crypto, check, wire, or ACH. Your tax
-          deduction is immediate, because you give to HCB by Hack Club, a 501(c)(3).</p>
+          deduction is immediate, because you give to Fuime by Hack Club, a 501(c)(3).</p>
       </li>
       <li class="mk-step">
         <span class="mk-step__num">2</span>
@@ -333,7 +333,7 @@
         <figure class="mk-window">
           <%= image_tag "https://cdn.hackclub.com/019e85ef-c890-772a-bf24-8252b544a015/image.png",
                 class: "mk-window__shot", width: 2624, height: 1640, loading: "lazy",
-                decoding: "async", alt: "A real-time HCB transaction feed" %>
+                decoding: "async", alt: "A real-time Fuime transaction feed" %>
         </figure>
       </div>
     </div>
@@ -349,7 +349,7 @@
       <p class="mk-lead">
         The next wave of charitable work doesn't always fit the 501(c)(3) timeline or
         structure. Fast-moving projects, new labs, and builder-led teams often can't wait
-        for incorporation. With HCB, you can fund them now, tax-deductibly, without waiting.
+        for incorporation. With Fuime, you can fund them now, tax-deductibly, without waiting.
       </p>
     </div>
     <div class="mk-uses">
@@ -372,7 +372,7 @@
       </article>
       <article class="mk-use">
         <h3>Fund the next generation</h3>
-        <p>Young builders and student-led teams are already the heart of what runs on HCB.</p>
+        <p>Young builders and student-led teams are already the heart of what runs on Fuime.</p>
       </article>
     </div>
   </div>
@@ -395,12 +395,12 @@
       <%# Stuck-state sentinel: when it scrolls above the nav line, the controller flags the
           sticky header so it can show a drop shadow. %>
       <div class="mk-table__sentinel" data-funders-compare-target="sentinel" aria-hidden="true"></div>
-      <%# Mobile-only control: compare HCB against one alternative at a time, so the two values sit
+      <%# Mobile-only control: compare Fuime against one alternative at a time, so the two values sit
           side by side on a narrow screen. Shown only once JS enhances the table; with no JS the full
           table (all three columns) renders and stays readable. %>
       <div class="mk-compare-switch">
         <span class="mk-compare-switch__label">Compare against</span>
-        <div class="mk-compare-switch__track" role="group" aria-label="Compare HCB against">
+        <div class="mk-compare-switch__track" role="group" aria-label="Compare Fuime against">
           <button type="button" class="mk-compare-switch__opt" data-vehicle="pf"
                   data-action="funders-compare#compareAgainst"
                   data-funders-compare-target="switchOpt">Private foundation</button>
@@ -413,7 +413,7 @@
         <thead>
           <tr>
             <th scope="col"><span class="mk-vh">Capability</span></th>
-            <th scope="col" class="mk-table__hcb">HCB</th>
+            <th scope="col" class="mk-table__hcb">Fuime</th>
             <th scope="col">Private foundation</th>
             <th scope="col">Donor-advised fund</th>
           </tr>
@@ -432,7 +432,7 @@
               </th>
               <%# data-label is the compact vehicle name shown only in the mobile card layout; the
                   full column names live in <thead> for desktop and screen readers. %>
-              <td class="mk-table__hcb" data-label="HCB" data-status="yes"><span class="mk-cell__v"><strong><%= row[:hcb] %></strong><% if row[:hcb_sub] %><span class="mk-table__hcb-sub"><%= row[:hcb_sub] %></span><% end %></span></td>
+              <td class="mk-table__hcb" data-label="Fuime" data-status="yes"><span class="mk-cell__v"><strong><%= row[:hcb] %></strong><% if row[:hcb_sub] %><span class="mk-table__hcb-sub"><%= row[:hcb_sub] %></span><% end %></span></td>
               <td data-label="Foundation" data-status="<%= row[:pf_status] %>"><span class="mk-cell__v"><%= row[:pf] %></span></td>
               <td data-label="DAF" data-status="<%= row[:daf_status] %>"><span class="mk-cell__v"><%= row[:daf] %></span></td>
             </tr>
@@ -441,7 +441,7 @@
                 <%# One short explanation per vehicle. On mobile the non-selected alternative is
                     hidden (see the data-compare CSS), so you only read about the two you're comparing. %>
                 <div class="mk-compare-detail">
-                  <% [["hcb", "HCB"], ["pf", "Foundation"], ["daf", "DAF"]].each do |vehicle, name| %>
+                  <% [["hcb", "Fuime"], ["pf", "Foundation"], ["daf", "DAF"]].each do |vehicle, name| %>
                     <div class="mk-compare-detail__vehicle" data-vehicle="<%= vehicle %>">
                       <p class="mk-compare-detail__vehicle-name"><%= name %></p>
                       <p class="mk-compare-detail__text"><%= row[:detail][vehicle.to_sym] %></p>
@@ -462,14 +462,14 @@
         </tbody>
       </table>
     </div>
-    <p class="mk-compare-entity">HCB by Hack Club, a registered 501(c)(3) (The Hack Foundation,
+    <p class="mk-compare-entity">Fuime by Hack Club, a registered 501(c)(3) (The Hack Foundation,
       EIN 81-2908499).</p>
     <p class="mk-compare-disclaimer">This comparison is general information, not tax or legal advice;
       confirm specifics with your own advisor.</p>
     <div class="mk-compare-note">
       <p class="mk-compare-note__lead">Already give through a donor-advised fund or foundation?</p>
       <p class="mk-compare-note__body">You don't have to choose. Route your existing vehicle's grants
-        into HCB to reach the fast-moving projects and brand-new initiatives it can't fund on its own,
+        into Fuime to reach the fast-moving projects and brand-new initiatives it can't fund on its own,
         with real-time visibility into every dollar. It's where your giving goes to work.</p>
     </div>
     <% else %>
@@ -479,7 +479,7 @@
         <thead>
           <tr>
             <th scope="col"><span class="mk-vh">Capability</span></th>
-            <th scope="col" class="mk-table__hcb">HCB</th>
+            <th scope="col" class="mk-table__hcb">Fuime</th>
             <th scope="col">Private foundation</th>
             <th scope="col">Donor-advised fund</th>
           </tr>
@@ -487,37 +487,37 @@
         <tbody>
           <tr>
             <th scope="row">Setup cost</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>$0</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>$0</strong></td>
             <td data-label="Private foundation">Legal &amp; accounting fees</td>
             <td data-label="Donor-advised fund">Low</td>
           </tr>
           <tr>
             <th scope="row">Time to first grant</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>Days</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>Days</strong></td>
             <td data-label="Private foundation">Months</td>
             <td data-label="Donor-advised fund">Days</td>
           </tr>
           <tr>
             <th scope="row">Fund brand-new initiatives</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>Yes</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>Yes</strong></td>
             <td data-label="Private foundation">Limited</td>
             <td data-label="Donor-advised fund">No</td>
           </tr>
           <tr>
             <th scope="row">Real-time transparency &amp; reporting</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>Real-time</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>Real-time</strong></td>
             <td data-label="Private foundation">Annual</td>
             <td data-label="Donor-advised fund">Limited</td>
           </tr>
           <tr>
             <th scope="row">Ongoing admin</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>We handle it</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>We handle it</strong></td>
             <td data-label="Private foundation">High</td>
             <td data-label="Donor-advised fund">Low</td>
           </tr>
           <tr>
             <th scope="row">Tax-deductible · 501(c)(3)</th>
-            <td class="mk-table__hcb" data-label="HCB"><strong>Yes</strong></td>
+            <td class="mk-table__hcb" data-label="Fuime"><strong>Yes</strong></td>
             <td data-label="Private foundation">Yes</td>
             <td data-label="Donor-advised fund">Yes</td>
           </tr>
@@ -527,7 +527,7 @@
     <div class="mk-compare-note">
       <p class="mk-compare-note__lead">Already give through a donor-advised fund or foundation?</p>
       <p class="mk-compare-note__body">You don't have to choose. Keep your existing vehicle and
-        use HCB as the fast, transparent layer it grants into, reaching the projects and
+        use Fuime as the fast, transparent layer it grants into, reaching the projects and
         brand-new initiatives a DAF isn't built to fund.</p>
     </div>
     <% end %>
@@ -547,12 +547,12 @@
         <p class="mk-lead">
           The <a href="https://www.argosyfnd.org" target="_blank" rel="noopener">Argosy
           Foundation</a>, founded by John Abele (co-founder of Boston Scientific), set out to
-          fund FIRST Robotics teams nationwide. Today, thanks to HCB's financial
+          fund FIRST Robotics teams nationwide. Today, thanks to Fuime's financial
           infrastructure, more than 500 teams receive funding every year through a single,
           transparent grantmaking program.
         </p>
         <p class="mk-lead">
-          Beyond handling grant distribution, administration, and compliance, HCB gives the
+          Beyond handling grant distribution, administration, and compliance, Fuime gives the
           Argosy Foundation something a year-end report never could: a real-time,
           grant-by-grant view of where their funding goes and the impact it's creating, with
           less overhead, not more.
@@ -588,13 +588,13 @@
   </div>
 </section>
 
-<%# ==================== ORGANIZATIONS ON HCB (live portfolio explorer) ==================== %>
+<%# ==================== ORGANIZATIONS ON Fuime (live portfolio explorer) ==================== %>
 <%# Replaces the old standalone Reboot / Public Grids / "Where it lands" sections with one
-    interactive showcase of real recipient organizations that *run on* HCB — deliberately
+    interactive showcase of real recipient organizations that *run on* Fuime — deliberately
     distinct from the funder proof (Argosy case study + "In good company" marquee) so the two
     kinds of organization never read as the same thing. A vertical rail selects an org; the
     stage on the right swaps to its detail. The final "wildcard" rail item reframes the list as
-    a sample: your giving isn't limited to these orgs, or even to orgs already on HCB.
+    a sample: your giving isn't limited to these orgs, or even to orgs already on Fuime.
 
     Recipients + field docs live in MarketingHelper#funder_recipients. Driven by
     funders_portfolio_controller (mirrors the value-pillar explorer's a11y pattern). With no JS
@@ -610,8 +610,8 @@
           lets the detail stage rise to a full-height hero on the right. %>
       <div class="mk-portfolio__aside">
         <div class="mk-portfolio__head">
-          <p class="mk-eyebrow">Already on HCB</p>
-          <h2 class="mk-section__title">A few of the thousands of organizations already running on HCB.</h2>
+          <p class="mk-eyebrow">Already on Fuime</p>
+          <h2 class="mk-section__title">A few of the thousands of organizations already running on Fuime.</h2>
           <p class="mk-portfolio-count">
             <span data-funders-portfolio-target="count"><%= @stats[:organizations] %></span>
             organizations &middot; since <%= @stats[:founded] %>
@@ -619,7 +619,7 @@
         </div>
 
         <%# --- rail: selectable list of orgs, ending in the open-door wildcard --- %>
-        <div class="mk-portfolio__rail" role="tablist" aria-label="Organizations on HCB"
+        <div class="mk-portfolio__rail" role="tablist" aria-label="Organizations on Fuime"
              aria-orientation="vertical" data-funders-portfolio-target="rail"
              data-action="scroll->funders-portfolio#onScroll">
         <% recipients.each_with_index do |org, i| %>
@@ -759,7 +759,7 @@
               <div class="mk-portfolio__footer">
                 <% if org[:funded_by] %>
                   <%# This org's backer(s). Shown small, greyscaled, and clearly labeled so it reads
-                      as "a real funder's money reached this org on HCB", never as an HCB customer.
+                      as "a real funder's money reached this org on Fuime", never as an Fuime customer.
                       "Backed by" (vs "Funded by") covers both grants and funding partnerships. %>
                   <div class="mk-portfolio__funded">
                     <span class="mk-portfolio__funded-label">Backed by</span>
@@ -784,7 +784,7 @@
              data-funders-portfolio-target="panel">
           <div class="mk-portfolio__body">
             <span class="mk-portfolio__open-mark"><%= inline_icon "idea", size: 30 %></span>
-            <h3 class="mk-portfolio__name">Your pick doesn&rsquo;t have to be on this list, or on HCB yet.</h3>
+            <h3 class="mk-portfolio__name">Your pick doesn&rsquo;t have to be on this list, or on Fuime yet.</h3>
             <p class="mk-portfolio__what">
               Fund any of the <%= @stats[:organizations] %> organizations already here, a brand-new
               project that isn&rsquo;t a 501(c)(3) yet, or an idea that&rsquo;s still just a team of one.
@@ -803,7 +803,7 @@
           selected org above it. Desktop keeps the in-stage wildcard tab/panel. %>
       <aside class="mk-portfolio__open-cta">
         <p class="mk-eyebrow">Beyond this list</p>
-        <h3 class="mk-portfolio__name">Your pick doesn&rsquo;t have to be on here, or on HCB yet.</h3>
+        <h3 class="mk-portfolio__name">Your pick doesn&rsquo;t have to be on here, or on Fuime yet.</h3>
         <p class="mk-portfolio__what">
           Fund any of the <%= @stats[:organizations] %> organizations already here, a brand-new
           project that isn&rsquo;t a 501(c)(3) yet, or an idea that&rsquo;s still just a team of one.
@@ -816,18 +816,18 @@
 </section>
 
 <%# ============================ FUNDERS MARQUEE ============================ %>
-<%# Recognizable funders whose grants have reached organizations on HCB. The names are factual; these
-    funders are not HCB customers, so the copy must not imply they "use" HCB. Text-only for now;
+<%# Recognizable funders whose grants have reached organizations on Fuime. The names are factual; these
+    funders are not Fuime customers, so the copy must not imply they "use" Fuime. Text-only for now;
     swap to logos once assets + per-funder clearance are in hand. %>
 <section class="mk-section">
   <div class="mk-container">
     <div class="mk-section__head">
       <p class="mk-eyebrow">In good company</p>
-      <h2 class="mk-section__title">Major funders already back organizations on HCB.</h2>
+      <h2 class="mk-section__title">Major funders already back organizations on Fuime.</h2>
     </div>
-    <ul class="mk-funders" aria-label="Funders whose grants have reached organizations on HCB">
+    <ul class="mk-funders" aria-label="Funders whose grants have reached organizations on Fuime">
       <%# Ordered so the biggest names land where eyes go first (top row + left edge of each row).
-          Excludes funders who only gave to Hack Club HQ itself, not to organizations on HCB. %>
+          Excludes funders who only gave to Hack Club HQ itself, not to organizations on Fuime. %>
       <li><%= image_tag "https://cdn.hackclub.com/019ed938-00a8-714d-bd51-3a7145ef976e/image.png", alt: "Ford Foundation", loading: "lazy", decoding: "async" %></li>
       <li><%= image_tag "https://cdn.hackclub.com/019ed938-0314-7502-9dca-4a7f342c53d7/image.png", alt: "Omidyar Network", loading: "lazy", decoding: "async" %></li>
       <li><%= image_tag "https://cdn.hackclub.com/019edcbb-3dec-7ee7-a4fd-d93fb2e0b9a0/image.png", alt: "William & Flora Hewlett Foundation", class: "mk-funders__logo--boost", loading: "lazy", decoding: "async" %></li>
@@ -845,13 +845,13 @@
 </section>
 
 <%# ============================ CASE STUDIES / TESTIMONIALS ============================ %>
-<%# "Funders on HCB" — currently a single testimonial: the Ghostty/Mitchell quote (pending
+<%# "Funders on Fuime" — currently a single testimonial: the Ghostty/Mitchell quote (pending
     his sign-off). Gated behind :funders_landing_testimonials (the section's rollout flag). %>
 <% if @show_testimonials %>
   <section class="mk-section mk-section--alt">
     <div class="mk-container">
       <div class="mk-section__head">
-        <p class="mk-eyebrow">Funders on HCB</p>
+        <p class="mk-eyebrow">Funders on Fuime</p>
         <h2 class="mk-section__title">Trusted to move capital that matters.</h2>
       </div>
       <div class="mk-cases">
@@ -859,7 +859,7 @@
             (mitchellh.com/writing/ghostty-non-profit + ghostty.org/docs/sponsor) — pending
             his approval. %>
         <figure class="mk-case">
-          <blockquote>“With HCB, we could start accepting tax-deductible donations and operate
+          <blockquote>“With Fuime, we could start accepting tax-deductible donations and operate
             under a charitable structure on a much faster timeline. They do amazing work. I
             would’ve supported them regardless.”</blockquote>
           <figcaption>
@@ -883,7 +883,7 @@
     <p class="mk-eyebrow">Built to be trusted</p>
     <h2 class="mk-section__title">Serious infrastructure for serious capital.</h2>
     <p class="mk-lead">
-      HCB is operated by The Hack Foundation (Hack Club), a registered 501(c)(3) nonprofit.
+      Fuime is operated by The Hack Foundation (Hack Club), a registered 501(c)(3) nonprofit.
       Since 2018 we've run the financial back office for thousands of organizations. It's the
       same infrastructure, proven at that scale, now open to funders. Funds are
       held and moved through established partners, <strong>Column N.A. (Member FDIC)</strong>
@@ -936,7 +936,7 @@
       </div>
     <% else %>
       <h2 class="mk-cta__title">Put your capital to work.</h2>
-      <p class="mk-lead">HCB pairs modern financial software with a hands-on team. You get a
+      <p class="mk-lead">Fuime pairs modern financial software with a hands-on team. You get a
         partner who helps map your giving and runs the operations behind it, not just a login.
         Tell us what you want to fund.</p>
       <% if flash[:error].present? %>
@@ -968,6 +968,6 @@
         </div>
       </div>
     <% end %>
-    <p class="mk-cta__brandline">HCB. The modern infrastructure for funding the future.</p>
+    <p class="mk-cta__brandline">Fuime. The modern infrastructure for funding the future.</p>
   </div>
 </section>
