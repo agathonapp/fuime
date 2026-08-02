@@ -1,33 +1,36 @@
-<% content_for :title, "User roles" %>
+<% content_for :title, "Roles on Fuime" %>
 
 <div class="overview">
   <h2>Overview</h2>
   <p>
-    Hi there! 👋 On March 9th, 2024, we introduced <em>user roles</em> to HCB.
-    This new feature allows restricting certain critical actions on HCB to a
-    specific group of users, enhancing security and control over sensitive
-    operations.
+    Every person on a Fuime business has a role, and the role decides what they
+    can do. When you invite someone, you pick their role &mdash; and you can
+    change it later.
   </p>
 
-  <p>
-    Now, in an organization on HCB, users can have one of three roles:
-    <strong>manager</strong>, <strong>member</strong>, or <strong>reader</strong>.
-    When you're inviting a user, you may select the role they receive.
-  </p>
-
-  <p>The TL;DR is:</p>
+  <p>There are three:</p>
   <ul>
-    <li><strong>Managers</strong> can do everything (just like before).</li>
     <li>
-      <strong>Members</strong> can <em>spend</em>, but not <em>send</em> money,
-      and can't edit the organization's settings.
+      <strong>Owners</strong> run the business. They can do everything: spend,
+      invite people, change settings.
     </li>
-    <li><strong>Readers</strong> have read-only access to an organization.
+    <li>
+      <strong>Team members</strong> work in the business. They can <em>spend</em>,
+      but not <em>send</em> money, and they can't change the business's settings.
+    </li>
+    <li>
+      <strong>Parents</strong> can see everything and change nothing. This is the
+      seat for a parent or guardian who wants to keep an eye on the money.
     </li>
   </ul>
 
-  <%= render "application/callout", type: "info", title: "By default, your permissions have not changed" do %>
-    <p class="m0">All existing users are now managers.</p>
+  <%= render "application/callout", type: "info", title: "Parents and guardians" do %>
+    <p class="m0">
+      The <strong>Parent</strong> role is a view of the business, not the legal
+      guardianship itself. If you're under 18, your parent or guardian signs for
+      your account separately &mdash; that's what actually lets you operate a
+      business on Fuime, and it's set up from your account settings.
+    </p>
   <% end %>
 
   <h2>Detailed breakdown</h2>
@@ -37,7 +40,7 @@
       <tr style="border-bottom-width: 3px">
         <th></th>
         <% OrganizerPosition.roles.keys.each do |role| %>
-          <th><%= role.pluralize.titleize %></th>
+          <th><%= role_label(role).pluralize %></th>
         <% end %>
       </tr>
       <%= render_permissions(@perms) %>

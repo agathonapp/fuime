@@ -229,8 +229,17 @@ class User < ApplicationRecord
   # Fuime: Block under-13 signups (COPPA compliance)
   validate :minimum_age_requirement, if: -> { birthday_changed? && birthday.present? }
 
-  # Fuime: close the "omit the birthday" bypass — see the method comment.
-  validate :birthday_required_for_onboarding
+  # Fuime: close the "omit the birthday" bypass.
+  #
+  # Only on the :onboarding context, driven by UsersController#update. Users are
+  # also created programmatically — organizer invites, guardian stubs built from
+  # an email address, seeds — and those legitimately have no birthday yet, so a
+  # blanket validation would break account creation rather than protect anyone.
+  #
+  # The control that actually matters does not depend on this: a user with no
+  # birthday is treated as a minor (see #minor_or_unknown_age?), so they are
+  # blocked from operating a business until they supply one.
+  validate :birthday_required_for_onboarding, on: :onboarding
 
   validates :full_name, format: {
     with: /\A[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,'-]+ [a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,' -]+\z/,
@@ -554,6 +563,43 @@ class User < ApplicationRecord
     guardianships_as_guardian.active.exists?
   end
 
+  # Fuime: what kind of account is this, in Fuime's own vocabulary?
+  #
+  # Admin and support staff kept having to reverse-engineer this from a birthday
+  # and two association counts, which is how you end up revoking the wrong
+  # person's guardianship. One symbol, computed the same way everywhere:
+  #
+  #   :guardian  — an adult who actively signs for at least one teen
+  #   :teen      — under 18 (or unknown age, which we treat as under 18)
+  #   :adult     — a confirmed 18+ user with no wards
+  #
+  # Ordering matters: an adult with wards is a guardian first. Unknown age
+  # resolves to :teen for the same fail-closed reason as #minor_or_unknown_age?
+  # — guessing "adult" on missing data is the guess that skips the guardian
+  # requirement entirely.
+  def account_type
+    return :guardian if is_guardian?
+    return :teen if minor_or_unknown_age?
+
+    :adult
+  end
+
+  def account_type_label
+    case account_type
+    when :guardian then "Parent / guardian"
+    when :teen then "Teen"
+    else "Adult"
+    end
+  end
+
+  # The guardianship this user's teen account hangs off — active if there is
+  # one, otherwise the most recent pending invite so admins can see a teen who
+  # has invited someone but is still waiting.
+  def primary_guardianship
+    guardianships_as_minor.active.first ||
+      guardianships_as_minor.where(status: :pending).order(created_at: :desc).first
+  end
+
   def was_teenager_on_join?
     return age_on(created_at || Time.current) <= 18 if birthday.present?
 
@@ -782,12 +828,9 @@ class User < ApplicationRecord
   # optional made both controls opt-out: no birthday meant `is_minor?` was nil,
   # so the under-13 validation never ran and the guardian redirect never fired.
   #
-  # Scoped to users who have started onboarding (full_name present) so that
-  # system users and guardian stubs created by an invite — which legitimately
-  # have neither — remain valid.
+  # Runs only on the :onboarding validation context — see the validation.
   def birthday_required_for_onboarding
     return if birthday.present?
-    return if full_name.blank?
     return if system_user?
 
     errors.add(:birthday, "is required. Fuime needs your date of birth to know whether you need a parent or guardian on the account.")

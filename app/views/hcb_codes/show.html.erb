@@ -11,9 +11,14 @@
   </div>
 
   <% if @hcb_code.accepts_receipts? %>
-    <% admin_tool("mt1 p-3") do %>
-      💌 Bonjour!
-      <%= mail_to @hcb_code.receipt_upload_email, "Email me to upload your receipts" %>
+    <%# Fuime: receipt-by-email is unavailable until an inbound parse domain is
+        configured (FUIME_RECEIPT_PARSE_DOMAIN); don't advertise an address
+        that would discard receipts. %>
+    <% if @hcb_code.receipt_upload_email.present? %>
+      <% admin_tool("mt1 p-3") do %>
+        💌 Bonjour!
+        <%= mail_to @hcb_code.receipt_upload_email, "Email me to upload your receipts" %>
+      <% end %>
     <% end %>
     <% admin_tool("mt1 p-3") do %>
       🌸 Aloha!

@@ -128,8 +128,14 @@ class AdminMailer < ApplicationMailer
 
   private
 
+  # Fuime: was a hardcoded list of Hack Club staff, which would have sent Fuime
+  # operational alerts (and the user data in them) to a third party.
+  # Set FUIME_ENGINEER_EMAILS to a comma-separated list to receive these.
   def engineers
-    User.where(email: ["gary@hackclub.com", "luke@hackclub.com", "ian@hackclub.com"]).pluck(:email)
+    emails = ENV["FUIME_ENGINEER_EMAILS"].to_s.split(",").map(&:strip).reject(&:blank?)
+    return [] if emails.empty?
+
+    User.where(email: emails).pluck(:email)
   end
 
 end

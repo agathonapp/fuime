@@ -56,9 +56,17 @@ Rails.application.routes.draw do
   resources :raffles, only: [:new, :create]
 
   # Fuime: Guardian invite/accept flow
+  #
+  # NOTE: :show and :accept are token-addressed — the :id segment carries an
+  # invite token, not a record id, because a guardian follows these links from
+  # an email before they have an account. :revoke and :resend_invite are
+  # id-addressed and authenticated; they are management actions, not invites.
   resources :guardianships, only: [:new, :create, :show], path: "guardian" do
     member do
       post :accept
+      post :revoke
+      post :resend_invite
+      get :record
     end
   end
 
@@ -304,9 +312,7 @@ Rails.application.routes.draw do
       get "wise_transfers", to: "admin#wise_transfers"
       get "events", to: "admin#events"
       get "event_new", to: "admin#event_new"
-      get "event_new_from_airtable", to: "admin#event_new_from_airtable"
       post "event_create", to: "admin#event_create"
-      post "event_create_from_airtable", to: "admin#event_create_from_airtable"
       get "donations", to: "admin#donations"
       get "recurring_donations", to: "admin#recurring_donations"
       get "disbursements", to: "admin#disbursements"
@@ -983,7 +989,6 @@ Rails.application.routes.draw do
         get "agreement"
         get "review"
         get "submission"
-        get "airtable"
         get "edit"
         post "submit"
         post "archive"

@@ -31,6 +31,11 @@ class ApplicationController < ActionController::Base
   # is entered) runs first. See the concern for the allowlist.
   include Fuime::GuardianshipEnforcement
 
+  # Fuime: HCB modules Fuime doesn't offer (ACH, checks, wires, donations,
+  # grants, G Suite, card issuing) are blocked at the request level, not just
+  # hidden from the nav.
+  include Fuime::DisabledModules
+
   # update the current session's last_seen_at
   before_action { Current.session&.update_session_timestamps }
 

@@ -45,14 +45,8 @@ RSpec.describe OrganizerPositionInvitesController do
       user = create(:user, :make_admin)
       event = create(:event, organizers: [user])
 
-      # `Contract` makes external requests to Airtable and
-      # Docuseal which we don't want to perform in this context.
-      expect(ApplicationsTable).to(
-        receive(:all)
-          .with(filter: include(event.id.to_s))
-          .and_return([])
-          .once
-      )
+      # `Contract` makes external requests to Docuseal which we don't want to
+      # perform in this context.
       create_docuseal_request =
         stub_request(:post, "https://api.docuseal.co/submissions")
         .to_return(

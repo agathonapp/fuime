@@ -403,9 +403,15 @@ class UsersController < ApplicationController
       session[:legal_entity_id] = @legal_entity.id if params[:legal_entity_id].present?
     end
 
+    # Fuime: require a date of birth to complete onboarding. Age determines
+    # whether a guardian is needed and enforces the COPPA floor, so a profile
+    # cannot be finished without it. Applied only to the user's own onboarding
+    # submission — admins editing an existing account are not blocked by it.
+    onboarding_self = @user.onboarding? && @user == current_user
+
     payout_update = nil
     saved = ActiveRecord::Base.transaction do
-      user_ok = @user.save
+      user_ok = onboarding_self ? @user.save(context: :onboarding) : @user.save
       payout_ok = true
       if payout_method_type.present?
         payout_update = LegalEntity::PayoutMethodService::Update.new(

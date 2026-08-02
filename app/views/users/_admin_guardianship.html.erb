@@ -1,0 +1,123 @@
+<%# locals: (user:) %>
+<%#
+  Fuime: guardianship panel on the admin user page.
+
+  Answers the question the admin page could not previously answer at a glance —
+  "is this a parent or a kid?" — and gives support the two actions a guardianship
+  actually needs in the field: resend a stale invite, and revoke consent.
+  Revocation is a legal requirement (a parent must be able to withdraw), not a
+  convenience; see docs/fuime/PRODUCTION_READINESS.md §5.
+%>
+
+<% admin_tool "p-3" do %>
+  <h3 class="mb2 mt1">Guardianship</h3>
+  <section>
+    <p>
+      <strong>Account type:</strong>
+      <%= badge_for user.account_type_label,
+                    class: user.account_type == :teen ? "bg-warning" : "bg-info" %>
+      <% if user.birthday.present? %>
+        <span class="muted">age <%= user.age %></span>
+      <% else %>
+        <span class="muted">no date of birth on file &mdash; treated as a minor</span>
+      <% end %>
+    </p>
+
+    <% if user.needs_guardian? %>
+      <p class="error">
+        <strong>Cannot operate a business.</strong>
+        This user is a minor (or has no date of birth) with no active guardian.
+      </p>
+    <% end %>
+
+    <%# ---- This user as a teen: who signs for them? ---- %>
+    <% guardianship = user.primary_guardianship %>
+    <% if guardianship.present? %>
+      <h4 class="mb1 mt2">Guardian</h4>
+      <p>
+        <%= user_mention guardianship.guardian %>
+        <%= badge_for guardianship.status.titleize,
+                      class: case guardianship.status
+                             when "active" then "bg-success"
+                             when "pending" then "bg-muted"
+                             else "bg-error"
+                             end %>
+      </p>
+      <% if guardianship.active? %>
+        <p class="muted">
+          Agreement signed <%= format_datetime guardianship.agreement_signed_at %>
+          <% if guardianship.agreement_version.present? %>
+            (version <%= guardianship.agreement_version %>)
+          <% end %>
+          <% if guardianship.agreement_ip.present? %>
+            &middot; from <%= guardianship.agreement_ip %>
+          <% end %>
+        </p>
+      <% elsif guardianship.pending? %>
+        <p class="muted">
+          Invited <%= format_datetime guardianship.invite_sent_at %>.
+          <% if guardianship.invite_expired? %>
+            <span class="error">The invite link has expired.</span>
+          <% end %>
+        </p>
+      <% elsif guardianship.revoked? %>
+        <p class="muted">
+          Revoked <%= format_datetime guardianship.revoked_at %>
+          <% if guardianship.revoked_by.present? %>
+            by <%= user_mention guardianship.revoked_by %>
+          <% end %>
+        </p>
+      <% end %>
+
+      <% if admin_signed_in? %>
+        <div class="flex items-center gap-2 mt2">
+          <% if guardianship.pending? %>
+            <%= button_to "Resend invite",
+                          resend_invite_guardianship_path(guardianship),
+                          method: :post,
+                          class: "btn bg-info",
+                          form: { data: { turbo_frame: "_top" } } %>
+          <% end %>
+          <% unless guardianship.revoked? %>
+            <%= button_to "Revoke guardianship",
+                          revoke_guardianship_path(guardianship),
+                          method: :post,
+                          class: "btn bg-error",
+                          form: { data: { turbo_frame: "_top" } },
+                          data: {
+                            turbo_confirm: "Revoke this guardianship? #{user.name || user.email} will immediately lose the ability to operate a business.",
+                            turbo_confirm_danger: true,
+                          } %>
+          <% end %>
+        </div>
+      <% end %>
+    <% elsif user.minor_or_unknown_age? %>
+      <p class="muted">No guardian invited yet.</p>
+    <% end %>
+
+    <%# ---- This user as a parent: who do they sign for? ---- %>
+    <% wards = user.guardianships_as_guardian.includes(:minor).order(created_at: :desc) %>
+    <% if wards.any? %>
+      <h4 class="mb1 mt2">
+        Signs for
+        <%= badge_for wards.size, class: "bg-muted" %>
+      </h4>
+      <ul>
+        <% wards.each do |ward| %>
+          <li>
+            <%= user_mention ward.minor %>
+            <%= badge_for ward.status.titleize,
+                          class: case ward.status
+                                 when "active" then "bg-success"
+                                 when "pending" then "bg-muted"
+                                 else "bg-error"
+                                 end %>
+            <% if ward.active? && ward.agreement_signed_at.present? %>
+              <span class="muted">signed <%= format_date ward.agreement_signed_at %></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

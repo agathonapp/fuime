@@ -103,12 +103,17 @@ class HcbCode < ApplicationRecord
     "/hcb/#{hashid}?frame=true#{author_img_param}#{receipt_button_param}#{ledger_instance_param}"
   end
 
+  # Fuime: receipt-by-email address shown to users.
+  #
+  # Previously pointed at hcb.hackclub.com, so Fuime users' receipts — and any
+  # personal information in them — were delivered to Hack Club's inbound parser.
+  # Fuime has no inbound parser yet, so this is nil and callers hide the
+  # feature rather than advertise an address that discards receipts.
+  # (docs/fuime/PRODUCTION_READINESS.md §2.4)
   def receipt_upload_email
-    if Rails.env.development?
-      "receipts+hcb-#{hashid}@bank-parse-dev.hackclub.com"
-    else
-      "receipts+hcb-#{hashid}@hcb.hackclub.com"
-    end
+    return nil if ENV["FUIME_RECEIPT_PARSE_DOMAIN"].blank?
+
+    "receipts+#{hashid}@#{ENV['FUIME_RECEIPT_PARSE_DOMAIN']}"
   end
 
   def best_suggested_receipts(limit: nil, threshold: nil, only_unreviewed: false)

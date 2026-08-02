@@ -1,0 +1,69 @@
+<% title "Guardian agreement" %>
+<% page_md %>
+
+<main class="center max-w-2xl card mt4 md-p3 mx-auto">
+  <h1 class="mt0 border-0 mb-2">Guardian agreement</h1>
+
+  <div class="bg-smoke rounded-lg p-4 mb-4">
+    <p class="mb-1">
+      <strong>Guardian:</strong> <%= @guardianship.guardian.name || @guardianship.guardian.email %>
+    </p>
+    <p class="mb-1">
+      <strong>For:</strong> <%= @guardianship.minor.name || @guardianship.minor.email %>
+    </p>
+    <p class="mb-1">
+      <strong>Status:</strong>
+      <%= badge_for @guardianship.status.titleize,
+                    class: case @guardianship.status
+                           when "active" then "bg-success"
+                           when "pending" then "bg-muted"
+                           else "bg-error"
+                           end %>
+    </p>
+    <% if @guardianship.agreement_signed_at.present? %>
+      <p class="mb-1">
+        <strong>Signed:</strong> <%= format_datetime @guardianship.agreement_signed_at %>
+      </p>
+      <p class="mb-1">
+        <strong>Version:</strong> <%= @guardianship.agreement_version.presence || "not recorded" %>
+      </p>
+      <% if @guardianship.agreement_ip.present? %>
+        <p class="mb-0">
+          <strong>Signed from:</strong> <%= @guardianship.agreement_ip %>
+        </p>
+      <% end %>
+    <% end %>
+    <% if @guardianship.revoked? %>
+      <p class="mb-0 error">
+        <strong>Revoked <%= format_datetime @guardianship.revoked_at %></strong>
+        <% if @guardianship.revoked_by.present? %>
+          by <%= @guardianship.revoked_by.name || @guardianship.revoked_by.email %>
+        <% end %>
+      </p>
+    <% end %>
+  </div>
+
+  <%# Renders the version that was actually signed, not today's terms. %>
+  <div class="border rounded-lg p-4 mb-4">
+    <% if (partial = @guardianship.agreement_partial) %>
+      <%= render partial, minor: @guardianship.minor, guardian: @guardianship.guardian %>
+    <% else %>
+      <p class="error mb-0">
+        The text of agreement version
+        <%= @guardianship.agreement_version.presence || "(unrecorded)" %>
+        is no longer available. Please contact <%= mail_to "support@fuime.com" %>.
+      </p>
+    <% end %>
+  </div>
+
+  <% if policy(@guardianship).revoke? %>
+    <%= button_to "Withdraw my consent",
+                  revoke_guardianship_path(@guardianship),
+                  method: :post,
+                  class: "btn bg-error",
+                  data: {
+                    turbo_confirm: "Withdraw consent? #{@guardianship.minor.name || 'This minor'} will immediately lose the ability to operate a business on Fuime.",
+                    turbo_confirm_danger: true,
+                  } %>
+  <% end %>
+</main>

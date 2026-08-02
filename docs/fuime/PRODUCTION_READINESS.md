@@ -2,13 +2,56 @@
 
 **Date:** 2026-08-01
 **Scope:** What must be true before Fuime serves real teenagers and real parents with real money.
-**Verdict:** **Not launchable.** Not because the code is bad — the HCB bones are excellent — but
-because Fuime's three defining claims (parent is the legal signer, we track your taxes, we hold
-your money) are each currently unbacked by the code, and the money path is wired to a mode that
-does not exist in production.
+**Verdict:** **Not launchable** — but the engineering blockers are now closed. What remains is
+legal, and no amount of code closes it.
 
 This is a hackathon demo that has been deployed to a public URL. That is fine. The gap between
 that and "real teenagers, real people" is the subject of this document.
+
+---
+
+## STATUS — 2026-08-01, after the hardening pass
+
+Branch `fuime/production-hardening`. See `UPSTREAM_DIVERGENCE.md` for the change-by-change log.
+
+**Closed in code:**
+
+| § | Item | What changed |
+|---|------|--------------|
+| 1.1 | Guardianship unenforced | Now a deny-by-default request filter + EventPolicy gate; unknown age fails closed; DOB required to finish onboarding |
+| 1.2 | Guardian could be anyone | Activation refuses unless the guardian is a *confirmed* adult; consent record (version/IP/UA); 7-day token expiry; auditable revocation |
+| 1.3 | Production Stripe mode didn't exist | `STRIPE_MODE`, defaulting to test everywhere; boot check refuses half-configured live keys |
+| 1.4 | Webhook broken + wrong | Signature now required; double-post fixed; `fronted: false`; refunds and disputes reverse correctly |
+| 1.6 | Wrong tax numbers | Threshold on net earnings (×0.9235); income classified; copy reframed as estimates |
+| 1.7 | Receipts destroyed each deploy | S3 configured on web + worker; boot check refuses to start on `:local` |
+| 2.2 | Storefront leaked minors' data | Balance removed; owner name adults-only; tax figures never public; badge claims only what's evidenced |
+| 2.3 | Money-out routes reachable | Blocked at request level, not nav-hidden |
+| 2.4 | Mail leaked to Hack Club | Comment mailer, receipt address, and admin alerts moved off hackclub.com |
+| 2.6 | Secrets hygiene | Live-looking `LOCKBOX` key and hackclub.com host removed from the example |
+| 2.7 | Zero tests | 68 specs covering every rule above |
+
+**Still open, and each independently gates launch:**
+
+- **§1.2 identity verification** — a guardian is still only a controlled email plus a
+  self-asserted birthday. Needs Stripe Identity/Persona.
+- **§1.5 money transmission** — unresolved. Determines how much of the money code survives.
+- **§1.6 CPA review** — the arithmetic is now correct and tested; whether the *guidance* is
+  right is not a question code can answer.
+- **§2.1 the product doesn't take payments yet** — `PaymentLinkService` is still called from
+  nowhere and the storefront Pay button is disabled. Deliberate: wiring it up before §1.5 is
+  settled would be building on a foundation that may move.
+- **§2.5 error tracking** — still no Sentry/Appsignal key.
+- ToS, COPPA privacy policy, guardian agreement — none exist.
+
+**Operator actions required before this branch helps anyone** (the app will now refuse to boot
+without the first two):
+
+1. Set `S3__BUCKET`, `S3__REGION`, `S3__ACCESS_KEY_ID`, `S3__SECRET_ACCESS_KEY` in Render.
+2. Re-sync the Render Blueprint so `ACTIVE_STORAGE_SERVICE=amazon` and `STRIPE_MODE=test` apply.
+3. Set `FUIME_STRIPE_WEBHOOK_SECRET` if payments are to be tested.
+4. Run `rails db:migrate` (three new migrations).
+5. Note: existing receipts on the current deploy are **already gone**, and any uploaded before
+   step 1 completes will be too.
 
 ---
 

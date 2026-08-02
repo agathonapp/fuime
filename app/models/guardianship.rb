@@ -5,13 +5,18 @@
 # Table name: guardianships
 #
 #  id                   :bigint           not null, primary key
-#  guardian_id          :bigint           not null
-#  minor_id             :bigint           not null
-#  status               :integer          default(0), not null
+#  agreement_ip         :string
 #  agreement_signed_at  :datetime
-#  invite_token         :string
-#  invite_sent_at       :datetime
+#  agreement_user_agent :string
+#  agreement_version    :string
 #  created_at           :datetime         not null
+#  guardian_id          :bigint           not null
+#  invite_sent_at       :datetime
+#  invite_token         :string
+#  minor_id             :bigint           not null
+#  revoked_at           :datetime
+#  revoked_by_id        :bigint
+#  status               :integer          default(0), not null
 #  updated_at           :datetime         not null
 #
 # Indexes
@@ -20,11 +25,13 @@
 #  index_guardianships_on_guardian_id_and_minor_id  (guardian_id, minor_id) UNIQUE
 #  index_guardianships_on_invite_token              (invite_token) UNIQUE
 #  index_guardianships_on_minor_id                  (minor_id)
+#  index_guardianships_on_revoked_by_id             (revoked_by_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (guardian_id => users.id)
 #  fk_rails_...  (minor_id => users.id)
+#  fk_rails_...  (revoked_by_id => users.id)
 #
 class Guardianship < ApplicationRecord
   # Bump when the guardian agreement text changes materially. Stored per
@@ -37,6 +44,9 @@ class Guardianship < ApplicationRecord
 
   belongs_to :guardian, class_name: "User"
   belongs_to :minor, class_name: "User"
+  # Who withdrew consent. Nil for guardianships revoked before this was
+  # recorded, and for any revocation not attributable to a signed-in user.
+  belongs_to :revoked_by, class_name: "User", optional: true
 
   enum :status, { pending: 0, active: 1, revoked: 2 }, default: :pending
 
@@ -127,6 +137,34 @@ class Guardianship < ApplicationRecord
     return false if invite_sent_at.blank?
 
     invite_sent_at < INVITE_VALID_FOR.ago
+  end
+
+  # Partial path for a given agreement version's text. Each version's wording
+  # lives in its own file under app/views/guardianships/agreements/ and is never
+  # edited in place, so a guardian who signed v1 always sees v1 — not whatever
+  # the terms happen to say today.
+  #
+  # Returns nil for a version with no partial on disk (a guardianship signed
+  # under a version whose file was later removed); callers must handle that
+  # rather than blow up a record page.
+  def self.agreement_partial_for(version)
+    return nil if version.blank?
+
+    slug = version.to_s.tr("-", "_")
+    # Version strings come from the database, so the slug is checked against a
+    # strict allowlist before it is ever interpolated into a path.
+    return nil unless slug.match?(/\A[a-z0-9_]+\z/)
+
+    file = Rails.root.join("app", "views", "guardianships", "agreements", "_#{slug}.html.erb")
+    return nil unless file.exist?
+
+    "guardianships/agreements/#{slug}"
+  end
+
+  # The text this guardianship was actually signed under (or, if unsigned, the
+  # text it would be signed under now).
+  def agreement_partial
+    self.class.agreement_partial_for(agreement_version.presence || CURRENT_AGREEMENT_VERSION)
   end
 
   # Re-issue a fresh token for a pending invite whose link has gone stale.

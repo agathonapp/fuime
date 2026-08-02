@@ -2,11 +2,11 @@
 
 <p>
   <%= @changer.name %> has updated your role in <%= @position.event.name %>
-  to <%= @position.role.titleize %>.
+  to <%= role_label @position.role %>.
 </p>
 
 <p>
-  Previously, you were a <%= @previous_role.titleize %>. <%= @position.role.titleize %>
+  Previously, you were a <%= role_label @previous_role %>. <%= role_label @position.role %>
   is a
   <%= OrganizerPosition.roles[@previous_role] < OrganizerPosition.roles[@position.role] ? "more" : "less" %>
   permissive role.

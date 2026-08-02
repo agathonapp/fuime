@@ -3,35 +3,29 @@
 require "rails_helper"
 
 RSpec.describe Event::Application, type: :model do
-  describe "#schedule_airtable_sync" do
+  # FUIME-DIVERGENCE: upstream mirrored every application into a Hack Club Airtable
+  # base via Event::ApplicationSyncToAirtableJob on an after_commit hook. Fuime keeps
+  # applications entirely in Postgres and reviews them in the HCB admin console, so
+  # saving an application must not enqueue any external sync at all.
+  describe "saving an application" do
     let!(:application) { create(:event_application) }
 
-    it "enqueues a sync job on save" do
+    it "does not enqueue any background job" do
       expect {
         application.update!(name: "Updated Name")
-      }.to have_enqueued_job(Event::ApplicationSyncToAirtableJob).with(application)
+      }.not_to have_enqueued_job
     end
 
-    context "when the job runs after a save" do
-      let!(:application) { create(:event_application, aasm_state: "submitted") }
+    it "does not define the removed Airtable sync constant" do
+      expect(defined?(Event::ApplicationSyncToAirtableJob)).to be_nil
+    end
+  end
 
-      before do
-        fake_record = double("airtable_record")
-        allow(fake_record).to receive(:[]=)
-        allow(fake_record).to receive(:[]).and_return(nil)
-        allow(fake_record).to receive(:save)
-        allow(fake_record).to receive(:id).and_return("recABC123")
-        allow(ApplicationsTable).to receive(:all).and_return([fake_record])
-      end
+  describe "aasm state as the source of truth" do
+    let!(:application) { create(:event_application, aasm_state: "submitted") }
 
-      it "only runs the sync job once, preventing an infinite loop" do
-        perform_enqueued_jobs do
-          application.update!(name: "Changed")
-        end
-
-        syncs_performed = performed_jobs.count { |j| j[:job] == Event::ApplicationSyncToAirtableJob }
-        expect(syncs_performed).to eq(1)
-      end
+    it "exposes a human-readable state for the admin console" do
+      expect(application.aasm.human_state).to eq("Submitted")
     end
   end
 end

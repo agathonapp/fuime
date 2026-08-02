@@ -1,13 +1,17 @@
 <% current_user ||= local_assigns[:p][:current_user] %>
 
 <% if activity&.trackable&.impersonated? %>
-  <% if current_user.auditor? %>
+  <% if current_user&.auditor? %>
     <%= render layout: "/public_activity/common", locals: { activity:, current_user: } do %>
-      impersonated <%= activity.trackable.user.name %> on HCB
+      <%# User::Session#user returns nil for an unverified session (see
+          User::Session#user), so an impersonation of an unverified account has
+          no user here. Without the guard this raises and 500s the whole
+          dashboard, since this partial renders in the nav's activity feed. %>
+      impersonated <%= activity.trackable.user(allow_unverified: true)&.name || "an account" %> on Fuime
     <% end %>
   <% end %>
 <% else %>
   <%= render layout: "/public_activity/common", locals: { activity:, current_user: } do %>
-    logged into HCB<%= " on #{activity.trackable.os_info}" if activity.trackable&.os_info.present? %>
+    logged into Fuime<%= " on #{activity.trackable.os_info}" if activity.trackable&.os_info.present? %>
   <% end %>
 <% end %>

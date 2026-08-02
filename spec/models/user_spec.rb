@@ -183,7 +183,9 @@ RSpec.describe User, type: :model do
     end
 
     it "marks a user with no birthday but a FIRST student affiliation as a teenager" do
-      user = create(:user, affiliations_attributes: [first_student_attrs])
+      # :unknown_age — this path only applies when there is no birthday to read,
+      # and the factory now supplies one by default (see user_factory.rb).
+      user = create(:user, :unknown_age, affiliations_attributes: [first_student_attrs])
 
       expect(user).to be_is_teenager
       expect(user.teenager).to be true
@@ -198,7 +200,7 @@ RSpec.describe User, type: :model do
     end
 
     it "syncs the teenager column when a FIRST student affiliation is added later" do
-      user = create(:user)
+      user = create(:user, :unknown_age)
       expect(user.teenager).not_to be true
 
       user.update!(affiliations_attributes: [first_student_attrs])

@@ -23,4 +23,32 @@ class GuardianshipPolicy < ApplicationPolicy
   def accept?
     user.present? && record.guardian == user && record.pending?
   end
+
+  # Everyone the agreement binds may read it back: the guardian who signed, the
+  # minor it covers, and admins handling support.
+  def record?
+    return false if user.blank?
+
+    user.admin? || record.guardian == user || record.minor == user
+  end
+
+  # Withdrawing consent belongs to the adult who gave it, plus Fuime admins for
+  # support cases. Deliberately NOT the minor: a teen must not be able to remove
+  # their own supervision, which is the whole point of the control.
+  def revoke?
+    return false if user.blank?
+    return false if record.revoked?
+
+    user.admin? || record.guardian == user
+  end
+
+  # Same authority as revoking — whoever can end a guardianship can re-send its
+  # invite. The minor is included here because chasing an unresponsive parent is
+  # their problem to solve, and a resend only ever re-mails the same guardian.
+  def resend_invite?
+    return false if user.blank?
+    return false unless record.pending?
+
+    user.admin? || record.guardian == user || record.minor == user
+  end
 end
