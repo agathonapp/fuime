@@ -66,7 +66,10 @@ module EventsHelper
       name: "Taxes",
       path_proc: ->(event_id) { fuime_taxes_path(event_slug: event_id) },
       tooltip: "Track income toward IRS threshold",
-      icon: "money-dollar-box",
+      # `inline_icon` reads the SVG off disk and raises Errno::ENOENT if it is
+      # missing, which 500s every page rendering the org nav — not just the
+      # Taxes item. "money-dollar-box" does not exist in app/assets/images/icons.
+      icon: "calculator",
       symbol: :taxes,
       available_proc: ->(event) { policy(event).show? && organizer_signed_in? }
     },

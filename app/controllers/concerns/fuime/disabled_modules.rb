@@ -62,6 +62,7 @@ module Fuime
     def block_disabled_fuime_modules
       return unless fuime_module_disabled?
       return if current_user&.admin?
+      return if safe_request_method?
 
       respond_to do |format|
         format.html do
@@ -71,6 +72,21 @@ module Fuime
         format.json { render json: { error: "Feature not available" }, status: :not_found }
         format.any  { head :not_found }
       end
+    end
+
+    # Only state-changing requests are blocked.
+    #
+    # The goal is that Fuime cannot originate a payment, issue a card, or
+    # provision a mailbox — all of which require a POST/PATCH/PUT/DELETE.
+    # Blocking GETs as well stopped anyone from *viewing* records inherited
+    # from upstream (an existing ACH transfer's detail page, a card grant's
+    # history), which prevents nothing and breaks legitimate read paths — the
+    # transaction drawer links to these pages, and upstream specs exercise them.
+    #
+    # Read access is still governed by the normal Pundit policies; this filter
+    # only removes the ability to act.
+    def safe_request_method?
+      request.get? || request.head?
     end
 
     def fuime_module_disabled?

@@ -53,7 +53,14 @@ describe AchTransfersController do
     end
   end
 
-  describe "create" do
+
+  # FUIME-DISABLED: ACH origination is a money-OUT module Fuime does not offer.
+  # Fuime::DisabledModules blocks state-changing requests to it
+  # (docs/fuime/PRODUCTION_READINESS.md §2.3), so these upstream specs — which
+  # exercise exactly those POST/PATCH actions — cannot pass while it is disabled.
+  # Left in place rather than deleted (CLAUDE.md Rule 2): re-enabling the module
+  # should re-enable its tests. Read-only specs in this file still run.
+  describe "create", skip: "FUIME-DISABLED" do
     render_views
 
     def ach_transfer_params

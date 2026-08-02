@@ -6,7 +6,14 @@ RSpec.describe DisbursementsController do
   include SessionSupport
   render_views
 
-  describe "#create" do
+
+  # FUIME-DISABLED: disbursements is a money-OUT module Fuime does not offer.
+  # Fuime::DisabledModules blocks state-changing requests to it
+  # (docs/fuime/PRODUCTION_READINESS.md §2.3), so these upstream specs — which
+  # exercise exactly those POST/PATCH actions — cannot pass while it is disabled.
+  # Left in place rather than deleted (CLAUDE.md Rule 2): re-enabling the module
+  # should re-enable its tests. Read-only specs in this file still run.
+  describe "#create", skip: "FUIME-DISABLED" do
     it "creates a disbursement" do
       sender = create(:user)
       source_event = create(:event, :with_positive_balance)

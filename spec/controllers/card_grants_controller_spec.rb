@@ -38,7 +38,14 @@ RSpec.describe CardGrantsController do
     end
   end
 
-  describe "#create" do
+
+  # FUIME-DISABLED: card grants is a money-OUT module Fuime does not offer.
+  # Fuime::DisabledModules blocks state-changing requests to it
+  # (docs/fuime/PRODUCTION_READINESS.md §2.3), so these upstream specs — which
+  # exercise exactly those POST/PATCH actions — cannot pass while it is disabled.
+  # Left in place rather than deleted (CLAUDE.md Rule 2): re-enabling the module
+  # should re-enable its tests. Read-only specs in this file still run.
+  describe "#create", skip: "FUIME-DISABLED" do
     def card_grant_params
       {
         amount_cents: "123.45",
@@ -123,7 +130,14 @@ RSpec.describe CardGrantsController do
     end
   end
 
-  describe "topup" do
+
+  # FUIME-DISABLED: card grants is a money-OUT module Fuime does not offer.
+  # Fuime::DisabledModules blocks state-changing requests to it
+  # (docs/fuime/PRODUCTION_READINESS.md §2.3), so these upstream specs — which
+  # exercise exactly those POST/PATCH actions — cannot pass while it is disabled.
+  # Left in place rather than deleted (CLAUDE.md Rule 2): re-enabling the module
+  # should re-enable its tests. Read-only specs in this file still run.
+  describe "topup", skip: "FUIME-DISABLED" do
     it "tops up a card grant" do
       user = create(:user)
       event = create(:event, :with_positive_balance, plan_type: Event::Plan::HackClubAffiliate)
