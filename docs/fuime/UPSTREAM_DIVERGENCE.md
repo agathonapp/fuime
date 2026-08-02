@@ -1405,3 +1405,35 @@ opens. A second run added nothing.
 platform fee line from the webhook handler *and* HCB's 7% plan revenue fee from
 `FeeEngine` (visible on `mayas-cookies`: a $45 payment leaves $41.85 available).
 
+
+## v4 card-grant activation issued cards to unverified phone numbers (2026-08-02)
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `Api::V4::CardGrantsController#activate` checks the grantee's `phone_number_verified?` | Activation issues a real Stripe card to the grantee. Every sibling path enforces this — the HTML `CardGrantsController#activate`, `StripeCardsController#create`, and `Api::V4::StripeCardsController#create` — but the v4 grant activation called `create_stripe_card` directly with no check. Upstream inconsistency; Fuime is where it matters, because the people being issued cards here are minors. | `app/controllers/api/v4/card_grants_controller.rb` |
+
+Regression coverage: two examples in
+`spec/controllers/api/v4/card_grants_controller_spec.rb` (`#activate`). The
+refusal case was confirmed to fail with the guard stashed and pass with it.
+
+**Who could actually reach it, precisely** — worth recording, because the first
+reading was wider than the truth:
+
+* A non-admin grantee cannot: `api/v4/card_grants` is in
+  `Fuime::DisabledModules::DISABLED_CONTROLLER_PREFIXES` and activation is a
+  POST. Upstream, with no such filter, any cardholder could.
+* An admin holding an ordinary API token cannot either: `ApiAdminContext#admin?`
+  additionally requires the token to carry the `admin:write` scope, so Pundit
+  returns 403 before the action runs.
+* An admin holding an `admin:write` token could — `CardGrantPolicy#activate?`
+  admits any admin for any grant — and it is exactly the admin exemption in
+  `DisabledModules` (`return if current_user&.admin?`) that lets the request
+  through the module filter to begin with.
+
+**Still open, needs a decision:** that admin exemption grants *only* write
+access. Its comment says it exists "so support staff can still inspect
+inherited records", but inspection is already covered one line below by
+`safe_request_method?`, which lets everyone GET these pages. Its whole
+practical effect is letting admins POST to modules Fuime states it must not
+have — issue cards, originate ACH and wires, send checks, run disbursements.
+Deleting that line would make the concern match its documented intent.
