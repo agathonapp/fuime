@@ -10,6 +10,12 @@
   --ink: #272735;
   --ink-muted: #535461;
   --ink-faint: #c3c3cc;
+  /* --ink-faint on white is 1.75:1. That is fine for the hairline ticks it
+     draws on the split bar and nowhere near fine for a placeholder, which is
+     the only thing telling you what the field wants. 4.55:1 clears AA.
+     Deliberately not --ink-muted (7.49:1) — a placeholder that dark reads as
+     a value already typed in, and people stop before they type. */
+  --ink-placeholder: #757580;
   --on-dark: #ededf3;
   --on-dark-mu: rgba(237, 237, 243, 0.62);
   --on-dark-faint: rgba(237, 237, 243, 0.14);
@@ -43,7 +49,11 @@
   --w-body: 400;
 
   --t-hero: clamp(2.5rem, 1.35rem + 4.6vw, 4.0625rem); /* → 65px */
-  --t-h2: clamp(2rem, 1.35rem + 2.6vw, 2.625rem); /* → 42px */
+  /* Was 42px at the top end. 42 is Mercury's h2, but Mercury spends the other
+     half of the row on dense product copy — ours was a lone 42px line on a
+     1100px measure with nothing beside it, which reads small rather than
+     restrained. 52 with the band head now filling both tracks. */
+  --t-h2: clamp(2.125rem, 1.3rem + 3.3vw, 3.25rem); /* → 52px */
   --t-h3: clamp(1.5rem, 1.2rem + 1.2vw, 2rem); /* → 32px */
   --t-h4: 1.5rem; /* 24 */
   --t-lead: clamp(1.125rem, 1.02rem + 0.42vw, 1.3125rem); /* → 21 */
@@ -163,10 +173,74 @@ h4 {
   margin-inline: auto;
   padding-inline: var(--gut);
 }
+/* 9vw hit the 144px ceiling at 1440, so consecutive bands put 288px of empty
+   ground between the last line of one and the first line of the next — plus the
+   mt-8 the content inside each one already carries. 6.6vw tops out at 104 and
+   holds the same proportion on the way down. */
 .band {
   position: relative;
   overflow: hidden;
-  padding-block: clamp(var(--s8), 9vw, var(--s10));
+  padding-block: clamp(var(--s7), 6.6vw, 104px);
+}
+
+/* ── band head ─────────────────────────────────────────────────────────────
+   Every band opened as a single left column: eyebrow, headline, then support
+   copy stacked underneath at 46ch. On a 1440 viewport that left the right ~40%
+   of all seven bands empty and spent vertical space saying what fits beside the
+   headline. Two tracks now — statement left, support right, both pulled to the
+   same baseline with one hairline under them. Children that are not part of the
+   head (a table, a card grid, a form) span both tracks and behave as before. */
+.bhead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  column-gap: var(--s8);
+  align-items: end;
+  padding-bottom: var(--s6);
+  border-bottom: 1px solid var(--hair);
+}
+.band--night .bhead {
+  border-bottom-color: var(--on-dark-faint);
+}
+.bhead > .eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  margin-bottom: var(--s4);
+}
+.bhead > .h2 {
+  grid-column: 1;
+  grid-row: 2;
+  max-width: 22ch;
+}
+/* The lead sits in the right track across both head rows and drops to the
+   headline's last baseline. Its own margin-top and the inline max-width the
+   markup carries would both fight that, so both are overridden here. */
+.bhead > .lead {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: end;
+  margin-top: 0;
+  max-width: 38ch !important;
+}
+/* A head with no support copy is a one-column head — the headline gets the
+   room the lead would have used instead of leaving a 400px hole beside it. */
+.bhead:not(:has(> .lead)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.bhead:not(:has(> .lead)) > .h2 {
+  max-width: 30ch;
+}
+@media (max-width: 860px) {
+  .bhead {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--s5);
+    padding-bottom: var(--s5);
+  }
+  .bhead > .h2,
+  .bhead > .lead {
+    grid-column: 1;
+    grid-row: auto;
+    max-width: none !important;
+  }
 }
 /* Everything inside a band sits above the arch watermark drawn behind it. */
 .band > .wrap {
@@ -208,8 +282,12 @@ section[id] {
   color: var(--on-dark-mu);
 }
 
+/* Optical tracking: at 52px the default spacing reads loose, and the display
+   weight is 480 so there is no extra stroke weight to carry it. */
 .h2 {
   font-size: var(--t-h2);
+  letter-spacing: -0.019em;
+  line-height: 1.08;
 }
 .h3 {
   font-size: var(--t-h3);
@@ -354,6 +432,14 @@ section[id] {
   letter-spacing: 0.42px;
   opacity: 0.78;
   transition: opacity var(--dur) var(--ease);
+  /* Measured at 90x22, which is under the 24px WCAG 2.5.8 floor. The inline
+     exception does not apply — these are standalone nav items, not links inside
+     a sentence. Free to fix here because .nav__in is a fixed 72px row with
+     align-items:center, so a taller link box re-centres and the text does not
+     move. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
 }
 .nav a.nav__link:hover {
   opacity: 1;
@@ -520,6 +606,14 @@ section[id] {
   font-weight: var(--w-ui);
   letter-spacing: 0.42px;
   color: var(--ink);
+  /* Also 22px tall, also standalone — every .tlink is the entire contents of its
+     own <p>, so it is a block-level target in practice and the sentence
+     exception does not cover it either. Padding buys the hit area; the matching
+     negative margin gives it straight back to the line box, because an
+     inline-flex is an atomic inline and the line box measures its MARGIN box.
+     Net effect on layout is zero and the target clears the floor by 6px. */
+  padding-block: 4px;
+  margin-block: -4px;
 }
 .band--night .tlink {
   color: var(--on-dark);
@@ -735,7 +829,7 @@ section[id] {
   color: var(--ink);
 }
 .capture input::placeholder {
-  color: var(--ink-faint);
+  color: var(--ink-placeholder);
 }
 .capture__msg {
   min-height: 20px;
@@ -1309,18 +1403,29 @@ section[id] {
   color: var(--on-dark);
   padding-block: var(--s9) var(--s7);
 }
+/* Measured before touching this: at 1440 the wordmark sat at x=170 and the two
+   link columns were jammed together at x=1032 and x=1172, hard against the right
+   edge, with ~740px of empty night between. That is what space-between does when
+   one side is a single small mark and the other is a nested flex row — it pushes
+   the whole row to the far edge, and the row's own gap keeps its columns tight.
+
+   A grid fixes it because the columns are placed on tracks instead of packed.
+   1.6fr for the brand cell gives the mark room to sit under the eye without
+   owning half the footer, and the two equal tracks after it land the columns at
+   roughly the thirds. display:contents on .foot__nav promotes the two .foot__col
+   into this grid without adding a wrapper to the markup; it is safe here because
+   the div carries no role, and the accessibility-tree bug with display:contents
+   only bites elements that do. */
 .foot__top {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
   gap: var(--s7);
-  justify-content: space-between;
+  align-items: start;
   padding-bottom: var(--s8);
   border-bottom: 1px solid var(--on-dark-faint);
 }
 .foot__nav {
-  display: flex;
-  gap: var(--s7);
-  flex-wrap: wrap;
+  display: contents;
 }
 .foot__col h4 {
   font-size: var(--t-small);
@@ -1332,6 +1437,12 @@ section[id] {
 }
 .foot__col a {
   display: block;
+  /* The regrid above made each column a 279px track, and a display:block link
+     fills it — which meant clicking 200px of empty night to the right of
+     "Parents" navigated. max-content pulls the box back to the text while
+     keeping each link on its own line. */
+  width: max-content;
+  max-width: 100%;
   font-size: var(--t-small);
   letter-spacing: 0.42px;
   color: var(--on-dark-mu);
@@ -1491,7 +1602,19 @@ section[id] {
   appearance: none;
   display: block;
   width: 100%;
-  height: 28px;
+  /* ASCENT specifies a 44px track with a 28px thumb, and 44x44 minimum hit
+     areas on mobile. This box was 28px, so on a phone the only interactive
+     control on the pricing page was 16px under the floor.
+
+     The 44px is hit area, not paint: the runnable track keeps its 3px and
+     Chrome centres it in the content box, so the thumb's -11.5px stays
+     correct and nothing moves visually. The negative block margin gives the
+     16px back to the layout, which keeps the slider's centre and the ticks
+     below it exactly where they were. The 8px it bleeds into its neighbours
+     lands on the figure above and the tick labels below — neither is
+     clickable, so nothing gets stolen. */
+  height: 44px;
+  margin-block: -8px;
   background: transparent;
   cursor: grab;
 }
@@ -1851,8 +1974,18 @@ section[id] {
   .capture .btn {
     width: 100%;
   }
-  .foot__nav {
-    gap: var(--s6);
+  /* .foot__nav is display:contents now, so it has no gap of its own to shrink —
+     the rule that used to live here was doing nothing. Three tracks are far too
+     narrow at 390 (they would be ~90px each), so drop to two and let the
+     wordmark span them, which is the stacked shape the flex version fell into by
+     wrapping. Two equal columns also stops COMPANY hugging PRODUCT with 200px of
+     empty night to its right. */
+  .foot__top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s7) var(--s6);
+  }
+  .foot__top > .mark {
+    grid-column: 1 / -1;
   }
 
   /* The closing copy is absolutely positioned over the bottom of the archway,

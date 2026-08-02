@@ -6,17 +6,26 @@
     <title>For parents · fuime</title>
     <meta
       name="description"
-      content="What a parent or guardian is actually signing: a Stripe account in your name, one ID check held by Stripe, read-only visibility on every invoice, and an off switch."
+      content="What a parent or guardian is signing: a Stripe account in your name, one ID check held by Stripe, read-only view of every invoice, and an off switch."
     />
     <link rel="canonical" href="https://fuime.com/parents" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/parents" />
     <meta property="og:title" content="You sign once. You keep the controls." />
     <meta
       property="og:description"
       content="A Stripe account in your name, with them as operator. Read-only on every invoice and payment. fuime never holds the money."
     />
-    <meta property="og:image" content="https://fuime.com/img/og.png" />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
@@ -26,7 +35,11 @@
       name="twitter:description"
       content="A Stripe account in your name, with them as operator. Read-only on every invoice and payment. fuime never holds the money."
     />
-    <meta name="twitter:image" content="https://fuime.com/img/og.png" />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
     <link rel="preconnect" href="https://api.fontshare.com" />
@@ -60,6 +73,18 @@
       </style></noscript
     >
     <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. This is the page it costs the most: 10.2k
+         characters of the copy a parent came here to read. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
     <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
          here and never inside a module, so vendoring stays a copy. This has to
          sit above every script on the page: an import map that arrives after
@@ -69,6 +94,87 @@
     </script>
     <script src="/site.js" defer></script>
     <script type="module" src="/fx/boot.js"></script>
+    <!-- Breadcrumb, plus the six FAQ answers copied verbatim from the
+         <details> blocks below. Verbatim is the requirement, not a nicety:
+         markup that paraphrases the page is a structured-data violation. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "fuime",
+                "item": "https://fuime.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "For parents",
+                "item": "https://fuime.com/parents"
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://fuime.com/parents#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is fuime a bank?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. fuime is software. It is not a bank, it is not a payment processor, and it is not insured by anyone, because it never holds a balance that could be insured. Stripe moves the money and Stripe is the regulated party."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Where does the money actually sit?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "In the Stripe account you own, from the moment a client pays until Stripe pays out to the bank account you connected. fuime has no wallet and cannot move funds anywhere, beyond taking its 7% at the point of payment."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What if my kid loses interest and stops using it?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Then it stops costing you anything. The 7% only applies to money collected, and the $15 a month only applies while the business is clearing $250 in 30 days. A quiet account bills nothing, and you can close it whenever you like."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I see everything, or just a summary?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Everything. Every invoice, every payment, every fee and every payout, in a read-only view under your own login. There is no private mode and nothing is hidden from the account owner."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Who is liable if something goes wrong?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You are, as the owner of the account. A chargeback, a refund or a negative balance lands on the account holder. That is the trade for a 15-year-old being able to accept a card at all, and we would rather you weigh it now than find out later."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What happens when they turn 18?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "At 18 they can open and own a Stripe account in their own name, and the point is that they move onto it and you step off. We have not shipped that handover yet. When we do we will say how it works, rather than implying it already exists."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
 
   <body>
@@ -311,10 +417,12 @@
       <!-- ── the comparison ────────────────────────────────────────────── -->
       <section class="band band--paper">
         <div class="wrap rise">
-          <p class="eyebrow">Against the alternatives</p>
-          <h2 class="h2">The four things you are actually checking.</h2>
+          <div class="bhead">
+            <p class="eyebrow">Against the alternatives</p>
+            <h2 class="h2">The four things you are actually checking.</h2>
+          </div>
 
-          <div class="matrix-scroll mt-8" >
+          <div class="matrix-scroll mt-8">
             <table class="matrix">
               <thead>
                 <tr>
@@ -367,7 +475,7 @@
             </table>
           </div>
 
-          <details class="reasoning mt-6" >
+          <details class="reasoning mt-6">
             <summary>Why those four and not price</summary>
             <p class="faq__a">
               Price is the easiest column to win and the least useful one to
@@ -384,13 +492,13 @@
       <!-- ── what you are agreeing to ──────────────────────────────────── -->
       <section class="band band--night">
         <div class="wrap rise stack-lg">
-          <div>
+          <div class="bhead">
             <p class="eyebrow">The honest version</p>
             <h2 class="h2">What you are agreeing to.</h2>
+            <p class="lead">
+              Read this part twice. It is the part with your name on it.
+            </p>
           </div>
-          <p class="lead">
-            Read this part twice. It is the part with your name on it.
-          </p>
 
           <div class="grid grid--2">
             <article class="card">
@@ -475,11 +583,11 @@
       <!-- ── what you keep ─────────────────────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise stack-lg">
-          <div>
+          <div class="bhead">
             <p class="eyebrow">What you keep</p>
             <h2 class="h2">Read-only on everything, and an off switch.</h2>
+            <p class="lead">You are not signing up to be surprised later.</p>
           </div>
-          <p class="lead">You are not signing up to be surprised later.</p>
 
           <div class="grid grid--2">
             <article class="card">

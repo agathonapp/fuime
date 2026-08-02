@@ -12,6 +12,8 @@
     />
     <link rel="canonical" href="https://fuime.com/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/" />
     <meta
       property="og:title"
@@ -21,7 +23,19 @@
       property="og:description"
       content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
     />
-    <meta property="og:image" content="https://fuime.com/img/og.png" />
+    <!-- Width and height let a scraper lay the card out before it has the
+         bytes, and alt is the only thing a screen reader gets when this is
+         shared into a feed. og.jpg is the same 1200x630 frame the old og.png
+         held, at 44KB instead of 567KB — the entire difference was a PNG
+         carrying a photograph. -->
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
@@ -31,7 +45,11 @@
       name="twitter:description"
       content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
     />
-    <meta name="twitter:image" content="https://fuime.com/img/og.png" />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <meta name="theme-color" content="#141420" />
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
@@ -67,6 +85,26 @@
       </style></noscript
     >
     <link rel="stylesheet" href="/style.css" />
+    <!-- style.css parks every .rise block at opacity 0 and site.js adding
+         .is-in is the only thing that ever puts it back. With scripting off the
+         rule above lifts the boot overlay onto a page whose copy never arrives:
+         6.4k characters here, 10.2k on /parents, all painted at zero alpha. It
+         looks like a page that loaded with empty bands, which is worse than one
+         that visibly failed.
+
+         Has to sit after the stylesheet link to win on source order, and has to
+         name `.rise > .rise-i` rather than `.rise-i` to match the specificity of
+         the rule it is undoing. Same declarations prefers-reduced-motion
+         already uses to opt out of the same animation. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
     <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
          here and never inside a module, so vendoring stays a copy. This has to
          sit above every script on the page: an import map that arrives after
@@ -76,6 +114,34 @@
     </script>
     <script src="/site.js" defer></script>
     <script type="module" src="/fx/boot.js"></script>
+    <!-- Organization and WebSite, on the homepage only — the two entities the
+         other pages reference by @id rather than restating. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://fuime.com/#org",
+            "name": "fuime",
+            "url": "https://fuime.com/",
+            "logo": "https://fuime.com/img/apple-touch-icon.png",
+            "email": "hi@fuime.com",
+            "description": "Invoicing and books for under-18 service businesses. A parent co-signs once, and the account is operated by the person doing the work."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://fuime.com/#site",
+            "url": "https://fuime.com/",
+            "name": "fuime",
+            "inLanguage": "en-US",
+            "publisher": {
+              "@id": "https://fuime.com/#org"
+            }
+          }
+        ]
+      }
+    </script>
   </head>
 
   <body>
@@ -270,7 +336,7 @@
       <!-- ── the artifact, live ────────────────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise" data-calc>
-          <div>
+          <div class="bhead">
             <p class="eyebrow">What the client gets</p>
             <h2 class="h2">An invoice with your name on it.</h2>
             <p class="lead mt-5" style="max-width: 54ch">
@@ -279,7 +345,7 @@
             </p>
           </div>
 
-          <div class="calc mt-8" >
+          <div class="calc mt-8">
             <div>
               <p class="calc__label">Move it. The math is the real math.</p>
               <p class="calc__figure num" data-out="lands">$360.10</p>
@@ -377,14 +443,16 @@
       <!-- ── the problem ───────────────────────────────────────────────── -->
       <section class="band band--night">
         <div class="wrap rise">
-          <p class="eyebrow">How you get paid today</p>
-          <h2 class="h2">
-            Every option makes you look like a kid doing a favor.
-          </h2>
-          <p class="lead mt-5" style="max-width: 46ch">
-            The work is real and the client is real. The payment method is a
-            group chat and somebody's mom.
-          </p>
+          <div class="bhead">
+            <p class="eyebrow">How you get paid today</p>
+            <h2 class="h2">
+              Every option makes you look like a kid doing a favor.
+            </h2>
+            <p class="lead">
+              The work is real and the client is real. The payment method is a
+              group chat and somebody's mom.
+            </p>
+          </div>
 
           <div class="rows mt-8" data-fx-rows="strike">
             <article class="card card--row">
@@ -466,8 +534,10 @@
       <!-- ── how it works ──────────────────────────────────────────────── -->
       <section class="band band--cream" id="how">
         <div class="wrap rise">
-          <p class="eyebrow">How fuime works</p>
-          <h2 class="h2">Three steps. One of them needs a parent.</h2>
+          <div class="bhead">
+            <p class="eyebrow">How fuime works</p>
+            <h2 class="h2">Three steps. One of them needs a parent.</h2>
+          </div>
 
           <div class="grid grid--3 mt-8" data-fx-steps>
             <article class="step">
@@ -591,14 +661,16 @@
       <!-- ── money ─────────────────────────────────────────────────────── -->
       <section class="band band--paper">
         <div class="wrap rise">
-          <p class="eyebrow">What it costs</p>
-          <h2 class="h2">
-            7% of what you collect. No monthly fee until you're earning.
-          </h2>
-          <p class="lead mt-5" style="max-width: 52ch">
-            A flat monthly fee on a kid making $80 a month is a tax on starting.
-            So there isn't one until the business is real.
-          </p>
+          <div class="bhead">
+            <p class="eyebrow">What it costs</p>
+            <h2 class="h2">
+              7% of what you collect. No monthly fee until you're earning.
+            </h2>
+            <p class="lead">
+              A flat monthly fee on a kid making $80 a month is a tax on
+              starting. So there isn't one until the business is real.
+            </p>
+          </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row card--fig">
@@ -650,11 +722,11 @@
           <div>
             <p class="eyebrow">For parents</p>
             <h2 class="h2">You sign once. You keep the controls.</h2>
-            <p class="lead mt-5" >
+            <p class="lead mt-5">
               Your kid is going to keep taking money for work either way. This
               is the version with a paper trail.
             </p>
-            <div class="arch arch--portrait mt-7" >
+            <div class="arch arch--portrait mt-7">
               <picture>
                 <source
                   type="image/avif"

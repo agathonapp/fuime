@@ -6,10 +6,12 @@
     <title>What it costs · fuime</title>
     <meta
       name="description"
-      content="7% of the money you collect. $0/mo under $250 collected in the last 30 days, $15/mo over. Stripe's card processing is separate and goes to Stripe. Drag the slider and check the math."
+      content="7% of the money you collect. $0/mo under $250 collected in the last 30 days, $15/mo over. Stripe's card processing is separate and goes to Stripe."
     />
     <link rel="canonical" href="https://fuime.com/pricing" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/pricing" />
     <meta
       property="og:title"
@@ -19,7 +21,14 @@
       property="og:description"
       content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
     />
-    <meta property="og:image" content="https://fuime.com/img/og.png" />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
@@ -29,7 +38,11 @@
       name="twitter:description"
       content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
     />
-    <meta name="twitter:image" content="https://fuime.com/img/og.png" />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A folding table and stool lit on a dark hilltop, a laptop open on the table, city lights below."
+    />
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
     <link rel="preconnect" href="https://api.fontshare.com" />
@@ -63,6 +76,18 @@
       </style></noscript
     >
     <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. Must follow the stylesheet link to win on source
+         order, and must name `.rise > .rise-i` to match specificity. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
     <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
          here and never inside a module, so vendoring stays a copy. This has to
          sit above every script on the page: an import map that arrives after
@@ -72,6 +97,33 @@
     </script>
     <script src="/site.js" defer></script>
     <script type="module" src="/fx/boot.js"></script>
+    <!-- Breadcrumb only. The fee here is a percentage of collections plus a
+         conditional subscription, which is not a priced Product, and saying
+         otherwise in markup would be a claim the page itself does not make. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "fuime",
+                "item": "https://fuime.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "What it costs",
+                "item": "https://fuime.com/pricing"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
 
   <body>
@@ -197,7 +249,7 @@
         <div class="wrap hero__in">
           <div class="hero__body">
             <h1>7% of what you collect.<br />That's the whole price.</h1>
-            <p class="disclaimer mt-6" >
+            <p class="disclaimer mt-6">
               $0/mo under $250 collected in 30 days. $15/mo over. Stripe's card
               processing is separate and goes to Stripe.
             </p>
@@ -208,17 +260,17 @@
       <!-- ── the live number ───────────────────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise" data-calc>
-          <div>
+          <div class="bhead">
             <p class="eyebrow">Run it yourself</p>
             <h2 class="h2">Put a real job in it.</h2>
-            <p class="lead mt-5" style="max-width: 52ch">
+            <p class="lead">
               The same arithmetic the product runs when a client pays. Drag it
               to something you have actually charged for and read the bottom
               line.
             </p>
           </div>
 
-          <div class="calc split mt-8" >
+          <div class="calc split mt-8">
             <div>
               <p class="calc__label">What lands, after everything</p>
               <p class="calc__figure num" data-out="lands">$360.10</p>
@@ -239,7 +291,7 @@
                 />
                 <div class="calc__ticks">
                   <span>$25</span>
-                  <span>$5,000</span>
+                  <span>$2,000</span>
                 </div>
               </div>
 
@@ -308,14 +360,16 @@
       <!-- ── the three numbers ─────────────────────────────────────────── -->
       <section class="band band--night">
         <div class="wrap rise">
-          <p class="eyebrow">The whole price list</p>
-          <h2 class="h2">
-            7% of what you collect. No monthly fee until you're earning.
-          </h2>
-          <p class="lead mt-5" style="max-width: 52ch">
-            A flat monthly fee on a kid making $80 a month is a tax on starting.
-            So there isn't one until the business is real.
-          </p>
+          <div class="bhead">
+            <p class="eyebrow">The whole price list</p>
+            <h2 class="h2">
+              7% of what you collect. No monthly fee until you're earning.
+            </h2>
+            <p class="lead">
+              A flat monthly fee on a kid making $80 a month is a tax on
+              starting. So there isn't one until the business is real.
+            </p>
+          </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row card--fig">
@@ -386,14 +440,16 @@
       <!-- ── what you are not charged for ──────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise">
-          <p class="eyebrow">What you are not charged for</p>
-          <h2 class="h2">Six things that never turn into a bill.</h2>
-          <p class="lead mt-5" style="max-width: 48ch">
-            There is no second page to the pricing. If it isn't the 7% or the
-            $15, it isn't a fee.
-          </p>
+          <div class="bhead">
+            <p class="eyebrow">What you are not charged for</p>
+            <h2 class="h2">Six things that never turn into a bill.</h2>
+            <p class="lead">
+              There is no second page to the pricing. If it isn't the 7% or the
+              $15, it isn't a fee.
+            </p>
+          </div>
 
-          <div class="grid grid--2 mt-8" >
+          <div class="grid grid--2 mt-8">
             <article class="card">
               <h3 class="h4">No setup fee</h3>
               <p>
@@ -462,10 +518,12 @@
       <!-- ── questions ─────────────────────────────────────────────────── -->
       <section class="band band--paper">
         <div class="wrap rise">
-          <p class="eyebrow">Questions</p>
-          <h2 class="h2">The ones worth asking before you sign up.</h2>
+          <div class="bhead">
+            <p class="eyebrow">Questions</p>
+            <h2 class="h2">The ones worth asking before you sign up.</h2>
+          </div>
 
-          <div class="faq mt-8" >
+          <div class="faq mt-8">
             <details>
               <summary>What happens if a client never pays?</summary>
               <p class="faq__a">
@@ -536,17 +594,13 @@
       <!-- ── join ──────────────────────────────────────────────────────── -->
       <section class="band band--night" id="join">
         <div class="wrap rise">
-          <p class="eyebrow">Early access</p>
-          <h2 class="h2">We're onboarding the first businesses now.</h2>
-          <p class="lead mt-5" >
-            One email when it's your turn. Nothing else.
-          </p>
+          <div class="bhead">
+            <p class="eyebrow">Early access</p>
+            <h2 class="h2">We're onboarding the first businesses now.</h2>
+            <p class="lead">One email when it's your turn. Nothing else.</p>
+          </div>
 
-          <form
-            class="capture mt-7"
-            data-source="pricing-foot"
-            novalidate
-          >
+          <form class="capture mt-7" data-source="pricing-foot" novalidate>
             <div class="capture__row">
               <input
                 type="email"
@@ -566,7 +620,7 @@
             </p>
           </form>
 
-          <p class="small muted mt-5" >
+          <p class="small muted mt-5">
             A question the page didn't answer:
             <a class="tlink" href="mailto:hi@fuime.com">hi@fuime.com</a>
           </p>

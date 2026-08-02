@@ -463,6 +463,22 @@
       else msg.removeAttribute('data-state')
     }
 
+    // The message lands in an aria-live region, so a screen reader hears the
+    // rejection. What it does not hear is that the field it is sitting in is
+    // the one being rejected — tab away and back and the error is gone.
+    // aria-invalid is what survives that, and it is the only form-a11y gap
+    // left here. Cleared the moment the address changes, because an error
+    // that outlives the thing it describes is worse than none.
+    var flag = function (bad) {
+      if (!input) return
+      if (bad) input.setAttribute('aria-invalid', 'true')
+      else input.removeAttribute('aria-invalid')
+    }
+    if (input)
+      input.addEventListener('input', function () {
+        flag(false)
+      })
+
     form.addEventListener('submit', function (ev) {
       ev.preventDefault()
       if (busy) return
@@ -470,9 +486,13 @@
       var email = (input.value || '').trim()
       if (!EMAIL_RE.test(email) || email.length > 254) {
         say('That address does not look right.', 'error')
+        flag(true)
         input.focus()
         return
       }
+      // Sending is not a claim about the address, so a network failure below
+      // must not re-raise this.
+      flag(false)
 
       busy = true
       if (btn) {
