@@ -1,24 +1,24 @@
 /* fx/boot.js — the wiring.
  *
- * Integration item 32. The one place that knows what order the fourteen
+ * Integration item 32. The one place that knows what order the fifteen
  * modules come up in, and the only file that imports more than one of them.
  *
  * Three properties this file has to have, in priority order:
  *
  *   1. No module can take down another. Every load and every init sits in its
- *      own catch. Fourteen modules written independently against a spec have
+ *      own catch. Fifteen modules written independently against a spec have
  *      never run in the same document until now, and the honest assumption is
  *      that at least one of them throws on first contact. When it does, the
- *      other thirteen still come up and the page still works.
+ *      other fourteen still come up and the page still works.
  *
  *   2. The order is the spec's, not a preference. Four of the steps below are
  *      real dependencies and are commented as such. The rest are grouped
  *      peers and run concurrently.
  *
- *   3. Fetching is not ordering. All fifteen files are requested in one
+ *   3. Fetching is not ordering. All sixteen files are requested in one
  *      parallel wave the moment this module evaluates, and only their `init`
  *      calls are sequenced. Serialising the network too would put `handoff`
- *      fifteen round-trips deep, and handoff has a real deadline.
+ *      sixteen round-trips deep, and handoff has a real deadline.
  *
  * Nothing here is load-bearing for the page. Delete this script and every
  * mount point falls back to the static design it ships in the markup — that
@@ -37,6 +37,7 @@ const NAMES = [
   'handoff',
   'live',
   'plate',
+  'dive',
   'steprail',
   'tape',
   'strike',
@@ -85,7 +86,7 @@ async function start(name, run) {
   }
 }
 
-/* Twelve of the fourteen fall back to `document` when handed no target. `rows`
+/* Thirteen of the fifteen fall back to `document` when handed no target. `rows`
    and `steprail` do not — handed nothing they return an inert stub, and an
    inert stub is a truthy object, so a boot that calls them bare reports success
    and animates nothing. Both are called once per mount, explicitly, and so is
@@ -121,6 +122,7 @@ await start('handoff', m => m.initHandoff())
 await Promise.all([
   start('live', m => m.initLive()),
   start('plate', m => m.initPlate()),
+  start('dive', m => m.initDive()),
   // The mount attribute is deliberately not `data-fx-steprail`: the module
   // writes that one onto its host to mark itself mounted, so shipping it in
   // the markup would make steprail bail on sight.

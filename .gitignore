@@ -97,3 +97,6 @@ id_ed25519*
 *.jks
 secrets.json
 .netrc
+
+# verify.mjs scroll-walk output
+/shots/

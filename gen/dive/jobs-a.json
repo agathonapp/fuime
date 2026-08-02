@@ -1,0 +1,20 @@
+[
+  {
+    "engine": "kling25-pro-i2v",
+    "out": "shots/a1.mp4",
+    "image": "keys/k0.png",
+    "duration": "5",
+    "cfg": 0.5,
+    "prompt": "Slow steady cinematic dolly-in. The camera glides forward through the dark bedroom toward the desk at the window, closing in on the open laptop until its glowing screen fills most of the frame. The teenager in the grey hoodie stays completely still, seen from behind, and slips out of the bottom of frame as the camera passes. Nothing else moves: the city lights below the window stay fixed, the desk lamp holds a steady warm glow, the bed and lamp stay where they are. Photoreal night interior, cinematic shallow depth of field, level horizon, smooth constant speed, no camera shake.",
+    "negative": "zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, person turning around, face, hands, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
+  },
+  {
+    "engine": "kling25-pro-i2v",
+    "out": "shots/a2.mp4",
+    "image": "keys/k0.png",
+    "duration": "5",
+    "cfg": 0.35,
+    "prompt": "Cinematic push-in on a laptop. Static subject, moving camera: the camera travels forward in a straight line toward the open laptop on the desk, ending close on the glowing screen. The hooded teenager seen from behind does not move and passes below the frame. The window, the town lights, the lamp and the bed remain perfectly still. Photoreal, night, dark interior lit only by the screen and the desk lamp, smooth constant dolly speed, level horizon, no shake.",
+    "negative": "zoom out, pull back, dolly out, camera shake, handheld wobble, whip pan, person turning around, face, hands, text, captions, watermark, warping walls, morphing furniture, extra furniture appearing, flicker, strobe, low quality, deformed, cartoon, oversaturated"
+  }
+]

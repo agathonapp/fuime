@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>fuime — screen plate</title>
+    <link
+      rel="stylesheet"
+      href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap"
+    />
+    <style>
+      /* Tokens lifted from site/style.css so the plate and the site cannot drift. */
+      :root {
+        --night: #141420;
+        --night-2: #1d1d2b;
+        --on-dark: #ededf3;
+        --on-dark-mu: rgba(237, 237, 243, 0.62);
+        --on-dark-faint: rgba(237, 237, 243, 0.14);
+        --accent: #c2401f;
+        --accent-lit: #e2724f;
+        --good: #6fbf95;
+        --font: 'General Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: var(--font);
+        background: var(--night);
+        color: var(--on-dark);
+        font-feature-settings: 'tnum' 1;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app {
+        width: 1600px;
+        height: 1000px;
+        display: grid;
+        grid-template-columns: 228px 1fr;
+        background: var(--night);
+      }
+
+      /* ── rail ─────────────────────────────────────────────────────────── */
+      .rail {
+        border-right: 1px solid var(--on-dark-faint);
+        padding: 22px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+        background: #101019;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 4px 8px;
+      }
+      .brand__mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: linear-gradient(150deg, var(--accent-lit), var(--accent));
+        box-shadow: 0 0 0 1px rgba(226, 114, 79, 0.3);
+      }
+      .brand__name {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .nav__label {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(237, 237, 243, 0.34);
+        padding: 0 8px 8px;
+      }
+      .nav a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 9px;
+        border-radius: 7px;
+        color: var(--on-dark-mu);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .nav a.is-on {
+        background: rgba(237, 237, 243, 0.07);
+        color: var(--on-dark);
+      }
+      .nav__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-lit);
+      }
+      .nav__count {
+        font-size: 11px;
+        color: rgba(237, 237, 243, 0.42);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .rail__foot {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px;
+      }
+      .avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: linear-gradient(160deg, #4b4b66, #2a2a3d);
+        border: 1px solid var(--on-dark-faint);
+      }
+      .rail__who {
+        font-size: 13px;
+      }
+      .rail__who span {
+        display: block;
+        font-size: 11px;
+        color: rgba(237, 237, 243, 0.4);
+      }
+
+      /* ── main ─────────────────────────────────────────────────────────── */
+      .main {
+        padding: 26px 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow: hidden;
+      }
+
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .top h1 {
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+      .top h1 em {
+        font-style: normal;
+        color: rgba(237, 237, 243, 0.45);
+      }
+      .top__acts {
+        display: flex;
+        gap: 9px;
+      }
+      .btn {
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--on-dark-faint);
+        background: transparent;
+        color: var(--on-dark-mu);
+      }
+      .btn--accent {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.55fr 1fr;
+        gap: 16px;
+      }
+      .card {
+        border: 1px solid var(--on-dark-faint);
+        border-radius: 12px;
+        background: var(--night-2);
+        padding: 18px 20px;
+      }
+      .card__hd {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(237, 237, 243, 0.38);
+        margin-bottom: 12px;
+      }
+
+      .figure {
+        font-size: 44px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+      .figure sup {
+        font-size: 20px;
+        top: -0.9em;
+        position: relative;
+        margin-left: 1px;
+      }
+      .sub {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--on-dark-mu);
+      }
+      .sub b {
+        color: var(--good);
+        font-weight: 500;
+      }
+
+      /* the little sparkline, hand-plotted so the shape is deliberate */
+      .spark {
+        margin-top: 16px;
+        width: 100%;
+        height: 92px;
+        display: block;
+      }
+
+      .set-aside {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .bar {
+        margin-top: 14px;
+        height: 8px;
+        border-radius: 99px;
+        background: rgba(237, 237, 243, 0.1);
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        width: 62%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-lit));
+      }
+      .legend {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--on-dark-mu);
+      }
+
+      /* ── ledger ───────────────────────────────────────────────────────── */
+      .ledger {
+        flex: 1;
+        min-height: 0;
+      }
+      .rows {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .rows th {
+        text-align: left;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: rgba(237, 237, 243, 0.34);
+        padding: 0 0 10px;
+        border-bottom: 1px solid var(--on-dark-faint);
+      }
+      .rows td {
+        padding: 13px 0;
+        border-bottom: 1px solid rgba(237, 237, 243, 0.07);
+        font-size: 14px;
+        color: var(--on-dark);
+      }
+      .rows td.mu {
+        color: var(--on-dark-mu);
+      }
+      .rows td.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .rows tr:last-child td {
+        border-bottom: 0;
+      }
+      .who {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .who__ini {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(237, 237, 243, 0.08);
+        color: var(--on-dark-mu);
+      }
+      .who span {
+        display: block;
+        font-size: 12px;
+        color: rgba(237, 237, 243, 0.42);
+      }
+      .chip {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 9px;
+        border-radius: 99px;
+        border: 1px solid currentColor;
+      }
+      .chip--paid {
+        color: var(--good);
+      }
+      .chip--sent {
+        color: rgba(237, 237, 243, 0.5);
+      }
+      .chip--due {
+        color: var(--accent-lit);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="rail">
+        <div class="brand">
+          <div class="brand__mark"></div>
+          <div class="brand__name">fuime</div>
+        </div>
+
+        <nav class="nav">
+          <div class="nav__label">Work</div>
+          <a href="#" class="is-on">Money <span class="nav__dot"></span></a>
+          <a href="#">Invoices <span class="nav__count">12</span></a>
+          <a href="#">Clients <span class="nav__count">9</span></a>
+          <a href="#">Jobs</a>
+        </nav>
+
+        <nav class="nav">
+          <div class="nav__label">Keeping straight</div>
+          <a href="#">Taxes</a>
+          <a href="#">Guardian</a>
+          <a href="#">Statements</a>
+        </nav>
+
+        <div class="rail__foot">
+          <div class="avatar"></div>
+          <div class="rail__who">Wren Delgado<span>Delgado Photo</span></div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="top">
+          <h1>Tuesday, <em>11:48pm</em></h1>
+          <div class="top__acts">
+            <button class="btn">Add a client</button>
+            <button class="btn btn--accent">New invoice</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <section class="card">
+            <div class="card__hd">
+              <span>In your account</span><span>Last 30 days</span>
+            </div>
+            <div class="figure">$2,140<sup>75</sup></div>
+            <p class="sub">
+              <b>+ $325.00</b> landed two minutes ago — Marisol R.
+            </p>
+            <svg
+              class="spark"
+              viewBox="0 0 560 92"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#e2724f" stop-opacity="0.34" />
+                  <stop offset="1" stop-color="#e2724f" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8 L560 92 L0 92 Z"
+                fill="url(#g)"
+              />
+              <path
+                d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8"
+                fill="none"
+                stroke="#e2724f"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+              <circle cx="560" cy="8" r="4" fill="#e2724f" />
+            </svg>
+          </section>
+
+          <section class="card set-aside">
+            <div>
+              <div class="card__hd"><span>Set aside for taxes</span></div>
+              <div class="figure" style="font-size: 34px">
+                $312<sup style="font-size: 16px">40</sup>
+              </div>
+              <div class="bar"><i></i></div>
+              <div class="legend">
+                <span>of $504 estimated</span><span>62%</span>
+              </div>
+            </div>
+            <p class="sub" style="margin-top: 18px">
+              You cross the $400 filing line in November at this pace.
+            </p>
+          </section>
+        </div>
+
+        <section class="card ledger">
+          <div class="card__hd">
+            <span>Invoices</span><span>All clients</span>
+          </div>
+          <table class="rows">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Work</th>
+                <th>Status</th>
+                <th style="text-align: right">Amount</th>
+                <th style="text-align: right">You keep</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">MR</div>
+                    <div>Marisol R.<span>Invoice 0031</span></div>
+                  </div>
+                </td>
+                <td class="mu">Senior portraits</td>
+                <td><span class="chip chip--paid">Paid</span></td>
+                <td class="num">$325.00</td>
+                <td class="num">$292.33</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">TH</div>
+                    <div>Theo H.<span>Invoice 0030</span></div>
+                  </div>
+                </td>
+                <td class="mu">Wedding highlight reel</td>
+                <td><span class="chip chip--sent">Sent</span></td>
+                <td class="num">$680.00</td>
+                <td class="num">$612.68</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">CP</div>
+                    <div>Cedar Park HS<span>Invoice 0029</span></div>
+                  </div>
+                </td>
+                <td class="mu">Team photos, fall</td>
+                <td><span class="chip chip--due">Due Friday</span></td>
+                <td class="num">$240.00</td>
+                <td class="num">$215.68</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">JV</div>
+                    <div>June V.<span>Invoice 0028</span></div>
+                  </div>
+                </td>
+                <td class="mu">Headshots, two hours</td>
+                <td><span class="chip chip--paid">Paid</span></td>
+                <td class="num">$180.00</td>
+                <td class="num">$161.06</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">AO</div>
+                    <div>Amara O.<span>Invoice 0027</span></div>
+                  </div>
+                </td>
+                <td class="mu">Quinceañera, four hours</td>
+                <td><span class="chip chip--paid">Paid</span></td>
+                <td class="num">$450.00</td>
+                <td class="num">$405.35</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">BK</div>
+                    <div>Bell &amp; Kline<span>Invoice 0026</span></div>
+                  </div>
+                </td>
+                <td class="mu">Storefront photos</td>
+                <td><span class="chip chip--paid">Paid</span></td>
+                <td class="num">$275.00</td>
+                <td class="num">$247.28</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <div class="who__ini">DM</div>
+                    <div>Dov M.<span>Invoice 0025</span></div>
+                  </div>
+                </td>
+                <td class="mu">Band promo, half day</td>
+                <td><span class="chip chip--paid">Paid</span></td>
+                <td class="num">$320.00</td>
+                <td class="num">$287.90</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

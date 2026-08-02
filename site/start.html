@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Get early access · fuime</title>
+    <meta
+      name="description"
+      content="Scroll into the laptop on the desk and land on the sign-up. One email when it is your turn, nothing after that."
+    />
+    <link rel="canonical" href="https://fuime.com/start" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/start" />
+    <meta property="og:title" content="Get in line." />
+    <meta
+      property="og:description"
+      content="A scroll that flies into the laptop on the desk and lands on the sign-up. One email when it's your turn."
+    />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Get in line." />
+    <meta
+      name="twitter:description"
+      content="A scroll that flies into the laptop on the desk and lands on the sign-up. One email when it's your turn."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- The dive is the whole page here, not a thing a third of the way down
+         it, so the two fetches that gate it are asked for in the head instead
+         of being discovered by a module several round trips later.
+
+         The track is what tells fx/dive.js where the laptop screen is in every
+         frame; nothing arms until it lands. `crossorigin` is not decoration —
+         it makes this preload's credentials mode match the fetch in dive.js
+         (`credentials: 'same-origin'`), and a mismatch there is not a no-op,
+         it is the same file downloaded twice.
+
+         Then the first frame of whichever ladder this viewport will use. It is
+         the one frame that has to be in hand before anything can be drawn, and
+         the media queries mirror LADDERS in fx/dive.js — 900px, the same
+         breakpoint, deliberately duplicated here because a <link> cannot ask a
+         module a question. -->
+    <link rel="preload" as="fetch" href="/dive/track.json" crossorigin />
+    <link
+      rel="preload"
+      as="image"
+      href="/dive-m/f_0001.webp"
+      media="(max-width: 900px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/dive/f_0001.webp"
+      media="(min-width: 901px)"
+    />
+    <!-- First paint, inline and above every script: the browser must never get a
+         chance to paint white before the loader's own background arrives. -->
+    <meta name="theme-color" content="#141420" />
+    <meta name="darkreader-lock" />
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. Without this the sign-up at the end of the dive
+         never appears for a reader with scripts off. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+  </head>
+
+  <body>
+    <!-- The mark, defined once and referenced everywhere it appears. The
+         reset makes every svg display:block, so a 0x0 box occupies no room
+         and needs no positioning to stay out of the flow. -->
+    <svg width="0" height="0" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── first-visit loader ───────────────────────────────────────────
+         The arch fills from the bottom as a progress meter. Suppressed for
+         the rest of the session by the sessionStorage guard above. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <main>
+      <!-- ── the dive ──────────────────────────────────────────────────────
+           Scroll flies into the laptop on that desk and lands on the sign-up.
+
+           The panel below is not a picture of a screen — it is the sign-up
+           itself, a real form that happens to be registered onto the laptop's
+           glass. That is the whole idea of the page: you do not arrive
+           somewhere and then find a form, you fly into the form.
+
+           It is in the markup from first paint and it is styled by
+           style.css's resting rules, so it exists whether or not the dive ever
+           runs. fx/dive.js only takes it out of the flow and maps it onto the
+           screen once there are frames to hand off from; before that, and for
+           anyone whose dive will never run, the poster above it and this panel
+           are simply two blocks stacked in a page.
+
+           The panel carries real controls, so fx/dive.js holds `inert` on it
+           for the whole flight and drops it when the panel comes to rest — an
+           email field at opacity 0 is one a Tab key finds long before an eye
+           does. -->
+      <section class="dive" data-fx-dive>
+        <div class="dive__track">
+          <div class="dive__stage">
+            <canvas class="dive__canvas" aria-hidden="true"></canvas>
+            <img
+              class="dive__still"
+              src="/img/dive-end.webp"
+              width="1920"
+              height="1080"
+              fetchpriority="high"
+              decoding="async"
+              alt="The same laptop, close up: the fuime sign-up open on the screen at the end of the flight."
+            />
+
+            <div class="dive__app dive__app--join">
+              <div class="dv-join">
+                <svg
+                  class="dv-join__mark"
+                  viewBox="0 0 713 582"
+                  aria-hidden="true"
+                >
+                  <use href="#arch" />
+                </svg>
+                <p class="dv-join__eyebrow">Early access</p>
+                <h1 class="dv-join__h">
+                  You're already working.<br />Start billing.
+                </h1>
+                <p class="dv-join__lead">
+                  Send a real invoice, get paid into an account you run day to
+                  day, and know what you owe at tax time. A parent co-signs
+                  once. After that it's yours.
+                </p>
+                <form class="capture" data-source="start-dive" novalidate>
+                  <div class="capture__row">
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="you@school.edu"
+                      autocomplete="email"
+                      aria-label="Email address"
+                      required
+                    />
+                    <button type="submit" class="btn btn--accent">
+                      Get early access
+                    </button>
+                  </div>
+                  <p class="capture__msg" role="status" aria-live="polite"></p>
+                  <p class="capture__done">
+                    You're on the list. We'll email you once.
+                  </p>
+                </form>
+                <p class="dv-join__fine">
+                  One email when it's your turn, nothing after that. fuime is
+                  not a bank — payments go from your client into your own Stripe
+                  account.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Outside the pinned stage on purpose: it belongs to the first
+               screen of the track, so it leaves on the first screen of scroll
+               instead of riding the stage down the whole dive. -->
+          <p class="dive__cue" aria-hidden="true"><span></span>Scroll</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
