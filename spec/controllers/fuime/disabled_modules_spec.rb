@@ -44,6 +44,27 @@ RSpec.describe AchTransfersController, type: :controller do
       expect(disabled).not_to include("invoices", "receipts", "comments", "canonical_transactions")
     end
 
+    # Reimbursements are "hide nav", not disable (FUIME_HACKATHON_SPEC §WON'T).
+    # Blocking them silently no-opped report PATCHes — success responses that
+    # changed nothing.
+    it "does NOT disable reimbursements" do
+      expect(disabled).not_to include("reimbursement", "reimbursements")
+    end
+
+    # The v4 API exposes the same capabilities under a different path. Blocking
+    # only the HTML controller leaves the API as an open back door.
+    it "disables the API twin of every disabled HTML module that has one" do
+      api_controllers = Dir.glob(Rails.root.join("app/controllers/api/v4/*_controller.rb"))
+                           .map { |f| "api/v4/#{File.basename(f, '_controller.rb')}" }
+
+      unguarded = api_controllers.reject { |api| disabled.include?(api) }.select do |api|
+        disabled.include?(api.sub("api/v4/", ""))
+      end
+
+      expect(unguarded).to be_empty,
+                           "API endpoints left open while their HTML module is disabled: #{unguarded.join(', ')}"
+    end
+
     # A typo here silently disables nothing, so assert each prefix resolves to
     # a real controller or namespace on disk.
     it "only lists prefixes that exist" do

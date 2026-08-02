@@ -96,7 +96,11 @@ RSpec.describe Api::V4::CardGrantsController do
                 "admin"    => false,
                 "auditor"  => false,
                 "avatar"   => "https://gravatar.com/avatar/stubbed",
-                "birthday" => nil,
+                # Fuime: the user factory now supplies a birthday by default,
+                # because Fuime treats unknown age as a minor requiring a
+                # guardian. Assert against the record rather than hardcoding
+                # nil, so this doesn't re-break if the default changes.
+                "birthday" => user.birthday&.to_date&.iso8601,
               },
               "created_at"              => disbursement.created_at.iso8601(3)
             }

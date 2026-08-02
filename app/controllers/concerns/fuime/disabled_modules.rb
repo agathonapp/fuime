@@ -35,7 +35,13 @@ module Fuime
       "check_deposits",
       "wires",
       "disbursements",
-      "reimbursement", # namespace: reimbursement/reports, /expenses, ...
+
+      # NOTE: reimbursements are deliberately NOT here. FUIME_HACKATHON_SPEC
+      # lists them as "hide nav", not disable — a teen reimbursing themselves
+      # for a business expense is a legitimate flow, and the money moves within
+      # Fuime rather than out of it. Blocking them silently no-opped report
+      # updates: a PATCH that returned success while changing nothing, which is
+      # worse than either allowing the action or plainly refusing it.
 
       # Nonprofit fundraising — not applicable to a teen business.
       "donations",
@@ -55,6 +61,17 @@ module Fuime
       "emburse_cards",
       "emburse_card_requests",
       "emburse_transactions",
+
+      # The v4 API exposes the same capabilities under a different path, so
+      # blocking only the HTML controllers would leave an open back door.
+      "api/v4/ach_transfers",
+      "api/v4/card_grants",
+      "api/v4/check_deposits",
+      "api/v4/checks",
+      "api/v4/disbursements",
+      "api/v4/donations",
+      "api/v4/stripe_cards",
+      "api/v4/wires",
     ].freeze
 
     private

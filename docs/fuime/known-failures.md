@@ -63,7 +63,11 @@ LoadError: cannot load such file -- sassc
 |---|---|
 | no JS, no CSS | 320 examples, 118 failures |
 | JS built (`yarn build`) | 317 examples, **115 failures** |
-| JS + CSS built (`+ yarn build:css`) | measurement in flight |
+| JS + CSS built (`+ yarn build:css`) | 320 examples, **49 failures** |
+| JS + CSS + the fixes below | 320 examples, **23 failures**, 14 pending |
+
+Versus **87 failures** at the pre-hardening baseline (`f51302a54`, no assets
+built). Two genuine regressions were found in that 23 and fixed — see below.
 
 Building the JS alone removed only 3 failures. The dominant cause was the
 missing stylesheet, not the missing bundle — an earlier revision of this file
@@ -89,12 +93,40 @@ absent. The fix is to build the CSS, not to add the gem.
    The suite was already substantially red — 87 failures before any hardening
    work.
 
-   **The +31 delta is NOT explained.** The baseline run was filtered to the
-   count line, so there is no per-spec list to diff against `main`'s. The
-   plausible reading is that the hardening pass added view-rendering specs
-   which hit the same missing bundle, but that is a guess and is recorded here
-   as one. Re-run both sides with assets built and with the failure list
-   retained before drawing any conclusion.
+## The +31 delta: two real regressions, found by diffing per-spec
+
+An earlier revision recorded this delta as unexplained, then guessed it was
+just new view-rendering specs. Re-running the baseline while **retaining the
+failure list** — rather than filtering to the count — made the answer immediate.
+Per-file counts, baseline vs `main`:
+
+| Spec file | Baseline | `main` |
+|---|---|---|
+| `ach_transfers_controller_spec` | 1 | 5 |
+| `increase_checks_controller_spec` | 1 | 5 |
+| `reimbursement/reports_controller_spec` | 0 | 11 |
+| `reimbursement/expenses_controller_spec` | 0 | 3 |
+| `api/v4/card_grants_controller_spec` | 0 | 1 |
+
+Both regressions came from `Fuime::DisabledModules`:
+
+1. **It blocked GETs, not just writes.** Fuime must not *originate* a payment
+   or issue a card — all POST/PATCH/PUT/DELETE. Blocking reads stopped anyone
+   viewing records inherited from upstream (an ACH transfer's detail page,
+   linked from the transaction drawer). Prevents nothing; breaks real paths.
+2. **Reimbursements should never have been on the list.**
+   `FUIME_HACKATHON_SPEC` lists them as "hide nav", not disable. Blocking them
+   silently no-opped report PATCHes — a success response that changed nothing,
+   which is worse than either allowing the action or plainly refusing it.
+
+A third issue surfaced the same way: `api/v4/card_grants` was reachable while
+the HTML `card_grants` controller was blocked — an open API back door. Eight
+`api/v4/*` paths are now covered, with a spec that fails if any disabled HTML
+module keeps an unguarded API twin.
+
+**Lesson for the next baseline:** keep the failure list, not just the count.
+Filtering to `grep "examples,"` cost several rounds of guessing at a delta that
+a diff answered in one command.
 
 **Fix before running these locally:**
 
