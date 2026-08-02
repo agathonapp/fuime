@@ -191,7 +191,7 @@ services:
       - key: WAITLIST_NOTIFY_TO
         sync: false
       - key: WAITLIST_NOTIFY_FROM
-        value: fuime <hi@fuime.com>
+        value: fuime <rushil@fuime.com>
 
   - type: worker
     name: fuime-worker
