@@ -58,18 +58,41 @@ const get = (p, init) => fetch(BASE + p, { redirect: 'manual', ...init })
 try {
   await waitForBoot()
 
-  await run('serves index.html at /', async () => {
+  await run('serves the dive at /', async () => {
     const r = await get('/')
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /text\/html/)
-    assert.match(await r.text(), /fuime/i)
+    const body = await r.text()
+    // The dive, not the old marketing home: it preloads the frame track.
+    assert.match(body, /dive\/track\.json/, 'root should be start.html')
+    assert.match(body, /class="capture"/, 'root should carry the sign-up')
+  })
+
+  await run('serves the old marketing home at /home', async () => {
+    const r = await get('/home')
+    assert.equal(r.status, 200)
+    const body = await r.text()
+    assert.match(body, /id="how"/, '/home should be index.html')
   })
 
   await run('serves every top-level page extensionless', async () => {
-    for (const p of ['/pricing', '/parents', '/start']) {
+    for (const p of ['/pricing', '/parents', '/home']) {
       const r = await get(p)
       assert.equal(r.status, 200, `${p} should be 200, got ${r.status}`)
       assert.match(r.headers.get('content-type'), /text\/html/, p)
+    }
+  })
+
+  await run('moved pages redirect in a single hop', async () => {
+    for (const [from, to] of [
+      ['/start', '/'],
+      ['/start.html', '/'],
+      ['/index.html', '/home'],
+      ['/index', '/home'],
+    ]) {
+      const r = await get(from)
+      assert.equal(r.status, 308, `${from} status`)
+      assert.equal(r.headers.get('location'), to, `${from} -> ${to}`)
     }
   })
 
@@ -104,6 +127,19 @@ try {
     const slash = await get('/parents/')
     assert.equal(slash.status, 308)
     assert.equal(slash.headers.get('location'), '/parents')
+  })
+
+  await run('every sign-up carries the paper plane', async () => {
+    // The confirmation animates the address away. If the markup drifts out of
+    // one page the CSS silently does nothing there, which is invisible in
+    // review and obvious to a user.
+    for (const p of ['/', '/home', '/pricing', '/parents']) {
+      const body = await (await get(p)).text()
+      const dones = (body.match(/class="capture__done"/g) || []).length
+      const planes = (body.match(/class="capture__plane"/g) || []).length
+      assert.ok(dones > 0, `${p} has no confirmation block`)
+      assert.equal(planes, dones, `${p}: ${planes} planes for ${dones} forms`)
+    }
   })
 
   await run('security headers on every response', async () => {

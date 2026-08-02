@@ -61,6 +61,16 @@ const REDIRECTS = new Map([
   ['/signup', `${APP_ORIGIN}/users/auth`],
 ])
 
+// The dive moved to / and the old marketing home moved to /home, so the two
+// filenames no longer sit where the generic .html rule below would put them.
+// Both old URLs still work; they just land on the one canonical address.
+const INTERNAL_REDIRECTS = new Map([
+  ['/start', '/'],
+  ['/start.html', '/'],
+  ['/index.html', '/home'],
+  ['/index', '/home'],
+])
+
 // Everything the public may fetch. The site root doubles as the deploy root on
 // Render, so package.json, server.js, .env and test/ all sit in the same
 // directory as index.html — serving the whole directory would publish them.
@@ -93,7 +103,12 @@ async function resolveFile(pathname) {
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 
+  // The dive is the front door. The older marketing home is still served, at
+  // /home, because pricing and parents link back to it.
   if (pathname === '/') {
+    return { path: join(ROOT, 'start.html'), ext: '.html' }
+  }
+  if (pathname === '/home') {
     return { path: join(ROOT, 'index.html'), ext: '.html' }
   }
 
@@ -194,10 +209,19 @@ const server = createServer(async (req, res) => {
     return waitlist({ method: req.method, headers: req.headers, body }, shim(res))
   }
 
+  // Moved pages first, so /start.html reaches / in one hop rather than
+  // bouncing through /start on the way.
+  const moved = INTERNAL_REDIRECTS.get(pathname)
+  if (moved) {
+    res.statusCode = 308
+    res.setHeader('Location', moved)
+    return res.end()
+  }
+
   // Canonicalise /pricing.html → /pricing so the pretty URL is the only one.
   if (pathname.endsWith('.html')) {
     res.statusCode = 308
-    res.setHeader('Location', pathname.replace(/(?:\/index)?\.html$/, '') || '/')
+    res.setHeader('Location', pathname.replace(/\.html$/, '') || '/')
     return res.end()
   }
 

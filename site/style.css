@@ -860,6 +860,61 @@ section[id] {
   display: flex;
 }
 
+/* The address takes off as a paper plane: it climbs in from where the field
+   was, banks, and settles beside the confirmation — which then follows it in.
+   It lands rather than exits, because this icon is the receipt. A plane that
+   flies off screen leaves the sentence sitting next to an empty gap. */
+.capture__plane {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+.capture[data-done='true'] .capture__plane {
+  animation: plane-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.capture[data-done='true'] .capture__done span {
+  animation: done-in 0.45s ease-out 0.3s both;
+}
+
+@keyframes plane-in {
+  0% {
+    transform: translate(-14px, 16px) rotate(-18deg) scale(0.7);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  /* Overshoots the climb, then eases back level — the bank that sells it. */
+  65% {
+    transform: translate(3px, -5px) rotate(9deg) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes done-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A plane that flies is decoration; the confirmation is the message. Motion
+   off means the icon simply sits there and the text is legible immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .capture[data-done='true'] .capture__plane,
+  .capture[data-done='true'] .capture__done span {
+    animation: none;
+  }
+}
+
 /* ── grid + cards ──────────────────────────────────────────────────────── */
 
 .grid {
