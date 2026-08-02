@@ -67,6 +67,62 @@ namespace :fuime do
     ensure_transfer_limit!(user)
   end
 
+  desc "Mark a phone number verified so a card can be issued (test mode only)"
+  task :verify_phone, [:email, :phone_number] => :environment do |_t, args|
+    if args[:email].blank?
+      puts "Usage: rake fuime:verify_phone[email@example.com]"
+      puts "       rake fuime:verify_phone[email@example.com,+12025550123]"
+      puts "       (the number is optional if the user already has one on file)"
+      exit 1
+    end
+
+    # This forges the result of an SMS verification, and a verified number is
+    # what gates card issuing (StripeCardholderService::Create refuses without
+    # one). Fine against test-mode Stripe, where a card spends nothing; a real
+    # anti-fraud control anywhere else.
+    #
+    # Gated on StripeService.live? rather than Rails.env, because this fork
+    # deliberately runs test-mode Stripe *in production* — RAILS_ENV would
+    # refuse on the deployed demo, which is the one place this is needed.
+    if StripeService.live?
+      puts "Refusing: STRIPE_MODE=live. Verify the number for real."
+      exit 1
+    end
+
+    user = User.find_by(email: args[:email])
+    if user.nil?
+      puts "User not found with email: #{args[:email]}"
+      exit 1
+    end
+
+    # Saved separately: `on_phone_number_update` clears phone_number_verified
+    # whenever the number changes, so setting both at once would undo itself.
+    if args[:phone_number].present?
+      user.phone_number = args[:phone_number]
+      unless user.save
+        # Phonelib rejects the reserved 555-01xx fictional range, which is the
+        # first thing anyone reaches for. Say so instead of raising a backtrace.
+        puts "Could not set that number: #{user.errors.full_messages.join('; ')}"
+        exit 1
+      end
+    end
+
+    if user.phone_number.blank?
+      puts "#{user.email} has no phone number on file — pass one:"
+      puts "  rake fuime:verify_phone[#{user.email},+12025550123]"
+      exit 1
+    end
+
+    user.phone_number_verified = true
+    unless user.save
+      puts "Could not verify: #{user.errors.full_messages.join('; ')}"
+      exit 1
+    end
+
+    puts "#{user.email}: #{user.phone_number} marked verified (Stripe mode: #{StripeService.mode})"
+    puts "  Cards can now be issued to this user on non-Playground organizations."
+  end
+
   desc "Set an admin's daily transfer approval limit, in dollars"
   task :set_transfer_limit, [:email, :dollars] => :environment do |_t, args|
     if args[:email].blank? || args[:dollars].blank?

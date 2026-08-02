@@ -35,8 +35,12 @@ RSpec.describe AchTransfersController, type: :controller do
       expect(disabled).to include("donations", "card_grants")
     end
 
-    it "covers card issuing" do
-      expect(disabled).to include("stripe_cards")
+    # Card issuing was here until test-mode issuing was turned back on. The
+    # HTML surface is deliberately open now; the v4 API is not (see below), and
+    # Emburse — a dead upstream integration Fuime never had — stays blocked.
+    it "no longer covers HTML card issuing, but still covers Emburse" do
+      expect(disabled).not_to include("stripe_cards", "stripe_cardholders")
+      expect(disabled).to include("emburse_cards", "emburse_card_requests")
     end
 
     # Fuime's own money-in and record-keeping must stay reachable.
