@@ -55,6 +55,31 @@ The full suite takes a long time. Run the Fuime-specific specs first:
 
 ## Gotchas hit
 
+- **Build BOTH the JS bundle and the CSS before running controller or request
+  specs.** They render real views, and `app/views/layouts/_head.html.erb` calls
+  both `javascript_include_tag "bundle"` and `stylesheet_link_tag
+  "application"`. In a fresh container these produce two different errors and
+  ~115 failures that look exactly like a mass regression:
+
+  - no JS → `ActionView::Template::Error: The asset "bundle.js" is not present
+    in the asset pipeline`
+  - no CSS → `LoadError: cannot load such file -- sassc`
+
+  The `sassc` error is misleading. `sassc` is not in the Gemfile and is not
+  meant to be: CSS is built by postcss (`yarn build:css`). Sprockets only
+  reaches for its sassc processor because the prebuilt `application.css` is
+  missing, so the fix is to build the CSS, not to add the gem.
+
+  ```bash
+  docker compose run --rm -e RAILS_ENV=test \
+    -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
+    web bash -c 'yarn install && yarn build && yarn build:css'   # ~5 min
+  ```
+
+  Both write to `app/assets/builds/` (`bundle.js`, `application.css`,
+  `admin.css`, `mailer.css`), not `public/`. CI runs these as part of setup,
+  so neither failure shows up there.
+
 - **`DATABASE_URL` must be passed explicitly** to `docker compose run`. The
   compose file only sets `REDIS_URL`; without the override, Rails looks for a
   local socket and fails.
