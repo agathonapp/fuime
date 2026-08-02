@@ -649,3 +649,43 @@ Note: keys registered against the Render hostname stop working if the site
 moves to a custom domain — WebAuthn credentials are bound to the RP ID. Both
 hosts are listed once `LIVE_URL_HOST` is set, but existing keys must be
 re-registered after a domain change.
+
+## Canonical Domain: fuime.com
+
+`LIVE_URL_HOST=fuime.com` is set on both services, so mailer links, route
+URL generation, WebAuthn origins, and markdown link handling all follow it.
+
+`fuime-web.onrender.com` stays resolvable (Render owns that DNS), so instead
+of serving the app there, `CanonicalHost` middleware 301s it to fuime.com.
+That leaves one address for search, cookies, and WebAuthn.
+
+Middleware rather than a controller filter, so it also covers routes that skip
+ApplicationController's callbacks. Path and query string are preserved.
+
+**Deliberately exempt** — these must answer on any hostname:
+- `/up` — Render probes the health check on the internal hostname. Redirecting
+  it fails the check and takes the service down.
+- `/fuime/webhooks/stripe` — a 301 on a POST can drop the body, and Stripe's
+  signature covers the original request. The endpoint verifies its own
+  signature, so leaving it reachable is safe.
+
+The middleware only activates when `LIVE_URL_HOST` is set AND differs from
+`RENDER_EXTERNAL_HOSTNAME`, so it cannot redirect to itself in a loop.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `CanonicalHost` middleware | Old URL served a full second copy of the app | `app/middleware/canonical_host.rb`, `config/application.rb` |
+| Rebrand SEO meta tags | Every page shipped HCB nonprofit marketing copy and a hardcoded `og:url` of `hcb.hackclub.com` | `app/views/application/_seo_meta_tags.html.erb` |
+| Disable brand download menu | `/brand/fuime-logo-{light,dark}.png` never existed; the links 404'd on the public storefront | `app/views/application/_logo.html.erb` |
+
+Verified: old host 301s in a single hop with path+query intact; `/up` still
+200 on the old host; fuime.com serves without redirecting; `og:url` is
+`https://fuime.com/`; zero `hcb.hackclub.com` references in storefront HTML.
+
+**Before launch:**
+- Add real logo PNGs to `public/brand/` and restore the download menu.
+- Replace the social image with a 1200x630 card (currently reuses
+  `apple-touch-icon.png`, which exists but is small and square).
+- WebAuthn credentials bind to the domain. `allowed_origins` lists both hosts,
+  but any key registered on the Render hostname must be re-registered on
+  fuime.com. Currently zero keys exist, so there is nothing to migrate.

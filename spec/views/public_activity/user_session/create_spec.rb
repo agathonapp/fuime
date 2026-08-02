@@ -57,11 +57,16 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
                                                                           "whole dashboard 500s, since this renders in the activity feed."
     end
 
-    it "falls back to a placeholder instead of a name" do
+    # `allow_unverified: true` bypasses the nil-return, so an unverified target
+    # still resolves to its real name. The unguarded `.name` crashed only
+    # because it went through the *default* accessor; the fix is what lets the
+    # name through at all. The `|| "an account"` fallback is for a session with
+    # no user row whatsoever — covered separately below.
+    it "names the unverified account by reading through the unverified accessor" do
       render_activity_for(session, current_user: admin)
 
       expect(rendered).to include("impersonated")
-      expect(rendered).to include("an account")
+      expect(rendered).to include(shadow.name)
     end
   end
 
@@ -86,10 +91,32 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
     end
   end
 
-  # The impersonation branch is admin-only; a non-auditor viewer must not be
-  # shown the row at all. This previously called `current_user.auditor?`
-  # without a safe navigation, the same nil-dereference shape as the bug above.
+  # The `|| "an account"` fallback belongs to a session with no user row at all
+  # — the shape `SessionsHelper#create_session` builds before a login resolves.
+  context "when the impersonated session has no user at all" do
+    let(:session) do
+      create(
+        :user_session,
+        user: nil,
+        verified: false,
+        impersonated_by: admin,
+        expiration_at: 1.hour.from_now,
+      )
+    end
+
+    it "falls back to a placeholder rather than raising" do
+      expect { render_activity_for(session, current_user: admin) }.not_to raise_error
+
+      expect(rendered).to include("impersonated")
+      expect(rendered).to include("an account")
+    end
+  end
+
+  # The impersonation branch is auditor-only; a regular viewer must not be shown
+  # the row at all.
   context "when the viewer is not an auditor" do
+    let(:viewer) { create(:user) }
+
     let(:shadow) { create(:user, verified: false, creation_method: :first_robotics_form) }
 
     let(:session) do
@@ -102,8 +129,8 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
       )
     end
 
-    it "renders nothing rather than raising when there is no current user" do
-      expect { render_activity_for(session, current_user: nil) }.not_to raise_error
+    it "renders nothing" do
+      render_activity_for(session, current_user: viewer)
 
       expect(rendered.strip).to be_empty
     end
