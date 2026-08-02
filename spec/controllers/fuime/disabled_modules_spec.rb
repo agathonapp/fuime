@@ -55,4 +55,28 @@ RSpec.describe AchTransfersController, type: :controller do
       expect(missing).to be_empty, "unknown controller prefixes: #{missing.join(', ')}"
     end
   end
+
+  describe "the guardianship allowlist" do
+    subject(:allowed) { Fuime::GuardianshipEnforcement::ALLOWED_CONTROLLER_PATHS }
+
+    # An entry naming a controller that isn't routed is dead weight that reads
+    # as protection. Three of these shipped ("sessions",
+    # "active_storage/blobs", "active_storage/representations") and matched
+    # nothing — this is the check that finds them.
+    it "only lists controllers that are actually routed" do
+      routed = Rails.application.routes.routes.filter_map { |r| r.defaults[:controller] }.uniq
+
+      expect(allowed - routed).to be_empty
+    end
+
+    # The allowlist is the escape hatch from the platform's central legal
+    # control, so it must stay small and deliberate.
+    it "does not include anything a parked teen doesn't need" do
+      expect(allowed).not_to include("users/wrapped", "users/first", "events")
+    end
+
+    it "lets a parked teen reach the invite page and their own settings" do
+      expect(allowed).to include("guardianships", "users", "logins")
+    end
+  end
 end

@@ -37,14 +37,18 @@ module Fuime
       "guardianships",        # the whole point: invite your guardian
       "users",                # profile / settings / date of birth
       "users/email_updates",  # confirming an email change
-      "logins",               # sign in
-      "sessions",             # sign out
+      "logins",               # sign in AND sign out — there is no separate
+                              # sessions controller in this app
       "static_pages",         # home, legal, help
       "errors",
       "fuime/storefronts",    # public pages
       "rails/health",
-      "active_storage/blobs",
-      "active_storage/representations",
+      # Active Storage's real routed controller names — "active_storage/blobs"
+      # and "active_storage/representations" are NOT routed and matched nothing.
+      "active_storage/blobs/proxy",
+      "active_storage/blobs/redirect",
+      "active_storage/representations/proxy",
+      "active_storage/representations/redirect",
       "active_storage/disk",
     ].freeze
 
