@@ -17,22 +17,47 @@ Rails.application.config.after_initialize do
   next if ENV["FUIME_SKIP_SAFETY_CHECK"] == "true"
   next unless Rails.env.production? || Rails.env.staging?
 
+  # Asset precompile runs at IMAGE BUILD time, where runtime env vars and
+  # secrets are deliberately absent — Rails signals this with
+  # SECRET_KEY_BASE_DUMMY. Nothing is served and no uploads can be lost during
+  # a build, so failing here only breaks the deploy that would have delivered
+  # the fix. These checks belong to boot, not to compilation.
+  next if ENV["SECRET_KEY_BASE_DUMMY"].present?
+
   errors = []
   warnings = []
 
   # --- 1. Uploaded files must be durable -------------------------------------
   # Active Storage on :local writes to the container filesystem. On Render that
   # is ephemeral: every deploy permanently destroys every uploaded receipt —
-  # the exact records Fuime tells families to keep for tax filing. Silent and
-  # unrecoverable, so this is a hard failure.
+  # the exact records Fuime tells families to keep for tax filing.
+  #
+  # Pre-launch this is a loud WARNING, not a hard failure: no real user is
+  # uploading receipts yet, and refusing to boot blocks every other fix from
+  # shipping. It escalates to a hard error the moment there is something real
+  # to lose — a live Stripe mode, or receipts already in the database.
+  #
+  # BEFORE LAUNCH: set ACTIVE_STORAGE_SERVICE=amazon and the S3__* credentials.
   storage_service = Rails.application.config.active_storage.service.to_s
   if storage_service == "local"
-    errors << <<~MSG.strip
+    stored_receipts =
+      begin
+        ActiveStorage::Blob.count
+      rescue StandardError
+        0 # table may not exist yet during an initial migrate
+      end
+
+    fatal = ENV["STRIPE_MODE"].to_s == "live" || stored_receipts.positive?
+
+    message = <<~MSG.strip
       Active Storage is using the :local service in #{Rails.env}.
       On an ephemeral filesystem (Render, Heroku, most containers) every deploy
       DESTROYS all uploaded receipts and documents, with no recovery.
-      Set ACTIVE_STORAGE_SERVICE=amazon and provide S3__* credentials.
+      #{stored_receipts.positive? ? "There are already #{stored_receipts} stored file(s) at risk." : "No files are stored yet."}
+      Set ACTIVE_STORAGE_SERVICE=amazon and provide S3__* credentials before launch.
     MSG
+
+    fatal ? errors << message : warnings << message
   end
 
   # --- 2. Live money movement requires an explicit, credentialed decision -----

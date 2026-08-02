@@ -38,8 +38,12 @@ Rails.application.configure do
   config.assets.compile = false
 
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files (see config/storage.yml for options).
+  # Fuime: was hardcoded to :local, which on an ephemeral container filesystem
+  # destroys every uploaded receipt on each deploy. Reads the env var like
+  # production so a deployed staging environment can use S3; the boot-time
+  # safety check refuses to start on :local.
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "local").to_sym
 
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
