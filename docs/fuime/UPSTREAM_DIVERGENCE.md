@@ -569,3 +569,83 @@ queried `Event::Application` directly. Nothing about the review workflow moved.
 - `pending_identity_vault_verifications_task_size` calls
   `identity.hackclub.com`. Already `FUIME-DISABLED` in the admin_tools view, but
   the method remains.
+
+## Loops.so Contact Sync Removal (Resend is the only email service)
+
+Fuime already sends **all** transactional email through Resend via SMTP
+(`config/application.rb` defaults to `smtp.resend.com`). Loops.so was never an
+email sender in this codebase — it was a separate **marketing-CRM contact sync**
+that pushed user profiles outbound and subscribed people to a mailing list.
+
+**Why not "port Loops to Resend":** they are not equivalent services. Resend
+Audiences stores only email, first name, last name, and unsubscribe status — it
+has no custom fields. Most of what this sync pushed (birthday, last-seen,
+last-login, billing address, `hasActiveOrg`, `hasCardGrant`, mailing-list
+segmentation) has nowhere to land in Resend. Rather than ship a lossy port of a
+CRM Fuime does not use, the sync is removed. Resend keeps doing what it already
+does: sending the actual mail.
+
+This also closes the last outbound path for teen PII. The Airtable removal above
+had already rerouted teenagers' legal name / date of birth / home address from
+Hack Club's Airtable into Loops; now that data does not leave Postgres at all.
+
+| Change | Why | Files |
+|---|---|---|
+| Deleted `UserService::SyncWithLoops` | Pushed name, birthday, address, last-seen/login and org+card flags to Loops | `app/services/user_service/sync_with_loops.rb` |
+| Deleted `User::SyncUserToLoopsJob` and `User::SyncToLoopsJob` | Per-user and nightly-backfill wrappers with nothing left to call | `app/jobs/user/sync_user_to_loops_job.rb`, `app/jobs/user/sync_to_loops_job.rb` |
+| Removed the `user_sync_to_loops_job` cron (daily 07:00) | Walked **every** user and synced each one outbound | `config/schedule.yml` |
+| Removed `after_update :queue_sync_with_loops_job, if: :verified?` and its method | Every verified-user update enqueued an outbound sync | `app/models/user.rb` |
+| Deleted `spec/models/user_loops_sync_spec.rb` | Tested only the enqueue-gating of a job that no longer exists | `spec/models/user_loops_sync_spec.rb` |
+
+**Kept deliberately:** the `users.subscribed_to_loops_at` column. Prime Directive 5
+is new-migrations-only, and dropping a column is irreversible; it is now simply
+unread. `was_onboarding?` also stays — `send_onboarded_email` still uses it.
+
+`LOOPS` / `LOOPS__MAILING_LIST` credentials are now referenced nowhere in the app.
+
+### Tests
+
+- `bundle exec rails zeitwerk:check` passes (whole app eager-loads).
+- `config/schedule.yml` parses; 65 jobs remain, none referencing Loops or Airtable.
+- `spec/models/user_spec.rb` + `spec/models/user_account_type_spec.rb`: 72 examples, 0 failures.
+- RuboCop on `app/models/user.rb`: the 2 remaining `Layout/ExtraSpacing` offenses
+  (lines 128–129, guardianship associations) are **pre-existing** — verified
+  identical on a clean stash — and were left alone.
+
+## Auth: Security Keys, Phone Verification, Email Verification
+
+**Security keys were broken in production.** WebAuthn validates the browser's
+origin against `config.allowed_origins`, which was built from `LIVE_URL_HOST`.
+That variable is unset on Render, so the allowed origin was the bare string
+`"https://"` and every registration and sign-in attempt failed.
+
+`rp_name` was also still `"Hack Club Bank"` — the name the browser/OS shows in
+the passkey prompt, so it was user-visible branding.
+
+**Phone verification hidden.** SMS login codes and phone 2FA go through Twilio
+Verify. `TWILIO__SMS_VERIFY__*` are unset, so "verify your phone number" could
+only ever fail. Gated behind `phone_verification_available?`; setting the
+Twilio credentials restores the UI automatically. The phone *field* remains, so
+a number can still be stored.
+
+**Email verification: none exists.** There is no email-verification flow in
+this codebase and no mailer for one. `User#verified` is set in
+`LoginsController#complete` when a login completes — receiving the login code
+*is* the verification. Nothing was missing or misdelivered.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| WebAuthn origin falls back to `RENDER_EXTERNAL_HOSTNAME` | `LIVE_URL_HOST` unset ⇒ origin `"https://"` ⇒ all keys fail | `config/initializers/webauthn.rb` |
+| `rp_name` → "Fuime" | Shown in the OS passkey prompt | `config/initializers/webauthn.rb` |
+| `phone_verification_available?` helper | Single switch for all phone UI | `app/helpers/users_helper.rb` |
+| Gate SMS/2FA card, warning, and modals | Twilio unconfigured; controls could not work | `app/views/users/edit_security.html.erb`, `app/views/users/edit.html.erb` |
+| "Sign in to HCB" → Fuime | Branding on the security page | `app/views/users/edit_security.html.erb` |
+
+Verified on production: `allowed_origins=["https://fuime-web.onrender.com"]`,
+`rp_name="Fuime"`, challenge generation succeeds, both settings templates
+compile, zero 500s.
+
+Note: keys registered against the Render hostname stop working if the site
+moves to a custom domain — WebAuthn credentials are bound to the RP ID. Both
+hosts are listed once `LIVE_URL_HOST` is set, but existing keys must be
+re-registered after a domain change.
