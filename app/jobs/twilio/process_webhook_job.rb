@@ -16,7 +16,7 @@ module Twilio
         send_reply(<<~MSG.squish)
           Hey! We couldn't find your account on Fuime; if you're looking to upload
           receipts, make sure your phone number is set and verified in your account's settings
-          (https://hcb.hackclub.com/my/settings).
+          (#{my_settings_url}).
         MSG
         return
       end
@@ -52,7 +52,7 @@ module Twilio
       elsif @receiptable
         send_reply("Attached #{receipts.count} #{"receipt".pluralize(receipts.count)} to #{@receiptable.memo}! #{hcb_code_url(@receiptable)}")
       else
-        send_reply("Added #{receipts.count} #{"receipt".pluralize(receipts.count)} to your Receipt Bin! https://hcb.hackclub.com/my/inbox")
+        send_reply("Added #{receipts.count} #{"receipt".pluralize(receipts.count)} to your Receipt Bin! #{my_inbox_url}")
       end
     end
 

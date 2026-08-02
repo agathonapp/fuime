@@ -5,10 +5,6 @@
 <% if @employees.empty? && organizer_signed_in? && !params[:q].present? && !params[:filter].present? %>
     <%= render "events/one_pager",
     title: "Contractors",
-    screenshots: {
-      light: "https://cdn.hackclub.com/019c562c-4ea3-7799-8e04-951af832dca6/hcb.hackclub.com_devhacks_employees__4_.png",
-      dark: "https://cdn.hackclub.com/019c562c-4cb2-7209-b2b0-9a4b8cb68f8b/hcb.hackclub.com_devhacks_employees__5_.png",
-    },
     hints: [
       {
         icon: "announcement",

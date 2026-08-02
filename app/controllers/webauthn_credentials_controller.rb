@@ -1,13 +1,19 @@
 # frozen_string_literal: true
 
 class WebauthnCredentialsController < ApplicationController
-  skip_before_action :signed_in_user, only: [:auth_options]
-  skip_after_action :verify_authorized, only: [:auth_options]
+  # NOTE: this controller has no `auth_options` action — it lives on
+  # UsersController as `webauthn_options` (GET /users/webauthn/auth_options).
+  # Two `skip_*_action ... only: [:auth_options]` callbacks used to sit here
+  # naming it. Rails 7.1 raises `AbstractController::ActionNotFound` for a
+  # callback listing an action the controller doesn't define, so EVERY request
+  # here raised before reaching an action, and no one could register a security
+  # key. All three actions below require a signed-in user and authorize, so
+  # there was nothing for the skips to do in the first place.
 
   def register_options
     user = User.friendly.find(params[:user_id])
 
-    authorize user, :edit?
+    authorize user, :manage_webauthn_credentials?
 
     if !user.webauthn_id
       user.update!(webauthn_id: WebAuthn.generate_user_id)
@@ -26,7 +32,7 @@ class WebauthnCredentialsController < ApplicationController
   def create
     user = User.friendly.find(params[:user_id])
 
-    authorize user, :edit?
+    authorize user, :manage_webauthn_credentials?
 
     webauthn_credential = WebAuthn::Credential.from_create(JSON.parse(params[:credential]))
 
@@ -38,7 +44,7 @@ class WebauthnCredentialsController < ApplicationController
         public_key: webauthn_credential.public_key,
         sign_count: webauthn_credential.sign_count,
         name: params[:name].presence || "#{browser.name} on #{browser.platform.name}",
-        authenticator_type: params[:type]
+        authenticator_type: authenticator_type_param
       )
 
       redirect_back fallback_location: edit_user_path(user), flash: { success: "Registered security key!" }
@@ -56,6 +62,22 @@ class WebauthnCredentialsController < ApplicationController
     credential.destroy
 
     redirect_back fallback_location: edit_user_path(params[:user_id]), flash: { success: "Deleted security key." }
+  end
+
+  private
+
+  # `params[:type]` arrives in one of two spellings for the same thing. The form
+  # radio posts `cross_platform` (the enum value), but the Stimulus controller
+  # overwrites it with `cross-platform` — the hyphenated spelling the WebAuthn
+  # API itself requires for `authenticator_attachment`. Passing the hyphenated
+  # form straight to the enum raised `'cross-platform' is not a valid
+  # authenticator_type`, so registering any roaming key (a YubiKey, a phone)
+  # failed while platform keys happened to work.
+  def authenticator_type_param
+    normalized = params[:type].to_s.tr("-", "_")
+    return nil unless WebauthnCredential.authenticator_types.key?(normalized)
+
+    normalized
   end
 
 end

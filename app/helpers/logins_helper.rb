@@ -1,14 +1,17 @@
 # frozen_string_literal: true
 
 module LoginsHelper
-  HACKATHONS = [
-    {
-      name: "Assemble",
-      time: "Summer 2022",
-      slug: "assemble",
-      background: "linear-gradient(180deg, rgb(0 0 0 / 20%) 0%, rgba(0 0 0 / 40%) 100%), url('https://cdn.hackclub.com/019c3145-9292-72ce-9c97-6e2fbddcc559/crowd.jpeg')"
-    }
-  ].map do |hackathon|
+  # Emptied for Fuime. The single entry was Hack Club's 2022 "Assemble"
+  # hackathon: a photo of its crowd served from cdn.hackclub.com, used as a
+  # login-page background, linking to a `/assemble` route that does not exist
+  # in this app.
+  #
+  # `sample_hackathon` has no callers anywhere in app/ or spec/ — the module is
+  # included via ApplicationHelper, which makes the method available but never
+  # invokes it — so nothing renders today either way. Kept rather than deleted
+  # (CLAUDE.md Rule 2); `sample_hackathon` now returns nil, so any future caller
+  # must handle the empty case.
+  HACKATHONS = [].map do |hackathon|
     hackathon[:url] = "/#{hackathon[:slug]}"
 
     hackathon

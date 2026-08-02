@@ -95,8 +95,12 @@ class Event
       @application.mark_approved!
       flash[:success] = "Application approved."
 
-      if @application.teen_led?
-        party = @application.contract.party :hcb
+      # Mirrors the guard in Event::Application's mark_approved callback: when no
+      # Fuime agreement is configured there is no contract to countersign, so
+      # send the approver to the submission summary instead of dereferencing nil.
+      party = @application.contract&.party(:hcb) if @application.teen_led?
+
+      if party
         party.update!(user: current_user)
         redirect_to contract_party_path(party)
       else

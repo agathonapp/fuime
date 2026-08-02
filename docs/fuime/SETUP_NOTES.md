@@ -2,6 +2,48 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Milestone 3 close-out.** Branch `fuime/m3-finish-brand-sweep`.
+Finished the brand sweep and wrote the missing `docs/fuime/BRAND_STRINGS.md`
+(read that before touching any `HCB`/`Hack Club` string — it classifies which
+are branding, which are ledger data, and which are legally required to stay).
+Disabled four surfaces that made claims Fuime cannot make — the fiscal
+sponsorship and verification letters (PDFs on Hack Club letterhead with a real
+employee's signature and EIN, one attesting an FDIC banking relationship), the
+termination agreement, and the Perks page — and closed three "trap pages"
+(Cards, Donations, Google Workspace) that showed a nav item, rendered fully,
+then bounced the only action on them. Also killed a credentialed cross-origin
+`fetch` to `blog.hcb.hackclub.com` that ran on every authenticated page load,
+and fixed the admin header logo rendering full-size over the page.
+**Verified against a `cafd73bba` baseline with assets built on both sides:
+zero new failures in all three scopes.** Two measurement traps are documented
+at the end of that UPSTREAM_DIVERGENCE entry — read them before trusting a
+spec run; one of them makes an early-terminated run look green.
+
+**2026-08-02 — Approval crash fixed; money-in wired up.** Branch
+`fuime/m3-finish-brand-sweep`. Approving a teen-led application 500'd on a nil
+contract (no DocuSeal template configured) — guarded, with a regression spec
+proven to catch it. The storefront Pay button was hardcoded `disabled` and
+nothing called `PaymentLinkService`; added `Fuime::CheckoutsController` +
+`POST /b/:slug/pay`. The 4% fee now posts as a visible ledger line and rebates
+proportionally on refunds/chargebacks (it previously lived only in Stripe
+metadata, so a refund would have left a teen net negative by the fee).
+**Gotcha that cost time:** several rspec containers can pile up against the one
+`bank_test` database and deadlock each other — `docker ps`, stop the strays, then
+`SELECT pg_terminate_backend(...)` before `rails db:schema:load`. Also note
+`db:test:prepare` can exit 0 having left the schema unloaded; `db:schema:load`
+is the reliable call.
+Also fixed the other half of that outage: approved applications never became
+businesses. `activate_event!` raised on a nil contract *inside* `with_lock`, so
+`Event.create!` rolled back with it; `tags:` blew up on `params[:tags]` being nil
+(a Ruby default does not apply to an explicit nil — this failed on ANY activation
+with no tags selected, contract or not); and the only Activate button in the app
+lived on the contract-party page, which does not exist without a contract.
+**Next:** click the payment through against live test-mode Stripe
+(`STRIPE__TEST__*` + `stripe listen`) — that is the one part not yet executed.
+**Also note:** the dashboard card bug reported this session was reproduced on the
+deployed Render app, which lags this branch. Check what is deployed before
+debugging a symptom you cannot reproduce locally.
+
 **2026-08-01 — Production hardening pass.** Branch `fuime/production-hardening`.
 Closed every *engineering* blocker from `PRODUCTION_READINESS.md`: guardianship is
 now an enforced control rather than a redirect, the webhook no longer double-posts

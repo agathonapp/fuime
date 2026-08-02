@@ -133,7 +133,9 @@
       <% end %>
     </div>
   </div>
-  <div class="w-full card bg-[url('https://cdn.hackclub.com/019dd791-107c-7e7f-b5d4-fed1b310938a/Screenshot%20From%202026-04-28%2023-48-02.png')] bg-left-top bg-cover min-h-[200px]"></div>
+  <%# Screenshot removed: it was served from cdn.hackclub.com (Prime Directive
+      4). The arbitrary-value Tailwind class also compiled the URL into all
+      three CSS bundles, so it shipped even to pages that never rendered it. %>
 </div>
 
 <div class="card my-4">

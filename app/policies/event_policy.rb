@@ -104,8 +104,16 @@ class EventPolicy < ApplicationPolicy
     is_public || auditor_or_reader?
   end
 
+  # FUIME-DISABLED: the org Cards page.
+  #
+  # Card issuing is explicitly a later phase (CLAUDE.md Milestone 5: "hide,
+  # don't delete, the Stripe Issuing/cards UI"). Fuime::DisabledModules already
+  # blocks stripe_cards/stripe_cardholders writes, but writes-only meant the
+  # nav item and overview page still rendered, offering a "Create card" button
+  # that could not work. Hidden here; nothing is deleted, so reviving this is
+  # reverting one method.
   def card_overview?
-    show? && record.approved? && record.plan.cards_enabled?
+    false
   end
 
   def card_overview_in_v4?
@@ -148,8 +156,16 @@ class EventPolicy < ApplicationPolicy
     auditor_or_reader? && !record.demo_mode?
   end
 
+  # FUIME-DISABLED: Google Workspace provisioning.
+  #
+  # `g_suite`, `g_suite_accounts` and `g_suite_aliases` are all in
+  # Fuime::DisabledModules, but that concern blocks writes only — so the nav
+  # item stayed visible and the overview page rendered in full, with every CTA
+  # on it bouncing off the write filter. Standard is the default plan for new
+  # orgs (EventService::Create) and it enables google_workspace, so this was
+  # shown to every Fuime business.
   def g_suite_overview?
-    auditor_or_reader? && is_not_demo_mode? && record.plan.google_workspace_enabled?
+    false
   end
 
   def g_suite_create?
@@ -200,8 +216,25 @@ class EventPolicy < ApplicationPolicy
     admin_or_manager? && record.plan.card_grants_enabled?
   end
 
+  # FUIME-DISABLED: the Perks page (events#promotions).
+  #
+  # Every perk on it is a Hack Club program Fuime cannot deliver: HCB stickers,
+  # Hack Club's 1Password / StickerNinja / StickerMule / Replit / GitHub
+  # partnerships, hackathon grants, free domains. Offering them to a teen
+  # running a Fuime business is a promise that cannot be kept, and the page was
+  # reachable by every org member — `auditor_or_reader?` was the loosest gate
+  # of any page in the app.
+  #
+  # The PVSA perk went further and told the user "Since you run on Fuime, you
+  # can issue Presidential Volunteer Service Awards" — an eligibility that
+  # depends on the 501(c)(3) status Fuime does not have.
+  #
+  # Gating here rather than at the route disables the nav item and the action
+  # together: EventsController#promotions calls `authorize @event`, and the nav
+  # entry in EventsHelper::NAV_ITEMS is built from `policy(event).promotions?`.
+  # Views and partials are left in place (CLAUDE.md Rule 2).
   def promotions?
-    auditor_or_reader?
+    false
   end
 
   def reimbursements_pending_review_icon?
@@ -235,8 +268,15 @@ class EventPolicy < ApplicationPolicy
     admin_or_manager? || (Flipper.enabled?(:member_subevent_creation, record) && member?)
   end
 
+  # FUIME-DISABLED: the Donations page.
+  #
+  # Donations are nonprofit fundraising — `donations`, `donation` and
+  # `recurring_donations` are already in Fuime::DisabledModules. A teen
+  # business does not solicit tax-deductible donations, and Fuime has no
+  # charitable status to make them deductible. Writes-only blocking left the
+  # nav item and the overview page live for every approved Standard-plan org.
   def donation_overview?
-    show? && record.approved? && record.plan.donations_enabled? && record.donation_page_enabled?
+    false
   end
 
   def donation_page?
@@ -267,8 +307,21 @@ class EventPolicy < ApplicationPolicy
     user&.auditor?
   end
 
+  # FUIME-DISABLED: the termination agreement PDF (events#termination).
+  #
+  # It generates a legal document terminating a *fiscal sponsorship* — "the
+  # Agreement between The Hack Foundation ('Hack Club') and <business>" —
+  # under which "Hack Club shall… transfer the balance of assets in Hack
+  # Club's restricted Fund" to a successor, defaulting to The Hack Foundation
+  # itself. Fuime is not a fiscal sponsor, holds no restricted fund, and
+  # cannot execute an agreement on Hack Club's behalf.
+  #
+  # Auditor-gated and unlinked upstream, so this was never reachable by a teen
+  # — but it is the same class of document as the fiscal sponsorship and
+  # verification letters disabled in config/routes.rb, and is closed for the
+  # same reason. The action and template remain (CLAUDE.md Rule 2).
   def termination?
-    user&.auditor?
+    false
   end
 
   def can_invite_user?

@@ -19,11 +19,9 @@
   <meta name="twitter:description" content="<%= description %>">
   <meta name="twitter:image" content="<%= share_image %>">
 
-  <%# Preconnect + preload the brand font so the Phantom Sans hero headline doesn't block LCP. %>
-  <link rel="preconnect" href="https://assets.hackclub.com" crossorigin>
-  <link rel="preload" as="font" type="font/woff2" href="https://assets.hackclub.com/fonts/Phantom_Sans_0.8/Bold.woff2" crossorigin>
-  <%# Product screenshots (incl. the above-the-fold hero image) load from this CDN. %>
-  <link rel="preconnect" href="https://cdn.hackclub.com">
+  <%# Font preconnect/preload removed with Phantom Sans — see _marketing.scss.
+      The cdn.hackclub.com preconnect went with it: Fuime must not open
+      connections to Hack Club infrastructure (Prime Directive 4). %>
 
   <script type="application/ld+json"> <%# erb_lint:disable AllowedScriptType %>
     {

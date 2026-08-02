@@ -6,10 +6,6 @@
 <% if @announcements.empty? && organizer_signed_in? %>
   <%= render "events/one_pager",
     title: "Announcements",
-    screenshots: {
-      light: "https://cdn.hackclub.com/019ce82d-380a-7bf0-89b7-600b22247f45/image.png",
-      dark: "https://cdn.hackclub.com/019ce82d-5120-79a5-928e-4745bec305a4/image.png"
-    },
     hints: [
       {
         icon: "announcement",

@@ -25,27 +25,10 @@
   <div class="grid-row text">
     <h3>General documents</h3>
     <div class="grid grid-cols-3 gap-4">
-      <% if @event.approved? && !@event.demo_mode? %>
-        <%= link_to event_verification_letter_path(event_id: @event.slug, format: "pdf") do %>
-          <li class="card card--hover h-100">
-            <div class="overflow-hidden" style="max-height: 250px;">
-              <%= image_tag event_verification_letter_url(event_id: @event.slug, format: "png"), width: 330, style: "max-width: 100%;" %>
-            </div>
-
-            <strong class="h3 block mt1 leading-[1.125]">Verification Letter</strong>
-            <%= user_mention @event.point_of_contact %>
-          </li>
-        <% end if @event.account_number %>
-        <%= link_to event_fiscal_sponsorship_letter_path(event_id: @event.slug, format: "pdf") do %>
-            <li class="card card--hover h-100 w-fit">
-              <div class="overflow-hidden" style="max-height: 250px;">
-                <%= image_tag event_fiscal_sponsorship_letter_url(event_id: @event.slug, format: "png"), width: 330, style: "max-width: 100%;" %>
-              </div>
-              <strong class="h3 block mt1 leading-[1.125]">Fiscal Sponsorship Confirmation</strong>
-              <%= user_mention @event.point_of_contact %>
-            </li>
-          <% end %>
-      <% end %>
+      <%# FUIME-DISABLED: the Verification Letter and Fiscal Sponsorship
+          Confirmation tiles. Both generated PDFs on Hack Club letterhead
+          asserting a fiscal-sponsorship and FDIC banking relationship Fuime
+          does not have. Routes removed in config/routes.rb. %>
       <%= render partial: "documents/document", collection: @active_documents&.general %>
       <%= render partial: "documents/document", collection: @active_common_documents.general %>
     </div>

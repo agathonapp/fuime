@@ -253,6 +253,10 @@ class Event
       return "We're reviewing your application" if submitted? || under_review?
       return "Start spending!" if event.present?
       return "" if rejected?
+      # Approved but not yet activated. Without this the method returns nil and
+      # the application card falls back to its "We're reviewing your
+      # application" default, contradicting the Approved badge next to it.
+      return "Waiting on Fuime to finish setting up your account" if approved?
     end
 
     def completion_percentage
@@ -344,7 +348,11 @@ class Event
       update!(last_viewed_at: Time.current, last_page_viewed:)
     end
 
-    def activate_event!(risk_level:, tags: [], point_of_contact: nil)
+    # `tags` arrives straight from `params[:tags]`, which is nil when the admin
+    # selects none — the default only applies to an omitted argument, not an
+    # explicit nil, so this raised `undefined method 'filter' for nil`.
+    def activate_event!(risk_level:, tags: nil, point_of_contact: nil)
+      tags = Array(tags)
       # With no Fuime agreement configured there is no contract to sign, so
       # activation proceeds on admin approval alone. Once a real template is
       # set, contracts exist again and the signed check below applies as before.
@@ -357,7 +365,11 @@ class Event
       self.with_lock do
         raise ArgumentError.new("Event was already created") if event.present?
 
-        poc_user = point_of_contact.presence || contract.party(:hcb).user
+        # With no contract there is no `hcb` party to fall back to, so an
+        # activation without an explicit point of contact would raise on nil.
+        poc_user = point_of_contact.presence || contract&.party(:hcb)&.user
+        raise ArgumentError, "Cannot activate #{hashid}: no point of contact and no contract to take one from" if poc_user.nil?
+
         Event.create!(
           name:,
           country: address_country,
@@ -366,7 +378,10 @@ class Event
           event_tags: tags.filter { |tag| EventTag::Tags::ALL.include?(tag) }.map { |tag| EventTag.find_or_create_by!(name: tag) },
           risk_level:
         )
-        contract.create_document!
+        # Only a signed contract produces a countersigned PDF to file. Without a
+        # configured agreement there is no document — this call raised on nil and
+        # aborted the whole activation, so the business was never created.
+        contract.create_document! if contract.present?
 
         service = OrganizerPositionInviteService::Create.new(event:, sender: poc_user, user_email: user.email, is_signee: true, role: :manager, initial: true)
         invite = service.model

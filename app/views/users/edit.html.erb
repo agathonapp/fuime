@@ -109,7 +109,9 @@
         <% end %>
       </turbo-frame>
     </div>
-    <div class="hidden flex-1 bg-smoke dark:bg-neutral-800 sm:grid h-screen"
+    <%# Hidden while onboarding_gallery is empty — an empty grid would render as
+        a bare grey half-screen next to the signup form. %>
+    <div class="hidden flex-1 bg-smoke dark:bg-neutral-800 <%= "sm:grid" if onboarding_gallery.any? %> h-screen"
          style="grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr);">
       <% onboarding_gallery.each do |image| %>
         <a href="<%= image[:url] %>" target="_blank" class="group relative flex w-full h-full min-w-0 min-h-0" style="background: <%= image[:overlay_color] %>">

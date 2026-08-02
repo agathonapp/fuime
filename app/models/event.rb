@@ -570,7 +570,10 @@ class Event < ApplicationRecord
     name
     revenue_fee
     country
-    slug "URL" do |slug| "https://hcb.hackclub.com/#{slug}" end
+    # Built from this deployment's own host. Upstream hardcoded
+    # hcb.hackclub.com, so a Fuime CSV export handed the user links into Hack
+    # Club's app, where their organization does not exist.
+    slug "URL" do |slug| Rails.application.routes.url_helpers.root_url.chomp("/") + "/#{slug}" end
     is_public "Transparent"
     users "Active teenagers" do |users| users.active_teenager.distinct.count end
   end

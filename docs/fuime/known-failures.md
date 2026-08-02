@@ -167,3 +167,27 @@ most of these; it was not attempted here.
 
 Full-suite baseline at this commit: **still not measured** (the suite is slow —
 budget well over an hour). This subset is not a claim about the suite as a whole.
+
+### `cafd73bba` vs. this branch — approval fix + money-in (2026-08-02)
+
+Measured with the worktree method above, on separate databases so the two runs
+could not contend (`bank_test` and `bank_baseline`), with **identical prebuilt
+assets copied into both** so the asset artifact described earlier could not skew
+the comparison.
+
+| Scope: `spec/controllers spec/policies spec/models` | Examples | Failures |
+|---|---|---|
+| `cafd73bba` (baseline) | 1382 | **34** |
+| This branch | 1407 (+25 new) | **34** |
+
+The failure lists are **byte-identical** — `comm -23` of the two sorted lists is
+empty. Zero regressions; the +25 examples are new passing specs.
+
+The 34 are all pre-existing, in modules untouched by this work:
+`ach_transfers`, `payroll/positions`, `wires`, `logins`, `user_session`,
+`organizer_position_invites`, `comment_policy`, `has_payment_recipient`. None
+overlap the seven application files changed here.
+
+Per the lesson recorded above, the failure **list** was kept, not just the
+count — which is what made "34 vs 34" provable rather than a coincidence of
+totals.

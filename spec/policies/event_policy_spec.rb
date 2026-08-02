@@ -3,6 +3,84 @@
 require "rails_helper"
 
 RSpec.describe EventPolicy, type: :policy do
+  # FUIME-DISABLED surfaces.
+  #
+  # Fuime::DisabledModules blocks writes but deliberately leaves GETs alone, so
+  # for Cards, Donations and Google Workspace the nav item stayed visible and
+  # the overview page rendered in full — every CTA on it bouncing off the write
+  # filter with "That feature isn't available on Fuime." Standard is the default
+  # plan for new organizations (EventService::Create) and it enables cards,
+  # donations, google_workspace and promotions, so every Fuime business saw all
+  # four.
+  #
+  # These predicates gate both the nav entry (EventsHelper::NAV_ITEMS) and the
+  # controller action's `authorize`, so pinning them false closes the page and
+  # the link together.
+  #
+  # Each example uses a manager on an approved Standard-plan organization —
+  # precisely the user upstream grants access to. A weaker subject would pass
+  # for the wrong reason.
+  describe "FUIME-DISABLED overview pages" do
+    let(:manager) { create(:user) }
+    # `approved` is the initial AASM state on Event, so a plain create is
+    # already approved — which is what card_overview?/donation_overview?
+    # required upstream.
+    let(:event) { create(:event, plan_type: Event::Plan::Standard) }
+
+    before { create(:organizer_position, event:, user: manager, role: :manager) }
+
+    subject(:policy) { described_class.new(manager, event) }
+
+    it "denies the Cards overview even though the plan enables cards" do
+      expect(event.plan.cards_enabled?).to eq(true)
+      expect(policy.card_overview?).to eq(false)
+    end
+
+    it "denies the Donations overview even though the plan enables donations" do
+      expect(event.plan.donations_enabled?).to eq(true)
+      expect(policy.donation_overview?).to eq(false)
+    end
+
+    it "denies the Google Workspace overview even though the plan enables it" do
+      expect(event.plan.google_workspace_enabled?).to eq(true)
+      expect(policy.g_suite_overview?).to eq(false)
+    end
+
+    it "denies the Perks page even though the plan enables promotions" do
+      expect(event.plan.promotions_enabled?).to eq(true)
+      expect(policy.promotions?).to eq(false)
+    end
+
+    # The termination PDF generates a fiscal-sponsorship termination agreement
+    # naming The Hack Foundation as the counterparty. Auditor-gated upstream,
+    # so an auditor is the subject that would have been allowed.
+    it "denies the termination agreement to an auditor" do
+      auditor_policy = described_class.new(create(:user, :make_auditor), event)
+
+      expect(auditor_policy.termination?).to eq(false)
+    end
+
+    # Admins are exempt from Fuime::DisabledModules, but these pages are not
+    # about privilege — the products do not exist on Fuime — so the denial must
+    # hold regardless of who is asking.
+    it "denies all of them to an admin" do
+      admin_policy = described_class.new(create(:user, :make_admin), event)
+
+      expect(admin_policy.card_overview?).to eq(false)
+      expect(admin_policy.donation_overview?).to eq(false)
+      expect(admin_policy.g_suite_overview?).to eq(false)
+      expect(admin_policy.promotions?).to eq(false)
+      expect(admin_policy.termination?).to eq(false)
+    end
+
+    # The public donation *page* is a separate predicate. Disabling the org's
+    # donation overview must not silently take it with it.
+    it "does not disable unrelated predicates on the same policy" do
+      expect(policy.show?).to eq(true)
+      expect(policy.reimbursements?).to eq(true)
+    end
+  end
+
   describe "#sub_organizations?" do
     let(:event) { create(:event, is_public: true) }
 

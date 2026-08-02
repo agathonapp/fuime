@@ -53,8 +53,12 @@
     </table>
 
     <footer class="flex flex-row justify-between items-center">
-      <img src="https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/b574a59805cf292d77458a187750674aa7858dd3_vector__10_.svg" alt="Wise logo" height="16">
-      <%= link_to "Learn more about Wise on Fuime →", "https://help.hcb.hackclub.com/article/65-wise", target: :_blank %>
+      <%# Wise wordmark rather than the SVG: the logo was proxied through
+          cdn.hackclub.com (Prime Directive 4). The "learn more" link went to
+          help.hcb.hackclub.com — Hack Club's help centre, describing how Wise
+          works on HCB — while the label claimed it explained Wise "on Fuime".
+          Removed rather than repointed; Fuime has no help centre yet. %>
+      <span class="muted">Wise</span>
     </footer>
   </section>
 <% end %>

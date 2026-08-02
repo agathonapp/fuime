@@ -5,10 +5,6 @@
 <% if @contractors.empty? && organizer_signed_in? && !params[:q].present? %>
   <%= render "events/one_pager",
     title: "Contractors",
-    screenshots: {
-      light: "https://cdn.hackclub.com/019f623d-fab8-73d3-8ca6-78100fb6c981/image.png",
-      dark: "https://cdn.hackclub.com/019f623d-f81a-7d21-a8ee-5ab25859bf69/image.png",
-    },
     hints: [
       {
         icon: "payment-transfer",

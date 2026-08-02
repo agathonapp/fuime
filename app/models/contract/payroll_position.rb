@@ -66,8 +66,9 @@ class Contract
             send_email: false,
             fields: [
               {
+                # See Contract::FiscalSponsorship: no prefilled Hack Club
+                # founder signature on a Fuime contract.
                 name: "Signature",
-                default_value: ActionController::Base.helpers.asset_url("zach_signature.png", host: "https://hcb.hackclub.com"),
                 readonly: false
               }
             ]

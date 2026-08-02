@@ -279,9 +279,10 @@ a.card {
   color: white !important;
 }
 
-.card--sunset {
-  background-image: url('https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/760076d21af80460_image.png');
-}
+// .card--sunset background removed: the image was hosted on cdn.hackclub.com
+// (Prime Directive 4). The class has no callers anywhere in the app, so this
+// is dead upstream styling; the rule is kept as a marker rather than deleted
+// (CLAUDE.md Rule 2). Point it at a local asset if the class is ever revived.
 
 #card-pin {
   width: 64px;

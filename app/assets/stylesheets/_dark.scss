@@ -291,9 +291,8 @@ html[data-dark='true'] {
     background-color: rgba(map-get($palette, pending), 0.125);
   }
 
-  .card--sunset {
-    background-image: url('https://cdn.hackclub.com/rescue?url=https://hc-cdn.hel1.your-objectstorage.com/s/v3/cc0d90d3c01af31f_image.png');
-  }
+  // .card--sunset dark variant removed — see components/_cards.scss. The image
+  // was hosted on cdn.hackclub.com and the class has no callers.
 
   .badge {
     color: map-get($palette, muted);
