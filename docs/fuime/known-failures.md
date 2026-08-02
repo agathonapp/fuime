@@ -45,12 +45,40 @@ this as "the baseline was green."
 |---|---|
 | Same subset as above | **163 examples, 0 failures** (+15 new specs) |
 | `spec/models/guardianship_spec.rb`, `user_guardianship_spec.rb`, `spec/services/fuime`, `spec/controllers/fuime`, `spec/policies`, `spec/models/user_spec.rb` | **203 examples, 0 failures** |
-| Full suite | measurement in progress; see the handoff in SETUP_NOTES.md |
+| `spec/controllers spec/requests` | 320 examples, **118 failures** — see below |
+
+## The 118 controller/request failures are an ENVIRONMENT artifact, not a regression
+
+Every one inspected fails identically:
+
+```
+ActionView::Template::Error:
+  The asset "bundle.js" is not present in the asset pipeline.
+# ./app/views/layouts/_head.html.erb:12
+```
+
+Controller and request specs render real views, and `_head.html.erb` calls
+`javascript_include_tag "bundle"`. If the JS bundle has never been built in the
+container, every view-rendering spec fails regardless of the code under test.
+
+**Verified pre-existing:** the same specs produce the same `bundle.js` error at
+`f51302a54`, before any hardening work. This is a missing build step in a fresh
+container, not something the hardening pass introduced.
+
+**Fix before running these locally:**
+
+```bash
+docker compose run --rm -e RAILS_ENV=test \
+  -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
+  web bash -c 'yarn install && yarn build'
+```
+
+CI does this as part of its setup, which is why it isn't visible there.
 
 ## Open
 
-The full suite has not yet been shown green at any commit, before or after the
-hardening pass. Until it has been run at `f51302a54` and at current `main`, any
-failure in it is **unattributed** — it may predate this work or come from it.
-Resolve this before the next milestone rather than carrying the ambiguity
-forward.
+The full suite has still not been shown green at any commit. The model-, policy-,
+and service-level specs are green and directly comparable to baseline; the
+view-rendering specs are dominated by the asset artifact above and need a build
+step before they say anything useful. Run both scopes with assets built, at
+`f51302a54` and at `main`, to close this out.
