@@ -72,7 +72,7 @@ module InvoiceService
         due_date: invoice.due_date.to_i, # convert to unixtime
         description: invoice.memo,
         status: invoice.status,
-        statement_descriptor: invoice.statement_descriptor || "HCB",
+        statement_descriptor: invoice.statement_descriptor || "Fuime",
         # tax_percent: invoice.tax_percent,
         footer:,
         metadata: { event_id: invoice.event.id },

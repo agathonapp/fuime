@@ -111,7 +111,7 @@
             Fuime will automatically detect email addresses and Slack channel links.
           </p>
 
-          <%= card_grant_setting_fields.text_field :support_url, placeholder: "mailto:orpheus@hackclub.com", value: event.card_grant_setting.support_url, disabled: %>
+          <%= card_grant_setting_fields.text_field :support_url, placeholder: "mailto:parent@example.com", value: event.card_grant_setting.support_url, disabled: %>
         </div>
 
         <%= form.submit "Update", disabled:, class: "mt-4" %>

@@ -2,7 +2,7 @@
 
 <%= form_with(local: true, data: { turbo: false }, url: send_contract_organizer_position_invite_path(id: opi.id)) do |form| %>
   <p class="muted">
-    This will send <%= opi.user.name %> a fiscal sponsorship agreement
+    This will send <%= opi.user.name %> the Fuime agreement
     for <%= opi.event.name %>. <strong>If they are under 18, <%= opi.user.name %> will need to have a parent sign on their behalf.</strong>
   <p>
 

@@ -75,8 +75,8 @@ class StaticPagesController < ApplicationController
       { name: "Outlined White", criteria: "For black or dark colored backgrounds.", background: "black" }
     ]
     @icons = [
-      { name: "Icon Original", criteria: "The original HCB logo.", background: "smoke" },
-      { name: "Icon Dark", criteria: "HCB logo in dark mode.", background: "black" }
+      { name: "Icon Original", criteria: "The original Fuime logo.", background: "smoke" },
+      { name: "Icon Dark", criteria: "Fuime logo in dark mode.", background: "black" }
     ]
     @event_name = signed_in? && current_user.events.first&.name || "Hack Pennsylvania"
     @event_slug = signed_in? && current_user.events.first&.slug || "hack-pennsylvania"
@@ -115,10 +115,10 @@ class StaticPagesController < ApplicationController
         "Account & routing numbers": {
           "View the organization's account & routing numbers": :manager
         },
-        "HCB transfers": {
-          "Create an HCB Transfer": :manager,
-          "Cancel an HCB Transfer": :manager,
-          "View an HCB Transfer": :reader
+        "Fuime transfers": {
+          "Create an Fuime Transfer": :manager,
+          "Cancel an Fuime Transfer": :manager,
+          "View an Fuime Transfer": :reader
         },
         _preface: "As a general rule, only managers can create/modify financial transfers"
       },
@@ -133,7 +133,7 @@ class StaticPagesController < ApplicationController
         "View card billing address": :reader,
       },
       Reimbursements: {
-        "Get reimbursed through HCB": :member,
+        "Get reimbursed through Fuime": :member,
         "View reimbursement reports": :reader,
         "Review, approve, and reject reports": :manager,
       },

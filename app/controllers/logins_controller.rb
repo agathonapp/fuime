@@ -61,7 +61,7 @@ class LoginsController < ApplicationController
 
     if @login.available_factors.none?
       Rails.error.unexpected("[Login] Login ran out of available factors. This should never be possible.")
-      flash[:error] = "Something went wrong. Please try again or contact HCB for support."
+      flash[:error] = "Something went wrong. Please try again or contact Fuime for support."
       return redirect_to auth_users_path
     end
 

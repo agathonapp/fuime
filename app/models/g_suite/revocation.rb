@@ -40,7 +40,7 @@ class GSuite
 
     aasm do
       state :pending, initial: true # 2 weeks from warning to pending revocation
-      state :revoked # adds to a list where HCB ops can review and
+      state :revoked # adds to a list where Fuime ops can review and
       # click "revoke" to delete the g_suite and all associated data/accounts
 
       event :mark_revoked do

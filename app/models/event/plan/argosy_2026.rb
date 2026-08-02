@@ -31,10 +31,6 @@ class Event
         super - %w[promotions google_workspace]
       end
 
-      def contract_docuseal_template_id
-        4637952
-      end
-
       def default_values
         { is_public: true }
       end

@@ -227,6 +227,10 @@ class OrganizerPositionInvite < ApplicationRecord
   end
 
   def send_contract(cosigner_email: nil, include_videos: false, reissue_messages: {}, reissue_of: nil)
+    # See Event::Plan#contract_docuseal_template_id — no Fuime agreement exists
+    # yet, and the upstream templates are Hack Club's own legal documents.
+    return nil unless event.plan.contract_available?
+
     fs_contract = nil
 
     ActiveRecord::Base.transaction do

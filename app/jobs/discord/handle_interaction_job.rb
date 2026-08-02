@@ -89,7 +89,7 @@ module Discord
 
       return respond(content: "Could not find the transaction to attach a receipt to.") unless activity&.key == "raw_pending_stripe_transaction.create"
 
-      return respond(content: "This Discord server is not currently linked to the same HCB organization") unless activity.event_id == @current_event&.id && activity.event_id == hcb_code.event.id
+      return respond(content: "This Discord server is not currently linked to the same Fuime organization") unless activity.event_id == @current_event&.id && activity.event_id == hcb_code.event.id
 
       {
         "type": Discordrb::Interaction::CALLBACK_TYPES[:modal],
@@ -114,7 +114,7 @@ module Discord
     def attach_receipt_modal
       hcb_code = HcbCode.find(@params)
 
-      return respond(content: "This Discord server is not currently linked to the same HCB organization") unless hcb_code.event.id == @current_event&.id
+      return respond(content: "This Discord server is not currently linked to the same Fuime organization") unless hcb_code.event.id == @current_event&.id
 
       attachments = @interaction.dig(:data, :resolved, :attachments)
       file = attachments&.values&.first
@@ -160,7 +160,7 @@ module Discord
           color:,
           url: url_helpers.reimbursement_report_url(report)
         }
-      ], components: button_to("View on HCB", url_helpers.reimbursement_report_url(report)), flags: EPHEMERAL_MESSAGE_FLAG
+      ], components: button_to("View on Fuime", url_helpers.reimbursement_report_url(report)), flags: EPHEMERAL_MESSAGE_FLAG
     end
 
     def setup_component
@@ -173,20 +173,20 @@ module Discord
 
     def link_command
       link_user_button = button_to("Link Discord account", generate_discord_link_url)
-      link_server_button = button_to("Set up HCB on this server", generate_discord_setup_url)
+      link_server_button = button_to("Set up Fuime on this server", generate_discord_setup_url)
 
       if @current_event.present? && @user.present?
-        respond content: "HCB has already been setup for this Discord server!", embeds: linking_embed
+        respond content: "Fuime has already been setup for this Discord server!", embeds: linking_embed
       elsif !@current_event.present? && @user.present?
-        respond content: "You've linked your Discord and HCB accounts, but this Discord server isn't connected to an HCB organization yet:",
+        respond content: "You've linked your Discord and Fuime accounts, but this Discord server isn't connected to an Fuime organization yet:",
                 components: link_server_button,
                 embeds: linking_embed
       elsif @current_event.present? && !@user.present?
-        respond content: "This Discord server is connected to #{@current_event.name} on HCB. HCB is the platform your team uses to manage its finances. Finish your setup by linking your Discord account to HCB:",
+        respond content: "This Discord server is connected to #{@current_event.name} on Fuime. Fuime is the platform your team uses to manage its finances. Finish your setup by linking your Discord account to Fuime:",
                 components: link_user_button,
                 embeds: linking_embed
       else
-        respond content: "Link your HCB account, and then connect this Discord server to an HCB organization:",
+        respond content: "Link your Fuime account, and then connect this Discord server to an Fuime organization:",
                 components: [link_user_button, link_server_button],
                 embeds: linking_embed
       end
@@ -204,7 +204,7 @@ module Discord
           title: "#{@current_event.name}'s balance is #{ApplicationController.helpers.render_money @current_event.balance_available_v2_cents}",
           color:
         }
-      ], components: button_to("View on HCB", url_helpers.my_inbox_url)
+      ], components: button_to("View on Fuime", url_helpers.my_inbox_url)
     end
 
     TRANSACTION_LIMIT = 10
@@ -248,7 +248,7 @@ module Discord
           fields: transaction_fields,
           color:,
         }
-      ], components: button_to("Go to HCB", url_helpers.event_url(@current_event.slug))
+      ], components: button_to("Go to Fuime", url_helpers.event_url(@current_event.slug))
     end
 
     REIMBURSEMENT_REPORT_LIMIT = 10
@@ -273,7 +273,7 @@ module Discord
         }
       ], components: [
         button_to("Create new report", "reimburse:new", style: 3),
-        button_to("View on HCB", url_helpers.my_reimbursements_url),
+        button_to("View on Fuime", url_helpers.my_reimbursements_url),
       ]
     end
 
@@ -285,13 +285,13 @@ module Discord
           title: "You have #{@user.transactions_missing_receipt_count} transactions missing receipts",
           color:,
         }
-      ], components: button_to("View on HCB", url_helpers.my_inbox_url)
+      ], components: button_to("View on Fuime", url_helpers.my_inbox_url)
     end
 
     def require_linked_user
-      return respond content: "This command requires you to link this Discord account to HCB", components: button_to("Set up HCB", "setup") if @responded
+      return respond content: "This command requires you to link this Discord account to Fuime", components: button_to("Set up Fuime", "setup") if @responded
 
-      respond content: "This command requires you to link your Discord account to HCB", embeds: linking_embed, flags: EPHEMERAL_MESSAGE_FLAG
+      respond content: "This command requires you to link your Discord account to Fuime", embeds: linking_embed, flags: EPHEMERAL_MESSAGE_FLAG
     end
 
     def linking_embed
@@ -302,17 +302,17 @@ module Discord
 
       [
         {
-          title: "Set up HCB on Discord",
+          title: "Set up Fuime on Discord",
           color:,
           fields: [
             {
-              name: "Discord Account (`@#{user_name}`) ↔ Your HCB Account",
-              value: "Allows you to open reimbursement reports, view missing receipts, and take action on HCB.\n\n#{@user.present? ? "✅ Linked to #{@user.preferred_name.presence || @user.first_name} on HCB (#{link_to("disconnect", url_helpers.discord_unlink_user_url)})" : "❌ Not linked. #{link_to("Set up here", generate_discord_link_url)}"}\n",
+              name: "Discord Account (`@#{user_name}`) ↔ Your Fuime Account",
+              value: "Allows you to open reimbursement reports, view missing receipts, and take action on Fuime.\n\n#{@user.present? ? "✅ Linked to #{@user.preferred_name.presence || @user.first_name} on Fuime (#{link_to("disconnect", url_helpers.discord_unlink_user_url)})" : "❌ Not linked. #{link_to("Set up here", generate_discord_link_url)}"}\n",
             },
             (if @guild_id.present?
                {
-                 name: "\nDiscord Server (#{server_name}) ↔ HCB Organization",
-                 value: "Allows you to see your organization's balance, see transactions, and get notifications on Discord.\n\n#{@current_event.present? ? "✅ Connected to #{link_to(@current_event.name, url_helpers.event_url(@current_event.slug))} on HCB (#{link_to("disconnect", generate_discord_unlink_server_url)})" : "❌ Not connected. #{guild_setup_cta}"}"
+                 name: "\nDiscord Server (#{server_name}) ↔ Fuime Organization",
+                 value: "Allows you to see your organization's balance, see transactions, and get notifications on Discord.\n\n#{@current_event.present? ? "✅ Connected to #{link_to(@current_event.name, url_helpers.event_url(@current_event.slug))} on Fuime (#{link_to("disconnect", generate_discord_unlink_server_url)})" : "❌ Not connected. #{guild_setup_cta}"}"
                }
              end)
           ].compact
@@ -321,9 +321,9 @@ module Discord
     end
 
     def require_linked_event
-      return respond content: "This command requires you to link this Discord server to HCB", components: button_to("Set up HCB", "setup") if @responded
+      return respond content: "This command requires you to link this Discord server to Fuime", components: button_to("Set up Fuime", "setup") if @responded
 
-      respond content: "This command requires you to link this Discord server to HCB", embeds: linking_embed, flags: EPHEMERAL_MESSAGE_FLAG
+      respond content: "This command requires you to link this Discord server to Fuime", embeds: linking_embed, flags: EPHEMERAL_MESSAGE_FLAG
     end
 
     def respond(**body)

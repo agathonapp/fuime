@@ -8,7 +8,7 @@ module Users
 
     def index
       unless Flipper.enabled?(:bank_wrapped, current_user)
-        render plain: "HCB Wrapped coming soon! I heard #{current_user&.first_name.presence&.concat("'s") || "you're"} on the naughty list 🎅" and return
+        render plain: "Fuime Wrapped coming soon! I heard #{current_user&.first_name.presence&.concat("'s") || "you're"} on the naughty list 🎅" and return
       end
 
       ahoy.track "Wrapped #{Metric.year} viewed", user_id: current_user.id if current_user == @user

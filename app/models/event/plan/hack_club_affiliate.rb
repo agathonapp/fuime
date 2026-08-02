@@ -55,14 +55,10 @@ class Event
         35 # custom rate for HQ events
       end
 
-      def contract_docuseal_template_id
-        2838847
-      end
-
       def contract_skip_prefills
         {
           "Contract Signee" => ["Telephone", "Email", "The Project"],
-          "HCB"             => ["HCB ID"]
+          "Fuime"             => ["Fuime ID"]
         }
       end
 

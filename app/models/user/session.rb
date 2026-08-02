@@ -174,7 +174,7 @@ class User
 
     def user_is_unlocked
       if user&.locked? && !impersonated?
-        errors.add(:user, "Your HCB account has been locked.")
+        errors.add(:user, "Your Fuime account has been locked.")
       end
     end
 

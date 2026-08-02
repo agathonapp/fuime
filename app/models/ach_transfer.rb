@@ -196,7 +196,7 @@ class AchTransfer < ApplicationRecord
   before_validation { self.recipient_name = recipient_name.presence&.strip }
 
   before_validation do
-    self.company_name = "HCB (Hack Club)" # Column requires "Hack Club" to be included in the company_name for all outgoing ACHs
+    self.company_name = "Fuime (Hack Club)" # Column requires "Hack Club" to be included in the company_name for all outgoing ACHs
   end
 
   include HasHcbCode
@@ -325,7 +325,7 @@ class AchTransfer < ApplicationRecord
     when :deposited then "Deposited successfully"
     when :scheduled then "Scheduled for #{scheduled_on.strftime("%B %-d, %Y")}"
     when :in_transit then "In transit"
-    when :pending then "Waiting on HCB approval"
+    when :pending then "Waiting on Fuime approval"
     when :rejected then "Rejected"
     else status_text
     end

@@ -56,7 +56,7 @@ module SessionsHelper
     if impersonate
       user_session.impersonated_by = current_user
     else
-      raise(AccountLockedError, "Your HCB account has been locked.") if user.locked?
+      raise(AccountLockedError, "Your Fuime account has been locked.") if user.locked?
     end
 
     user_session.save!
@@ -92,7 +92,7 @@ module SessionsHelper
     if impersonate
       user_session.impersonated_by = current_user
     else
-      raise(AccountLockedError, "Your HCB account has been locked.") if user&.locked?
+      raise(AccountLockedError, "Your Fuime account has been locked.") if user&.locked?
     end
 
     user_session.save!

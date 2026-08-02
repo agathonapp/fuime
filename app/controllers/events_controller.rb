@@ -1587,7 +1587,7 @@ class EventsController < ApplicationController
       "mailed_check"  => "Mailed check",
       "wise_transfer" => "Wise transfer",
       "wire_transfer" => "Wire transfer",
-      "hcb_transfer"  => "HCB transfer",
+      "hcb_transfer"  => "Fuime transfer",
       "paypal"        => "PayPal"
     }
 

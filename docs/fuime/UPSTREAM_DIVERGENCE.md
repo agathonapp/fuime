@@ -783,3 +783,75 @@ this is the toolchain problem `known-failures.md` describes, still unresolved.
 All 303 modified ERB templates compile through Rails' own ERB handler. Three
 layouts report "Invalid yield" both before and after the change — an artifact of
 compiling a layout outside a render context, confirmed against pristine copies.
+
+## 2026-08-01 — Milestone 3 (cont.): contract flow, FAQ, and marketing copy
+
+| Change | Why | Files |
+|---|---|---|
+| DocuSeal template id now `ENV["FUIME_DOCUSEAL_TEMPLATE_ID"]`, unset by default; six hardcoded per-plan ids removed | Upstream served template 487784 (and five others) from **Hack Club's** DocuSeal account — their real fiscal sponsorship agreements. The flow was live, so a teen or guardian could sign another organization's binding legal document | `app/models/event/plan.rb`, `app/models/event/plan/*.rb` |
+| `contract_available?` guards; flow completes with no contract | Without a template, applications stalled in `submitted` forever and `mark_approved`/`activate_event!`/`agreement` raised `NoMethodError` on nil | `app/models/event/application.rb`, `app/models/organizer_position_invite.rb`, `app/controllers/event/applications_controller.rb` |
+| Contract FAQ rewritten for Fuime | Explained 501(c)(3) sponsorship, IP assignment to Hack Club's EIN, and IRS Determination Letters — beside a live signature field | `app/views/contract/parties/_fs_contract_faq.html.erb` |
+| Onboarding videos behind `FUIME_ONBOARDING_VIDEO_IDS`, empty default; step auto-skips | A mandatory step titled "Watch Fuime's onboarding videos" played Hack Club's videos about HCB's rules | `app/models/event/application.rb`, `app/views/event/applications/videos.html.erb`, `app/controllers/event/applications_controller.rb`, `app/views/contract/party_mailer/notify_signee.html.erb` |
+| Cosigner email rewritten | The parent-facing email claimed 501(c)(3) status, cited Hack Club's founding and real customer orgs as Fuime's, and advertised four features Fuime blocks at the request level | `app/views/contract/party_mailer/notify_cosigner.html.erb` |
+| "…but will not have access or control" → guardians *can* see activity | Directly contradicted the Fuime guardian agreement ("You can see everything… cannot be turned off by the minor"). The application form was telling teens the opposite of what their guardian signs | `app/views/event/applications/{personal_info,show,edit}.html.erb` |
+| `orpheus@hackclub.com` → `parent@example.com` (7 sites) | Placeholder emails pointed at a Hack Club address | `app/views/**` |
+| "fiscal sponsorship agreement" → "the Fuime agreement"; remaining display `HCB` → `Fuime` in controllers/models/helpers/services/jobs | Copy surface my first pass didn't reach (it covered views/mailers only) | ~40 files |
+| Testimonials, funder team, and funder marquee emptied | Real named people (Jasmine Sun, Isaac Sevier, Richard Littauer) quoted about HCB; three Hack Club staff shown as Fuime's team; Ford/Omidyar/Hewlett/Sloan/SoftBank/Founders Fund logos under "Major funders already back organizations on Fuime" — false, and on an indexable page | `app/helpers/marketing_helper.rb`, `app/views/marketing/funders.html.erb` |
+| `/for/funders*` FUIME-DISABLED (redirect for humans, 404 otherwise) | JSON-LD declared `"legalName": "The Hack Foundation"` with `taxID: 81-2908499`, telling search engines Fuime *is* Hack Club's 501(c)(3). Public, indexable, and orphaned — nothing in the app links to it | `app/controllers/marketing_controller.rb`, `spec/requests/marketing_spec.rb` |
+
+### Ledger regression — caught pre-commit, worth reading before the next sweep
+
+Applying the `HCB → Fuime` word replacement to `.rb` files corrupted ledger
+internals, because `HCB` is not only a brand there — it is a **stored data
+prefix**. The sweep rewrote:
+
+- `TransactionGroupingEngine::Calculate::HcbCode::HCB_CODE = "HCB"` → `"Fuime"`
+  — the prefix every HCB code in the database is built from. This alone
+  orphaned all existing ledger data and broke 10 `statement_of_activity` specs.
+- `ilike 'HCB-000%'`, `memo ~ '.*HCB-\w{5}.*'`, `CONCAT('HCB-300-', ...)` and
+  ~30 similar SQL literals — scopes that would silently match **nothing**.
+- `statement_descriptor: "HCB-#{short_code}"` — the text printed on a
+  customer's bank statement for real Stripe payouts.
+- `'%COLUMN*THE HACK HCB-SWEEP%'` — a literal bank memo string.
+
+Every ledger-critical file was restored to HEAD and verified byte-identical:
+`hcb_code.rb` (grouping engine), `canonical_transaction.rb`,
+`canonical_pending_transaction.rb`, `hcb_code.rb`, `transaction.rb`,
+`statement_of_activity.rb`, `ledger/item.rb`.
+
+One instance of this bug **shipped in the previous commit** (`b9c5e2b6e`):
+`app/views/admin/unknown_merchants.html.erb` linked to `hcb_code_path("Fuime-600-…")`,
+a code that cannot resolve. Fixed here.
+
+Rule for future passes: before replacing `HCB` in a `.rb` file, check whether
+the literal is *compared against or written to the database*. `HCB-` followed by
+digits, an interpolation, or `\w{5}` is data, never branding. Rule 3 covers more
+than the pipeline classes — it covers the string constants they build codes from.
+
+### Verification
+
+Same scope, clean-worktree baseline at `33b11bfb8`:
+
+| Scope | Baseline | After |
+|---|---|---|
+| `spec/models/event spec/views spec/mailers spec/helpers spec/requests` | 161 examples, **51 failures** | 143 examples, **8 failures** |
+
+Failure sets diffed by example id: **zero new failures.** The example-count drop
+is the 22 upstream funders-page examples replaced by 4 that pin the disabled
+state (including one asserting Hack Club's EIN and legal name cannot reach a
+visitor).
+
+### Still outstanding
+
+- **DocuSeal is wired but not set up.** It needs a Fuime DocuSeal account, the
+  `DOCUSEAL` + webhook credentials, and — the real blocker — an actual Fuime
+  agreement document. Drafting that is a legal task, not a code change
+  (CLAUDE.md puts the merchant-of-record structure in Phase 2). Until
+  `FUIME_DOCUSEAL_TEMPLATE_ID` is set, no one signs anything.
+- `static_pages/branding.html.erb` still describes fiscal sponsorship, restricted
+  funds, and Column backing.
+- `documents/fiscal_sponsorship_letter.pdf.erb`, `verification_letter.pdf.erb`,
+  and `events/termination.pdf.erb` are unreviewed legal documents.
+- `help.hcb.hackclub.com` / `blog.hcb.hackclub.com` / `graph.hcb.hackclub.com`
+  links, and `cdn.hackclub.com` assets (fonts, images) still load from Hack Club.
+- Logos/favicons partially done; `docs/fuime/BRAND_STRINGS.md` still not written.

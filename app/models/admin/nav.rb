@@ -200,7 +200,7 @@ module Admin
             count_type: :records
           ),
           make_item(
-            name: "HCB Codes",
+            name: "Fuime Codes",
             path: hcb_codes_admin_index_path,
             count: ->{ HcbCode.count },
             count_type: :records
@@ -264,7 +264,7 @@ module Admin
         name: "Organizations",
         items: [
           make_item(
-            name: "Applications (HCB)",
+            name: "Applications (Fuime)",
             path: applications_admin_index_path,
             count: ->{ Event::Application.under_review.count },
             count_type: :tasks
@@ -358,7 +358,7 @@ module Admin
             count_type: :records
           ),
           make_item(
-            name: "HCB Fees",
+            name: "Fuime Fees",
             path: bank_fees_admin_index_path,
             count: ->{ BankFee.in_transit_or_pending.count },
             count_type: :records

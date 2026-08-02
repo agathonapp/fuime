@@ -70,14 +70,14 @@ module UserService
 
     def notify_unlocked
       CardLockingMailer.cards_unlocked(user: @user).deliver_later
-      send_sms("Your HCB cards work again. Keep uploading receipts within 7 days of the charge. Manage them at #{CardLocking.inbox_url}.")
+      send_sms("Your Fuime cards work again. Keep uploading receipts within 7 days of the charge. Manage them at #{CardLocking.inbox_url}.")
     end
 
     def locked_message(now:)
       count = @user.card_locking_overdue_charges(now:).count("hcb_codes.id")
       noun = "receipt".pluralize(count)
       verb = count == 1 ? "is" : "are"
-      "Your HCB cards are locked because #{count} #{noun} #{verb} overdue. Recurring charges will also fail until you upload. Upload to unlock in seconds at #{CardLocking.inbox_url}."
+      "Your Fuime cards are locked because #{count} #{noun} #{verb} overdue. Recurring charges will also fail until you upload. Upload to unlock in seconds at #{CardLocking.inbox_url}."
     end
 
     # A receipt landed for a still-locked cardholder (uploaded by them or a

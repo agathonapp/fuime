@@ -48,7 +48,7 @@ module EventsHelper
           nil
         end
       end,
-      tooltip: "Sign the fiscal sponsorship contract as HCB",
+      tooltip: "Sign the Fuime agreement as Fuime",
       icon: "checkmark",
       adminTool: true,
       available_proc: ->(event) { event.financially_frozen? && event.contracts_pending_on_hcb.one? && event.contracts.signed.none? }
@@ -133,7 +133,7 @@ module EventsHelper
     {
       name: "Cards",
       path_proc: ->(event_id) { event_cards_overview_path(event_id:) },
-      tooltip: "Manage team HCB cards",
+      tooltip: "Manage team Fuime cards",
       icon: "card",
       data: { tour_step: "cards" },
       symbol: :cards,
@@ -289,14 +289,14 @@ module EventsHelper
         {
           name: "Integrations",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "integrations") },
-          tooltip: "Setup and manage integrations with HCB",
+          tooltip: "Setup and manage integrations with Fuime",
           symbol: :settings_integrations,
           available_proc: ->(event) { true }
         },
         {
           name: "Feature previews",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "features") },
-          tooltip: "Enable new HCB features",
+          tooltip: "Enable new Fuime features",
           symbol: :settings_features,
           available_proc: ->(event) { true }
         },

@@ -11,7 +11,7 @@ module Commentable
   end
 
   def comment_mailer_subject
-    "New comment from HCB"
+    "New comment from Fuime"
   end
 
   def comment_mentionable(current_user: nil)

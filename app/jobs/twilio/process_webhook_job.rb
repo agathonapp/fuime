@@ -14,7 +14,7 @@ module Twilio
 
       if @user.nil?
         send_reply(<<~MSG.squish)
-          Hey! We couldn't find your account on HCB; if you're looking to upload
+          Hey! We couldn't find your account on Fuime; if you're looking to upload
           receipts, make sure your phone number is set and verified in your account's settings
           (https://hcb.hackclub.com/my/settings).
         MSG
@@ -29,7 +29,7 @@ module Twilio
       if @attachments.none?
         send_reply(<<~MSG.squish)
           Hey! Are you trying to upload receipts? We couldn't find any attachments in your message.
-          If you're looking for HCB support, please reach out to support@fuime.com.
+          If you're looking for Fuime support, please reach out to support@fuime.com.
         MSG
         return
       end

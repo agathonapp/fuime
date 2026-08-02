@@ -14,33 +14,17 @@
 <% end %>
 
 <div class="md:max-h-[75vh] flex flex-col gap-5" data-controller="onboarding-videos" data-onboarding-videos-button-id-value="continue_button">
-  <div class="flex gap-3 items-start flex-grow">
-    <div class="flex items-center justify-center rounded-full border border-gray-300 h-8 w-8 shrink-0">
-      1
+  <% Event::Application::ONBOARDING_VIDEO_IDS.each_with_index do |video_id, index| %>
+    <div class="flex gap-3 items-start flex-grow">
+      <div class="flex items-center justify-center rounded-full border border-gray-300 h-8 w-8 shrink-0">
+        <%= index + 1 %>
+      </div>
+
+      <div class="flex flex-col flex-grow gap-3">
+        <div data-onboarding-videos-target="player" data-video-id="<%= video_id %>" class="flex-grow aspect-[560/315] min-h-0 max-w-full"></div>
+      </div>
     </div>
-
-    <div class="flex flex-col flex-grow gap-3">
-      <p class="text-lg mb-0 mt-1">
-        <strong>Introduction</strong>
-      </p>
-
-      <div data-onboarding-videos-target="player" data-video-id="Ucz-QT2GPOk" class="flex-grow aspect-[560/315] min-h-0 max-w-full"></div>
-    </div>
-  </div>
-
-  <div class="flex gap-3 items-start flex-grow">
-    <div class="flex items-center justify-center rounded-full border border-gray-300 h-8 w-8 shrink-0">
-      2
-    </div>
-
-    <div class="flex flex-col flex-grow gap-3">
-      <p class="text-lg mb-0 mt-1">
-        <strong>Rules & Regulations</strong>
-      </p>
-
-      <div data-onboarding-videos-target="player" data-video-id="LMh9FCm8iIE" class="flex-grow aspect-[560/315] min-h-0 max-w-full"></div>
-    </div>
-  </div>
+  <% end %>
 </div>
 
 <% content_for :footer do %>

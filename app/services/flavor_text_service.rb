@@ -25,8 +25,8 @@ class FlavorTextService
       "super secret admin mode",
       "Puts the 'dev' in 'financially devious'!",
       "Rails.env.fun?",
-      "Let's rewrite HCB in #{Faker::ProgrammingLanguage.name}!",
-      "Here's a secret: HCB stands for Hack Club Bonk",
+      "Let's rewrite Fuime in #{Faker::ProgrammingLanguage.name}!",
+      "Here's a secret: Fuime stands for Hack Club Bonk",
       "recommended by 100% of fraudsters"
     ]
   end
@@ -118,12 +118,12 @@ class FlavorTextService
       "Did you bring enough #{%w[zip-ties ductape].sample(random: @random)}?",
       "Duct tape, ductape, duck tape",
       "🦆 📼",
-      "Build season? HCB season!",
+      "Build season? Fuime season!",
       "Build season already?",
       "Graciously accepting your team's donations",
       "Your team may graciously decline, but your cards won't",
       "<s>Not</s> held together with zip ties".html_safe,
-      "3, 2, 1, HCB!",
+      "3, 2, 1, Fuime!",
       "If you have transparency mode on, is that money-pit-scouting?"
     ]
   end
@@ -131,7 +131,7 @@ class FlavorTextService
   def flavor_texts
     [
       "duck.",
-      "The hivemind known as HCB",
+      "The hivemind known as Fuime",
       "How often does time happen?",
       "To an extent",
       "A cloud full of money",
@@ -151,10 +151,10 @@ class FlavorTextService
       "Open on weekends",
       "Open on holidays",
       "please don't hack",
-      "HCB– Happily Celebrating Bees",
-      "HCB– Hungry Computer Bison",
-      "HCB– Huge Cellophane Boats",
-      "HCB– Hydrofoils Chartered by Bandits",
+      "Fuime– Happily Celebrating Bees",
+      "Fuime– Hungry Computer Bison",
+      "Fuime– Huge Cellophane Boats",
+      "Fuime– Hydrofoils Chartered by Bandits",
       "The best thing since sliced bread",
       "Hack Club Bink",
       "Hack 👏 Club 👏 B--- 👏",
@@ -167,7 +167,7 @@ class FlavorTextService
       "From the makers of Hack Club",
       "Now in color!",
       "Filmed on location",
-      "From the makers of HCB",
+      "From the makers of Fuime",
       "Soon to be a major cryptocurrency!",
       "👏 KEEP 👏 YOUR 👏 RECEIPTS 👏",
       "Money: collect it all!",
@@ -178,7 +178,7 @@ class FlavorTextService
       "B O N K",
       "#{@random.rand 4..9}0% bug free!",
       "#{@random.rand 1..4}0% fewer bugs!",
-      "Ask your doctor if HCB is right for you",
+      "Ask your doctor if Fuime is right for you",
       "Now with an&nbsp;<a href='https://hcb.hackclub.com/docs/api/v3'>API</a>!".html_safe,
       "<a href='https://hcb.hackclub.com/docs/api/v3'>README</a>".html_safe,
       "Read the&nbsp;<a href='https://hcb.hackclub.com/docs/api/v3'>docs</a>!".html_safe,
@@ -357,7 +357,7 @@ class FlavorTextService
       "Receipts are kinda like a recipe for money",
       "Receipts are kinda like a recipe for a nonprofit",
       "Receipts are kinda like a recipe for losing money",
-      "Check the back of this page for an exclusive promo code!<!--\n\n\n\n\n\n\n\n          Use promo code STICKERSNOW for free HCB stickers.\n\n          (Alternatively, you could just get some here: https://hack.af/hcb-stickers)\n\n\n\n\n\n\n\n          -->".html_safe,
+      "Check the back of this page for an exclusive promo code!<!--\n\n\n\n\n\n\n\n          Use promo code STICKERSNOW for free Fuime stickers.\n\n          (Alternatively, you could just get some here: https://hack.af/hcb-stickers)\n\n\n\n\n\n\n\n          -->".html_safe,
       "You've found the 5th easter egg on the site!",
       "Happiness > Wealthiness, but I didn't tell you that",
       "A wallet is fine too",

@@ -21,7 +21,7 @@
              <% merchant[:memos].reverse.first(10).each do |memo| %>
               <li>
                 <% if memo[:authorization].present? %>
-                  <%= link_to memo[:memo], hcb_code_path("Fuime-600-#{memo[:authorization]}") %>
+                  <%= link_to memo[:memo], hcb_code_path("HCB-600-#{memo[:authorization]}") %>
                 <% else %>
                   <%= memo[:memo] %>
                 <% end %>

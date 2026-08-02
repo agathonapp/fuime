@@ -27,10 +27,6 @@ class Event
         "2025 Argosy FTC SIM grant spend-only"
       end
 
-      def contract_docuseal_template_id
-        1711777
-      end
-
     end
 
   end

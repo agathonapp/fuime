@@ -8,7 +8,7 @@ class DocusealController < ActionController::Base
   def webhook
     ActiveRecord::Base.transaction do
       contract = Contract.find_by(external_id: params[:data][:submission_id])
-      return head :ok if contract.nil? || contract.signed? # sometimes contracts are sent using Docuseal that aren't in HCB
+      return head :ok if contract.nil? || contract.signed? # sometimes contracts are sent using Docuseal that aren't in Fuime
 
       if params[:event_type] == "form.completed"
         party = contract.parties.detect { |party| party.docuseal_role == params[:data][:role] }

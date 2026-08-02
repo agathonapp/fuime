@@ -27,7 +27,7 @@ module UsersHelper
       items << {
         name: "FIRST",
         path: first_index_path,
-        tooltip: "Explore HCB for FIRST teams",
+        tooltip: "Explore Fuime for FIRST teams",
         icon: "resources",
         selected: selected == :first
       }

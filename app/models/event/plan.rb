@@ -59,6 +59,33 @@ class Event
       {}
     end
 
+    # The DocuSeal template a plan's signing flow serves.
+    #
+    # Upstream HCB hardcoded per-plan template IDs living in Hack Club's
+    # DocuSeal account — 487784 for Standard, and five others. Those are Hack
+    # Club's real fiscal sponsorship agreements: binding documents about
+    # 501(c)(3) sponsorship, IP assignment to EIN 81-2908499, and nonprofit
+    # asset transfer. None of it describes Fuime, and Fuime cannot edit them.
+    #
+    # Serving one to a Fuime user would ask a teen (or their guardian) to sign
+    # another organization's legal agreement, so every plan now reads a single
+    # Fuime-controlled template from the environment instead. Unset by default:
+    # `contract_available?` is then false and callers must skip the signing
+    # step rather than fall back to an upstream template.
+    #
+    # To enable: create the agreement in Fuime's own DocuSeal account, set
+    # FUIME_DOCUSEAL_TEMPLATE_ID to its id, and set the DOCUSEAL credential.
+    # See docs/fuime/DOCUSEAL_SETUP.md.
+    def contract_docuseal_template_id
+      ENV["FUIME_DOCUSEAL_TEMPLATE_ID"].presence
+    end
+
+    # Whether a signable agreement is actually configured. Guard the signing
+    # step on this, never on the template id being merely non-nil.
+    def contract_available?
+      contract_docuseal_template_id.present?
+    end
+
     # Organizations on plans that force transparency can't opt out of it while
     # their parent organization is transparent.
     def forces_transparency?

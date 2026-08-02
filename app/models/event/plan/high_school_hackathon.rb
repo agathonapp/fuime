@@ -36,7 +36,7 @@ class Event
       end
 
       def description
-        "Used for high school hackathons that have their HCB fees waived. Has access to all standard features."
+        "Used for high school hackathons that have their Fuime fees waived. Has access to all standard features."
       end
 
     end

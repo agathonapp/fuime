@@ -26,7 +26,7 @@
   </p>
 <% end %>
 
-<p>The signed fiscal sponsorship contract is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
+<p>The signed Fuime agreement is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
 
 <p>
   If you would like, you can <%= link_to "schedule an onboarding call", @application.event.onboarding_scheduling_link.presence || event_url(@application.event, request_call: "true") %> with a member of our team,

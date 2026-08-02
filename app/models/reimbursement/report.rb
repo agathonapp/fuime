@@ -204,7 +204,7 @@ module Reimbursement
     end
 
     def admin_status_text
-      return "HCB Review Requested" if reimbursement_requested?
+      return "Fuime Review Requested" if reimbursement_requested?
       return "Organizers Reviewing" if submitted?
 
       status_text
@@ -223,7 +223,7 @@ module Reimbursement
 
     def status_description
       return "Review requested from #{event.name}" if submitted?
-      return "HCB is reviewing this report" if reimbursement_requested?
+      return "Fuime is reviewing this report" if reimbursement_requested?
 
       nil
     end
