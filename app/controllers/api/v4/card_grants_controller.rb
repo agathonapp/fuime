@@ -109,6 +109,14 @@ module Api
       def activate
         authorize @card_grant
 
+        # The control the HTML flow already enforces (CardGrantsController#activate)
+        # and this one did not. Activation issues a real card to the *grantee*, so
+        # the check is on their phone rather than the caller's — and the caller is
+        # not usually the grantee here: CardGrantPolicy#activate? admits any admin.
+        unless @card_grant.user.phone_number_verified?
+          return render json: { error: "A verified phone number is required to activate this grant card." }, status: :bad_request
+        end
+
         @card_grant.create_stripe_card(request.remote_ip)
         render :show
       end

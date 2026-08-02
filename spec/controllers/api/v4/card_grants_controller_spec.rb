@@ -175,4 +175,45 @@ RSpec.describe Api::V4::CardGrantsController do
       )
     end
   end
+
+  # Activation issues a real card to the grantee. The HTML flow has always
+  # refused to do that for an unverified phone number; this endpoint did not,
+  # and `CardGrantPolicy#activate?` admits any admin — so an admin could issue
+  # a card to someone who never verified a number.
+  describe "#activate" do
+    # `admin:write` because ApiAdminContext only treats a v4 caller as an admin
+    # when the token carries that scope — an admin's ordinary token gets a 403
+    # from Pundit long before reaching the action.
+    def activate_as_admin(card_grant)
+      token = create(:api_token, user: create(:user, :make_admin), scopes: "admin:write")
+      request.headers["Authorization"] = "Bearer #{token.token}"
+
+      post(:activate, params: { id: card_grant.public_id }, as: :json)
+    end
+
+    it "refuses when the grantee has no verified phone number" do
+      card_grant = create(:card_grant, event: create(:event, :with_positive_balance),
+                                       user: create(:user, phone_number_verified: false))
+
+      expect_any_instance_of(CardGrant).not_to receive(:create_stripe_card)
+
+      activate_as_admin(card_grant)
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["error"]).to eq(
+        "A verified phone number is required to activate this grant card."
+      )
+    end
+
+    it "activates when the grantee's phone number is verified" do
+      card_grant = create(:card_grant, event: create(:event, :with_positive_balance),
+                                       user: create(:user, phone_number_verified: true))
+
+      allow_any_instance_of(CardGrant).to receive(:create_stripe_card)
+
+      activate_as_admin(card_grant)
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end
