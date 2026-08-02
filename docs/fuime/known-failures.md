@@ -61,9 +61,26 @@ Controller and request specs render real views, and `_head.html.erb` calls
 `javascript_include_tag "bundle"`. If the JS bundle has never been built in the
 container, every view-rendering spec fails regardless of the code under test.
 
-**Verified pre-existing:** the same specs produce the same `bundle.js` error at
-`f51302a54`, before any hardening work. This is a missing build step in a fresh
-container, not something the hardening pass introduced.
+**Verified pre-existing**, two ways:
+
+1. The same specs produce the same `bundle.js` error at `f51302a54`, before any
+   hardening work.
+2. Counted, both without assets built:
+
+   | Commit | `spec/controllers spec/requests` |
+   |---|---|
+   | `f51302a54` (pre-hardening) | 303 examples, **87 failures** |
+   | current `main` | 320 examples, **118 failures** |
+
+   The suite was already substantially red — 87 failures before any hardening
+   work.
+
+   **The +31 delta is NOT explained.** The baseline run was filtered to the
+   count line, so there is no per-spec list to diff against `main`'s. The
+   plausible reading is that the hardening pass added view-rendering specs
+   which hit the same missing bundle, but that is a guess and is recorded here
+   as one. Re-run both sides with assets built and with the failure list
+   retained before drawing any conclusion.
 
 **Fix before running these locally:**
 
