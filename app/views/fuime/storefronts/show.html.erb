@@ -161,7 +161,11 @@
     </p>
     <p class="muted text-sm mt-2">
       Fuime is forked from
-      <%= link_to "Fuime by Hack Club", "https://hackclub.com/hcb", target: "_blank", class: "text-primary" %>
+<%# The upstream project's name is HCB. The brand sweep replaced "HCB" here
+    too, leaving the public-facing "Fuime is forked from Fuime by Hack Club" —
+    nonsense, and it stops the attribution naming what it attributes
+    (CLAUDE.md Rule 7). %>
+      <%= link_to "HCB by Hack Club", "https://hackclub.com/hcb", target: "_blank", class: "text-primary" %>
       (AGPL-3.0)
     </p>
   </div>

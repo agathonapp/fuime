@@ -50,12 +50,20 @@ class SponsorPolicy < ApplicationPolicy
 
   private
 
+  # `index?` is authorized against the Sponsor *class*, not an instance, and a
+  # class has no #event — so `record.event` raised NoMethodError and any
+  # non-admin hitting /sponsors got a 500 instead of being denied. Admins never
+  # saw it because `user&.auditor?` / `user&.admin?` short-circuits first.
+  def record_event
+    record.respond_to?(:event) ? record.event : nil
+  end
+
   def auditor_or_reader?
-    user&.auditor? || OrganizerPosition.role_at_least?(user, record&.event, :reader)
+    user&.auditor? || OrganizerPosition.role_at_least?(user, record_event, :reader)
   end
 
   def admin_or_member?
-    user&.admin? || OrganizerPosition.role_at_least?(user, record&.event, :member)
+    user&.admin? || OrganizerPosition.role_at_least?(user, record_event, :member)
   end
 
 end

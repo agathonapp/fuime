@@ -106,6 +106,47 @@ RSpec.describe OrganizerPositionInvite, type: :model do
     end
   end
 
+  describe "#pending_signature?" do
+    # FUIME: with no agreement configured a signee invite used to wait on a
+    # contract that never arrives, so accept() returned false and the applicant
+    # could never join the org their application had just created.
+    context "when no agreement is configured" do
+      before do
+        allow_any_instance_of(Event::Plan::Standard)
+          .to receive(:contract_available?).and_return(false)
+      end
+
+      it "is not pending, and a signee invite can be accepted" do
+        invite = create(:organizer_position_invite, is_signee: true)
+
+        expect(invite).to_not be_pending_signature
+        expect(invite.accept).to eq(true)
+        expect(invite.reload).to be_accepted
+        expect(invite.organizer_position).to be_present
+      end
+    end
+
+    context "when an agreement is configured" do
+      before do
+        allow_any_instance_of(Event::Plan::Standard)
+          .to receive(:contract_available?).and_return(true)
+      end
+
+      it "still holds a signee invite until something is signed" do
+        invite = create(:organizer_position_invite, is_signee: true)
+
+        expect(invite).to be_pending_signature
+        expect(invite.accept).to eq(false)
+      end
+
+      it "does not hold a non-signee invite" do
+        invite = create(:organizer_position_invite, is_signee: false)
+
+        expect(invite).to_not be_pending_signature
+      end
+    end
+  end
+
   context "when sending another invite to an existing user" do
     it "fails validation" do
       invite = create(:organizer_position_invite)

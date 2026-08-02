@@ -15,6 +15,11 @@ module ApplicationHelper
   include LogoHelper
   include OrganizerPosition::Spending::AllowancesHelper
   include PopoverHelper
+  # `config.action_controller.include_all_helpers = false`, so a helper is only
+  # available to its own controller unless it is included here. RolesHelper is
+  # called from team, invite, and roles views owned by several controllers —
+  # without this, `role_label` is undefined and those pages 500.
+  include RolesHelper
   include SeasonalHelper
   include SessionsHelper
   include StaticPagesHelper

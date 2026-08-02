@@ -107,7 +107,19 @@ class OrganizerPositionInvite < ApplicationRecord
     contracts.not_voided.last
   end
 
+  # Upstream reads "no signed contract yet" as "still waiting for one". Fuime
+  # has no DocuSeal agreement configured, so no contract ever arrives and a
+  # signee invite waits forever: activate_event! creates the invite, accept()
+  # hits the pending_signature? guard and returns false — no exception, no
+  # organizer position — and the applicant lands on "the associated contract
+  # needs to be signed by all parties" for a document that does not exist.
+  #
+  # Gate on whether an agreement is configured at all. When one is, this is
+  # unchanged. Same reasoning as Event::Application#send_contract returning nil
+  # and activate_event! skipping its contract steps.
   def pending_signature?
+    return false unless Event::Plan::Standard.new.contract_available?
+
     is_signee && contracts.where(aasm_state: :signed).none?
   end
 

@@ -9,6 +9,17 @@ class SponsorsController < ApplicationController
     @sponsors = Sponsor.all.includes(:event).order(created_at: :desc)
   end
 
+  # GET /sponsors/new
+  #
+  # `resources :sponsors` routes this and the index links to it ("New Sponsor"),
+  # but there was no action — so Rails rendered the view with @sponsor nil and
+  # `@sponsor.event` raised NoMethodError. Reachable from Admin Tools →
+  # Sponsors → New Sponsor, which 500'd for everyone including admins.
+  def new
+    @sponsor = Sponsor.new(event_id: params[:event_id])
+    authorize @sponsor
+  end
+
   # GET /sponsors/1
   def show
     authorize @sponsor
