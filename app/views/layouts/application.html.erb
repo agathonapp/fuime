@@ -15,6 +15,29 @@
 
     <%= render "layouts/seasonal" %>
 
+    <%# Playground Mode banner, restored from upstream (removed in 73d010de6).
+        Without it, toggling an organization into Playground Mode changes nothing
+        an organizer can see, which is how the mode came to look broken. %>
+    <% if @event&.demo_mode? && !@no_app_shell && !@no_transparency_header %>
+      <div class="w-full dev-banner dev-banner--info rounded-b no-underline">
+        <div class="flex flex-col md:flex-row gap-y-2 gap-x-6 py-6 items-center justify-center">
+          <%= link_to "#playground-callout", class: "no-underline text-[inherit] hover:text-[inherit]" do %>
+            <p class="font-semibold text-xl m0">Playground Mode</p>
+          <% end %>
+          <%# Always the transactions page, not the current one. Upstream linked
+              to `{ show_mock_data: ... }` — the page you are already on — and the
+              mock ledger only renders on transactions, so clicking this from the
+              org home (where everyone starts) set the flag and visibly did
+              nothing at all. %>
+          <%= link_to(event_transactions_path(event_id: @event.slug, show_mock_data: !show_mock_data?),
+                      class: "btn btn-small w-fit shrink-none nowrap") do %>
+            <%= inline_icon "view" %>
+            <%= show_mock_data? ? "Hide" : "Show" %> mock data
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
     <% if content_for?(:nav) %>
       <main class="app flex flex-col lg:flex-row gap-0 w-full">
         <% if @event && @first_time %>

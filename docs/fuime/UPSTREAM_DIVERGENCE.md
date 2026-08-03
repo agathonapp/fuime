@@ -1500,6 +1500,79 @@ placeholder `sk...`; `Stripe::Account.retrieve` returns AuthenticationError),
 and `create_stripe_card?` requires `is_not_demo_mode?` — so cards cannot be
 issued on `fuime-playground` or any other Playground Mode org.
 
+## Playground Mode does something again (2026-08-02)
+
+Reported as "when i toggle playground mode on orgs nothing happens" — and that
+was accurate. Upstream deleted the feature's entire visible half in
+`73d010de6` ("Remove playground mode & mock data", #12240, Nov 2025), which is
+in our history. It left `EventsHelper#show_mock_data?` as a stub returning
+`false`, so every call site in the views was dead code, and put a small "Demo
+Account" badge in the org nav in its place — which later upstream nav rewrites
+then dropped. The result: `demo_mode` still gated features and still refused
+things, but an organizer looking at the org saw nothing at all.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `show_mock_data?`, `set_mock_data!`, `mock_data_session_key` restored | The stub is what made every mock-data branch in the views unreachable. Session-scoped per event, so two orgs can be viewed differently in one session and the org record never changes. | `app/helpers/events_helper.rb` |
+| `before_action :set_mock_data` + the mock ledger in `transactions_list` | `?show_mock_data=true|false` drives the banner's toggle. Nothing is persisted — the real query is discarded for that request. | `app/controllers/events_controller.rb` |
+| Playground Mode banner restored | The visible half. Without it, toggling the mode changes nothing an organizer can see. | `app/views/layouts/application.html.erb` |
+| "Welcome to Playground Mode" callout restored, reworded | It is the `#playground-callout` anchor the banner links to. Upstream's copy invited teams to explore a fiscal-sponsorship dashboard. | `app/views/events/transactions.html.erb` |
+| Mock descriptions rewritten for a teen business | Upstream's were a nonprofit's: "💰 Fiscal sponsorship fee", donations from strangers, club discos. The fee is now "Fuime platform fee (4%)", matching what `Fuime::PaymentWebhookHandler` actually posts. | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |
+
+The service itself survived the upstream deletion — only its callers were
+removed — so the expensive half was already on disk.
+
+**Three bugs the restore hit, each now a spec** in
+`spec/controllers/fuime/playground_mock_data_spec.rb` (7 examples):
+
+* **Arity.** The rows are `OpenStruct`s, and the transaction partial calls
+  methods that take arguments — `memo(event:)`, `receipt_optional?`,
+  `association(:receipts)`. An OpenStruct field is arity 0, so each was an
+  `ArgumentError`/`NoMethodError` 500 in turn. They are singleton methods now.
+* **A shared cache key.** `hcb_codes/memo/_memo` caches the rendered memo under
+  `"#{event}/#{hcb_code.hcb_code}/cached_memo"` when `custom_memo` is nil. A mock
+  row has no `hcb_code`, so every row collided on one key and the whole ledger
+  rendered the *same* memo — cached for ten minutes, across requests. The mock
+  sets `custom_memo`, which takes the uncached branch.
+* **The lazy frame.** The rows live in `transactions_list`, not `transactions`,
+  so the mock block has to be in that action or the page renders real rows.
+
+Verified in-process: banner and callout appear on a Playground org and on no
+other; the toggle flips "Show"/"Hide" and survives navigation; with it on the
+ledger frame is 9 rows and 7 distinct mock memos with no real rows; with it off
+the real seeded rows return; and a second organization is unaffected while the
+first has mock data on.
+
+**Noticed, not fixed:** the transaction *type* filter still offers "Fiscal
+sponsorship fee" as an option — an HCB-model string in a Fuime UI, and a
+`BRAND_STRINGS.md` item rather than part of this change.
+
+## The Playground Mode toggle led nowhere (2026-08-02)
+
+Reported one merge after #25: "when i click show mock data nothin happens".
+Correct again, and this one was mine. The banner renders on **every** page of a
+Playground org, but the mock ledger only renders on transactions — and the
+button linked to `{ show_mock_data: ... }`, i.e. the page you are already on
+(upstream's own markup). Clicking it from the org home, which is where everyone
+starts, set the session flag and changed nothing visible.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| The toggle links to `event_transactions_path(..., show_mock_data:)` | So clicking it lands on the one page that renders a mock ledger, from wherever it was clicked. | `app/views/layouts/application.html.erb` |
+| Balance falls back when `@mock_total` is nil | Only the action that builds the mock ledger sets it; every other page left it nil, and `render_money_amount(nil)` reads as $0.00. Mock data on the ledger should not make the org look broke everywhere else. | `app/views/events/home/_balance.html.erb` |
+
+Reproduced before fixing, in-process: clicking from `/fuime-playground` gave
+200 and zero mock rows. After: the href is
+`/fuime-playground/transactions?show_mock_data=true` from the home page *and*
+from `/cards`; following it lands 200 with 6 mock rows in the ledger frame; the
+home balance still reads the real $417.88; the off switch returns 0 mock rows.
+
+Four new examples in `spec/controllers/fuime/playground_mock_data_spec.rb`
+(11 total). One measurement note for whoever probes this next: a fresh git
+worktree has no `app/assets/builds`, which is gitignored — every page 500s on
+`javascript_include_tag "bundle"` and it looks like the feature is broken.
+Copy the builds directory in before believing a probe.
+
 ## The admin transfer limit was gating nothing (2026-08-02)
 
 Found while unblocking disbursement approval on the deployed app. Approval is
