@@ -369,8 +369,23 @@ module EventsHelper
     )
   end
 
+  # Playground Mode's mock data, restored from upstream (removed there in
+  # 73d010de6, "Remove playground mode & mock data"). Fuime keeps Playground
+  # Mode as a live product surface — an empty org is a bad demo — so the stub
+  # that commit left behind (`false`) is back to the real implementation.
+  #
+  # Session-scoped per event, so two orgs can be viewed differently in one
+  # session and nothing about the org record changes when it is toggled.
   def show_mock_data?(event = @event)
-    false
+    event&.demo_mode? && session[mock_data_session_key(event)]
+  end
+
+  def set_mock_data!(bool = true, event = @event)
+    session[mock_data_session_key(event)] = bool
+  end
+
+  def mock_data_session_key(event = @event)
+    "show_mock_data_#{event.id}".to_sym
   end
 
   def paypal_transfers_airtable_form_url(embed: false, event: nil, user: nil)
