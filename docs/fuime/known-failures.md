@@ -192,6 +192,34 @@ Per the lesson recorded above, the failure **list** was kept, not just the
 count — which is what made "34 vs 34" provable rather than a coincidence of
 totals.
 
+### `97ddfe3e0` — "Turn test-mode card issuing back on" (Phase 1 baseline)
+
+Measured 2026-08-02 in a clean `git worktree` at `HEAD`, with
+`app/assets/builds` copied in so the asset-related failures documented above do
+not dominate. Same scope, same container, both sides.
+
+| Scope | Tree | Result |
+|---|---|---|
+| `spec/controllers spec/requests spec/policies spec/helpers` | `HEAD` | **450 examples, 22 failures, 14 pending** |
+| same | `HEAD` + the Phase 1 honesty work | **474 examples, 22 failures, 14 pending** |
+
+The failure lists are **identical** — diffed with `comm`, not compared by count.
+The +24 examples are the 24 specs added by that work.
+
+The 22 are pre-existing and cluster in five areas, none of them Fuime-authored:
+
+| Area | Count |
+|---|---|
+| `payroll/positions_controller_spec` | 9 |
+| `users/first_controller_spec` | 3 |
+| webauthn (`logins_controller`, `webauthn_credentials_controller`) | 3 |
+| `wires_controller_spec` (2), `ach_transfers_controller_spec` (1), `sudo_mode_handler_spec` (1), `organizer_position_invites_controller_spec` (1) | 5 |
+| `comment_policy_spec` — factory hits "Company name is too long (maximum is 16)" | 1 |
+
+The last one is Faker-seed dependent and will move between runs; treat a change
+in that single example as noise rather than a regression. **Use this table as
+the reference point for the next change**, and diff lists rather than counts.
+
 ### The full suite, measured at last — 2026-08-02 (plan lineup work)
 
 **The first full-suite measurement in this repo's history.** Every entry above

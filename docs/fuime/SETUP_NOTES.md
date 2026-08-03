@@ -2,6 +2,58 @@
 
 ## Handoff (most recent first)
 
+**2026-08-02 — Phase 1: the app now tells the truth about itself.** Written
+against `97ddfe3e0`, in a working tree a second session was editing at the same
+time — name the commit, not the branch, because the branch moved underneath this
+work mid-session (`fuime/enable-card-issuing` → `fuime/front-on-approval`).
+Two live misrepresentations closed. (1) `/privacy`
+was redirecting to `hackclub.com/privacy-and-terms/` and `/faq` to
+`help.hcb.hackclub.com` — Fuime serving another organisation's documents as its
+own, which blocks the first real signup. There are now real `/privacy`,
+`/terms`, `/guardian-agreement` and `/faq` pages, linked from the footer and
+from onboarding. The guardian agreement page renders **the same versioned
+partial the signing flow renders**, so the published text cannot drift from the
+binding one; it passes a `Struct` stand-in for the minor rather than editing the
+versioned file, whose own header forbids that. (2) Stripe runs in test mode in
+production, and nothing said so — a storefront asked strangers for card numbers
+and the Cards page issued real-looking cards. There is now an app-wide banner
+plus specific copy on both surfaces, all reading `StripeService.live?`, so going
+live removes every one of them at once. Also repointed
+`security_reporting_email` and `github_url` off Hack Club.
+**Measurement:** baseline taken in a clean worktree at `HEAD` with assets copied
+in — 450 examples / 22 failures, versus 474 / 22 with this work. Failure lists
+diffed with `comm` and **identical**; the +24 are the 24 new specs. See the new
+table at the end of `known-failures.md` and use it as the next reference point.
+**Gotcha:** `docker run --rm ... | tail -N` buffers everything until the
+container exits, so a long run looks like a hung one with a 0-byte log. Also
+note `docker run` names containers randomly — to wait on a run, poll
+`docker ps --format '{{.Image}}' | grep '^fuime-web$'`, not the container name.
+**Still operator-only, and each still open:** object-storage credentials
+(receipts are *still* dying on every deploy — `render.yaml` says `amazon` with
+nothing behind it), `APPSIGNAL_PUSH_API_KEY` (newly added to `render.yaml` for
+both services), and a real `support@fuime.com` inbox, which every legal page now
+routes COPPA deletion and export requests to.
+**Storage does not have to be AWS.** `config/storage.yml` now takes an optional
+`S3__ENDPOINT`, so Cloudflare R2 (recommended — no egress fees) or Backblaze B2
+work unchanged. A **Render persistent disk cannot** be used: a disk is reachable
+by one service instance only and not from another service, and `fuime-worker`
+really does read uploaded bytes (receipt OCR, `check_deposit.front.open`,
+Active Storage's `AnalyzeJob`). Don't relitigate this — it is written up at the
+end of `UPSTREAM_DIVERGENCE.md`.
+
+**2026-08-02 — Transfer approval was gating nothing.** Branch
+`fuime/front-on-approval`. No production admin had a
+`Governance::Admin::Transfer::Limit` (bd10e06c1 only fixed new rake-made
+admins), so nobody could approve a disbursement; set rushilchopra@gmail.com to
+$10,000/24h via a Render one-off job. Then found the gate was decorative:
+`DisbursementService::Create` fronted the incoming side **at creation**, so
+`HCB-500-2` ($1,230,004, still `reviewing`) had already made $1,229,914
+spendable. Now fronts only on approval. Two new specs; 35 examples green in
+`spec/services/disbursement_service/`. **Run rake on the deployed app with
+`render jobs create srv-d9n2tm6417fc73ci8hl0 --start-command "..."`** — SSH keys
+aren't registered, and the Postgres `ipAllowList` is empty so psql can't reach
+it either.
+
 **2026-08-02 — Playground org with money.** Playground Mode was already here:
 it is upstream's `Event#demo_mode`, per-org, and it blocks money movement while
 leaving the ledger fully readable. Added

@@ -1,4 +1,23 @@
 <div class="banner-container">
+  <%# Fuime: the single most important fact about this deployment.
+      Stripe runs in test mode, so nothing on Fuime moves real money — a
+      customer who types a real card into a storefront is simply declined, and
+      an issued card buys nothing. Stating that once, on every page, is more
+      honest and far more durable than annotating each surface that could
+      mislead someone; it also cannot be missed by a signed-out visitor who
+      only ever sees a storefront.
+      This disappears by itself the moment STRIPE_MODE=live.
+      The rule lives in FuimeHelper#show_test_mode_banner? so it can be tested;
+      it is suppressed in development and test. %>
+  <% if show_test_mode_banner? %>
+    <div class="w-100 px4 !bg-warning transparency-banner px-4">
+      <p class="h5 medium center py-2 my-0 text-white">
+        Fuime is in <strong>test mode</strong> — no real money moves.
+        Payments and cards are simulated.
+        <%= link_to "Learn more", faq_path, class: "text-inherit underline" %>
+      </p>
+    </div>
+  <% end %>
   <% if current_user&.needs_to_enable_2fa? && !Rails.env.development? %>
     <div class="w-100 px4 !bg-red transparency-banner px-4">
       <p class="h5 medium center py-2 my-0 text-white text-xl">

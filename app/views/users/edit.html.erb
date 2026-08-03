@@ -88,6 +88,18 @@
           </div>
           <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to] %>
 
+          <%# Fuime: the terms have to appear where someone actually agrees to
+              them. Published-but-unlinked documents are not notice, and this
+              form is the moment a person becomes a Fuime user. %>
+          <p class="muted text-sm mt-3 mb-2">
+            By continuing you agree to Fuime's
+            <%= link_to "Terms of Service", terms_path, target: "_blank" %> and
+            <%= link_to "Privacy Policy", privacy_path, target: "_blank" %>.
+            If you're under 18, a parent or guardian also accepts the
+            <%= link_to "Guardian Agreement", guardian_agreement_path, target: "_blank" %>
+            before you can run a business.
+          </p>
+
           <div class="actions flex">
             <button type="submit" class="btn bg-info w-full gap-2">
               Start using Fuime

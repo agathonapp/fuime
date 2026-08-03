@@ -8,6 +8,19 @@
     Fuime is a fork of <a href="https://github.com/hackclub/hcb" target="_blank" class="underline">HCB</a> by Hack Club (AGPL-3.0).
   </p>
 
+  <%# Fuime: legal links live here, not in .footer-extras below — that block is
+      `invisible` until the footer is hovered, which is not a reachable place to
+      put the terms someone is being asked to agree to. %>
+  <p class="text-xs text-center flex justify-center gap-1 flex-wrap">
+    <%= link_to "Terms", terms_path %>
+    •
+    <%= link_to "Privacy", privacy_path %>
+    •
+    <%= link_to "Guardian Agreement", guardian_agreement_path %>
+    •
+    <%= link_to "FAQ", faq_path %>
+  </p>
+
   <% if !Rails.env.production? || auditor_signed_in? %>
     <% @sql_cached_count = ActiveRecord::RuntimeRegistry.stats.cached_queries_count %>
     <% @sql_count = ActiveRecord::RuntimeRegistry.stats.queries_count - @sql_cached_count %>

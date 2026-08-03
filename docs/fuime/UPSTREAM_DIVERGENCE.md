@@ -1500,6 +1500,157 @@ placeholder `sk...`; `Stripe::Account.retrieve` returns AuthenticationError),
 and `create_stripe_card?` requires `is_not_demo_mode?` — so cards cannot be
 issued on `fuime-playground` or any other Playground Mode org.
 
+## The admin transfer limit was gating nothing (2026-08-02)
+
+Found while unblocking disbursement approval on the deployed app. Approval is
+guarded by `Governance::Admin::Transfer::Limit`, but the money was already
+spendable before anyone approved anything, so the guard decided only a state
+transition.
+
+`DisbursementService::Create` fronts **at creation** — `i_cpt.update(fronted:
+@fronted)`, with callers passing `@source_event.plan.front_disbursements_enabled?`
+([disbursements_controller.rb:139](../../app/controllers/disbursements_controller.rb#L139),
+`api/v4/disbursements_controller.rb:23`, `wires_controller.rb:84`). Every reader
+of `fronted` is incoming-scoped (`Event#fronted_incoming_balance_v2_cents`,
+`#fronted_fee_balance_v2_cents`), so that one line is what makes a destination
+org's money spendable. Fronting it at creation meant a destination could spend
+the full amount while the transfer still sat in `reviewing`.
+
+Observed in production: `HCB-500-2`, $1,230,004.00 from "Hack Club NoEvent"
+(id 999, `Internal` plan) to "Alpha School Santa Barbara" — `aasm_state:
+reviewing`, never approved, and the destination showed **$1,229,914 available**
+(the $1,230,004 fronted in, less a $90 pending out).
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Incoming disbursement is no longer fronted at creation (`fronted: false`, unconditionally) | Made the transfer-limit approval gate real: the destination cannot spend until an admin approves. `Disbursement#mark_approved` already fronts both pending transactions, so an approved transfer behaves exactly as before. | `app/services/disbursement_service/create.rb` |
+| Two specs pinning the new behaviour | Non-admin request with `fronted: true` leaves the incoming CPT unfronted and the destination's `fronted_incoming_balance_v2_cents` at 0; `approve_by_admin` then fronts it and the balance appears. | `spec/services/disbursement_service/create_spec.rb` |
+
+The outgoing side keeps upstream's behaviour. Nothing reads its `fronted` flag,
+and the outgoing amount counts against the source event's balance either way.
+
+The `fronted:` kwarg is now only consulted for the outgoing transaction, so the
+plan feature `front_disbursements` is effectively inert. Left in place rather
+than ripped out of three call sites: it is upstream's shape, and this keeps the
+diff to one line in one file.
+
+**Blast radius is narrower than it first looks.** Teen ventures are on the
+`Standard` plan, which already excludes `front_disbursements`, so their outgoing
+transfers were never pre-fronted. This only changed transfers *sourced from* the
+`Internal` / `HackClubHQ` pseudo-orgs — i.e. admin funding of demo orgs.
+
+Specs: `spec/services/disbursement_service/` 35 examples, 0 failures.
+
+### Not fixed, deliberately: money-in never settles
+
+Related and left alone. `Fuime::PaymentWebhookHandler` correctly books incoming
+payments `fronted: false` — but nothing ever settles them. The only settlement
+sources are Plaid, Stripe Issuing, CSV and Column
+([transaction_engine/nightly.rb:14-17](../../app/services/transaction_engine/nightly.rb#L14-L17));
+no importer turns a Fuime Stripe payment or payout into a `CanonicalTransaction`.
+So `fronted: false` means *never spendable*, not "spendable at T+2". The single
+real payment taken so far ($45.00 to Sunset Cookies) only shows as balance
+because it predates that fix and was written `fronted: true`.
+
+Building the settlement feed now was rejected: §1.5's Stripe Connect route would
+delete it, since funds would land in the parent's connected account rather than a
+Fuime-controlled pool. Decide the structure first.
+
+Also unresolved, and now visible: approved disbursements can never reach
+`deposited` on this deployment. `Disbursement::NightlyJob` is scheduled
+([schedule.yml:61](../../config/schedule.yml#L61)) and posts a Column book
+transfer for every `pending` disbursement, but production has
+`COLUMN__PRODUCTION__API_KEY` missing and `ColumnService::Accounts::FS_MAIN` nil,
+so every attempt fails. Harmless while balances are fronted; it is error noise
+and it means the state machine dead-ends at `pending`.
+
+## Phase 1: honest pre-launch posture (2026-08-02)
+
+Goal for the day: make the deployed app safe to put in front of real teenagers
+and real parents **without** resolving the money-transmission question, which is
+weeks of legal work (LAUNCH_SPEC.md §1.1). That means no real money moves — and
+the app has to say so, everywhere, without being asked.
+
+Two classes of problem were closed. Both were live on the deployed service.
+
+### 1. Fuime was pointing its own users at Hack Club
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `/privacy` no longer redirects to `hackclub.com/privacy-and-terms/` | Fuime was serving another organisation's privacy policy as its own. You cannot take a single real signup in that state — it is a misrepresentation, and the policy does not describe what Fuime collects. | `config/routes.rb`, `app/views/static_pages/privacy.html.erb` |
+| `/faq` no longer redirects to `help.hcb.hackclub.com` | Same class of problem: Fuime's users being sent to HCB's help site for answers about Fuime. The new page also answers the question this phase creates — "does real money move?" — and answers it from `StripeService.live?`, so it cannot go stale. | `config/routes.rb`, `app/views/static_pages/faq.html.erb` |
+| New `/terms` | None existed. | `app/views/static_pages/terms.html.erb` |
+| New `/guardian-agreement` | The agreement text already existed and was already versioned, but was only reachable *inside* the signing flow — so a parent could only read it by first having an account and an invite. It is now public, and renders **the same versioned partial** the signing flow renders, so the published text cannot drift from the binding one. | `app/views/static_pages/guardian_agreement.html.erb`, `app/controllers/static_pages_controller.rb` |
+| `security_reporting_email`: `hcb-security@hackclub.com` → `support@fuime.com` | `/security` told Fuime's users to report Fuime vulnerabilities to Hack Club's inbox: Fuime never hears them, and Hack Club fields reports for software it does not run. | `config/constants.yml` |
+| `github_url`: `hackclub/hcb` → `agathonapp/fuime` | Rendered as the footer's "Open source" link and as the target for build-commit links, so it pointed at a repo containing none of Fuime's commits. AGPL-3.0 asks for the source of the *running* program. Attribution to HCB is separate and stays (footer text, README). | `config/constants.yml` |
+| Legal links in the footer, and at the point of signup | Terms nobody is shown are not notice. The footer block they would naturally have joined (`.footer-extras`) is `invisible` until hover, so they got their own always-visible line; onboarding now states what continuing agrees to. | `app/views/application/_footer.html.erb`, `app/views/users/edit.html.erb` |
+
+The legal pages are deliberately written to describe **what the app does
+today**, hedged as beta terms, rather than adapted from a template describing a
+product that does not exist. They are not a substitute for counsel-drafted
+documents before real money — LAUNCH_SPEC.md §1.3 is unchanged — but "accurate
+and plain" is a defensible pre-launch posture and "someone else's policy" was
+not.
+
+### 2. The app looked like it moved real money, and it does not
+
+Stripe runs in test mode in production, deliberately (PRODUCTION_READINESS.md
+§1.5). That is defensible only if it is stated. It was not: a storefront asked a
+stranger for a card number, and the Cards page issued a real-looking card, with
+nothing on either page saying the result is simulated.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| App-wide test-mode banner | The cheapest honest fix, and the only one a signed-out storefront visitor is guaranteed to see. Renders in both layout branches. Vanishes by itself on `STRIPE_MODE=live`. | `app/views/application/_banner_container.html.erb` |
+| `FuimeHelper#show_test_mode_banner?` | The banner rule lives in a helper rather than inline in the partial **because it is suppressed in development and test** — a view spec could otherwise never exercise it. Now unit-tested in all four environments. | `app/helpers/fuime_helper.rb`, `app/helpers/application_helper.rb` |
+| Storefront states that a real card will not be charged | This is a public URL a teenager hands to actual customers. A plain "Pay" button was a promise the page could not keep, and the person let down is the teen's customer, in front of the teen. The form still works — the beta and every demo need it — the button now reads "Try a test payment", and the post-payment confirmation says no real money changed hands. | `app/views/fuime/storefronts/show.html.erb` |
+| Cards page states the cards are test cards | The app-wide banner says it too, but the page that issues the card is where it needs saying — otherwise a teen tries to buy something and is declined at a checkout. | `app/views/events/card_overview.html.erb` |
+
+Every one of these reads `StripeService.live?`, so going live removes all of
+them at once with no copy to hunt down. That was the design constraint.
+
+### Operator actions (nothing below is code)
+
+| # | Action | Consequence if skipped |
+|---|--------|------------------------|
+| 1 | Set `S3__BUCKET`, `S3__REGION`, `S3__ACCESS_KEY_ID`, `S3__SECRET_ACCESS_KEY` (and `S3__ENDPOINT` if not AWS) on **both** `fuime-web` and `fuime-worker` | `render.yaml` already sets `ACTIVE_STORAGE_SERVICE=amazon`, but with no credentials behind it. Until this is done, every uploaded receipt still dies on the next deploy — silently. |
+| 2 | Set `APPSIGNAL_PUSH_API_KEY` on both services, then add alerts on 500-rate and Sidekiq failures | Newly added to `render.yaml` as `sync: false`. Without it you learn about outages from a user's email; a key with no alert attached is still nobody watching. |
+| 3 | Stand up a real `support@fuime.com` inbox | Every legal page now routes deletion, export, and consent-withdrawal requests there. These are COPPA obligations with a clock on them. |
+
+### Verification
+
+`spec/controllers spec/requests spec/policies spec/helpers`, assets built on both
+sides, baseline measured in a clean worktree at `HEAD`:
+
+| Tree | Result |
+|---|---|
+| `HEAD` (clean worktree, baseline) | 450 examples, **22 failures**, 14 pending |
+| `HEAD` + this work | 474 examples, **22 failures**, 14 pending |
+
+The +24 examples are exactly the 24 added here. Failure **lists** were diffed,
+not just counts — an earlier session was burned by comparing counts alone (see
+`known-failures.md`) — and the two lists are **identical**: no new failures, and
+none of the 22 touches a surface this work changed. The 24 new specs, all green:
+
+- `spec/requests/fuime/legal_pages_spec.rb` (12) — reachable without an account
+  (a parent reading the agreement before accepting an invite has no account), no
+  lingering Hack Club redirect, the published agreement is the versioned one and
+  not the fallback, and all four pages stay indexable.
+- `spec/helpers/fuime_helper_spec.rb` (5) — the banner rule across four
+  environments, including that it disappears when Stripe goes live.
+- `spec/controllers/fuime/storefronts_controller_spec.rb` (4 added) —
+  test-mode and live-mode copy.
+- `spec/controllers/fuime/onboarding_terms_spec.rb` (3) — **no spec anywhere
+  rendered `users/edit`**, so a typo'd path helper in the new notice would have
+  500'd the signup page behind a green suite. Note the fixture needs
+  `full_name: nil`: `User#onboarding?` is `full_name_in_database.blank?`, and a
+  populated user renders the settings branch instead.
+
+Rubocop clean on all changed Ruby. `erb_lint` reports one `Layout/HashAlignment`
+in `fuime/storefronts/show.html.erb`; it is **pre-existing** — verified by
+linting the file at `HEAD`, where the same offence sits at line 84 before this
+work shifted it to 106.
+
 ## Organization plans: Fuime's lineup, HCB's retired (2026-08-02)
 
 ### What was wrong

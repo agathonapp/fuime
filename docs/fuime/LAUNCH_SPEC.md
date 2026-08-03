@@ -170,18 +170,34 @@ Set in Render for **both** `fuime-web` **and** `fuime-worker`. Anything marked
 **Cost:** 2.9% + $0.30 per transaction. Connect adds fees — model this against your 4%
 before promising anyone a margin.
 
-### 3.2 AWS S3 — REQUIRED (data loss today)
+### 3.2 Object storage — REQUIRED (data loss today)
+
+Any **S3-compatible** store; it does not have to be AWS. Cloudflare R2 and
+Backblaze B2 both work unchanged. **R2 is the recommended pick** — S3-compatible
+API, no egress fees, and materially cheaper than S3 for records kept seven years.
+
 | Variable | Notes |
 |---|---|
-| `ACTIVE_STORAGE_SERVICE` | Must be `amazon` |
-| `S3__BUCKET` `S3__REGION` `S3__ACCESS_KEY_ID` `S3__SECRET_ACCESS_KEY` | IAM user scoped to one bucket |
+| `ACTIVE_STORAGE_SERVICE` | Must be `amazon` — upstream's service name. It means "S3-compatible", not "AWS". |
+| `S3__BUCKET` `S3__REGION` `S3__ACCESS_KEY_ID` `S3__SECRET_ACCESS_KEY` | Credentials scoped to one bucket |
+| `S3__ENDPOINT` | Optional. Set for non-AWS: R2 is `https://<account-id>.r2.cloudflarestorage.com` with `S3__REGION=auto`. Leave unset for AWS. |
+
+> **Why not a Render persistent disk?** It cannot work for Fuime — a hard
+> constraint, not a preference. A Render disk is "accessible by only a single
+> service instance" and unreachable "from any other service". Fuime runs
+> **two**, and `fuime-worker` genuinely reads uploaded bytes:
+> `Receipt::SuggestPairingsJob` OCRs receipts via RTesseract/MiniMagick,
+> `ProcessColumnCheckDepositJob` calls `check_deposit.front.open`, and Active
+> Storage's own `AnalyzeJob` downloads every new blob. A disk on the web service
+> is invisible to all of it. Disks also forbid scaling past one instance and
+> rule out zero-downtime deploys.
 
 > **This is live data loss.** Active Storage defaults to `:local`, Render's filesystem
 > is ephemeral, and `render.yaml` defines no disk. Every deploy **permanently destroys
 > every uploaded receipt** — the exact records Fuime tells families to keep for taxes.
 > Also configure versioning, lifecycle, and a 7-year retention policy for tax records.
 
-**Cost:** a few dollars a month at launch scale.
+**Cost:** a few dollars a month at launch scale; less on R2, which bills no egress.
 
 ### 3.3 Postgres + Redis — REQUIRED
 Currently `basic-256mb` Postgres and a **free** Redis with `maxmemoryPolicy: noeviction`

@@ -65,11 +65,33 @@
       </div>
       <p class="muted m-0">Thank you for supporting <%= @event.name %>.</p>
       <p class="text-sm muted mt-2">
-        It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+        <% if StripeService.live? %>
+          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+        <% else %>
+          That was a <strong>test payment</strong> — no real money changed hands.
+          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+        <% end %>
       </p>
     <% else %>
-      <h3 class="m-0 mb-2">Support this business</h3>
-      <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
+      <%# Fuime: this form talks to whichever Stripe mode the deployment is in.
+          In test mode a customer entering a real card is declined — so
+          rendering a plain "Pay" button would be a promise the page cannot
+          keep, on a public URL a teenager has shared with actual customers.
+          The form stays functional, because the beta and every demo need it;
+          it just stops pretending. %>
+      <% stripe_live = StripeService.live? %>
+      <h3 class="m-0 mb-2">
+        <%= stripe_live ? "Support this business" : "Payments aren't live yet" %>
+      </h3>
+      <% if stripe_live %>
+        <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
+      <% else %>
+        <p class="muted m-0 mb-4">
+          <%= @event.name %> is on Fuime while we're still in beta. You can try
+          the checkout below, but it runs in Stripe's test mode —
+          <strong>a real card will not be charged.</strong>
+        </p>
+      <% end %>
 
       <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
                     class: "flex flex-col items-center gap-3" do |form| %>
@@ -83,7 +105,8 @@
           <%= form.text_field :description, placeholder: "Custom print",
                               class: "w-full" %>
         </div>
-        <%= form.submit "Pay #{@event.name}", class: "btn btn--primary btn--lg" %>
+        <%= form.submit stripe_live ? "Pay #{@event.name}" : "Try a test payment",
+                        class: "btn btn--lg #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
       <% end %>
 
       <p class="text-sm muted mt-3 m-0">
@@ -94,9 +117,10 @@
         Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>%
         to run the platform.
       </p>
-      <% if StripeService.mode == :test %>
-        <p class="text-sm muted mt-1 m-0">
-          <strong>Test mode</strong> — use card 4242 4242 4242 4242.
+      <% unless stripe_live %>
+        <p class="text-sm mt-1 m-0">
+          Test card <strong>4242 4242 4242 4242</strong>, any future expiry,
+          any CVC.
         </p>
       <% end %>
     <% end %>
@@ -167,6 +191,14 @@
     (CLAUDE.md Rule 7). %>
       <%= link_to "HCB by Hack Club", "https://hackclub.com/hcb", target: "_blank", class: "text-primary" %>
       (AGPL-3.0)
+    </p>
+    <%# The storefront takes the no-nav layout branch, which does not render
+        application/_footer — so the legal links added there never reach this
+        page. It is also the one page where a member of the public is asked for
+        money, which makes it the page that most needs them. %>
+    <p class="muted text-sm mt-2">
+      <%= link_to "Terms", terms_path, class: "text-primary" %> ·
+      <%= link_to "Privacy", privacy_path, class: "text-primary" %>
     </p>
   </div>
 </div>

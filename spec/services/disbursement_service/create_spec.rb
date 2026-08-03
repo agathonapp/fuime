@@ -63,6 +63,58 @@ RSpec.describe DisbursementService::Create do
     expect(cpt_incoming.category).to be_nil
   end
 
+  # FUIME: fronting an incoming disbursement is what makes the money spendable
+  # by the destination org. Doing it at creation let a destination spend the
+  # full amount while the transfer was still `reviewing`, which made the admin
+  # transfer limit a rubber stamp. Fronting now happens only on approval.
+  describe "fronting" do
+    it "does not front the incoming side before approval, even when fronted: true" do
+      requestor = create(:user) # not an admin, so the transfer stays in `reviewing`
+      source_event = create(:event, :with_positive_balance)
+      create(:organizer_position, event: source_event, user: requestor)
+
+      destination_event = create(:event)
+
+      disbursement = described_class.new(
+        name: "Boba Drops",
+        amount: "123.45",
+        requested_by_id: requestor.id,
+        source_event_id: source_event.id,
+        destination_event_id: destination_event.id,
+        fronted: true,
+      ).run
+
+      expect(disbursement).to be_reviewing
+      expect(disbursement.raw_pending_incoming_disbursement_transaction.canonical_pending_transaction.fronted).to eq(false)
+      expect(destination_event.fronted_incoming_balance_v2_cents).to eq(0)
+    end
+
+    it "fronts the incoming side once an admin approves" do
+      requestor = create(:user)
+      source_event = create(:event, :with_positive_balance)
+      create(:organizer_position, event: source_event, user: requestor)
+
+      destination_event = create(:event)
+
+      disbursement = described_class.new(
+        name: "Boba Drops",
+        amount: "123.45",
+        requested_by_id: requestor.id,
+        source_event_id: source_event.id,
+        destination_event_id: destination_event.id,
+        fronted: true,
+      ).run
+
+      approver = create(:user, :make_admin)
+      create(:governance_admin_transfer_limit, user: approver)
+      disbursement.approve_by_admin(approver)
+
+      expect(disbursement.reload).to be_pending
+      expect(disbursement.raw_pending_incoming_disbursement_transaction.canonical_pending_transaction.reload.fronted).to eq(true)
+      expect(destination_event.fronted_incoming_balance_v2_cents).to eq(123_45)
+    end
+  end
+
   it "auto-approves when requested by an admin" do
     requestor = create(:user, :make_admin)
     create(:governance_admin_transfer_limit, user: requestor)

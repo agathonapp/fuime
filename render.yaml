@@ -63,6 +63,14 @@ services:
         sync: false
       - key: S3__SECRET_ACCESS_KEY
         sync: false
+      # Optional. Set to point Active Storage at a non-AWS S3-compatible store
+      # (Cloudflare R2, Backblaze B2, MinIO). Leave unset for AWS S3.
+      # R2 example: https://<account-id>.r2.cloudflarestorage.com  (region: auto)
+      # A Render persistent disk is NOT an option here: a disk is reachable by
+      # exactly one service instance, and both fuime-web and fuime-worker read
+      # uploaded files. See the comment in config/storage.yml.
+      - key: S3__ENDPOINT
+        sync: false
       # Stripe mode. Fuime defaults to test mode everywhere, including
       # production, because the money-transmission structure is not yet
       # legally settled (docs/fuime/PRODUCTION_READINESS.md §1.5).
@@ -163,6 +171,18 @@ services:
         sync: false
       - key: AWS_KMS__SECRET_ACCESS_KEY
         sync: false
+      # Error tracking. Appsignal is already wired into the app; the key has
+      # never been set, which is why a total homepage outage was once invisible
+      # until someone happened to load the site. Render's log search is not
+      # error tracking: with real users you learn about failures from an email.
+      #
+      # REQUIRED BEFORE REAL USERS. Set this in the Render dashboard on BOTH
+      # fuime-web and fuime-worker, then add alerts on 500-rate and on Sidekiq
+      # job failures — a key with no alert attached is still nobody watching.
+      - key: APPSIGNAL_PUSH_API_KEY
+        sync: false
+      - key: APPSIGNAL_APP_ENV
+        value: production
 
   # The marketing site on fuime.com. Separate from fuime-web because it shares
   # nothing with it: no database, no Redis, no Rails. A node service rather
@@ -238,6 +258,14 @@ services:
       - key: S3__ACCESS_KEY_ID
         sync: false
       - key: S3__SECRET_ACCESS_KEY
+        sync: false
+      # Optional. Set to point Active Storage at a non-AWS S3-compatible store
+      # (Cloudflare R2, Backblaze B2, MinIO). Leave unset for AWS S3.
+      # R2 example: https://<account-id>.r2.cloudflarestorage.com  (region: auto)
+      # A Render persistent disk is NOT an option here: a disk is reachable by
+      # exactly one service instance, and both fuime-web and fuime-worker read
+      # uploaded files. See the comment in config/storage.yml.
+      - key: S3__ENDPOINT
         sync: false
       - key: STRIPE_MODE
         value: test
@@ -336,3 +364,9 @@ services:
         sync: false
       - key: AWS_KMS__SECRET_ACCESS_KEY
         sync: false
+      # Error tracking — see the note on fuime-web. Sidekiq failures surface
+      # here, not on the web service, so this key is required on BOTH.
+      - key: APPSIGNAL_PUSH_API_KEY
+        sync: false
+      - key: APPSIGNAL_APP_ENV
+        value: production

@@ -692,8 +692,14 @@ Rails.application.routes.draw do
   get "mobile", to: "static_pages#mobile"
   get "branding", to: "static_pages#branding"
   get "security", to: "static_pages#security"
-  get "privacy", to: redirect("https://hackclub.com/privacy-and-terms/")
-  get "faq", to: redirect("https://help.hcb.hackclub.com")
+  # Fuime: these three used to redirect to hackclub.com and help.hcb.hackclub.com.
+  # Pointing Fuime's own users at another organisation's privacy policy is a
+  # misrepresentation, and it has to be closed before a single real signup
+  # (docs/fuime/LAUNCH_SPEC.md §1.3). They are now Fuime's own documents.
+  get "privacy", to: "static_pages#privacy"
+  get "terms", to: "static_pages#terms"
+  get "guardian-agreement", to: "static_pages#guardian_agreement", as: :guardian_agreement
+  get "faq", to: "static_pages#faq"
   get "roles", to: "static_pages#roles"
   get "admin_tools", to: "static_pages#admin_tools"
   get "audit", to: "admin#audit"

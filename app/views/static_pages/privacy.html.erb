@@ -1,0 +1,156 @@
+<% title "Privacy Policy" %>
+
+<h1 class="heading">Privacy Policy</h1>
+<p class="muted">Last updated 2 August 2026.</p>
+
+<%= render "application/callout", type: "warning", title: "This covers Fuime's pre-launch beta" do %>
+  <p class="m0">
+    Fuime is not yet handling real money. Payments and cards run against
+    Stripe's test mode, so no real funds move through the platform. This policy
+    describes what Fuime collects today. Before Fuime handles real money it
+    will be replaced by a policy reviewed by a lawyer, and you will be told
+    before that happens.
+  </p>
+<% end %>
+
+<h2>Who we are</h2>
+<p>
+  Fuime is a financial record-keeping platform for businesses run by teenagers
+  aged 13 to 17, with a parent or legal guardian on the account. When this
+  policy says &ldquo;we&rdquo; it means Fuime; &ldquo;you&rdquo; means anyone
+  with a Fuime account, whether a teen or a guardian.
+</p>
+
+<h2>Fuime is 13+</h2>
+<p>
+  You must be at least 13 years old to hold a Fuime account. We ask for a date
+  of birth during signup and refuse to create an account for anyone under 13.
+  We do not knowingly collect any information from a child under 13. If we
+  learn that we have, we delete it. If you believe a child under 13 has given
+  us information, email
+  <%= mail_to "support@fuime.com" %> and we will remove it.
+</p>
+
+<h2>What we collect</h2>
+<p>From everyone with an account:</p>
+<ul>
+  <li>Your name, email address, and date of birth.</li>
+  <li>
+    Security and sign-in information: IP address, browser user agent, login
+    times, and any two-factor or security-key credentials you register.
+  </li>
+</ul>
+<p>From a teen running a business:</p>
+<ul>
+  <li>Business details you enter — name, category, description, storefront text.</li>
+  <li>
+    Transaction records, balances, receipts you upload, and comments you write
+    on the ledger.
+  </li>
+</ul>
+<p>From a parent or guardian:</p>
+<ul>
+  <li>Your name, email address, and date of birth.</li>
+  <li>
+    A record of your consent: the date and time you accepted the guardian
+    agreement, the version of the agreement you accepted, your IP address, and
+    your browser user agent. This is what makes your consent auditable, and we
+    keep it for as long as the guardianship exists.
+  </li>
+</ul>
+
+<h2>Why we collect it</h2>
+<ul>
+  <li>To run your account and keep it secure.</li>
+  <li>
+    To enforce the guardian requirement — a teen cannot operate a business on
+    Fuime without an active guardian, and we need dates of birth to know who
+    that rule applies to.
+  </li>
+  <li>To keep the books for the business and produce tax summaries.</li>
+  <li>To send email you need: sign-in codes, notifications, and receipts.</li>
+</ul>
+<p>
+  We do not sell your information. We do not share it with advertisers. We do
+  not use it to train machine-learning models.
+</p>
+
+<h2>Who else sees it</h2>
+<p>
+  A guardian sees everything about the businesses they sign for. That is the
+  point of the product and a teen cannot switch it off.
+</p>
+<p>We also use these companies to run Fuime, and they process data on our behalf:</p>
+<ul>
+  <li><strong>Stripe</strong> — payments and card issuing. Currently test mode only.</li>
+  <li><strong>Amazon Web Services (S3)</strong> — storage for receipts and uploaded files.</li>
+  <li><strong>Render</strong> — application hosting and the database.</li>
+  <li><strong>Resend</strong> — outbound email.</li>
+</ul>
+<p>
+  We will also disclose information if the law requires it, or to protect
+  someone's safety.
+</p>
+
+<h2>If you make your business public</h2>
+<p>
+  A business can publish a storefront page. When it is public, anyone on the
+  internet can see the business name, its description, and its transaction
+  history. We deliberately do <em>not</em> publish the account balance, and we
+  do not publish the owner's name when the owner is a minor. Publishing is off
+  unless someone turns it on, and we recommend a guardian be part of that
+  decision.
+</p>
+
+<h2>How long we keep it</h2>
+<ul>
+  <li>Account information: as long as the account is open.</li>
+  <li>
+    Financial records and receipts: seven years, because that is the period tax
+    records generally need to be kept for. This applies even after an account
+    closes.
+  </li>
+  <li>
+    Everything else: deleted on request, unless we are required to keep it.
+  </li>
+</ul>
+
+<h2>Your rights, and a parent's rights</h2>
+<p>A parent or guardian on an account may:</p>
+<ul>
+  <li>Review everything Fuime holds about their teen.</li>
+  <li>Withdraw consent, which stops the teen operating a business on Fuime.</li>
+  <li>Request that we delete their teen's information.</li>
+  <li>Request an export of the business's records.</li>
+</ul>
+<p>
+  Email <%= mail_to "support@fuime.com" %> to make any of these requests.
+  Some of them are not yet self-serve in the product; we handle them by hand
+  in the meantime, and we do not charge for them.
+</p>
+
+<h2>Security</h2>
+<p>
+  Sensitive fields are encrypted at rest. You can protect your account with
+  two-factor authentication or a security key from your
+  security settings. If you find a vulnerability, please tell us — see our
+  <%= link_to "security page", security_path %>.
+</p>
+
+<h2>Changes</h2>
+<p>
+  If we change this policy we will update the date at the top. If a change
+  materially affects what we do with your information, we will email you.
+</p>
+
+<h2>Contact</h2>
+<p>
+  Questions about this policy: <%= mail_to "support@fuime.com" %>.
+</p>
+
+<hr>
+
+<p class="muted">
+  See also our <%= link_to "Terms of Service", terms_path %> and the
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>.
+</p>
