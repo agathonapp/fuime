@@ -24,16 +24,16 @@ class Event
   class Plan
     class Standard < Plan
       def revenue_fee
-        0.07
+        Event::Plan::FALLBACK_REVENUE_FEE
       end
 
       def label
-        "full fiscal sponsorship (#{revenue_fee_label})"
+        "Fuime standard (#{revenue_fee_label})"
       end
 
       def description
         if self.instance_of?(Event::Plan::Standard)
-          "Has access to all standard features, used for most organizations."
+          "The default plan for a teen-run venture: money in, cards, receipts, and reimbursements, with Fuime's #{revenue_fee_label} fee on revenue."
         else
           "Has access to all standard features"
         end

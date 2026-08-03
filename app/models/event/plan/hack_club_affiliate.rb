@@ -23,6 +23,11 @@
 class Event
   class Plan
     class HackClubAffiliate < FeeWaived
+      # Hack Club's own organizations. Not a Fuime plan.
+      def self.selectable?
+        false
+      end
+
       def label
         "Hack Club affiliated project"
       end
@@ -58,7 +63,7 @@ class Event
       def contract_skip_prefills
         {
           "Contract Signee" => ["Telephone", "Email", "The Project"],
-          "Fuime"             => ["Fuime ID"]
+          "Fuime"           => ["Fuime ID"]
         }
       end
 

@@ -22,7 +22,9 @@
 #
 class Event
   class Plan < ApplicationRecord
-    FALLBACK_REVENUE_FEE = 0.07
+    # Fuime's platform fee. Upstream HCB used 0.07, the headline rate of its
+    # fiscal sponsorship agreement; Fuime charges 4% on money in.
+    FALLBACK_REVENUE_FEE = 0.04
 
     has_paper_trail
 
@@ -117,6 +119,48 @@ class Event
 
     def self.available_plans_by_popularity
       available_plans.sort_by { |p| plan_popularities[p].presence || 0 }.reverse!
+    end
+
+    # Whether an admin may newly assign this plan.
+    #
+    # Upstream HCB offered every subclass in every picker. For Fuime that means
+    # offering Hack Club's grant programs (Argosy, the SC Google Grant, the
+    # 2024 hackathon fee waiver), Hack Club's own internal org plans, and HCB's
+    # fiscal-sponsorship fee ladder (7 / 5 / 3.5 / 2.9 / 10%) — none of which
+    # Fuime administers or can honor.
+    #
+    # Those classes stay loadable rather than being deleted (CLAUDE.md Rule 2)
+    # so existing `event_plans` rows never point at a missing constant and so
+    # upstream ledger fixes still merge cleanly. They are simply no longer
+    # offered. Override to false to retire a plan; subclasses inherit it.
+    def self.selectable?
+      true
+    end
+
+    # The plans Fuime actually offers.
+    def self.selectable_plans
+      available_plans.select(&:selectable?)
+    end
+
+    # Plans inherited from HCB that we keep for existing rows only.
+    def self.legacy_plans
+      available_plans.reject(&:selectable?)
+    end
+
+    def self.selectable_plans_by_popularity
+      available_plans_by_popularity.select(&:selectable?)
+    end
+
+    # [label, class name] pairs for a plan <select>.
+    #
+    # `current` is the type an organization is already on. Passing it keeps a
+    # retired plan in the options so that submitting the form for an unrelated
+    # setting can't silently migrate the org onto a different plan.
+    def self.select_options(current = nil)
+      plans = selectable_plans
+      current_plan = available_plans.find { |p| p.name == current.to_s }
+      plans += [current_plan] if current_plan && !plans.include?(current_plan)
+      plans.map { |p| [p.new.label, p.name] }
     end
 
     def self.plan_popularities

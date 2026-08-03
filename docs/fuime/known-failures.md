@@ -191,3 +191,76 @@ overlap the seven application files changed here.
 Per the lesson recorded above, the failure **list** was kept, not just the
 count — which is what made "34 vs 34" provable rather than a coincidence of
 totals.
+
+### The full suite, measured at last — 2026-08-02 (plan lineup work)
+
+**The first full-suite measurement in this repo's history.** Every entry above
+this one is a subset, and each says so; the "Open" section's request to finally
+run the whole thing is now answered.
+
+Both sides run as **complete suites, in parallel, against separate databases** so
+they could not contend — `bank_test` for the branch and `bank_planbaseline`,
+cloned schema-only from it, for the baseline. Prebuilt assets were already
+present in `app/assets/builds`, which is why the asset artifact that dominates
+the earlier measurements does not appear here.
+
+The baseline is **not** `HEAD`. `HEAD` was missing a concurrent session's
+uncommitted Phase 1 work, so measuring against it would have compared two trees
+differing in far more than the plan changes. Instead the working tree was copied
+and *only* the plan-related files reverted to `HEAD` — a true one-variable
+comparison.
+
+| Tree | Examples | Failures | Pending |
+|---|---|---|---|
+| Working tree, plan changes reverted (baseline) | 2152 | **64** | 14 |
+| Working tree, plan changes applied | 2162 | **64** | 14 |
+
+Failure lists diffed with `comm`, per the lesson recorded above — **byte-identical
+in both directions**. No new failures and none fixed. The +10 examples are exactly
+the 10 added to `spec/models/event/plan_spec.rb`.
+
+The 64 are all pre-existing, and all in modules the plan work does not touch —
+the same families named in the `cafd73bba` measurement plus several this wider
+scope reaches for the first time:
+
+| Spec file | Failures |
+|---|---|
+| `controllers/payroll/positions_controller_spec` | 10 |
+| `models/ach_transfer_spec` | 7 |
+| `models/payroll/position_spec` | 6 |
+| `mailboxes/receipt_bin_mailbox_spec` | 4 |
+| `config/webauthn_configuration_spec` | 4 |
+| `services/process_login_service_spec` | 3 |
+| `.../import/outgoing_ach_spec` | 3 |
+| `requests/users/first_controller_spec` | 3 |
+| `mailers/payroll/position_mailer_spec` | 3 |
+| 17 further files | 1–2 each |
+
+Not one is a plan, fee, disbursement, storefront, legal-page or helper spec.
+
+**Caveat, stated rather than papered over:** the branch run finished *before* two
+final edits — the `legacy HCB fiscal sponsorship (n%)` labels and the
+`eager_load!` in `plan_spec`. Rather than re-run 40 minutes for a label string,
+the specs that could possibly depend on plan labels were identified by grep
+(`spec/models/contract/party_spec.rb`, `spec/requests/documents_letters_spec.rb`,
+`spec/models/event/plan_spec.rb`) and run together with `event_spec`,
+`fee_relationship_spec` and `event_service/create_spec`: **67 examples, 0
+failures**. The full-suite figure above therefore describes the tree minus two
+string/test-setup changes, both separately covered.
+
+## How to reproduce
+
+```bash
+docker exec fuime-db-1 psql -U postgres -c "CREATE DATABASE bank_planbaseline;"
+docker exec fuime-db-1 bash -c 'pg_dump -U postgres -s bank_test | psql -U postgres -q bank_planbaseline'
+docker run --rm --network fuime_default -v "$PWD":/usr/src/app -w /usr/src/app \
+  -e RAILS_ENV=test -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
+  -e REDIS_URL=redis://redis:6379 fuime-web bundle exec rspec
+```
+
+Point `DATABASE_URL` at `/bank_planbaseline` for the baseline copy. Budget ~45
+minutes per side; they run concurrently. Keep the failure **list**:
+
+```bash
+grep -a "^rspec \./spec" run.log | sed 's/ *#.*//' | sort > failures.txt
+```

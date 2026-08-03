@@ -23,6 +23,11 @@
 class Event
   class Plan
     class ScGoogleGrant < Standard
+      # Hack Club grant program. Fuime does not administer it.
+      def self.selectable?
+        false
+      end
+
       def label
         "South Carolina Google Grant"
       end
@@ -30,7 +35,7 @@ class Event
       def contract_skip_prefills
         {
           "Contract Signee" => ["The Project"],
-          "Fuime"             => ["Fuime ID", "Signature"]
+          "Fuime"           => ["Fuime ID", "Signature"]
         }
       end
 

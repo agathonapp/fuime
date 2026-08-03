@@ -1499,3 +1499,163 @@ Stripe test account (the local `STRIPE__TEST__SECRET_KEY` is the literal
 placeholder `sk...`; `Stripe::Account.retrieve` returns AuthenticationError),
 and `create_stripe_card?` requires `is_not_demo_mode?` — so cards cannot be
 issued on `fuime-playground` or any other Playground Mode org.
+
+## Organization plans: Fuime's lineup, HCB's retired (2026-08-02)
+
+### What was wrong
+
+The "Available plans" panel in an organization's admin settings — and every plan
+`<select>` behind it — listed all 18 `Event::Plan` subclasses. Fifteen of them
+describe Hack Club programs Fuime does not run:
+
+- **Hack Club's grant programs**: `Argosy2024`, `Argosy2025`, `Argosy2026`,
+  `ArgosyFtcSim2025`, `ScGoogleGrant`, `HighSchoolHackathon` (a 2024 hackathon
+  fee waiver, already marked DEPRECATED upstream).
+- **Hack Club's own organizations**: `HackClubAffiliate`, `HackClubHQ`,
+  `SalaryAccount` (HCB living-expense reimbursement).
+- **HCB's fiscal-sponsorship fee ladder**: `Standard` at 7% plus `FivePercent`,
+  `ThreePointFive`, `TwoPointNinePercent`, `TenPercent`, `FeeWaived` — labelled
+  "full fiscal sponsorship (7.0%)" and so on. Fuime is not a fiscal sponsor and
+  its fee is **4%** (`docs/fuime/LAUNCH_SPEC.md`).
+
+Two strings had also been mangled by an earlier brand sweep into claims Fuime
+would be making about itself: `HighSchoolHackathon` offering to waive "Fuime
+fees" for high school hackathons, and `Internal` describing "the internal
+workings of Fuime" in a 👻 joke inherited from HCB — visible to any admin.
+
+An admin picking one of these got real behavior: `Argosy2025` forces the org
+public and blocks incoming money; `HackClubAffiliate` grants every restricted
+feature and sets a 35¢ mileage rate; `SalaryAccount` disables receipt
+requirements. Wrong fee, wrong features, wrong story.
+
+### What changed
+
+`Event::Plan.selectable?` (class method, default `true`, inherited by
+subclasses) splits the plans Fuime offers from the ones kept only so existing
+rows resolve. Per **Rule 2 — disable, don't delete** — no class was removed and
+no `event_plans` row was migrated; the 12 retired plans just declare
+`selectable? => false`.
+
+Fuime's lineup, all six reachable from the pickers:
+
+| Plan | Fee | Purpose |
+|---|---|---|
+| `Standard` | 4.0% | Default for a venture: money in, cards, receipts, reimbursements |
+| `Founders` **(new)** | 0.0% | Fee waived for early / hand-onboarded ventures |
+| `SpendOnly` | 0.0% | Incoming money blocked |
+| `CardsOnly` | — | Cards only, can't raise |
+| `Terminated` | — | Frozen and hidden (operational state) |
+| `Internal` | 0.0% | Ledger's own clearing and fee accounts (operational state) |
+
+`Founders` is new because upstream's bare `FeeWaived` had no `label` of its own
+and so rendered as an unexplained "full fiscal sponsorship (0.0%)". `FeeWaived`
+stays as the base tier — `HackClubAffiliate` and friends still inherit from it —
+but is no longer offered directly.
+
+`Event::Plan.select_options(current)` builds the `<select>` pairs. It takes the
+org's current plan and **re-adds it if retired**: without that, an admin opening
+settings for an org on a legacy plan would see a select whose `selected:` value
+matched no option, and saving any unrelated field on that form would silently
+move the org onto whichever plan the browser defaulted to. The admin *filter* in
+`admin/_events_filter` deliberately still lists every plan — it is how you find
+the orgs sitting on a retired one.
+
+`FALLBACK_REVENUE_FEE` went 0.07 → 0.04, and `Standard#revenue_fee` now reads it
+rather than hardcoding a second copy. This is the fee `Event#revenue_fee` falls
+back to when an org has no plan at all, so leaving it at 7% would have
+overcharged exactly the orgs already in a broken state.
+
+### Files touched
+
+- `app/models/event/plan.rb` — `FALLBACK_REVENUE_FEE`, `selectable?`,
+  `selectable_plans`, `legacy_plans`, `selectable_plans_by_popularity`,
+  `select_options`
+- `app/models/event/plan/founders.rb` — new
+- `app/models/event/plan/standard.rb` — 4% fee, Fuime label and description
+- `app/models/event/plan/internal.rb` — selectable, description rewritten
+- `app/models/event/plan/{spend_only,cards_only}.rb` — descriptions
+- 12 legacy plans — `selectable? => false` plus a one-line reason each
+- `app/views/events/settings/_admin.html.erb` — panel lists the lineup and
+  names the retired plans separately; both pickers use `select_options`
+- `app/views/admin/event_new.html.erb`,
+  `app/views/events/activation_flow.html.erb` — `select_options`
+- `app/views/admin/_events_filter.html.erb` — comment only, behavior unchanged
+- `spec/models/event/plan_spec.rb` — 13 added
+
+### Retired plans keep their own label
+
+`Standard#label` became "Fuime standard (4.0%)", and the retired fee tiers
+inherit it — so `TenPercent` began rendering as "Fuime standard (10.0%)" in the
+admin filter, advertising a rate Fuime does not offer. `FeeWaived`,
+`FivePercent`, `TenPercent`, `ThreePointFive` and `TwoPointNinePercent` now
+declare `"legacy HCB fiscal sponsorship (#{revenue_fee_label})"`. Safe to add on
+`FeeWaived` specifically because all six of its subclasses already override
+`label`.
+
+### Verification
+
+Full suite, both sides, parallel, separate databases — see
+`docs/fuime/known-failures.md` for the procedure and the caveat.
+
+| Tree | Examples | Failures |
+|---|---|---|
+| Plan changes reverted (baseline) | 2152 | **64** |
+| Plan changes applied | 2162 | **64** |
+
+Failure lists **byte-identical** via `comm` in both directions; the +10 examples
+are the 10 added to `plan_spec`. None of the 64 is a plan, fee, disbursement,
+storefront, legal-page or helper spec. Rubocop clean on all 22 plan files;
+erb_lint clean on the 4 views.
+
+`plan_spec` calls `Rails.application.eager_load!` because `available_plans` is
+`descendants` and `config.eager_load` is `ENV["CI"].present?` in test — without
+it, every assertion about the *set* of plans silently depends on what an earlier
+spec happened to reference.
+
+### Not done
+
+Fee percentages are the only money-model change here. Fiscal-sponsorship copy
+survives elsewhere — `app/helpers/marketing_helper.rb` FAQ answers,
+`static_pages/branding.html.erb`, `events/termination.pdf.erb`,
+`disbursements/_form` ("Charge fiscal sponsorship fee?"), and
+`static_pages/faq.html.erb` — none of it plan-driven, all of it still claiming
+501(c)(3) sponsorship. Separate pass.
+
+`HackClubAffiliate#contract_skip_prefills` maps DocuSeal field names and reads
+`"Fuime" => ["Fuime ID"]` after the brand sweep renamed what were HCB template
+field names. Left alone: those names must match a template, the plan is retired,
+and `contract_docuseal_template_id` is unset by default anyway.
+
+### Storage made provider-agnostic (2026-08-02)
+
+Asked: "doesn't Render have its own storage? I don't want to use S3."
+
+Render does have persistent disks, and they **cannot** serve Fuime. Per Render's
+docs a disk is "accessible by only a single service instance" and "You can't
+access a service's disk from any other service"; attaching one also forbids
+scaling past one instance and rules out zero-downtime deploys. Fuime runs two
+services and `fuime-worker` demonstrably reads uploaded bytes —
+`Receipt::SuggestPairingsJob` OCRs receipts through RTesseract/MiniMagick,
+`ProcessColumnCheckDepositJob` calls `check_deposit.front.open`, and Active
+Storage's own `AnalyzeJob` downloads every new blob. A disk on `fuime-web` is
+invisible to all of it, so receipt OCR and pairing would fail silently while the
+upload appeared to succeed.
+
+The real ask — *not AWS* — costs nothing, because Rails' S3 service speaks the
+S3 **protocol**, not AWS specifically.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `amazon:` block takes an optional `S3__ENDPOINT` + `force_path_style` | Points Active Storage at Cloudflare R2, Backblaze B2, or MinIO with no code change. Emitted by ERB **only when set**, because `endpoint: nil` is not the same as omitting the key. | `config/storage.yml` |
+| `S3__ENDPOINT` added to both services | Optional; unset means AWS. | `render.yaml` |
+| §3.2 retitled "Object storage", records the disk constraint | It read "AWS S3 — REQUIRED", which is what prompted the question. | `docs/fuime/LAUNCH_SPEC.md` |
+
+**Recommendation: Cloudflare R2** — S3-compatible, no egress fees, and cheaper
+than S3 for records held seven years. `S3__REGION=auto`,
+`S3__ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`.
+
+Verified in-container both ways: with `S3__ENDPOINT` unset the resolved config
+has no `endpoint` key at all; with it set to an R2 host,
+`ActiveStorage::Service.configure` builds an `S3Service` whose client reports
+that endpoint and `force_path_style: true`. The service name stays `amazon` —
+renaming it would be a migration of every deployment's env for no gain.
