@@ -1,6 +1,21 @@
 <% title "Cards for #{@event.name}" %>
 <% page_md %>
 <%= render "events/nav", selected: :cards %>
+<%# Fuime: a card issued here is a Stripe TEST-mode card. It has a real-looking
+    number and it is declined everywhere. A teenager who does not know that will
+    try to buy something with it and be embarrassed at a checkout. The app-wide
+    test-mode banner says this too, but the page that issues the card is where
+    it actually needs saying. Disappears by itself on STRIPE_MODE=live. %>
+<% unless StripeService.live? %>
+  <%= render "application/callout", type: "warning", title: "These are test cards" do %>
+    <p class="m0">
+      Fuime is in test mode, so cards ordered here are Stripe test cards. The
+      numbers look real, but they cannot buy anything — any real purchase is
+      declined. They're here so you can see how cards work on Fuime before we
+      go live.
+    </p>
+  <% end %>
+<% end %>
 <% @show_card_popovers = Flipper.enabled?(:hcb_code_popovers_2023_06_16, current_user) && organizer_signed_in? && !@event.demo_mode %>
 <% if @event.stripe_cards.any? || !organizer_signed_in? || @has_filter %>
   <% if current_user.try(:full_name).try(:blank?) %>

@@ -1,0 +1,52 @@
+<% title "Guardian Agreement" %>
+
+<h1 class="heading">Guardian Agreement</h1>
+<p class="muted">
+  Version <%= @agreement_version %>.
+  This is the agreement a parent or legal guardian accepts when they take
+  responsibility for a teen's Fuime account.
+</p>
+
+<%= render "application/callout", type: "info", title: "Read this before you accept an invite" do %>
+  <p class="m0">
+    If your teen has invited you to be their guardian, this is the text you
+    will be agreeing to. It is published here so you can read it before
+    clicking anything in an email. When you accept, Fuime records the date and
+    time, your IP address, your browser, and the version above — so there is a
+    permanent record of exactly what you agreed to.
+  </p>
+<% end %>
+
+<% if @agreement_partial.present? %>
+  <%# Fuime: the same versioned partial the signing flow renders. Rendering the
+      real thing — rather than a copy maintained alongside it — is what stops
+      the published agreement drifting from the binding one. The named minor is
+      a stand-in here; see StaticPagesController#guardian_agreement. %>
+  <%= render @agreement_partial, minor: @specimen_minor, guardian: nil %>
+<% else %>
+  <p>
+    We could not load the agreement text. Please email
+    <%= mail_to "support@fuime.com" %> and we will send it to you.
+  </p>
+<% end %>
+
+<hr>
+
+<h2>Withdrawing consent</h2>
+<p>
+  You can withdraw consent at any time by emailing
+  <%= mail_to "support@fuime.com" %>. When you do, the teen can no longer
+  operate a business on Fuime. You do not have to give a reason.
+</p>
+
+<h2>Questions</h2>
+<p>
+  If anything here is unclear, email <%= mail_to "support@fuime.com" %> before
+  you accept. We would much rather answer a question than have you agree to
+  something you are unsure about.
+</p>
+
+<p class="muted">
+  See also our <%= link_to "Terms of Service", terms_path %> and
+  <%= link_to "Privacy Policy", privacy_path %>.
+</p>

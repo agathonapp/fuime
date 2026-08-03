@@ -1,0 +1,110 @@
+<% title "FAQ" %>
+
+<h1 class="heading">Frequently asked questions</h1>
+
+<h2>What is Fuime?</h2>
+<p>
+  Fuime is a financial home for businesses run by teenagers. It keeps your
+  books, stores your receipts, tracks what you might owe at tax time, and
+  keeps a parent or guardian in the loop — because under 18 you cannot open a
+  business bank account or sign a contract on your own.
+</p>
+
+<h2>Does real money move through Fuime right now?</h2>
+<% if StripeService.live? %>
+  <p>
+    Yes. Payments made to a business on Fuime are real.
+  </p>
+<% else %>
+  <p>
+    <strong>No.</strong> Fuime is in a pre-launch beta and everything runs
+    against Stripe's test mode. Payment forms and cards work end to end so you
+    can see how the product behaves, but no real money moves and a real card
+    will not be charged. We will say so clearly, here and in the product,
+    before that changes.
+  </p>
+<% end %>
+
+<h2>Who can use Fuime?</h2>
+<p>
+  Anyone 13 or older. If you are under 18 you need a parent or legal guardian
+  on your account before you can run a business. We do not accept anyone under
+  13, and we ask for a date of birth at signup to enforce that.
+</p>
+
+<h2>Why do I need a parent on the account?</h2>
+<p>
+  Because a minor cannot legally sign the agreements a business needs. Your
+  parent or guardian is the adult who takes legal responsibility, which is what
+  makes the whole thing work. They accept the
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>, and until they
+  do, you cannot create a business.
+</p>
+
+<h2>What can my parent see?</h2>
+<p>
+  Everything about the businesses they sign for: transactions, balances,
+  receipts, and who is on your team. This is not optional and you cannot turn
+  it off. It is the deal that lets a teenager run a real business.
+</p>
+
+<h2>Can my parent change their mind?</h2>
+<p>
+  Yes, at any time. If they withdraw consent you can no longer operate a
+  business on Fuime. Your records are not deleted automatically — see the
+  <%= link_to "Privacy Policy", privacy_path %>.
+</p>
+
+<h2>What does the tax tracker actually do?</h2>
+<p>
+  It watches your ledger and estimates whether you are approaching the IRS
+  threshold where self-employment tax starts to apply. It is an
+  <em>estimate</em> built from the records you enter — not a tax return, and
+  not advice. Show it to an accountant before you rely on it. Tax rules also
+  vary by state, and Fuime does not model that.
+</p>
+
+<h2>What does Fuime cost?</h2>
+<p>
+  Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of
+  each payment processed for your business, shown as its own line on your
+  ledger so you can always see it. There is no monthly fee. During the beta no
+  real payments are processed, so nothing is charged.
+</p>
+
+<h2>Is Fuime a bank?</h2>
+<p>
+  No. Fuime is software for keeping records. It is not a bank, it does not hold
+  deposits, and money tracked in Fuime is not FDIC-insured. See our
+  <%= link_to "Terms of Service", terms_path %>.
+</p>
+
+<h2>What happens when I turn 18?</h2>
+<p>
+  The guardian requirement stops applying to you, and you can export your
+  records to take to your own LLC or accountant. Ask us at
+  <%= mail_to "support@fuime.com" %> and we will get you an export.
+</p>
+
+<h2>How do I get my data out, or delete it?</h2>
+<p>
+  Email <%= mail_to "support@fuime.com" %>. Export and deletion are not
+  self-serve in the product yet, so we do them by hand. We do not charge for
+  either. A parent can make the request too.
+</p>
+
+<h2>Something is broken. Who do I tell?</h2>
+<p>
+  <%= mail_to "support@fuime.com" %> for anything at all. For security
+  vulnerabilities specifically, see our
+  <%= link_to "security page", security_path %>.
+</p>
+
+<h2>Is Fuime open source?</h2>
+<p>
+  Yes. Fuime is a fork of
+  <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank" %> by
+  Hack Club — the platform that has handled fiscal sponsorship for teen
+  nonprofits since 2018 — and is licensed under the AGPL-3.0. The source is at
+  <%= link_to Rails.configuration.constants.github_url, Rails.configuration.constants.github_url, target: "_blank" %>.
+</p>

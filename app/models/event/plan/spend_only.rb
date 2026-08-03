@@ -32,7 +32,7 @@ class Event
       end
 
       def description
-        "All incoming money is blocked."
+        "All incoming money is blocked; the venture can only spend what it already has. No fee."
       end
 
       def features

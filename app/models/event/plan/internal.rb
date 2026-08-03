@@ -23,12 +23,16 @@
 class Event
   class Plan
     class Internal < FeeWaived
+      def self.selectable?
+        true
+      end
+
       def label
         "Fuime internal organization"
       end
 
       def description
-        "FOR ENGINEERING/TRANSACTION ENGINE USE ONLY. 👻 oo scary! you're looking at the internal workings of Fuime. shield your eyes, you may not like what you see."
+        "Engineering use only. Backs the ledger's own clearing and fee accounts — never assign this to a real venture."
       end
 
       def features

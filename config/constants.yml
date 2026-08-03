@@ -6,5 +6,20 @@
 # Learn more: https://guides.rubyonrails.org/configuring.html#custom-configuration
 
 shared:
-  github_url: https://github.com/hackclub/hcb
-  security_reporting_email: hcb-security@hackclub.com
+  # Fuime: both of these pointed at Hack Club.
+  #
+  # github_url is rendered as the footer's "Open source" link and as the target
+  # for build-commit links — so it must name the repository this binary was
+  # actually built from. Pointing it at hackclub/hcb sent users to a repo that
+  # does not contain Fuime's commits, and understated AGPL-3.0's requirement to
+  # offer the source of the *running* program. Attribution to HCB is separate
+  # and stays: see the footer text and README (CLAUDE.md Rule 7).
+  github_url: https://github.com/agathonapp/fuime
+  # /security told Fuime's users to report Fuime vulnerabilities to Hack Club's
+  # security inbox — so Fuime would never hear them, and Hack Club would field
+  # reports for software they do not run.
+  #
+  # TODO: stand up a dedicated security@fuime.com inbox and point this at it.
+  # Until that exists this is deliberately the support address that is already
+  # live across every mailer, rather than an address nobody reads.
+  security_reporting_email: support@fuime.com

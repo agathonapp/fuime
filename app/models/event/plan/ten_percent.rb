@@ -23,6 +23,17 @@
 class Event
   class Plan
     class TenPercent < Standard
+      # Legacy HCB fiscal-sponsorship fee tier. Retained for existing rows only.
+      def self.selectable?
+        false
+      end
+
+      # Retired, so it must not inherit Standard's "Fuime standard"
+      # label — Fuime does not offer this rate.
+      def label
+        "legacy HCB fiscal sponsorship (#{revenue_fee_label})"
+      end
+
       def revenue_fee
         0.1
       end

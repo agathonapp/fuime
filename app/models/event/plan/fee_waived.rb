@@ -23,6 +23,18 @@
 class Event
   class Plan
     class FeeWaived < Standard
+      # Base fee-free tier. Not offered directly — Event::Plan::Founders is
+      # Fuime's fee waiver.
+      def self.selectable?
+        false
+      end
+
+      # Retired, so it must not inherit Standard's "Fuime standard"
+      # label — Fuime does not offer this rate.
+      def label
+        "legacy HCB fiscal sponsorship (#{revenue_fee_label})"
+      end
+
       def revenue_fee
         0.00
       end

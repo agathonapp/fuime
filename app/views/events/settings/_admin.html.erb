@@ -29,8 +29,12 @@
     <details>
       <summary>Available plans</summary>
 
-      <% Event::Plan.available_plans_by_popularity.each do | plan | %>
+      <% Event::Plan.selectable_plans_by_popularity.each do | plan | %>
         <p><strong><%= plan.new.label %></strong>: <%= plan.new.description %></p>
+      <% end %>
+
+      <% if Event::Plan.legacy_plans.any? %>
+        <p class="muted italic">Retired plans inherited from HCB, kept only for organizations already on them: <%= Event::Plan.legacy_plans.map { |plan| plan.new.label }.sort.to_sentence %>.</p>
       <% end %>
     </details>
   <% end %>
@@ -67,7 +71,7 @@
             Assign a plan
           <% end %>
         <% } %>
-        <%= form.select :plan, Event::Plan.available_plans.map { |p| [p.new.label, p.name] }, { selected: event.plan&.type }, { disabled: } %>
+        <%= form.select :plan, Event::Plan.select_options(event.plan&.type), { selected: event.plan&.type }, { disabled: } %>
       </div>
 
       <div class="field">
@@ -165,7 +169,7 @@
               <option value="">🚫 Disable creating sub-organizations</option>
             </optgroup>
             <optgroup label="✅ Enabled">
-              <%= options_for_select(Event::Plan.available_plans.map { |p| [p.new.label, p.name] }, event.config.subevent_plan) %>
+              <%= options_for_select(Event::Plan.select_options(event.config.subevent_plan), event.config.subevent_plan) %>
             </optgroup>
           <% end %>
         </div>

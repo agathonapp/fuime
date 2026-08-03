@@ -1,0 +1,166 @@
+<% title "Terms of Service" %>
+
+<h1 class="heading">Terms of Service</h1>
+<p class="muted">Last updated 2 August 2026.</p>
+
+<%= render "application/callout", type: "warning", title: "These are beta terms" do %>
+  <p class="m0">
+    Fuime is in a pre-launch beta. Payments and cards run against Stripe's test
+    mode, which means <strong>no real money moves through Fuime</strong>. These
+    terms describe that beta. Before Fuime handles real money they will be
+    replaced by terms reviewed by a lawyer, and you will be asked to accept the
+    new ones.
+  </p>
+<% end %>
+
+<h2>1. What Fuime is</h2>
+<p>
+  Fuime is software for keeping the books of a small business run by someone
+  aged 13 to 17, with a parent or legal guardian on the account. It records
+  income and expenses, stores receipts, and produces summaries that help at tax
+  time.
+</p>
+
+<h2>2. What Fuime is not</h2>
+<p>This matters more than anything else on this page.</p>
+<ul>
+  <li>
+    <strong>Fuime is not a bank</strong> and does not hold deposits. It is not
+    a credit union, and money recorded in Fuime is not insured by the FDIC or
+    anyone else.
+  </li>
+  <li>
+    <strong>Fuime is not a fiscal sponsor.</strong> It does not take legal
+    ownership of your business or its money.
+  </li>
+  <li>
+    <strong>Fuime does not give tax, legal, or financial advice.</strong> The
+    tax figures Fuime shows are estimates generated from the records you enter.
+    They are not a tax return, not a determination of what you owe, and not a
+    substitute for a professional. Check them with an accountant before relying
+    on them.
+  </li>
+  <li>
+    <strong>During the beta, Fuime does not move real money.</strong> Anything
+    that looks like a payment or a card is running in test mode.
+  </li>
+</ul>
+
+<h2>3. Who may use Fuime</h2>
+<ul>
+  <li>You must be at least 13 years old. There are no exceptions.</li>
+  <li>
+    If you are under 18, you must have an active guardian on your account
+    before you can create or run a business. A parent or legal guardian accepts
+    the <%= link_to "Guardian Agreement", guardian_agreement_path %> and takes
+    legal responsibility for your use of Fuime.
+  </li>
+  <li>
+    If you are 18 or over, you may use Fuime on your own behalf.
+  </li>
+  <li>
+    You must give us accurate information, including your real date of birth.
+    Accounts built on false information can be closed.
+  </li>
+</ul>
+
+<h2>4. Your account</h2>
+<p>
+  Keep your sign-in details to yourself. You are responsible for what happens
+  under your account. Tell us at <%= mail_to "support@fuime.com" %> if you
+  think someone else has access to it. We recommend turning on two-factor
+  authentication.
+</p>
+
+<h2>5. Your business and your records</h2>
+<p>
+  Your business is yours. Fuime does not own it, does not take a stake in it,
+  and does not control it. The records you put into Fuime are yours too, and
+  you can ask for a copy at any time.
+</p>
+<p>
+  You are responsible for the accuracy of what you enter, and for meeting the
+  legal obligations of running a business, including tax filings and any
+  licences your local authority requires.
+</p>
+
+<h2>6. Fees</h2>
+<p>
+  When Fuime processes a payment for a business, it keeps
+  <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of that payment
+  as a platform fee, shown as a separate line on the ledger. During the beta no
+  real payments are processed, so no real fees are charged. If we change the
+  fee, we will tell you before it applies to you.
+</p>
+
+<h2>7. What you may not do</h2>
+<ul>
+  <li>Break the law, or use Fuime to help someone else break the law.</li>
+  <li>
+    Use Fuime for anything on
+    <%= link_to "Stripe's restricted businesses list", "https://stripe.com/legal/restricted-businesses", target: "_blank" %>.
+  </li>
+  <li>Misrepresent who you are, how old you are, or who your guardian is.</li>
+  <li>
+    Invite someone who is not your parent or legal guardian to act as your
+    guardian.
+  </li>
+  <li>
+    Attack, overload, or try to break into Fuime. If you want to report a
+    vulnerability, see our <%= link_to "security page", security_path %> — we
+    would genuinely like to hear from you.
+  </li>
+</ul>
+
+<h2>8. A guardian can end this at any time</h2>
+<p>
+  A parent or guardian may withdraw consent whenever they choose. When they do,
+  the teen can no longer operate a business on Fuime. Records are kept
+  according to our <%= link_to "Privacy Policy", privacy_path %>.
+</p>
+
+<h2>9. We can end it too</h2>
+<p>
+  We may suspend or close an account that breaks these terms, or where we
+  believe someone is at risk. Where we can, we will tell you why and give you a
+  chance to get your records out first.
+</p>
+
+<h2>10. No warranty</h2>
+<p>
+  Fuime is provided &ldquo;as is&rdquo;. This is beta software. It may have
+  bugs, it may be unavailable, and it may get something wrong. We do not
+  promise it is error-free or that it will always be running.
+</p>
+
+<h2>11. Limit of liability</h2>
+<p>
+  To the extent the law allows, Fuime is not liable for indirect or
+  consequential losses, or for lost profits. Nothing here limits liability that
+  cannot legally be limited.
+</p>
+
+<h2>12. Changes to these terms</h2>
+<p>
+  We will update the date at the top when these change. For a material change
+  we will email you, and where the law requires it we will ask you to accept
+  the new terms.
+</p>
+
+<h2>13. Open source</h2>
+<p>
+  Fuime is a fork of <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank" %>
+  by Hack Club, and is licensed under the AGPL-3.0. The source code of the
+  version you are using is at
+  <%= link_to Rails.configuration.constants.github_url, Rails.configuration.constants.github_url, target: "_blank" %>.
+</p>
+
+<h2>14. Contact</h2>
+<p><%= mail_to "support@fuime.com" %></p>
+
+<hr>
+
+<p class="muted">
+  See also our <%= link_to "Privacy Policy", privacy_path %> and the
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>.
+</p>

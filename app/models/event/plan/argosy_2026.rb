@@ -23,6 +23,11 @@
 class Event
   class Plan
     class Argosy2026 < SpendOnly
+      # Hack Club grant program. Fuime does not administer it.
+      def self.selectable?
+        false
+      end
+
       def label
         "2026 Argosy grantee spend-only"
       end

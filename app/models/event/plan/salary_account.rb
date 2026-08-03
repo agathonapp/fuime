@@ -23,6 +23,11 @@
 class Event
   class Plan
     class SalaryAccount < FeeWaived
+      # HCB living-expense account. Not part of Fuime's lineup.
+      def self.selectable?
+        false
+      end
+
       def label
         "salary account"
       end

@@ -6,9 +6,30 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
+# Fuime: named "amazon" for upstream compatibility, but this is any
+# S3-COMPATIBLE object store — Cloudflare R2, Backblaze B2, MinIO, or AWS.
+# Set S3__ENDPOINT to point it somewhere other than AWS; leave it unset for AWS.
+#
+# Why object storage at all, when Render has persistent disks: a Render disk is
+# "accessible by only a single service instance" and cannot be reached from
+# another service. Fuime runs two — fuime-web and fuime-worker — and the worker
+# genuinely reads uploaded bytes (Receipt::SuggestPairingsJob runs OCR via
+# RTesseract/MiniMagick; ProcessColumnCheckDepositJob calls `check_deposit
+# .front.open`; ActiveStorage's own AnalyzeJob downloads every new blob). A disk
+# on the web service would be invisible to all of it. Disks also forbid scaling
+# past one instance and rule out zero-downtime deploys.
+#
+# For R2: region "auto", endpoint https://<account-id>.r2.cloudflarestorage.com.
 amazon:
   service: S3
   access_key_id: <%= Credentials.fetch(:S3, :ACCESS_KEY_ID) %>
   secret_access_key: <%= Credentials.fetch(:S3, :SECRET_ACCESS_KEY) %>
   region: <%= Credentials.fetch(:S3, :REGION) %>
   bucket: <%= Credentials.fetch(:S3, :BUCKET) %>
+<% if (s3_endpoint = Credentials.fetch(:S3, :ENDPOINT)).present? %>
+  <%# Emitted only when set: passing endpoint: nil to the AWS SDK is not the
+      same as omitting it. force_path_style keeps bucket names out of the
+      hostname, which is what R2, B2 and MinIO expect. %>
+  endpoint: <%= s3_endpoint %>
+  force_path_style: true
+<% end %>

@@ -77,8 +77,24 @@ module DisbursementService
             i_cpt = ::PendingTransactionEngine::CanonicalPendingTransactionService::ImportSingle::IncomingDisbursement.new(raw_pending_incoming_disbursement_transaction: rpidt, category_assignment_strategy: @category_assignment_strategy).run
             # 3. Map to event
             ::PendingEventMappingEngine::Map::Single::IncomingDisbursement.new(canonical_pending_transaction: i_cpt).run
-            # 4. Front if required
-            i_cpt.update(fronted: @fronted)
+            # 4. FUIME: never front the incoming side at creation.
+            #
+            # Upstream fronts here when the source event's plan has
+            # `front_disbursements`, which makes the money spendable by the
+            # destination before any admin approves the transfer. Every reader
+            # of `fronted` is incoming-scoped (Event#fronted_incoming_balance_v2_cents,
+            # #fronted_fee_balance_v2_cents), so this is the line that decides
+            # spendability — and fronting it here made the admin transfer limit
+            # in GovernanceService::Admin::Transfer::Approval cosmetic: a
+            # destination org could spend the full amount while the transfer
+            # still sat in `reviewing`, unapproved.
+            #
+            # Disbursement#mark_approved fronts both pending transactions, so an
+            # approved transfer is spendable exactly as it was before. The
+            # outgoing side below keeps upstream's behaviour; nothing reads its
+            # `fronted` flag, and the outgoing amount counts against the source
+            # event's balance either way.
+            i_cpt.update(fronted: false)
           end
 
           if requested_by_admin_with_approval_permission?(disbursement) || disbursement.source_event == disbursement.destination_event # Auto-fulfill disbursements between subledgers in the same event

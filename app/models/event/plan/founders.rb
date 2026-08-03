@@ -22,18 +22,20 @@
 #
 class Event
   class Plan
-    class Argosy2024 < SpendOnly
-      # Hack Club grant program. Fuime does not administer it.
+    # Fuime's fee waiver for early ventures. Same capabilities as Standard,
+    # no platform fee. Replaces upstream's bare FeeWaived plan, which rendered
+    # in pickers as an unexplained "full fiscal sponsorship (0.0%)".
+    class Founders < FeeWaived
       def self.selectable?
-        false
+        true
       end
 
       def label
-        "2024 Argosy grantee spend-only"
+        "Fuime founders (#{revenue_fee_label})"
       end
 
-      def features
-        super - %w[promotions google_workspace]
+      def description
+        "Every standard feature with Fuime's revenue fee waived — for early ventures and ones we've onboarded by hand."
       end
 
     end

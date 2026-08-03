@@ -4,11 +4,17 @@ require "net/http"
 
 class StaticPagesController < ApplicationController
   skip_after_action :verify_authorized # do not force pundit
-  skip_before_action :signed_in_user, only: [:index, :mobile, :branding, :roles, :security]
-  skip_before_action :redirect_to_onboarding, only: [:mobile, :branding, :roles, :security]
 
-  after_action only: [:index, :branding, :security] do
-    # Allow indexing home and branding pages
+  # Fuime: the legal pages must be readable by someone who has not signed up —
+  # you cannot ask a parent to accept terms they can only see from inside an
+  # account they do not have.
+  LEGAL_PAGES = [:privacy, :terms, :guardian_agreement, :faq].freeze
+
+  skip_before_action :signed_in_user, only: [:index, :mobile, :branding, :roles, :security, *LEGAL_PAGES]
+  skip_before_action :redirect_to_onboarding, only: [:mobile, :branding, :roles, :security, *LEGAL_PAGES]
+
+  after_action only: [:index, :branding, :security, *LEGAL_PAGES] do
+    # Allow indexing home, branding, and the legal pages
     response.delete_header("X-Robots-Tag")
   end
 
@@ -82,6 +88,39 @@ class StaticPagesController < ApplicationController
     @event_slug = signed_in? && current_user.events.first&.slug || "hack-pennsylvania"
 
     render layout: "docs"
+  end
+
+  # Fuime: the pre-launch legal set.
+  #
+  # These describe what Fuime actually does *today* — a beta in which no real
+  # money moves — and their whole value is that they are true. Before Fuime
+  # handles real funds they must be replaced by counsel-drafted documents
+  # (docs/fuime/LAUNCH_SPEC.md §1.3); until then, saying less and saying it
+  # accurately beats a template that promises a product that does not exist.
+  def privacy
+  end
+
+  def terms
+  end
+
+  # The guardian agreement, published at a stable public URL so a parent can
+  # read it *before* clicking accept in an emailed invite.
+  #
+  # This renders the same versioned partial the signing flow renders, so the
+  # published text cannot drift from the text that is actually binding.
+  def guardian_agreement
+    @agreement_version = Guardianship::CURRENT_AGREEMENT_VERSION
+    @agreement_partial = Guardianship.agreement_partial_for(@agreement_version)
+
+    # The agreement names the specific minor when a guardian signs it. A public
+    # reading has no minor, so it gets a stand-in rather than a half-rendered
+    # sentence. Passing a stand-in — rather than editing the partial to handle
+    # nil — keeps the versioned agreement file untouched, which is the rule its
+    # own header sets: that text is a record of what people signed.
+    @specimen_minor = Struct.new(:name, :email).new("your child", nil)
+  end
+
+  def faq
   end
 
   def roles

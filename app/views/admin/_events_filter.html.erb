@@ -52,6 +52,7 @@
 
   <%= form.label :plan do %>
     Current plan
+    <%# Deliberately every plan, not just the selectable ones — this filter is how you find the organizations still sitting on a retired HCB plan. %>
     <%= form.select :plan, Event::Plan.available_plans.map { |p| [p.new.label, p.name] }, { include_blank: "all", selected: @plan } %>
   <% end %>
 

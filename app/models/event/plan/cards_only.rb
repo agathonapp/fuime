@@ -28,7 +28,7 @@ class Event
       end
 
       def description
-        "Only has access to cards for spending and can't raise money, often used for one-off events like Outernet or Winter Hardware Wonderland."
+        "Spending cards only — the venture can't raise money. For ventures funded from elsewhere, or ones still waiting on a guardian agreement."
       end
 
       def features

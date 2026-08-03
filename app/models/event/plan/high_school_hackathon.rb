@@ -31,6 +31,11 @@
 class Event
   class Plan
     class HighSchoolHackathon < FeeWaived
+      # Retired Hack Club hackathon fee waiver. Retained for existing rows only.
+      def self.selectable?
+        false
+      end
+
       def label
         "high school hackathon (2024 fee waiver)"
       end
