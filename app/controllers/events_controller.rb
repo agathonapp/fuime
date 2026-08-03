@@ -11,6 +11,7 @@ class EventsController < ApplicationController
   before_action :set_event, except: [:index]
   before_action :set_ledger_filters, only: [:ledger]
   before_action :set_transaction_filters, only: [:transactions, :transactions_list]
+  before_action :set_mock_data
   before_action except: [:show, :index] do
     render_back_to_tour @organizer_position, :welcome, event_path(@event)
   end
@@ -236,6 +237,15 @@ class EventsController < ApplicationController
       @transactions.reverse.reduce(initial_subtotal) do |running_total, transaction|
         transaction.running_balance = running_total + transaction.amount
       end
+    end
+
+    # Playground Mode's mock ledger, restored from upstream (73d010de6). Nothing
+    # is persisted: the real query above is discarded for this request only, and
+    # `@mock_total` stands in for the balance in events/home/_balance.
+    if helpers.show_mock_data?
+      @transactions = MockTransactionEngineService::GenerateMockTransaction.new.run
+      @transactions = Kaminari.paginate_array(@transactions).page(params[:page]).per(params[:per] || 75)
+      @mock_total = @transactions.sum(&:amount_cents)
     end
 
     render layout: !turbo_frame_request? && auditor_signed_in?
@@ -1563,6 +1573,15 @@ class EventsController < ApplicationController
     )
 
     @cacheable = !(organizer_signed_in? || has_filters)
+  end
+
+  # `?show_mock_data=true|false` — the Playground Mode banner's toggle. Stored
+  # in the session (see EventsHelper#set_mock_data!) so it survives navigation
+  # without appearing in every link.
+  def set_mock_data
+    return if params[:show_mock_data].blank?
+
+    helpers.set_mock_data!(params[:show_mock_data] == "true")
   end
 
   def set_timeframe
