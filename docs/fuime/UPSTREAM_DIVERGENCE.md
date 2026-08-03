@@ -1546,3 +1546,29 @@ first has mock data on.
 **Noticed, not fixed:** the transaction *type* filter still offers "Fiscal
 sponsorship fee" as an option — an HCB-model string in a Fuime UI, and a
 `BRAND_STRINGS.md` item rather than part of this change.
+
+## The Playground Mode toggle led nowhere (2026-08-02)
+
+Reported one merge after #25: "when i click show mock data nothin happens".
+Correct again, and this one was mine. The banner renders on **every** page of a
+Playground org, but the mock ledger only renders on transactions — and the
+button linked to `{ show_mock_data: ... }`, i.e. the page you are already on
+(upstream's own markup). Clicking it from the org home, which is where everyone
+starts, set the session flag and changed nothing visible.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| The toggle links to `event_transactions_path(..., show_mock_data:)` | So clicking it lands on the one page that renders a mock ledger, from wherever it was clicked. | `app/views/layouts/application.html.erb` |
+| Balance falls back when `@mock_total` is nil | Only the action that builds the mock ledger sets it; every other page left it nil, and `render_money_amount(nil)` reads as $0.00. Mock data on the ledger should not make the org look broke everywhere else. | `app/views/events/home/_balance.html.erb` |
+
+Reproduced before fixing, in-process: clicking from `/fuime-playground` gave
+200 and zero mock rows. After: the href is
+`/fuime-playground/transactions?show_mock_data=true` from the home page *and*
+from `/cards`; following it lands 200 with 6 mock rows in the ledger frame; the
+home balance still reads the real $417.88; the off switch returns 0 mock rows.
+
+Four new examples in `spec/controllers/fuime/playground_mock_data_spec.rb`
+(11 total). One measurement note for whoever probes this next: a fresh git
+worktree has no `app/assets/builds`, which is gitignored — every page 500s on
+`javascript_include_tag "bundle"` and it looks like the feature is broken.
+Copy the builds directory in before believing a probe.

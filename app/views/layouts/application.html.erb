@@ -24,7 +24,13 @@
           <%= link_to "#playground-callout", class: "no-underline text-[inherit] hover:text-[inherit]" do %>
             <p class="font-semibold text-xl m0">Playground Mode</p>
           <% end %>
-          <%= link_to({ show_mock_data: !show_mock_data? }, class: "btn btn-small w-fit shrink-none nowrap") do %>
+          <%# Always the transactions page, not the current one. Upstream linked
+              to `{ show_mock_data: ... }` — the page you are already on — and the
+              mock ledger only renders on transactions, so clicking this from the
+              org home (where everyone starts) set the flag and visibly did
+              nothing at all. %>
+          <%= link_to(event_transactions_path(event_id: @event.slug, show_mock_data: !show_mock_data?),
+                      class: "btn btn-small w-fit shrink-none nowrap") do %>
             <%= inline_icon "view" %>
             <%= show_mock_data? ? "Hide" : "Show" %> mock data
           <% end %>
