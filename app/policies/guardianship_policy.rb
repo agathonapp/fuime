@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 class GuardianshipPolicy < ApplicationPolicy
+  # Any signed-in user may open their own guardian overview. It lists only the
+  # guardianships they hold, so an adult with none simply sees an empty state —
+  # there is nothing to authorize beyond being signed in, and gating on
+  # `is_guardian?` would 403 a parent whose invite is still pending, which is
+  # exactly when they most want to look.
+  def index?
+    user.present?
+  end
+
   # Teen can create a guardianship invite (inviting their parent).
   #
   # `is_minor?` is nil (not false) when no birthday is recorded, which is the

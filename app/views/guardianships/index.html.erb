@@ -1,0 +1,148 @@
+<% title "Guardian overview" %>
+
+<h1 class="heading">Guardian overview</h1>
+
+<%# Fuime: the surface behind agreement §3 ("You can see everything"). Before
+    this page existed, `guardianships_as_guardian` was rendered in exactly one
+    place — the admin user page — so the visibility the guardian is asked to
+    rely on when they sign was not actually reachable by them. %>
+
+<% if @guardianships_as_guardian.none? && @guardianships_as_minor.none? %>
+  <%= render "application/callout", type: "info", title: "Nothing here yet" do %>
+    <p class="mb-0">
+      This page shows the ventures you oversee as a parent or guardian. When a
+      young founder invites you, their invitation will appear here.
+    </p>
+  <% end %>
+<% end %>
+
+<%# ── The guardian's own view: who they signed for, and what those teens run ── %>
+<% if @guardianships_as_guardian.any? %>
+  <h2 class="mb-1">Young founders you signed for</h2>
+  <p class="muted mb-3">
+    You are the legal signer and responsible adult for these accounts. You can
+    see their activity; they run the business day to day.
+  </p>
+
+  <% @guardianships_as_guardian.each do |guardianship| %>
+    <% minor = guardianship.minor %>
+    <div class="card mb-3">
+      <div class="flex justify-between items-start flex-wrap gap-2">
+        <div>
+          <h3 class="mt-0 mb-1"><%= minor.name.presence || minor.email %></h3>
+          <p class="muted text-sm mb-0">
+            <%# Status is stated plainly rather than as a coloured pill alone: a
+                parent needs to know whether their signature is currently doing
+                anything, and "pending" vs "active" is the difference between the
+                teen being able to operate at all. %>
+            <% case guardianship.status %>
+            <% when "active" %>
+              Active since <%= guardianship.agreement_signed_at&.strftime("%B %-d, %Y") || "—" %>
+            <% when "pending" %>
+              Invitation pending<%= " — link expired" if guardianship.invite_expired? %>
+            <% when "revoked" %>
+              Consent withdrawn <%= guardianship.revoked_at&.strftime("%B %-d, %Y") %>
+            <% end %>
+          </p>
+        </div>
+
+        <div class="flex gap-2 flex-wrap items-center">
+          <% if guardianship.agreement_signed_at.present? %>
+            <%= link_to "Agreement you signed", record_guardianship_path(guardianship), class: "btn bg-muted" %>
+          <% end %>
+
+          <% if policy(guardianship).resend_invite? %>
+            <%= button_to "Resend invite", resend_invite_guardianship_path(guardianship), method: :post, class: "btn bg-muted" %>
+          <% end %>
+
+          <%# Withdrawing consent immediately stops the minor operating any
+              venture (User#permitted_to_operate_business? reads status live), so
+              it is confirmed rather than one click from a summary page. %>
+          <% if policy(guardianship).revoke? %>
+            <%= button_to "Withdraw consent",
+                          revoke_guardianship_path(guardianship),
+                          method: :post,
+                          class: "btn btn--destroy",
+                          form: { data: { turbo_confirm: "Withdraw consent for #{minor.name.presence || minor.email}? They will immediately lose the ability to operate a venture on Fuime." } } %>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Their ventures. Only active guardianships confer oversight, so a
+          pending or revoked one shows the person without their books. %>
+      <% if guardianship.active? %>
+        <% events = @overseen_events_by_ward_id[minor.id] || [] %>
+        <% if events.any? %>
+          <div class="mt-3 pt-3 border-t">
+            <% events.each do |event| %>
+              <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+                <div>
+                  <%= link_to event.name, event_path(event), class: "font-bold" %>
+                  <p class="muted text-sm mb-0">
+                    <%= link_to "Ledger", event_path(event) %> ·
+                    <%= link_to "Transactions", event_transactions_path(event) %>
+                  </p>
+                </div>
+                <div class="text-right">
+                  <%# Settled balance only. Fuime posts incoming payments as
+                      unfronted pending transactions, so a "balance" that counted
+                      them would tell a parent money is available that cannot be
+                      spent. %>
+                  <span class="font-bold"><%= render_money event.settled_balance_cents %></span>
+                  <p class="muted text-xs mb-0">settled</p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="muted text-sm mt-3 mb-0">No venture started yet.</p>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<%# ── The teen's own view of their invite, so they can chase it without the email ── %>
+<% if @guardianships_as_minor.any? %>
+  <h2 class="mb-1 mt-4">Your guardian</h2>
+  <p class="muted mb-3">
+    Fuime needs a parent or guardian to sign as the responsible adult before you
+    can run a venture.
+  </p>
+
+  <% @guardianships_as_minor.each do |guardianship| %>
+    <% guardian = guardianship.guardian %>
+    <div class="card mb-3">
+      <div class="flex justify-between items-start flex-wrap gap-2">
+        <div>
+          <h3 class="mt-0 mb-1"><%= guardian.name.presence || guardian.email %></h3>
+          <p class="muted text-sm mb-0">
+            <% case guardianship.status %>
+            <% when "active" %>
+              Signed <%= guardianship.agreement_signed_at&.strftime("%B %-d, %Y") || "—" %>
+            <% when "pending" %>
+              Waiting for them to accept<%= " — the link has expired, send a new one" if guardianship.invite_expired? %>
+            <% when "revoked" %>
+              Consent withdrawn — you cannot operate a venture until a guardian signs again
+            <% end %>
+          </p>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+          <% if policy(guardianship).resend_invite? %>
+            <%= button_to "Resend invite", resend_invite_guardianship_path(guardianship), method: :post, class: "btn bg-muted" %>
+          <% end %>
+          <% if guardianship.agreement_signed_at.present? && policy(guardianship).record? %>
+            <%= link_to "Read the agreement", record_guardianship_path(guardianship), class: "btn bg-muted" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+<% end %>
+
+<p class="muted text-sm mt-4">
+  A guardian's visibility into a young founder's activity cannot be turned off by
+  the founder — see the
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>, §3.
+</p>

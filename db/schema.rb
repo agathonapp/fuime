@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1375,6 +1375,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
     t.index ["user_id"], name: "index_governance_request_contexts_on_user_id"
   end
 
+  create_table "guardian_verifications", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.string "consent_ip"
+    t.text "consent_user_agent"
+    t.datetime "created_at", null: false
+    t.string "doc_version_hash"
+    t.bigint "event_id", null: false
+    t.datetime "evidence_released_at"
+    t.jsonb "fields_forwarded", default: [], null: false
+    t.jsonb "stripe_requirements_snapshot", default: {}, null: false
+    t.datetime "submitted_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.string "vendor"
+    t.text "vendor_ref"
+    t.string "verification_method", null: false
+    t.index ["event_id", "user_id"], name: "index_guardian_verifications_on_event_id_and_user_id"
+    t.index ["event_id"], name: "index_guardian_verifications_on_event_id"
+    t.index ["user_id"], name: "index_guardian_verifications_on_user_id"
+  end
+
   create_table "guardianships", force: :cascade do |t|
     t.string "agreement_ip"
     t.datetime "agreement_signed_at"
@@ -2040,6 +2061,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
     t.index ["payee_id"], name: "index_payments_on_payee_id"
   end
 
+  create_table "payout_requests", force: :cascade do |t|
+    t.string "aasm_state", default: "pending", null: false
+    t.integer "amount_cents", null: false
+    t.datetime "approved_at"
+    t.bigint "approved_by_id"
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.string "failure_code"
+    t.text "failure_message"
+    t.datetime "paid_at"
+    t.datetime "rejected_at"
+    t.text "rejection_reason"
+    t.bigint "requested_by_id", null: false
+    t.text "stripe_payout_id"
+    t.datetime "updated_at", null: false
+    t.index ["approved_by_id"], name: "index_payout_requests_on_approved_by_id"
+    t.index ["event_id", "created_at"], name: "index_pending_payout_requests_on_event", where: "((aasm_state)::text = 'pending'::text)"
+    t.index ["event_id"], name: "index_payout_requests_on_event_id"
+    t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
+    t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
+  end
+
   create_table "paypal_transfers", force: :cascade do |t|
     t.string "aasm_state", null: false
     t.integer "amount_cents", null: false
@@ -2586,6 +2629,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
     t.index ["subledger_id"], name: "index_stripe_cards_on_subledger_id", unique: true
   end
 
+  create_table "stripe_connected_accounts", force: :cascade do |t|
+    t.jsonb "capabilities", default: {}, null: false
+    t.boolean "charges_enabled", default: false, null: false
+    t.jsonb "controller", default: {}, null: false
+    t.string "controller_profile", default: "payments_only", null: false
+    t.datetime "created_at", null: false
+    t.boolean "details_submitted", default: false, null: false
+    t.string "disabled_reason"
+    t.bigint "event_id", null: false
+    t.boolean "livemode", default: false, null: false
+    t.datetime "onboarded_at"
+    t.datetime "onboarding_started_at"
+    t.bigint "owner_id", null: false
+    t.boolean "payouts_enabled", default: false, null: false
+    t.jsonb "requirements", default: {}, null: false
+    t.text "stripe_id"
+    t.datetime "stripe_synced_at"
+    t.datetime "updated_at", null: false
+    t.index ["controller_profile"], name: "index_stripe_connected_accounts_on_non_default_profile", where: "((controller_profile)::text <> 'payments_only'::text)"
+    t.index ["event_id"], name: "index_stripe_connected_accounts_on_event_id", unique: true
+    t.index ["owner_id"], name: "index_stripe_connected_accounts_on_owner_id"
+    t.index ["stripe_id"], name: "index_stripe_connected_accounts_on_stripe_id", unique: true, where: "(stripe_id IS NOT NULL)"
+  end
+
   create_table "stripe_service_fees", force: :cascade do |t|
     t.integer "amount_cents", null: false
     t.datetime "created_at", null: false
@@ -2951,6 +3018,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
     t.index ["slug"], name: "index_users_on_slug", unique: true
   end
 
+  create_table "venture_cardholders", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.jsonb "requirements", default: {}, null: false
+    t.string "role", null: false
+    t.string "status"
+    t.text "stripe_id"
+    t.datetime "stripe_synced_at"
+    t.datetime "terms_accepted_at"
+    t.string "terms_accepted_ip"
+    t.text "terms_accepted_user_agent"
+    t.string "terms_version"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["event_id", "user_id"], name: "index_venture_cardholders_on_event_id_and_user_id", unique: true
+    t.index ["event_id"], name: "index_venture_cardholders_on_event_id"
+    t.index ["stripe_id"], name: "index_venture_cardholders_on_stripe_id", unique: true, where: "(stripe_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_venture_cardholders_on_user_id"
+  end
+
+  create_table "venture_cards", force: :cascade do |t|
+    t.string "brand"
+    t.string "card_type", default: "virtual", null: false
+    t.boolean "commercial_controls_applied", default: false, null: false
+    t.datetime "created_at", null: false
+    t.integer "exp_month"
+    t.integer "exp_year"
+    t.string "last4"
+    t.integer "spending_limit_cents"
+    t.string "spending_limit_interval"
+    t.string "status"
+    t.text "stripe_id"
+    t.datetime "stripe_synced_at"
+    t.datetime "updated_at", null: false
+    t.bigint "venture_cardholder_id", null: false
+    t.index ["stripe_id"], name: "index_venture_cards_on_stripe_id", unique: true, where: "(stripe_id IS NOT NULL)"
+    t.index ["venture_cardholder_id"], name: "index_venture_cards_on_venture_cardholder_id"
+  end
+
   create_table "versions", force: :cascade do |t|
     t.datetime "created_at", precision: nil
     t.string "event", null: false
@@ -3150,6 +3256,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
   add_foreign_key "governance_admin_transfer_limits", "users"
   add_foreign_key "governance_request_contexts", "users"
   add_foreign_key "governance_request_contexts", "users", column: "impersonator_id"
+  add_foreign_key "guardian_verifications", "events"
+  add_foreign_key "guardian_verifications", "users"
   add_foreign_key "guardianships", "users", column: "guardian_id"
   add_foreign_key "guardianships", "users", column: "minor_id"
   add_foreign_key "guardianships", "users", column: "revoked_by_id"
@@ -3204,6 +3312,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
   add_foreign_key "organizer_positions", "events"
   add_foreign_key "organizer_positions", "users"
   add_foreign_key "payment_recipients", "events"
+  add_foreign_key "payout_requests", "events"
+  add_foreign_key "payout_requests", "users", column: "approved_by_id"
+  add_foreign_key "payout_requests", "users", column: "requested_by_id"
   add_foreign_key "paypal_transfers", "events"
   add_foreign_key "paypal_transfers", "users"
   add_foreign_key "payroll_invoices", "payments"
@@ -3240,6 +3351,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
   add_foreign_key "stripe_cards", "events"
   add_foreign_key "stripe_cards", "stripe_cardholders"
   add_foreign_key "stripe_cards", "users", column: "last_frozen_by_id"
+  add_foreign_key "stripe_connected_accounts", "events"
+  add_foreign_key "stripe_connected_accounts", "users", column: "owner_id"
   add_foreign_key "subledgers", "events"
   add_foreign_key "transaction_category_mappings", "transaction_categories"
   add_foreign_key "transactions", "ach_transfers"
@@ -3257,6 +3370,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_170002) do
   add_foreign_key "user_seen_at_histories", "users"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
+  add_foreign_key "venture_cardholders", "events"
+  add_foreign_key "venture_cardholders", "users"
+  add_foreign_key "venture_cards", "venture_cardholders"
   add_foreign_key "w9s", "users", column: "uploaded_by_id"
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wires", "events"

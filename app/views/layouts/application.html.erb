@@ -114,6 +114,19 @@
       <main class="container px-6 <%= content_for :container_class %>" style="<%= content_for :container_style %>">
         <%= render "application/flash", klass: "my-1" unless @hide_flash %>
         <%= yield %>
+        <%# Fuime: the footer must render on the signed-out branch too.
+            It previously only appeared in the app-shell branch above, so a
+            SIGNED-OUT visitor to /faq, /terms, /privacy or the guardian agreement
+            never saw the standing "not a bank / no FDIC-insured products"
+            disclosure — and a parent reading the terms before accepting an emailed
+            guardian invite has no account, so they are exactly the reader it exists
+            for. 12 CFR 328.102(b)(3)(ii) makes the OMISSION the violation, not just
+            an affirmative false claim, so this branch was the gap that mattered
+            most. See docs/fuime/LEGAL_RESEARCH.md §7 and
+            spec/requests/fuime/status_disclosure_spec.rb.
+            Pages with their own tailored disclosure (the public storefront) opt out
+            with @hide_footer rather than showing it twice. %>
+        <%= render "application/footer" unless @no_app_shell || @hide_footer %>
       </main>
     <% end %>
     <%= render "application/shared_popover" %>

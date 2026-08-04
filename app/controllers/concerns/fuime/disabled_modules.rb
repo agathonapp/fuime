@@ -66,6 +66,30 @@ module Fuime
       # EventPolicy#card_overview? was re-enabled would have rebuilt the exact
       # trap page that list was written to close: a Create button that 302s.
       # Blocked again the moment this fork points at anything but test keys.
+      #
+      # ⚠️ 2026-08-03 — READ BEFORE GOING LIVE WITH CARDS. Inherited Issuing is
+      # structurally incompatible with the connected-account model added the same
+      # day, and the incompatibility is a funding one, not a config one:
+      #
+      #   * A swipe is approved against `StripeCard#balance_available`, i.e. the
+      #     EVENT'S LEDGER balance (app/models/stripe_card.rb:391).
+      #   * The debit lands on the PLATFORM's Stripe Issuing balance, which HCB
+      #     tops up from its own money (upstream app/jobs/topup_stripe_job.rb) —
+      #     one shared balance for every org, with per-org limits enforced only by
+      #     the subledger.
+      #   * Under Connect that ledger MIRRORS THE GUARDIAN'S Stripe balance. The
+      #     money is the family's, held by Stripe, not Fuime's to spend.
+      #
+      # So going live as-is means Fuime funds the swipe and has no claim on the
+      # revenue backing it: uncollateralised credit extended to a minor's
+      # business. Celtic Bank's own Authorized User Terms make this explicit —
+      # the "Accountholder" is the entity with the credit account, and "all
+      # expenses on your card are the responsibility of the Accountholder". HCB
+      # can carry that because it is a 501(c)(3) that legally owns the funds.
+      # Fuime cannot.
+      #
+      # Cards therefore need their own funding rail, not a flag flip. See
+      # docs/fuime/LEGAL_RESEARCH.md and the handoff note in SETUP_NOTES.md.
       "emburse_cards",
       "emburse_card_requests",
       "emburse_transactions",

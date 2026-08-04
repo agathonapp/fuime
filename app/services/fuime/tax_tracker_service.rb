@@ -198,7 +198,15 @@ module Fuime
       # the fee CHARGE (memo "Fuime platform fee (4%)") is deliberately NOT
       # excluded, because it is a genuine deductible business expense.
       "platform fee refunded",
+      # Money moving from the venture's Stripe balance to the family's own bank
+      # account. Neither income nor a deductible expense — the business already
+      # earned it (and it was already counted as income when the sale posted), and
+      # sending it to the owner's bank does not spend it on anything. Counting a
+      # payout as an expense would understate a teenager's taxable income, which
+      # is the direction of error that gets a family in trouble.
+      "payout",
       "adjustment",
     ].freeze
+
   end
 end

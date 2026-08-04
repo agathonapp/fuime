@@ -81,6 +81,10 @@ services:
       # Stripe webhook is rejected and payments never reach a ledger.
       - key: FUIME_STRIPE_WEBHOOK_SECRET
         sync: false
+      # Connect webhooks arrive on a separately-scoped Stripe endpoint with its
+      # own signing secret; verifying them against the secret above fails.
+      - key: FUIME_STRIPE_CONNECT_WEBHOOK_SECRET
+        sync: false
       - key: SECRET_KEY_BASE
         generateValue: true
       - key: RAILS_MASTER_KEY
@@ -270,6 +274,10 @@ services:
       - key: STRIPE_MODE
         value: test
       - key: FUIME_STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Connect webhooks arrive on a separately-scoped Stripe endpoint with its
+      # own signing secret; verifying them against the secret above fails.
+      - key: FUIME_STRIPE_CONNECT_WEBHOOK_SECRET
         sync: false
       - key: SECRET_KEY_BASE
         fromService:

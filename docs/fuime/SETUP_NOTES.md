@@ -2,6 +2,163 @@
 
 ## Handoff (most recent first)
 
+**2026-08-04 (evening) — Cards and guardian verification.** Same branch. Three layers
+went in after the payouts work: (1) **account profiles** — `controller` is create-only at
+Stripe, so `:payments_only` (default, Stripe-liable) vs `:cards_enabled` (Fuime absorbs
+losses, collects SSNs, pays processing) is decided at creation and can never be changed;
+a venture cannot be upgraded into cards, it re-onboards. (2) **Cards** —
+`Fuime::CardSpendPolicy` enforces "business purchases only" as a Stripe
+`allowed_categories` allowlist (allowlist not blocklist: a missed category declines a
+purchase, a missed blocklist entry is a compliance violation). Guardian is the
+Accountholder, teen the Authorized User, and issuance **cancels any card Stripe returns
+without the controls applied**. (3) **Guardian verification** — collect-and-forward: PII
+goes straight to Stripe, `guardian_verifications` holds metadata only, and a spec fails
+the suite if a PII-capable column is ever added.
+
+**Two things worth knowing before touching this.** `Stripe::StripeObject#to_h` is
+SHALLOW — nested values stay StripeObjects with no `dig`, so it fails on the *second*
+key. Use `Fuime::StripeHash.deep`. And uploading a file for a connected account needs the
+`Stripe-Account` header while updating that account does not; getting either backwards
+looks like a permissions bug.
+
+**Nothing has run against Stripe, still.** The blocker is not code: the three questions
+in LEGAL_RESEARCH need answers, and question 3 (will underwriting class a teen sole-prop
+with a guardian representative as consumer rather than business?) can invalidate the
+whole card path. Also unverified: `payouts.schedule.interval=manual`, and Stripe's own
+processing fee is still not posted to the ledger.
+
+**2026-08-04 — The ledger sees Connect charges, and money can leave.** Same branch
+`fuime/p0-honest-posture`. Two things shipped. (1) **Direct charges now reach the
+ledger.** `Fuime::ConnectPaymentRecorder` maps `event.account` → connected account →
+venture (Stripe's word, not our metadata), reads the fee from
+`application_fee_amount` instead of recomputing it, and — the one real behaviour
+difference from the pooled handler — only credits Fuime's fee back on
+`application_fee.refunded`, because Stripe does NOT return an application fee on a
+plain refund and posting a rebate would print money into a family's ledger that is
+still in ours. (2) **Payouts**: teen requests, guardian approves, Stripe sends to the
+family's bank. `Fuime::ConnectOnboardingService` now sets
+`payouts.schedule.interval=manual`, without which Stripe drains the balance on a
+timer and the approval gate is theatre.
+
+**Found and fixed a bug that made the whole payment-setup flow 500:**
+`EventPolicy#setup_payments?` and `#payment_setup_status?` sat BELOW `private`, and
+Pundit resolves queries with `public_send`. The previous session's specs were saying
+so; they had never been run. `spec/policies/event_policy_payouts_spec.rb` now pins
+the visibility of all five Fuime predicates.
+
+**Cleared from the last handoff:** `Stripe::AccountSession` **does** exist in stripe
+11.7.0 (so do `Payout`, `Balance`, `ApplicationFee`) — no need for the Account Links
+fallback. And rspec runs fine; the toolchain gap was only that the Docker daemon was
+off. `docker compose up -d db redis`, then `rails db:migrate` with `RAILS_ENV=test`,
+then the spec command below.
+
+**Read `docs/fuime/UPSTREAM_DIVERGENCE.md` (2026-08-04 entry) for what is still
+missing.** Short version: nothing has touched Stripe even in test mode, so verify
+`payouts.schedule.interval=manual` against a real test-mode account first — platform
+control of the payout schedule interacts with `losses.payments=stripe` and that
+combination is unconfirmed. Also, Stripe's own processing fee is still not posted, so
+the ledger overstates each balance by Stripe's cut.
+
+**2026-08-03 (later) — Stripe Connect: the pooled account is gone.** Same branch
+`fuime/p0-honest-posture`. Money-in is now a **direct charge on a connected account
+the guardian owns**; Fuime takes a platform fee and is out of the flow of funds,
+which is what CLAUDE.md L1 requires. Account config is
+`losses.payments=stripe` + `requirement_collection=stripe` +
+`stripe_dashboard.type=none` — the first choice forces the other two (Stripe
+documents `requirement_collection=application` as incompatible with Stripe-liability),
+and the side effect is that the guardian's SSN never touches Fuime's database. New
+`stripe_connected_accounts` table (one per venture, `event_id` UNIQUE — that index
+is the anti-commingling guarantee), `Fuime::ConnectOnboardingService`, a four-surface
+guardian flow at `/:event_slug/payments`, a second Connect-scoped webhook endpoint,
+and `@stripe/connect-js`. Fixed a live bug on the way: the storefront's public
+"Guardian on account" badge was reading `point_of_contact.has_active_guardian?`, and
+`point_of_contact` is the *activating admin* — so it published whether a Fuime staff
+member has a parent. Also fixed: the platform fee never consulted `event.plan`, so
+Founders-plan ventures (0%) were charged 4%.
+
+**Three things to do before trusting any of it.** (1) **Verify
+`Stripe::AccountSession` exists in stripe 11.7.0** — the gem is pinned to a late-2024
+version and could not be introspected (gems aren't installed), so the embedded flow
+rests on an unverified assumption. If it's missing, upgrade the gem or fall back to
+Account Links and accept a redirect. (2) Nothing here has been executed against
+Stripe at all — no account created, no session minted, no webhook received; the
+parameter shapes come from documentation, not from a successful call. (3) Five spec
+files are unexecuted; run them in Docker.
+
+**⚠️ Cards — resolved, and the answer is "not in this repo".** Researched properly
+(addendum in LEGAL_RESEARCH.md). Age is *not* the blocker: Stripe documents the
+Issuing cardholder floor as **13**. Three real blockers instead. (1) A Stripe
+Issuing card is a **business-purpose commercial charge card** — "you may not use
+your card for personal, family or household purposes", cannot be topped up from a
+parent's personal funds, no consumer protections. It buys inventory; it cannot be
+a teen's spending money. (2) Issuing needs `losses.payments=application`, which
+drags `requirement_collection` (guardian SSNs into Fuime's systems) and
+`fees.payer` (Fuime pays all Stripe processing — a pricing change) with it, and
+**`controller` is create-only** so every existing family would have to re-onboard.
+(3) The BaaS alternative is closed at this stage: Evolve is barred by its Fed order
+from onboarding new fintech partners without regulator approval, CFSB and Choice
+are both under orders, and Synctera screens at Series C+. Copper — same size, same
+stage — lost its cards on 24 hours' notice in 2024. **Keep the Issuing UI hidden;
+the funding incompatibility is documented in `Fuime::DisabledModules`.** Near-term
+path is refer-out: payouts settle to the family, they spend on a card they already
+have, Fuime keeps the ledger and the parent visibility.
+
+**Next:** ledger semantics under direct charges (the gross payment is now a mirror
+of the family's Stripe balance, not funds Fuime holds, and `record_platform_fee` is
+redundant with `application_fee_amount`), then the plan lineup.
+
+**2026-08-03 — the legal review landed, and the architecture has to change.**
+Written on `fuime/p0-honest-posture` off `4fec272d8`. New file
+`docs/fuime/LEGAL_RESEARCH.md` is the output of a seven-workstream
+primary-source review; its 16 load-bearing citations were independently
+re-verified. Two findings are structural and are now `CLAUDE.md` constraints
+L1–L8. (1) **The pooled-account model can never go live.** Taking customers'
+payments into Fuime's own Stripe balance and paying out on request is money
+transmission (31 CFR 1010.100(ff)(5)); unlicensed operation is criminal under
+18 U.S.C. § 1960, and it independently violates Stripe's restricted-business
+rules. HCB escapes this only because donations become a 501(c)(3)'s own assets —
+"Column + Stripe like Hack Club" does not transfer to a for-profit. Production
+money-in becomes **Stripe Connect, guardian-owned connected account per
+venture**, which is a new spike, not a change to the existing pipeline; keep the
+pooled pipeline as the test-mode simulator it already is. (2) **SSN-free
+onboarding is impossible once money moves** — Stripe requires the guardian's SSN
+last-4 before an under-18 account can charge or pay out. This session shipped
+only the P0 copy work: the guardian invite no longer claims an identity check
+Fuime does not perform, "business account" is gone in favour of "venture", the
+FAQ no longer says a minor cannot sign a contract (they can — it is voidable at
+*their* option, which is the whole reason guardians exist), and a standing
+"financial technology company, not a bank" disclosure now renders in the footer
+**and** separately in the storefront, which takes the no-nav layout branch and
+never renders `application/_footer`. **Verification gap worth naming:** rspec
+did not run — `bundle exec rspec` reports the executable missing *and* the
+Docker daemon was down, so the container path below was unavailable too. Changes
+are copy-only and `ruby -c` passes on every `.rb`, but two specs
+(`spec/requests/fuime/status_disclosure_spec.rb`, new; `spec/requests/marketing_spec.rb`,
+amended) have never been executed. **Run those two first.** One gap was opened
+knowingly: the site now publishes the Starter/Standard-7%/Pro-$15+4%/Founders
+lineup while the app still ships Standard at 4% and has no Starter or Pro class,
+because that fee constant feeds Stripe metadata, the ledger fee line **and** the
+proportional refund reversal — three money paths I could not test. It is
+survivable only because nothing is billed in test mode and the site says so;
+closing it is the top P1 item and is written up in UPSTREAM_DIVERGENCE.md with
+the exact files. Also shipped in this session, and the first real feature work
+rather than copy: **guardian oversight**. Agreement §3 promises the signing adult
+visibility that "cannot be turned off by the minor", and nothing implemented it —
+`EventPolicy#reader?` resolved only through `OrganizerPosition` and accepting a
+guardianship creates none, so the predicate was false for every guardian who ever
+signed. Milestone 4's open design question is now decided and recorded: access
+derives from the **Guardianship record, not an OrganizerPosition**, because the
+minor is a manager of their own venture and could delete a membership row —
+which would make the one guarantee their parent relies on revocable by exactly
+the person it exists to be independent of. New `GET /guardian` overview, a
+`Guardianship.overseeing_event` scope, `EventPolicy#guardian_reader?`, and a nav
+entry. Read-only by construction: `member?`/`manager?` do not consult it, and all
+27 `reader?` call sites were audited. Two new spec files are **unexecuted** —
+`spec/policies/event_policy_guardian_spec.rb` and
+`spec/controllers/guardianships_controller_index_spec.rb`. Next session: run all
+four unexecuted spec files, then the plan lineup, then the Connect spike
+(LEGAL_RESEARCH.md "Recommended path" P1).
+
 **2026-08-02 — Phase 1: the app now tells the truth about itself.** Written
 against `97ddfe3e0`, in a working tree a second session was editing at the same
 time — name the commit, not the branch, because the branch moved underneath this

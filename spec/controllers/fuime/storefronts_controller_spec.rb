@@ -9,7 +9,25 @@ require "rails_helper"
 RSpec.describe Fuime::StorefrontsController, type: :controller do
   render_views
 
-  let(:event) { create(:event, slug: "mayas-prints", is_public: true) }
+  # The name is pinned, not left to Faker, because several examples assert on
+  # `include(event.name)` against RENDERED HTML. A Faker name containing an
+  # apostrophe or ampersand ("O'Brien & Sons") is escaped to `O&#39;Brien &amp;
+  # Sons` in the output and the match fails — a seed-dependent flake that passes on
+  # most runs and fails on some. "Maya Prints" contains nothing ERB will escape.
+  let(:event) { create(:event, name: "Maya Prints", slug: "mayas-prints", is_public: true) }
+
+  # A venture can only be paid once its guardian has finished Stripe setup — the
+  # view gates the whole pay form on `@accepts_payments`, because rendering it
+  # without an account puts a dead "Pay" button on a public URL a teenager has
+  # shared with real customers.
+  #
+  # These specs predate that gate and were written when the storefront always
+  # rendered the form (the pooled-account model, where Fuime's own balance was
+  # always available). Four of them broke silently when the gate landed. The
+  # connected account belongs here rather than in each example because "this
+  # venture can take money" is the precondition for a storefront being worth
+  # rendering at all; the un-set-up branch is covered explicitly below.
+  let!(:connected_account) { create(:stripe_connected_account, :ready, event:) }
 
   describe "GET #show" do
     it "renders the storefront to a logged-out visitor" do
@@ -30,7 +48,35 @@ RSpec.describe Fuime::StorefrontsController, type: :controller do
     it "states the platform fee rather than hiding it from the payer" do
       get :show, params: { slug: event.slug }
 
-      expect(response.body).to include("#{Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT}%")
+      # Asserted in the format the view actually renders. It reads
+      # `event.plan.revenue_fee` through `number_to_percentage(precision: 1)` — so
+      # "4.0%", not "4%" — because the constant this replaced ignored the plan
+      # entirely and advertised 4% to a Founders-plan venture that pays nothing.
+      # Derived rather than hardcoded so a plan change cannot leave this passing
+      # against the wrong number.
+      expected = ActiveSupport::NumberHelper.number_to_percentage(
+        event.plan.revenue_fee * 100, precision: 1
+      )
+
+      expect(response.body).to include(expected)
+    end
+
+    # The other side of the gate, which nothing pinned before. A storefront whose
+    # guardian has not finished setup must say so rather than showing a button that
+    # the checkout endpoint would refuse.
+    context "when the guardian has not finished payment setup" do
+      let!(:connected_account) { create(:stripe_connected_account, :incomplete, event:) }
+
+      it "explains the venture cannot be paid instead of rendering a dead form" do
+        get :show, params: { slug: event.slug }
+
+        expect(response).to have_http_status(:ok)
+        # Plain apostrophe: this sentence is static template text, so ERB does not
+        # HTML-escape it. Only `<%= %>` output becomes `&#39;` — which is why the
+        # test-mode examples above assert the entity and this one does not.
+        expect(response.body).to include("isn't set up to take payments yet")
+        expect(response.body).not_to include(fuime_storefront_pay_path(slug: event.slug))
+      end
     end
 
     it "confirms the payment on return from Stripe" do

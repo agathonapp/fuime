@@ -107,7 +107,7 @@ module Fuime
       if current_user.birthday.blank?
         "Please add your date of birth so we know whether you need a parent or guardian on your account."
       else
-        "Your parent or guardian needs to accept their invitation before you can use your Fuime business account."
+        "Your parent or guardian needs to accept their invitation before you can run your venture on Fuime."
       end
     end
   end

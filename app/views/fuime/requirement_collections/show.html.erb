@@ -1,0 +1,115 @@
+<% title "Verify your identity — #{@event.name}" %>
+
+<%= render "events/nav", selected: :payments %>
+
+<h1 class="heading">Verify your identity</h1>
+
+<%# Fuime: the guardian's own identity details, for a `:cards_enabled` venture where
+    Stripe has made collection Fuime's job.
+
+    Deliberately does NOT repopulate any field on error. The controller redirects rather
+    than re-rendering, because a re-rendered form puts a Social Security number into the
+    HTML of an error page. Re-asking is the worse experience and the right one. %>
+
+<% if @latest_verification.present? && @latest_verification.accepted? %>
+  <%= render "application/callout", type: "success", title: "Stripe has verified you" %>
+<% elsif @latest_verification.present? %>
+  <%= render "application/callout", type: "info", title: "Stripe is checking your details" do %>
+    <p class="mb-0">
+      Submitted <%= time_ago_in_words(@latest_verification.submitted_at) %> ago. This usually
+      takes a few minutes. You'll see it update on the
+      <%= link_to "payments page", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+    </p>
+  <% end %>
+<% end %>
+
+<% if @outstanding.any? %>
+  <h2>What Stripe still needs</h2>
+  <ul>
+    <% @outstanding.each do |item| %>
+      <li><%= item %></li>
+    <% end %>
+  </ul>
+<% elsif @latest_verification.blank? %>
+  <p class="secondary">
+    Stripe hasn't asked for anything yet. If you've just started setting up payments,
+    check back in a moment.
+  </p>
+<% end %>
+
+<%= render "fuime/requirement_collections/disclosure" %>
+
+<%= form_with url: fuime_requirement_collection_submit_path(event_slug: @event.slug),
+              method: :post, multipart: true do |f| %>
+  <div class="field">
+    <%= f.label :first_name, "Your legal first name", class: "bold" %>
+    <%= f.text_field :first_name, autocomplete: "off" %>
+  </div>
+
+  <div class="field">
+    <%= f.label :last_name, "Your legal last name", class: "bold" %>
+    <%= f.text_field :last_name, autocomplete: "off" %>
+  </div>
+
+  <div class="field">
+    <%= f.label :dob, "Your date of birth", class: "bold" %>
+    <%= f.date_field :dob %>
+  </div>
+
+  <div class="field">
+    <%= f.label :ssn_last_4, "Last 4 digits of your Social Security number", class: "bold" %>
+    <%# inputmode numeric, and autocomplete off so a browser never stores it. %>
+    <%= f.text_field :ssn_last_4, maxlength: 4, inputmode: "numeric",
+                     autocomplete: "off", style: "max-width: 8rem;" %>
+    <p class="text-sm secondary mb-0">
+      Stripe asks for these 4 digits to confirm you are who you say you are. Fuime does not
+      store them.
+    </p>
+  </div>
+
+  <fieldset class="mt2">
+    <legend>Your home address</legend>
+
+    <div class="field">
+      <%= f.label :line1, "Street address", class: "bold" %>
+      <%= f.text_field :line1, autocomplete: "off" %>
+    </div>
+
+    <div class="field">
+      <%= f.label :line2, "Apartment, suite (optional)", class: "bold" %>
+      <%= f.text_field :line2, autocomplete: "off" %>
+    </div>
+
+    <div class="field">
+      <%= f.label :city, "City", class: "bold" %>
+      <%= f.text_field :city, autocomplete: "off" %>
+    </div>
+
+    <div class="field">
+      <%= f.label :state, "State", class: "bold" %>
+      <%= f.text_field :state, maxlength: 2, autocomplete: "off",
+                       style: "max-width: 6rem;" %>
+    </div>
+
+    <div class="field">
+      <%= f.label :postal_code, "ZIP code", class: "bold" %>
+      <%= f.text_field :postal_code, autocomplete: "off",
+                       style: "max-width: 10rem;" %>
+    </div>
+  </fieldset>
+
+  <div class="field mt2">
+    <%= f.label :id_document, "Photo of your government-issued ID", class: "bold" %>
+    <%= f.file_field :id_document, accept: "image/png,image/jpeg,application/pdf" %>
+    <p class="text-sm secondary mb-0">
+      Uploaded straight to Stripe. Fuime does not keep a copy of this image.
+    </p>
+  </div>
+
+  <p class="secondary mt2">
+    By submitting, you confirm you are the parent or legal guardian of the young founder
+    running <%= @event.name %>, and that these are your own details.
+  </p>
+
+  <%= f.submit "Send to Stripe", class: "btn bg-accent" %>
+<% end %>

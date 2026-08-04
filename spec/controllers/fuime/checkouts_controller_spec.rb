@@ -13,6 +13,17 @@ require "rails_helper"
 RSpec.describe Fuime::CheckoutsController, type: :controller do
   let(:event) { create(:event, slug: "mayas-prints", is_public: true) }
 
+  # The controller refuses at `event.accepts_payments?` before it ever reaches the
+  # service, so stubbing Fuime::PaymentLinkService is not enough to exercise the
+  # happy path — the venture needs a guardian-owned Stripe account that Stripe is
+  # willing to charge on.
+  #
+  # These specs were written against the pooled-account model, where Fuime's own
+  # balance was always available and no such precondition existed. Five of them
+  # broke silently when the guard landed with Stripe Connect. The refusal branch is
+  # covered explicitly below.
+  let!(:connected_account) { create(:stripe_connected_account, :ready, event:) }
+
   let(:stripe_session) { double("Stripe::Checkout::Session", url: "https://checkout.stripe.com/c/pay/cs_test_123") }
 
   def stub_checkout
@@ -55,6 +66,29 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
     end
 
     context "guards" do
+      # The guard that makes the storefront honest under the connected-account
+      # model: before it, `accepts_payments?` defaulted to true and every activated
+      # venture presented a working form with nowhere for the money to go.
+      it "refuses a venture whose guardian has not finished Stripe setup" do
+        connected_account.update!(charges_enabled: false, capabilities: {})
+        allow(Fuime::PaymentLinkService).to receive(:new)
+
+        post :create, params: { slug: event.slug, amount: "25" }
+
+        expect(Fuime::PaymentLinkService).not_to have_received(:new)
+        expect(response).to redirect_to(fuime_storefront_path(slug: event.slug))
+        expect(flash[:alert]).to match(/isn't set up to accept payments/i)
+      end
+
+      it "refuses a venture with no Stripe account at all" do
+        connected_account.destroy!
+        allow(Fuime::PaymentLinkService).to receive(:new)
+
+        post :create, params: { slug: event.slug, amount: "25" }
+
+        expect(Fuime::PaymentLinkService).not_to have_received(:new)
+      end
+
       it "refuses a business that has not published a storefront" do
         private_event = create(:event, slug: "private-biz", is_public: false)
         allow(Fuime::PaymentLinkService).to receive(:new)

@@ -16,6 +16,18 @@
           <%= render partial: "application/theme_toggle" %>
           <hr>
           <p class="muted font-medium h5 pl-2 p-1 m0">Account</p>
+          <%# Fuime: the guardian's route to the oversight the agreement promises
+              them. Shown to anyone with a guardianship in either direction —
+              a guardian needs their wards' ventures, and a teen needs to see
+              whether their invite has been accepted without digging out the
+              email. Hidden entirely for users with neither, so an adult running
+              their own venture sees no stray parental furniture. %>
+          <% if @current_user.guardianships_as_guardian.any? || @current_user.guardianships_as_minor.any? %>
+            <%= link_to guardianships_path do %>
+              <%= inline_icon "friend", size: 23 %>
+              Guardian
+            <% end %>
+          <% end %>
           <%= link_to my_settings_path do %>
             <%= inline_icon "settings", style: "width:30px;height:30px;margin-left:-5px;margin-right:-2px" %>
             Settings

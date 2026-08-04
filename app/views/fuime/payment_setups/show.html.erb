@@ -1,0 +1,137 @@
+<% title "Payments — #{@event.name}" %>
+
+<%= render "events/nav", selected: :payments %>
+
+<h1 class="heading">Payments</h1>
+
+<%# Fuime: the payment-setup status page.
+    Readable by the whole team, not just the guardian, because a teen needs to
+    know whether they can be paid and whose action is outstanding — but only the
+    guardian gets the button, since only they can supply what Stripe requires of
+    an account owner. %>
+
+<% account = @connected_account %>
+
+<% if account.blank? || account.status == :not_started %>
+  <%= render "application/callout", type: "warning", title: "This venture can't be paid yet" do %>
+    <p>
+      Before <%= @event.name %> can accept money, a parent or guardian needs to set
+      up a payment account with Stripe. They will own that account; money settles
+      to their bank, not to Fuime.
+    </p>
+    <% if @can_set_up %>
+      <%# When cards are available to this venture the choice has to be made HERE, before
+          the account exists. Stripe's `controller` property is create-only, so a venture
+          set up without card support can never gain it later — it would have to be set up
+          again from scratch. Presenting it as a one-time choice is the honest framing. %>
+      <% if @can_choose_cards %>
+        <p class="bold mb1">How will this venture use Fuime?</p>
+
+        <div class="flex flex-wrap items-start mb2" style="gap: 1rem;">
+          <div>
+            <%= link_to "Take payments", new_fuime_payment_setup_path(event_slug: @event.slug),
+                        class: "btn bg-accent" %>
+            <p class="text-sm secondary mb-0" style="max-width: 20rem;">
+              Sell things and get paid into your own bank account. Stripe handles
+              verification and covers disputes.
+            </p>
+          </div>
+
+          <div>
+            <%= link_to "Take payments and get a business card",
+                        new_fuime_payment_setup_path(event_slug: @event.slug, profile: "cards_enabled"),
+                        class: "btn bg-info" %>
+            <p class="text-sm secondary mb-0" style="max-width: 20rem;">
+              Adds a card for buying supplies. You'll enter your ID details with Fuime
+              rather than with Stripe, and the card only works for business purchases.
+            </p>
+          </div>
+        </div>
+
+        <p class="text-sm secondary">
+          <strong>Choose carefully:</strong> Stripe can't add card support to an account
+          later, so switching would mean setting this venture up again.
+        </p>
+      <% else %>
+        <%= link_to "Set up payments", new_fuime_payment_setup_path(event_slug: @event.slug), class: "btn bg-accent" %>
+      <% end %>
+    <% else %>
+      <%# The teen's view. Naming who has to act beats a generic "contact your
+          guardian", and the guardian may not be listed yet if none is active. %>
+      <p class="mb-0">
+        <% if @guardians.any? %>
+          Waiting on <strong><%= @guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>.
+          They can do this from their guardian overview.
+        <% else %>
+          No parent or guardian has accepted yet, so there is nobody who can set
+          this up. <%= link_to "Invite your guardian", new_guardianship_path, class: "underline" %>.
+        <% end %>
+      </p>
+    <% end %>
+  <% end %>
+<% else %>
+  <%# A venture that is live gets the reassuring version; anything else gets the
+      specific outstanding item rather than a generic failure. %>
+  <% callout_type = case account.status
+                    when :ready then "success"
+                    when :ready_no_payouts, :ready_action_needed, :verifying then "info"
+                    else "warning"
+                    end %>
+
+  <%= render "application/callout", type: callout_type, title: account.status_description do %>
+    <ul class="list-disc pl-5 mb-2">
+      <li class="mb-1">
+        Accepting payments:
+        <strong><%= account.ready_for_payments? ? "yes" : "not yet" %></strong>
+      </li>
+      <li class="mb-1">
+        Transfers to a bank account:
+        <strong><%= account.ready_for_payouts? ? "yes" : "not yet" %></strong>
+      </li>
+      <li class="mb-0">
+        Account owner:
+        <strong><%= account.owner.name.presence || account.owner.email %></strong>
+      </li>
+    </ul>
+
+    <%# Stripe's requirement identifiers are dotted machine strings
+        (`individual.verification.document`), so they are humanised rather than
+        printed raw — but they ARE printed, because "Stripe needs something"
+        without saying what is not actionable. %>
+    <% if account.requirements_outstanding? %>
+      <p class="mb-1"><strong>Stripe still needs:</strong></p>
+      <ul class="list-disc pl-5 mb-2">
+        <% (account.requirements_past_due + account.requirements_currently_due).uniq.each do |requirement| %>
+          <li><%= requirement.to_s.tr("_", " ").tr(".", " › ") %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if @can_set_up %>
+      <%= link_to(account.onboarding_submitted? ? "Update payment details" : "Finish payment setup",
+                  new_fuime_payment_setup_path(event_slug: @event.slug),
+                  class: "btn bg-accent") %>
+    <% end %>
+  <% end %>
+
+  <% unless account.livemode %>
+    <p class="muted text-sm">
+      This is a Stripe <strong>test</strong> account — no real money can move
+      through it.
+    </p>
+  <% end %>
+
+  <p class="muted text-sm">
+    Last checked with Stripe
+    <%= account.stripe_synced_at ? "#{time_ago_in_words(account.stripe_synced_at)} ago" : "never" %>.
+    <% if @can_set_up %>
+      <%= link_to "Check again", fuime_payment_setup_return_path(event_slug: @event.slug), class: "underline" %>.
+    <% end %>
+  </p>
+<% end %>
+
+<p class="muted text-sm mt-4">
+  Fuime is a financial technology company, not a bank. Fuime does not hold
+  deposits and does not offer FDIC-insured products. Payments are processed by
+  Stripe into an account owned by a parent or legal guardian.
+</p>

@@ -8,20 +8,50 @@ it is a suggestion.
 Invoicing and books for under-18 service businesses. A 13–17-year-old who
 already has paying clients — tutoring, lawn care, photo, video, web, DJ work —
 sends a real invoice and gets paid into a Stripe account their guardian legally
-owns and they operate day to day. A guardian completes one ID check at signup.
-fuime charges 7% of money collected, $0/mo under $250 collected in the last 30
-days, $15/mo over. Stripe's card processing is separate and goes to Stripe.
+owns and they operate day to day.
 
-**fuime is not a bank and never holds the money.** Payments go client → the
-guardian's Stripe account. Stripe holds the identity documents, not fuime. Any
-copy implying otherwise is a defect, not a wording choice.
+**fuime is not a bank, does not hold deposits, and offers no FDIC-insured
+product.** That much is true today and always. The guardian owns the account;
+the young founder operates it. Copy that inverts that ownership — "your kid's
+account, with you on it" — is a defect, not a wording choice.
+
+### Shipped vs. roadmap — do not blur these
+
+This section exists because an earlier version of this brief described the
+target architecture in the present tense, and the site was built from it. The
+result was a public site claiming a KYC process and a fund flow the product did
+not have. State on the page which of these you are describing.
+
+**Shipped today:** private beta in Stripe **test mode** — no real money moves.
+Ledger, invoicing, receipts, storefront preview. The guardian flow is an emailed
+invitation plus acceptance of the Guardian Agreement. There is **no identity
+verification of any kind**, and funds (in test mode) land in fuime's own pooled
+Stripe account, not the family's.
+
+**Roadmap, and must be labelled as such:** each venture's account becomes a
+guardian-owned Stripe connected account, so payments go client → the guardian's
+own Stripe account and fuime never holds the money. Stripe performs the identity
+check and holds the documents. Guardian identity verification ships with live
+payments. Until it is built, the site may describe this as what *will* happen —
+never as what does.
+
+### Pricing
+
+Starter $0 (no payments — books, storefront preview, education). Standard $0/mo
++ 7% of collections. Pro ~$15/mo + 4%. Founders 0% for the launch cohort.
+Stripe's card processing (~2.9% + 30¢) is separate, goes to Stripe, and **must be
+disclosed wherever a fee appears** — an all-in cost that only becomes visible
+later is the FTC's hidden-fee fact pattern. Subscriptions bill the **guardian**,
+never the minor: a minor's payment authorisation is voidable at the minor's
+option, the guardian's is not.
 
 ## Two readers
 
 1. **The kid.** Already working, tired of being paid in a group chat. Decides
    to _want_ it.
-2. **The parent.** Has to complete a government ID check before any of it
-   works. Decides whether it _happens_.
+2. **The parent.** Has to accept the Guardian Agreement and become the legal
+   signer before any of it works — and, once live payments ship, complete
+   Stripe's identity check. Decides whether it _happens_.
 
 The landing page converts the kid. `/parents` survives the parent's scrutiny.
 Different jobs, different pages.
@@ -92,8 +122,18 @@ Footer columns:
 
 - **Product** — How it works `/#how` · Pricing `/pricing` · For parents `/parents`
 - **Company** — Email `mailto:hi@fuime.com`
+- A `.foot__legal` paragraph above the bottom line, **verbatim on every page**:
+  `fuime is a financial technology company, not a bank. fuime does not hold
+  deposits and does not offer FDIC-insured products. Payments are processed by
+  Stripe. Venture accounts are opened and owned by a parent or legal guardian;
+  young founders operate them with guardian oversight.`
 - Bottom line: `fuime · invoicing for people who aren't 18 yet` and
-  `fuime is not a bank. Payments settle into your own Stripe account.`
+  `Private beta in test mode — no real money moves yet.`
+- A `.beta` chip above the headline in every hero, saying the product is in
+  private beta in test mode and that payments are not live. `/` and
+  `/start-scroll` have no footer bar, so the standing disclosure goes in a bare
+  `.foot` / `.disclaimer` block below the dive — never inside the glass panel,
+  which is clipped on a phone.
 
 **Every href must resolve.** No `#`, no dead anchors, no 404s.
 
@@ -143,8 +183,9 @@ exclamation marks, emoji.
 
 ```
 You're already working. Start billing.
-Send a real invoice, get paid into an account you run day to day, and know what
-you owe at tax time. A parent co-signs once. After that it's yours.
+Write a real invoice, keep books that hold up, and know what you owe at tax
+time. A parent or guardian owns the account and signs once. You operate it: you
+write the invoices, you chase the ones that go unpaid, you run the business.
 Built for tutoring, lawn care, photo, video, web, and DJ work.
 
 How you get paid today
@@ -162,44 +203,54 @@ No record. Nothing to show a client who wants a receipt, or the IRS if you clear
 You have no invoice to point at, so following up feels like begging.
 
 A business account
-Requires 18. That's the whole wall, and waiting it out costs you two years of clients.
+Requires 18 nearly everywhere, and waiting it out costs you two years of clients.
+Say it as the practical wall it is, not as a legal absolute: a minor *can* sign,
+but the contract is voidable at the minor's option, which is why banks and
+processors won't rely on it.
 
 How fuime works
 Three steps. One of them needs a parent.
 01 Sign up and name your business — Takes about a minute. You'll need a parent or
    guardian's email address, because of step two.
-02 Your parent completes one ID check — Stripe lets a guardian own an account on
-   behalf of someone 13 or older. They verify once and they're the legal owner.
-   You're the operator: you send the invoices, you spend the money, you run the
-   business.
-03 Invoice clients and get paid — Send a link. Clients pay by card or bank
-   transfer. The money settles into your account, and fuime keeps your books as
-   it goes: income, expenses, net, and a warning when you cross the $400 the IRS
-   cares about.
+02 Your parent becomes the legal signer — They accept the Guardian Agreement, which
+   makes them the account owner and responsible adult. You're the operator: you
+   send the invoices, you track the money, you run the business. (Roadmap, label
+   it: Stripe permits a guardian to own an account on behalf of someone 13 or
+   older, and Stripe's identity check ships with live payments.)
+03 Invoice clients and get paid — Send a link. In the beta this runs in Stripe test
+   mode, so nothing is really charged. fuime keeps your books as it goes: income,
+   expenses, net, and a warning when you cross the $400 of net self-employment
+   income at which the IRS expects a return.
 
-7% of what you collect. No monthly fee until you're earning.
-A flat monthly fee on a kid making $80 a month is a tax on starting. So there
-isn't one until the business is real.
+Pricing on the page must match the Pricing section above, including Stripe's
+separate processing fee. A flat monthly fee on a kid making $80 a month is a tax
+on starting, which is why Standard has none — but never imply the 7% is the
+all-in cost.
 Stripe's card processing is separate and goes to Stripe. We show it on every
 invoice so the math is never a surprise.
 
-7%   Charged on money you collect. If you don't get paid, there's no fee.
-$0/mo   Under $250 collected in the last 30 days.
-$15/mo  Over $250 collected in the last 30 days. Billed to the guardian.
+Starter   Free. Books, storefront and lessons, with no payment processing.
+Standard  $0/mo + 7% of what you collect. No fee on an invoice nobody pays.
+Pro       $15/mo + 4%. Cheaper than Standard above about $500 a month.
+Founders  0% for the launch cohort, by invitation.
+Stripe    2.9% + 30¢ a card payment, on top of every plan above, paid to Stripe.
+Billed to the guardian who holds the account, never to the young founder — and
+not billed at all during the beta, because no real money moves.
 
 For parents
 You sign once. You keep the controls.
 Your kid is going to keep taking money for work either way. This is the version
 with a paper trail.
 
-The account is yours — A Stripe account in your name, with them as operator.
+The account is yours to own — You are the account holder, they are the operator.
   Your own Venmo and cards stay out of it.
 You see everything — Every invoice and every payment, in a read-only view. You
-  can shut it off.
+  can revoke the guardianship and shut it off.
 Tax time is legible — Income, expenses, and net for the year, with the $400
   self-employment threshold flagged.
-We never hold the money — Payments go from the client to your Stripe account.
-  fuime takes its 7% and nothing else.
+Where the money will sit — Roadmap, label it: at live launch, a Stripe account
+  you own, with fuime holding no balance. Today it is test mode, so no real
+  money moves.
 
 We're onboarding the first businesses now.
 One email when it's your turn. Nothing else.
@@ -211,15 +262,30 @@ hi@fuime.com
 ```
 Invoice 0014 · Maya R. · Photography · Due on receipt
 Senior portraits · 3 hr session      $400.00
-Card processing (Stripe)             −$11.90
-fuime fee · 7%                       −$28.00
-Lands in your account                $360.10
+Stripe processing · 2.9% + 30¢       −$11.90
+fuime platform fee · 7% (Standard)   −$28.00
+Left for the venture                 $360.10
 Paid Jun 14 · Visa ···· 4242
+```
+
+Both fee lines are mandatory. A worked example that shows the platform fee and
+hides Stripe's is the FTC-deception shape this brief exists to prevent, and
+"lands in your account" is the ownership inversion it exists to prevent.
 ```
 
 ## Claims that must not appear
 
 - fuime is a bank, holds funds, is FDIC-insured, or is a financial institution.
+- Any present-tense claim that an identity or KYC check happens, that a document
+  is uploaded or held by anyone, or that funds reach a family's own account.
+  Those are roadmap, and the future tense plus a visible label is the only way
+  they may appear.
+- The words bank, banking, checking, savings, deposits, neobank, insured, FDIC,
+  or any form of "your money is safe / protected / guaranteed" — except inside
+  the standing disclosure's own negations.
+- A fee quoted without Stripe's 2.9% + 30¢ named alongside it.
+- "The teen's account", or any phrasing where the young founder owns rather than
+  operates.
 - Any named partner beyond Stripe. **PayPal and Etsy are unconfirmed — never
   mention them.**
 - Specific launch dates, user counts, testimonials, logos, or press mentions.
@@ -280,9 +346,11 @@ so nothing shifts on load.
    `/api/waitlist` and reaches the success state; an invalid one shows the
    inline error without a request; a failed request shows the `hi@fuime.com`
    fallback. `test/waitlist.test.mjs` passes unmodified.
-7. `/parents` states in plain language that the Stripe account is in the
-   guardian's name, that **Stripe** holds the identity documents, and that
-   fuime never holds the money — and carries an FAQ of at least six questions.
+7. `/parents` states in plain language that the guardian is the account holder
+   and the young founder the operator, that there is **no identity verification
+   yet**, and that payments run in Stripe test mode today with the parent-owned
+   no-custody account named as roadmap — and carries an FAQ of at least six
+   questions.
 8. At 390px, 768px and 1440px: no horizontal scroll, no clipped or overlapping
    text, nav collapses cleanly, hero type stays clear of the subject. Verified
    by **screenshot at each width**, looked at — not by an assertion that only

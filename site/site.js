@@ -373,11 +373,13 @@
   /* ── live fee calculator ─────────────────────────────────────────────── */
 
   // The one place on the site where the pricing is not a claim. Drag it and
-  // the invoice recomputes with the same arithmetic the product uses.
+  // the invoice recomputes with the arithmetic a Standard plan will run at live
+  // launch — 7% platform fee, with Stripe's own 2.9% + 30c shown as its own
+  // line because an all-in figure that hides the processor is a deceptive one.
+  // Nothing is billed today: payments run in Stripe test mode.
   var STRIPE_PCT = 0.029
   var STRIPE_FIXED = 0.3
   var FUIME_PCT = 0.07
-  var MONTHLY_THRESHOLD = 250
 
   var money = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -414,11 +416,12 @@
       set(out.stripe, '−' + money.format(stripe))
       set(out.fuime, '−' + money.format(fuime))
       set(out.lands, money.format(lands))
+      // Plan-level, not slider-level: the monthly fee belongs to a plan the
+      // guardian picks, not to the size of one job, so this line must not move
+      // with the range or it reads as a threshold that trips.
       set(
         out.monthly,
-        amount >= MONTHLY_THRESHOLD
-          ? '$15/mo once you clear $250 in 30 days'
-          : 'No monthly fee at this level'
+        "Standard is $0/mo + 7%. Pro is $15/mo + 4%. Stripe's 2.9% + 30\u00A2 applies on both."
       )
 
       var pct = ((amount - range.min) / (range.max - range.min)) * 100

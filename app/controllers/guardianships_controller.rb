@@ -6,6 +6,46 @@ class GuardianshipsController < ApplicationController
   before_action :set_guardianship, only: [:show, :accept]
   before_action :hide_footer, only: [:show, :new]
 
+  # The guardian's overview of the ventures they signed for.
+  #
+  # This exists because agreement §3 promises the signing adult visibility into
+  # the minor's business activity and says it "cannot be turned off by the
+  # minor" — a binding promise that had no surface behind it: `guardianships_as_guardian`
+  # was referenced in exactly one view, the *admin* user page.
+  #
+  # Both directions are shown deliberately. A guardian needs their wards'
+  # ventures; a teen needs to see the state of their own invite (and chase it),
+  # which previously required keeping the emailed link.
+  def index
+    authorize Guardianship
+
+    @guardianships_as_guardian = current_user
+                                 .guardianships_as_guardian
+                                 .includes(:minor)
+                                 .order(created_at: :desc)
+
+    @guardianships_as_minor = current_user
+                              .guardianships_as_minor
+                              .includes(:guardian)
+                              .order(created_at: :desc)
+
+    # Ventures this user oversees, grouped by the ward who puts them there, so
+    # the page reads "Ada's ventures" rather than a flat list whose ownership a
+    # guardian of two teens cannot tell apart.
+    #
+    # Keyed by id, not by the User object: the wards loaded here and the
+    # `guardianship.minor` records the view iterates are different instances, and
+    # relying on ActiveRecord's `hash`/`eql?` to make them the same Hash key is
+    # the kind of subtlety that silently returns nil later. Sorted in Ruby so the
+    # `includes(:events)` preload is not thrown away by an `order` on the
+    # association.
+    @overseen_events_by_ward_id = current_user
+                                  .active_wards
+                                  .includes(:events)
+                                  .to_h { |ward| [ward.id, ward.events.sort_by { |e| e.name.to_s.downcase }] }
+                                  .reject { |_id, events| events.empty? }
+  end
+
   def new
     # Teen needs to invite a guardian
     @guardianship = Guardianship.new(minor: current_user)

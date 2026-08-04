@@ -29,6 +29,17 @@ module Fuime
         return
       end
 
+      # …and only ventures whose guardian has completed Stripe setup. `is_public`
+      # defaults to true, so it never gated anything meaningful — every activated
+      # venture presented a working payment form. Under the connected-account
+      # model there is nowhere for the money to go until a guardian has onboarded,
+      # so this is the check that makes the form honest.
+      unless event.accepts_payments?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "This business isn't set up to accept payments yet."
+        return
+      end
+
       amount_cents = parse_amount(params[:amount])
       if amount_cents.nil?
         redirect_to fuime_storefront_path(slug: event.slug),

@@ -61,6 +61,66 @@ module EventsHelper
       symbol: :home,
       available_proc: ->(event) { policy(event).show? }
     },
+    # Fuime: payment setup (guardian-owned Stripe account) nav item.
+    #
+    # Visible to the whole team, not just the guardian, because a teen needs to
+    # see whether their venture can be paid; the page itself decides who gets the
+    # button.
+    #
+    # No `async_badge_proc`: that field takes a path to a turbo frame, not a badge
+    # string, so signalling "setup unfinished" through it would need its own
+    # endpoint. Left off rather than misused — the storefront and the status page
+    # both say plainly when a venture cannot be paid.
+    #
+    # `icon:` is verified to exist in app/assets/images/icons — `inline_icon`
+    # raises Errno::ENOENT on a missing SVG, which 500s the entire org nav rather
+    # than just this item (see the Taxes note below).
+    {
+      name: "Payments",
+      path_proc: ->(event_id) { fuime_payment_setup_path(event_slug: event_id) },
+      tooltip: "Set up and check how this venture gets paid",
+      icon: "bank-account",
+      symbol: :payments,
+      available_proc: ->(event) { policy(event).payment_setup_status? && organizer_signed_in? }
+    },
+    # Fuime: Payouts — moving money to the family's bank.
+    #
+    # Separate from "Payments" above because they are opposite directions and
+    # different people act on them: Payments is the guardian setting up how money
+    # comes IN, Payouts is the teen asking for money to go OUT and the guardian
+    # deciding. Collapsing them into one screen would bury the approval, which is
+    # the control that makes the ownership structure real (CLAUDE.md L2).
+    #
+    # `cash.svg` is verified to exist in app/assets/images/icons — see the note on
+    # the Taxes item below for why a missing icon 500s the whole org nav rather
+    # than just one entry.
+    {
+      name: "Payouts",
+      path_proc: ->(event_id) { fuime_payouts_path(event_slug: event_id) },
+      tooltip: "Move money to your bank account",
+      icon: "cash",
+      symbol: :payouts,
+      available_proc: ->(event) { policy(event).payouts? && organizer_signed_in? }
+    },
+    # Fuime: business cards.
+    #
+    # Only shown for ventures whose Stripe account was actually created with card
+    # support — `controller` is create-only, so a payments-only venture can never have
+    # cards and a nav item leading to a permanent dead end is worse than no nav item.
+    #
+    # `card-list.svg` is verified to exist in app/assets/images/icons; a missing icon
+    # 500s the whole org nav (see the Taxes note below).
+    {
+      name: "Cards",
+      path_proc: ->(event_id) { fuime_cards_path(event_slug: event_id) },
+      tooltip: "Business cards for buying supplies",
+      icon: "card-list",
+      symbol: :cards,
+      available_proc: lambda { |event|
+        policy(event).cards? && organizer_signed_in? &&
+          event.stripe_connected_account&.cards_profile?
+      }
+    },
     # Fuime: Tax Tracker nav item
     {
       name: "Taxes",

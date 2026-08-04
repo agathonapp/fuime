@@ -292,3 +292,32 @@ minutes per side; they run concurrently. Keep the failure **list**:
 ```bash
 grep -a "^rspec \./spec" run.log | sed 's/ *#.*//' | sort > failures.txt
 ```
+
+### `fuime/p0-honest-posture` @ 2026-08-04 (Connect ledger + payouts session)
+
+Command (Docker, per "Running specs" in SETUP_NOTES.md):
+
+```
+spec/services/fuime/ spec/models/payout_request_spec.rb
+spec/models/stripe_connected_account_spec.rb spec/models/guardianship_spec.rb
+spec/models/user_guardianship_spec.rb spec/policies/ spec/controllers/fuime/
+spec/requests/fuime/ spec/requests/marketing_spec.rb
+```
+
+**370 examples, 1 failure.**
+
+| Failure | Count | Status |
+|---|---|---|
+| `comment_policy_spec:84` — factory hits "Company name is too long (maximum is 16)" | 1 | **Pre-existing**, already recorded above. Untouched this session. |
+
+Sixteen other failures were present when this session began measuring and were all
+fixed; see the 2026-08-04 entry in `UPSTREAM_DIVERGENCE.md` for what each was. The
+short version: fifteen were the previous session's own specs, written but never run,
+reporting two genuine app bugs (Pundit predicates below `private`, and the FDIC
+disclosure missing from the signed-out layout branch) plus spec drift from the
+pooled-to-Connect migration. One was a seed-dependent flake.
+
+**Note on measuring this suite:** RSpec randomises order, and one storefront example
+was flaky on name escaping (now fixed). If a single storefront or checkout example
+fails on one run and passes on another, check for a Faker-generated string being
+asserted against rendered HTML before assuming a regression.

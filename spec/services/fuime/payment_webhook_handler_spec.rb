@@ -102,12 +102,12 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     it "ignores checkout.session.completed for the same payment" do
       handle("payment_intent.succeeded", payment_intent)
       handle("checkout.session.completed", {
-        id: "cs_test_1",
-        object: "checkout_session",
-        amount_total: 10_000,
-        created: Time.current.to_i,
-        metadata: { "fuime_event_id" => event.id.to_s },
-      })
+               id: "cs_test_1",
+               object: "checkout_session",
+               amount_total: 10_000,
+               created: Time.current.to_i,
+               metadata: { "fuime_event_id" => event.id.to_s },
+             })
 
       expect(ledger_lines.size).to eq(2)
       expect(net_cents).to eq(9_600)
@@ -171,7 +171,7 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     it "ignores a refund for a payment it never recorded" do
       expect {
         handle("charge.refunded", charge(amount_refunded: 5_000, id: "ch_other").merge(payment_intent: "pi_unknown"))
-      }.not_to change { ledger_lines.size }
+      }.not_to(change { ledger_lines.size })
     end
   end
 
@@ -180,12 +180,12 @@ RSpec.describe Fuime::PaymentWebhookHandler do
 
     it "posts a chargeback reversal" do
       handle("charge.dispute.created", {
-        id: "dp_test_1",
-        object: "dispute",
-        payment_intent: "pi_test_1",
-        amount: 10_000,
-        created: Time.current.to_i,
-      })
+               id: "dp_test_1",
+               object: "dispute",
+               payment_intent: "pi_test_1",
+               amount: 10_000,
+               created: Time.current.to_i,
+             })
 
       # A chargeback must not leave the teen paying Fuime a fee on money that
       # was taken back from them.
@@ -197,6 +197,6 @@ RSpec.describe Fuime::PaymentWebhookHandler do
 
   it "ignores unrelated event types" do
     expect { handle("customer.created", { id: "cus_1", object: "customer" }) }
-      .not_to change { ledger_lines.size }
+      .not_to(change { ledger_lines.size })
   end
 end

@@ -8,7 +8,7 @@
     <title>fuime · invoicing for people who aren't 18 yet</title>
     <meta
       name="description"
-      content="Send a real invoice, get paid into an account you run day to day, and know what you owe at tax time. A parent co-signs once. After that it's yours."
+      content="Invoicing and books for under-18 founders. A parent or guardian owns the account and you operate it. Private beta in test mode — payments are not live yet."
     />
     <link rel="canonical" href="https://fuime.com/home" />
     <meta property="og:type" content="website" />
@@ -21,7 +21,7 @@
     />
     <meta
       property="og:description"
-      content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
+      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Private beta, test mode — payments are not live yet."
     />
     <!-- Width and height let a scraper lay the card out before it has the
          bytes, and alt is the only thing a screen reader gets when this is
@@ -43,7 +43,7 @@
     />
     <meta
       name="twitter:description"
-      content="Invoicing and books for under-18 service businesses. A parent co-signs once. After that it's yours."
+      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Private beta, test mode — payments are not live yet."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -127,7 +127,7 @@
             "url": "https://fuime.com/home",
             "logo": "https://fuime.com/img/apple-touch-icon.png",
             "email": "rushil@fuime.com",
-            "description": "Invoicing and books for under-18 service businesses. A parent co-signs once, and the account is operated by the person doing the work."
+            "description": "Invoicing and books for under-18 service businesses. A parent or legal guardian owns the venture account and the young founder operates it. Fuime is a financial technology company, not a bank, and is in private beta in test mode."
           },
           {
             "@type": "WebSite",
@@ -272,11 +272,13 @@
 
         <div class="wrap hero__in">
           <div class="hero__body">
+            <p class="beta">Private beta · test mode · payments are not live</p>
             <h1>You're already working.<br />Start billing.</h1>
             <p class="lead">
-              Send a real invoice, get paid into an account you run day to day,
-              and know what you owe at tax time. A parent co-signs once. After
-              that it's yours.
+              Write a real invoice, keep books that hold up, and know what you
+              owe at tax time. A parent or guardian owns the account and signs
+              once. You operate it: you write the invoices, you chase the ones
+              that go unpaid, you run the business.
             </p>
 
             <div class="hero__cta">
@@ -309,8 +311,12 @@
 
         <div class="wrap hero__disclaimer">
           <p class="disclaimer">
-            fuime is not a bank. Payments go from your client into your own
-            Stripe account — we never hold your money.
+            fuime is a financial technology company, not a bank. We are in
+            private beta in Stripe test mode, so no real money moves yet. When
+            we turn on live payments, each venture's account will be a Stripe
+            account owned by a parent or legal guardian, so funds settle to your
+            family and fuime never holds your money. That architecture is the
+            plan, not something running today.
           </p>
         </div>
       </section>
@@ -335,12 +341,12 @@
               height="1080"
               loading="lazy"
               decoding="async"
-              alt="The same laptop, close up: fuime open on it at 11:48pm, showing $2,140.75 in the account, $312.40 set aside for taxes, and a list of invoices with what each job actually paid."
+              alt="The same laptop, close up: fuime open on it at 11:48pm, showing $2,140.75 in the venture's ledger, $312.40 set aside for taxes, and a list of invoices with what each job actually paid."
             />
             <div
               class="dive__app"
               role="img"
-              aria-label="The fuime app: $2,140.75 in your account, $312.40 set aside for taxes, and a list of invoices with the amount charged beside the amount kept."
+              aria-label="The fuime app: $2,140.75 in the venture's ledger, $312.40 set aside for taxes, and a list of invoices with the amount charged beside the amount kept."
             >
               <div class="dv-rail">
                 <div class="dv-brand">
@@ -389,7 +395,7 @@
                 <div class="dv-grid">
                   <div class="dv-card">
                     <div class="dv-card__hd">
-                      <span>In your account</span><span>Last 30 days</span>
+                      <span>In the ledger</span><span>Last 30 days</span>
                     </div>
                     <p class="dv-figure">$2,140<sup>75</sup></p>
                     <p class="dv-sub">
@@ -598,18 +604,21 @@
             <p class="eyebrow">What the client gets</p>
             <h2 class="h2">An invoice with your name on it.</h2>
             <p class="lead mt-5" style="max-width: 54ch">
-              Not a Venmo request. A numbered invoice they can pay by card or
-              bank transfer, with every deduction shown before you agree to it.
+              Not a Venmo request. A numbered invoice, with every deduction shown
+              before you agree to it. Card and bank payments run in Stripe test
+              mode during the beta, so this is what the arithmetic will be at
+              launch rather than a payment you can take today.
             </p>
           </div>
 
           <div class="calc mt-8">
             <div>
-              <p class="calc__label">Move it. The math is the real math.</p>
+              <p class="calc__label">Move it. This is the price list at launch.</p>
               <p class="calc__figure num" data-out="lands">$360.10</p>
               <p class="calc__hint">
-                lands in your account on a
-                <span class="num" data-out="charged">$400.00</span> job.
+                is left for the venture on a
+                <span class="num" data-out="charged">$400.00</span> job, on the
+                Standard plan.
               </p>
 
               <div class="calc__slider">
@@ -629,7 +638,8 @@
               </div>
 
               <p class="calc__hint" data-out="monthly">
-                $15/mo once you clear $250 in 30 days
+                Standard is $0/mo + 7%. Pro is $15/mo + 4%. Stripe's 2.9% + 30¢
+                applies on both.
               </p>
             </div>
 
@@ -649,15 +659,15 @@
                     <span class="num" data-out="charged">$400.00</span>
                   </div>
                   <div class="invoice__row">
-                    <span class="muted">Card processing (Stripe)</span>
+                    <span class="muted">Stripe processing · 2.9% + 30¢</span>
                     <span class="muted num" data-out="stripe">−$11.90</span>
                   </div>
                   <div class="invoice__row">
-                    <span class="muted">fuime fee · 7%</span>
+                    <span class="muted">fuime platform fee · 7% (Standard)</span>
                     <span class="muted num" data-out="fuime">−$28.00</span>
                   </div>
                   <div class="invoice__row invoice__row--total">
-                    <span>Lands in your account</span>
+                    <span>Left for the venture</span>
                     <span class="num" data-out="lands">$360.10</span>
                   </div>
                 </div>
@@ -839,12 +849,13 @@
                 <p class="step__n">02</p>
                 <span class="tag">Requires a guardian</span>
               </div>
-              <h3 class="h4">A parent completes one ID check</h3>
+              <h3 class="h4">A guardian accepts the agreement</h3>
               <p>
-                Stripe lets a guardian own an account on behalf of someone 13 or
-                older. They verify once and they're the legal owner. You're the
-                operator: you send the invoices, you spend the money, you run
-                the business.
+                We email your parent or legal guardian the Guardian Agreement.
+                They accept it, and that makes them the account holder and you
+                the operator. Today that acceptance is the entire check: there is
+                no identity verification yet, and we are not going to imply
+                there is. It arrives with live payments, run by Stripe.
               </p>
               <picture>
                 <source
@@ -877,12 +888,12 @@
 
             <article class="step">
               <p class="step__n">03</p>
-              <h3 class="h4">Invoice clients and get paid</h3>
+              <h3 class="h4">Invoice clients and keep the books</h3>
               <p>
-                Send a link. Clients pay by card or bank transfer. The money
-                settles into your account, and fuime keeps your books as it
-                goes: income, expenses, net, and a warning when you cross the
-                $400 the IRS cares about.
+                Send a link. fuime keeps the books as it goes: income, expenses,
+                net, and a warning when you cross the $400 the IRS cares about.
+                Payments run in Stripe test mode for now, so nothing settles for
+                real until we turn live payments on.
               </p>
               <picture>
                 <source
@@ -921,38 +932,61 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">What it costs</p>
-            <h2 class="h2">
-              7% of what you collect. No monthly fee until you're earning.
-            </h2>
+            <h2 class="h2">Four plans. $0 a month on the one you start on.</h2>
             <p class="lead">
               A flat monthly fee on a kid making $80 a month is a tax on
-              starting. So there isn't one until the business is real.
+              starting. So there isn't one until you choose to pay one. Stripe's
+              card processing — 2.9% plus 30 cents a payment — applies on top of
+              every fuime fee below and goes to Stripe, not to us. Nobody is
+              billed anything during the private beta, because no real money
+              moves yet.
             </p>
           </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Rate on everything you collect</h3>
-                <p>If a client doesn't pay, there is no fee.</p>
+                <h3 class="h4">Starter · books, storefront and lessons</h3>
+                <p>No payment processing on this plan, so no platform fee.</p>
+              </div>
+              <p class="price__fig">Free</p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Standard · $0/mo + 7% of what you collect</h3>
+                <p>
+                  If a client never pays, there is no fee. Stripe's 2.9% + 30¢ is
+                  on top.
+                </p>
               </div>
               <p class="price__fig">7%</p>
             </article>
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Monthly fee, under $250 in 30 days</h3>
-                <p>Nothing. Not a trial, not an introductory rate.</p>
+                <h3 class="h4">Pro · $15/mo + 4% of what you collect</h3>
+                <p>
+                  Cheaper than Standard above about $500 collected in a month.
+                  Stripe's 2.9% + 30¢ is on top.
+                </p>
               </div>
-              <p class="price__fig">$0<sub>/mo</sub></p>
+              <p class="price__fig">$15<sub>/mo + 4%</sub></p>
             </article>
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Monthly fee, over $250 in 30 days</h3>
-                <p>Billed to the guardian who owns the account.</p>
+                <h3 class="h4">Founders · the launch cohort</h3>
+                <p>
+                  No platform fee at all, by invitation. Stripe's 2.9% + 30¢
+                  still applies.
+                </p>
               </div>
-              <p class="price__fig">$15<sub>/mo</sub></p>
+              <p class="price__fig">0%</p>
             </article>
           </div>
+
+          <p class="mt-6 small muted">
+            Every fuime fee is billed to the parent or legal guardian who owns
+            the account, never to the young founder.
+          </p>
 
           <p class="mt-7">
             <a class="tlink" href="/pricing"
@@ -1033,9 +1067,9 @@
 
           <div class="grid grid--2">
             <article class="card">
-              <h3 class="h4">The account is yours</h3>
+              <h3 class="h4">The account is yours to own</h3>
               <p>
-                A Stripe account in your name, with them as operator. Your own
+                You are the account holder and they are the operator. Your own
                 Venmo and cards stay out of it.
               </p>
             </article>
@@ -1043,7 +1077,7 @@
               <h3 class="h4">You see everything</h3>
               <p>
                 Every invoice and every payment, in a read-only view. You can
-                shut it off.
+                revoke the guardianship and shut it off.
               </p>
             </article>
             <article class="card">
@@ -1054,10 +1088,10 @@
               </p>
             </article>
             <article class="card">
-              <h3 class="h4">We never hold the money</h3>
+              <h3 class="h4">Where the money will sit</h3>
               <p>
-                Payments go from the client to your Stripe account. fuime takes
-                its 7% and nothing else.
+                At live launch, into a Stripe account you own — fuime holds no
+                balance. Today it is test mode, so no real money moves.
               </p>
             </article>
           </div>
@@ -1151,14 +1185,18 @@
         <div class="lrow foot__status">
           <span>Status</span>
           <span class="lrow__lead" aria-hidden="true"></span>
-          <span class="lrow__val">Onboarding the first businesses</span>
+          <span class="lrow__val">Private beta · test mode</span>
         </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Venture accounts are opened and owned by a parent
+          or legal guardian; young founders operate them with guardian
+          oversight.
+        </p>
         <div class="foot__bot">
           <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span
-            >fuime is not a bank. Payments settle into your own Stripe
-            account.</span
-          >
+          <span>Private beta in test mode — no real money moves yet.</span>
         </div>
       </div>
     </footer>

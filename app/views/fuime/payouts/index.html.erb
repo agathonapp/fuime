@@ -1,0 +1,181 @@
+<% title "Payouts — #{@event.name}" %>
+
+<%= render "events/nav", selected: :payouts %>
+
+<h1 class="heading">Payouts</h1>
+
+<%# Fuime: moving money out of the venture to the family's bank.
+
+    Two audiences on one page, deliberately. The teen sees what they have and can
+    ask for it; the guardian sees what they are being asked to approve. Neither
+    gets the other's controls — a teen approving their own payout would defeat the
+    ownership structure the whole company rests on (CLAUDE.md L2), and it is
+    blocked in EventPolicy, in Fuime::PayoutService and in PayoutRequest.
+
+    Plain markup on purpose (Milestone 4: correctness over beauty). %>
+
+<% account = @connected_account %>
+
+<% if account.blank? || !account.ready_for_payouts? %>
+  <%= render "application/callout", type: "warning", title: "Money can't be sent out yet" do %>
+    <p class="mb-0">
+      <% if account.blank? %>
+        A parent or guardian needs to set up this venture's payment account first.
+        They will own that account, and payouts go to their bank.
+        <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+      <% else %>
+        <%= account.status_description %>
+        <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+      <% end %>
+    </p>
+  <% end %>
+<% end %>
+
+<h2 class="mt2">Available to pay out</h2>
+
+<p class="h1 mt0 mb1">
+  <% if @available_cents.nil? %>
+    <%# Not the same as zero, and must not be shown as zero. A teen told they have
+        $0 when Fuime simply could not reach Stripe will conclude their money is
+        gone. %>
+    <span class="muted">Unavailable right now</span>
+  <% else %>
+    <%= number_to_currency(@available_cents / 100.0) %>
+  <% end %>
+</p>
+
+<p class="secondary mt0">
+  This is what Stripe says can be sent today. Money from a sale takes a couple of
+  days to become available, so a recent payment may not be included yet.
+</p>
+
+<% if @pending_request.present? %>
+  <%= render "application/callout", type: "info",
+             title: "#{number_to_currency(@pending_request.amount)} waiting for a guardian's approval" do %>
+    <p>
+      Requested by <strong><%= @pending_request.requested_by.name.presence || @pending_request.requested_by.email %></strong>
+      on <%= @pending_request.created_at.strftime("%B %-d, %Y") %>.
+    </p>
+
+    <% if @can_decide %>
+      <%# The guardian's decision. Both buttons are here rather than the reject
+          being hidden behind a second page, because a parent who cannot easily say
+          no will say nothing, and a request that sits forever is worse for the
+          teen than a decline with a reason. %>
+      <div class="flex flex-wrap items-start" style="gap: 1rem;">
+        <%= button_to "Approve and send",
+                      fuime_payout_approve_path(event_slug: @event.slug, id: @pending_request.id),
+                      method: :post,
+                      class: "btn bg-success",
+                      data: { turbo_confirm: "Send #{number_to_currency(@pending_request.amount)} to your bank account?" } %>
+
+        <%= form_with url: fuime_payout_reject_path(event_slug: @event.slug, id: @pending_request.id),
+                      method: :post, class: "flex items-start", style: "gap: 0.5rem;" do |f| %>
+          <%= f.text_field :rejection_reason,
+                           placeholder: "Reason (optional)",
+                           aria: { label: "Reason for declining" } %>
+          <%= f.submit "Decline", class: "btn bg-error" %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="mb-0">
+        <% guardians = @event.overseeing_guardians %>
+        <% if guardians.any? %>
+          Waiting on <strong><%= guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>
+          to approve it.
+        <% else %>
+          There's no active guardian on this venture yet, so nobody can approve it.
+          <%= link_to "Invite your guardian", new_guardianship_path, class: "underline" %>.
+        <% end %>
+      </p>
+    <% end %>
+  <% end %>
+<% elsif @can_request %>
+  <h2 class="mt2">Request a payout</h2>
+
+  <%= form_with url: fuime_payouts_create_path(event_slug: @event.slug), method: :post do |f| %>
+    <div class="field">
+      <%= f.label :amount, "Amount", class: "bold" %>
+      <%= f.text_field :amount,
+                       placeholder: "0.00",
+                       inputmode: "decimal",
+                       autocomplete: "off" %>
+    </div>
+
+    <p class="secondary">
+      Your guardian has to approve this before any money moves. It goes to their
+      bank account, not to Fuime.
+    </p>
+
+    <%= f.submit "Ask my guardian", class: "btn bg-accent" %>
+  <% end %>
+<% elsif @can_decide %>
+  <p class="secondary">
+    There's nothing waiting for you to approve. When
+    <%= @event.name %> asks for a payout, it will show up here.
+  </p>
+<% end %>
+
+<h2 class="mt2">History</h2>
+
+<% if @history.empty? %>
+  <p class="secondary">No payout requests yet.</p>
+<% else %>
+  <table class="table--autosize">
+    <thead>
+      <tr>
+        <th>Requested</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Decided by</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @history.each do |request| %>
+        <tr>
+          <td><%= request.created_at.strftime("%b %-d, %Y") %></td>
+          <td><%= number_to_currency(request.amount) %></td>
+          <td>
+            <%# Each state gets its own sentence rather than the raw aasm_state,
+                because "failed" on its own tells a family nothing about whether
+                they still have the money. They do — Stripe returns it. %>
+            <% case request.aasm_state
+               when "pending" %>
+              <span class="badge bg-info">Waiting for approval</span>
+            <% when "approved" %>
+              <span class="badge bg-info">Sent to your bank</span>
+            <% when "paid" %>
+              <span class="badge bg-success">Arrived</span>
+            <% when "rejected" %>
+              <span class="badge bg-muted">Declined</span>
+              <% if request.rejection_reason.present? %>
+                <span class="secondary">— <%= request.rejection_reason %></span>
+              <% end %>
+            <% when "failed" %>
+              <span class="badge bg-error">Didn't go through</span>
+              <span class="secondary">
+                — <%= request.failure_message.presence || "Stripe couldn't send it." %>
+                The money went back to the venture's balance.
+              </span>
+            <% end %>
+          </td>
+          <td>
+            <% if request.approved_by.present? %>
+              <%= request.approved_by.name.presence || request.approved_by.email %>
+            <% else %>
+              <span class="muted">—</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<%# Standing disclosure. Fuime is not a bank and never holds this money — the
+    connected account and the bank account are both the guardian's (L5). %>
+<p class="secondary mt2">
+  Payouts are sent by Stripe from the venture's own account to the bank account
+  the parent or guardian connected. Fuime is a financial technology company, not a
+  bank, and never holds this money.
+</p>
