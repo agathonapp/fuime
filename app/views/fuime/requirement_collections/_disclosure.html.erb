@@ -1,0 +1,62 @@
+<%# locals: () %>
+
+<%# Fuime: the consent text a guardian is shown before submitting identity details.
+
+    Strict locals with none declared, per dev-docs/code_style.md: this partial is pure
+    copy and must stay that way. Interpolating a venture name or a guardian's details
+    would change the hash per render, and the hash is the thing the consent record points
+    at (see below).
+
+    THIS FILE'S CONTENTS ARE HASHED. Fuime::RequirementCollectionsController digests it
+    and stores the first 16 hex characters on the GuardianVerification as
+    `doc_version_hash`, which is how the consent record proves WHAT was agreed to
+    without keeping a per-guardian copy (L4). Editing the wording changes the hash, so
+    old records keep pointing at the version actually shown. That is deliberate: do not
+    "fix" it by hashing something more stable.
+
+    Copy constraints that apply here:
+      * L5 forbids bank / banking / deposits / insured / FDIC while no partner bank
+        exists. Say "financial platform"; accounts are "opened and owned by a parent or
+        guardian".
+      * The card program, if mentioned, must carry
+        Fuime::CardSpendPolicy::REQUIRED_DISCLOSURE verbatim and must avoid every entry
+        in FORBIDDEN_PHRASES. A spec checks this file against both. %>
+
+<div class="card border b--info p-4 mb3">
+  <h3 class="mt0">What happens to the details you enter</h3>
+
+  <ul class="mb2">
+    <li>
+      <strong>They go to Stripe, not to us.</strong> Stripe is the payments company that
+      holds this account and verifies who owns it. Fuime passes your details straight to
+      them.
+    </li>
+    <li>
+      <strong>We don't keep your Social Security number or your ID.</strong> Your ID photo
+      is uploaded directly to Stripe. Fuime keeps only a record that you completed this
+      step, the date, and a reference number — never the image, and never your SSN.
+    </li>
+    <li>
+      <strong>You are the account owner.</strong> This account is opened and owned by you,
+      the parent or legal guardian. Your child operates the business inside it; you are the
+      person Stripe and Fuime are contracting with.
+    </li>
+    <li>
+      <strong>Why you and not your child.</strong> Stripe requires the owner of a business
+      account to be an adult, and the identity details below are yours. Your child cannot
+      complete this step and should not be asked for any of it.
+    </li>
+  </ul>
+
+  <p class="text-sm secondary mb-0">
+    Fuime is a financial technology company, not a bank. Fuime does not hold deposits and
+    does not offer FDIC-insured products. Payments are processed by Stripe. Venture
+    accounts are opened and owned by a parent or legal guardian; young founders operate
+    them with guardian oversight.
+  </p>
+</div>
+
+<p class="text-sm secondary">
+  A business card issued on this account
+  <%= Fuime::CardSpendPolicy::REQUIRED_DISCLOSURE %>.
+</p>

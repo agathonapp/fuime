@@ -6,7 +6,7 @@
     <title>What it costs · fuime</title>
     <meta
       name="description"
-      content="7% of the money you collect. $0/mo under $250 collected in the last 30 days, $15/mo over. Stripe's card processing is separate and goes to Stripe."
+      content="Starter is free. Standard is $0/mo plus 7% of what you collect. Pro is $15/mo plus 4%. Stripe's processing, 2.9% + 30c, applies on top of all of them. Nothing is billed during the private beta."
     />
     <link rel="canonical" href="https://fuime.com/pricing" />
     <meta property="og:type" content="website" />
@@ -15,11 +15,11 @@
     <meta property="og:url" content="https://fuime.com/pricing" />
     <meta
       property="og:title"
-      content="7% of what you collect. That's the whole price."
+      content="Four plans. $0 a month on the one you start on."
     />
     <meta
       property="og:description"
-      content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
+      content="Starter free. Standard $0/mo + 7%. Pro $15/mo + 4%. Founders 0% for the launch cohort. Stripe's 2.9% + 30c is on top of all of them, and nothing is billed during the private beta."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -32,11 +32,11 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="7% of what you collect. That's the whole price."
+      content="Four plans. $0 a month on the one you start on."
     />
     <meta
       name="twitter:description"
-      content="No setup fee, no fee on an invoice that never gets paid, and no monthly fee until you're earning. Stripe's cut goes to Stripe."
+      content="Starter free. Standard $0/mo + 7%. Pro $15/mo + 4%. Founders 0% for the launch cohort. Stripe's 2.9% + 30c is on top of all of them, and nothing is billed during the private beta."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -97,9 +97,10 @@
     </script>
     <script src="/site.js" defer></script>
     <script type="module" src="/fx/boot.js"></script>
-    <!-- Breadcrumb only. The fee here is a percentage of collections plus a
-         conditional subscription, which is not a priced Product, and saying
-         otherwise in markup would be a claim the page itself does not make. -->
+    <!-- Breadcrumb only. The price here is a plan lineup of percentages of
+         collections plus one subscription tier, which is not a priced Product,
+         and saying otherwise in markup would be a claim the page itself does
+         not make — doubly so while nothing is billed at all. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -249,10 +250,15 @@
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <h1>7% of what you collect.<br />That's the whole price.</h1>
+            <p class="beta">Private beta · test mode · nothing is billed yet</p>
+            <h1>Four plans.<br />$0 a month to start.</h1>
             <p class="disclaimer mt-6">
-              $0/mo under $250 collected in 30 days. $15/mo over. Stripe's card
-              processing is separate and goes to Stripe.
+              Starter is free with no payment processing. Standard is $0/mo plus
+              7% of what you collect. Pro is $15/mo plus 4%. Founders is 0% for
+              the launch cohort. Stripe's card processing — 2.9% plus 30 cents a
+              payment — applies on top of every one of them and goes to Stripe.
+              This is the price list at live launch: fuime is in Stripe test mode
+              today, so no real money moves and nobody is charged.
             </p>
           </div>
         </div>
@@ -265,19 +271,19 @@
             <p class="eyebrow">Run it yourself</p>
             <h2 class="h2">Put a real job in it.</h2>
             <p class="lead">
-              The same arithmetic the product runs when a client pays. Drag it
-              to something you have actually charged for and read the bottom
-              line.
+              The arithmetic a Standard plan will run at live launch. Drag it to
+              something you have actually charged for and read the bottom line.
             </p>
           </div>
 
           <div class="calc split mt-8">
             <div>
-              <p class="calc__label">What lands, after everything</p>
+              <p class="calc__label">What is left, after everything</p>
               <p class="calc__figure num" data-out="lands">$360.10</p>
               <p class="calc__hint">
-                lands in your account on a
-                <span class="num" data-out="charged">$400.00</span> job.
+                is left for the venture on a
+                <span class="num" data-out="charged">$400.00</span> job, on the
+                Standard plan.
               </p>
 
               <div class="calc__slider">
@@ -297,7 +303,8 @@
               </div>
 
               <p class="calc__hint" data-out="monthly">
-                $15/mo once you clear $250 in 30 days
+                Standard is $0/mo + 7%. Pro is $15/mo + 4%. Stripe's 2.9% + 30¢
+                applies on both.
               </p>
             </div>
 
@@ -317,15 +324,15 @@
                     <span class="num" data-out="charged">$400.00</span>
                   </div>
                   <div class="invoice__row">
-                    <span class="muted">Card processing (Stripe)</span>
+                    <span class="muted">Stripe processing · 2.9% + 30¢</span>
                     <span class="muted num" data-out="stripe">−$11.90</span>
                   </div>
                   <div class="invoice__row">
-                    <span class="muted">fuime fee · 7%</span>
+                    <span class="muted">fuime platform fee · 7% (Standard)</span>
                     <span class="muted num" data-out="fuime">−$28.00</span>
                   </div>
                   <div class="invoice__row invoice__row--total">
-                    <span>Lands in your account</span>
+                    <span>Left for the venture</span>
                     <span class="num" data-out="lands">$360.10</span>
                   </div>
                 </div>
@@ -346,14 +353,17 @@
 
           <p class="lead mt-8" style="max-width: 62ch">
             Stripe takes 2.9% plus 30 cents to run the card. That money goes to
-            Stripe, not to fuime. Every business that accepts cards pays it, and
-            we print it on the invoice instead of burying it. fuime's 7% is the
-            only line that comes to us.
+            Stripe, not to fuime, and it is charged on top of whichever fuime
+            plan the venture is on. Every business that accepts cards pays it,
+            and we print it on the invoice instead of burying it. The 7% line is
+            the only one that comes to us.
           </p>
           <p class="lead mt-5" style="max-width: 62ch">
-            The $15 monthly fee is not in that figure. It is billed once a
-            month, to the guardian, and only in a month where more than $250
-            came in during the previous 30 days.
+            Pro's $15 a month is not in that figure, and it is not charged on
+            Standard at all. Whichever plan a venture is on, every fuime fee is
+            billed to the parent or legal guardian who owns the account, never to
+            the young founder — and none of it is billed during the private beta,
+            because payments run in Stripe test mode and no real money moves.
           </p>
         </div>
       </section>
@@ -363,42 +373,63 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">The whole price list</p>
-            <h2 class="h2">
-              7% of what you collect. No monthly fee until you're earning.
-            </h2>
+            <h2 class="h2">Four plans, and what each one costs.</h2>
             <p class="lead">
               A flat monthly fee on a kid making $80 a month is a tax on
-              starting. So there isn't one until the business is real.
+              starting. So there isn't one until you pick a plan that has one.
+              Stripe's card processing — 2.9% plus 30 cents a payment — applies
+              on top of every plan here and goes to Stripe. Nothing on this list
+              is billed during the private beta.
             </p>
           </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Rate on everything you collect</h3>
-                <p>If a client doesn't pay, there is no fee.</p>
+                <h3 class="h4">Starter</h3>
+                <p>
+                  Books, storefront and the lessons, with no payment processing
+                  on it — so there is no platform fee and no Stripe fee either.
+                </p>
+              </div>
+              <p class="price__fig">Free</p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Standard · $0/mo</h3>
+                <p>
+                  7% of what you collect, and no fee at all on an invoice a
+                  client never pays. Stripe's 2.9% + 30¢ is charged on top.
+                </p>
               </div>
               <p class="price__fig">7%</p>
             </article>
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Monthly fee, under $250 in 30 days</h3>
-                <p>Nothing. Not a trial, not an introductory rate.</p>
+                <h3 class="h4">Pro · $15/mo</h3>
+                <p>
+                  The platform fee drops to 4%, which is cheaper than Standard
+                  above about $500 collected in a month. Billed to the guardian
+                  who owns the account. Stripe's 2.9% + 30¢ is charged on top.
+                </p>
               </div>
-              <p class="price__fig">$0<sub>/mo</sub></p>
+              <p class="price__fig">$15<sub>/mo + 4%</sub></p>
             </article>
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Monthly fee, over $250 in 30 days</h3>
-                <p>Billed to the guardian who owns the account.</p>
+                <h3 class="h4">Founders · the launch cohort</h3>
+                <p>
+                  No platform fee and no monthly fee, by invitation, for the
+                  ventures we onboard by hand. Stripe's 2.9% + 30¢ still applies.
+                </p>
               </div>
-              <p class="price__fig">$15<sub>/mo</sub></p>
+              <p class="price__fig">0%</p>
             </article>
           </div>
 
           <p class="mt-7">
             <a class="tlink" href="/parents"
-              >Who the $15 is billed to, and why<svg
+              >Who the fees are billed to, and why<svg
                 class="arrow"
                 width="14"
                 height="14"
@@ -445,8 +476,9 @@
             <p class="eyebrow">What you are not charged for</p>
             <h2 class="h2">Six things that never turn into a bill.</h2>
             <p class="lead">
-              There is no second page to the pricing. If it isn't the 7% or the
-              $15, it isn't a fee.
+              There is no second page to the pricing. If it isn't your plan's
+              platform fee, Pro's $15 a month, or Stripe's 2.9% + 30¢ on a card
+              payment, it isn't a fee.
             </p>
           </div>
 
@@ -454,15 +486,15 @@
             <article class="card">
               <h3 class="h4">No setup fee</h3>
               <p>
-                Signing up costs nothing. Naming the business costs nothing. The
-                ID check your parent does costs nothing.
+                Signing up costs nothing. Naming the venture costs nothing. The
+                agreement your guardian accepts costs nothing.
               </p>
             </article>
             <article class="card">
               <h3 class="h4">No fee on an invoice that never gets paid</h3>
               <p>
-                The 7% comes out of money that arrives. If a client ghosts you,
-                you lose the work. You do not also pay us for it.
+                The platform fee comes out of money that arrives. If a client
+                ghosts you, you lose the work. You do not also pay us for it.
               </p>
             </article>
             <article class="card">
@@ -483,15 +515,15 @@
               <h3 class="h4">No contract</h3>
               <p>
                 Nothing to sign for a term and nothing to cancel out of. Stop
-                sending invoices and the price goes back to $0.
+                sending invoices on Standard and the price goes back to $0.
               </p>
             </article>
             <article class="card">
-              <h3 class="h4">No charge for the parent's account</h3>
+              <h3 class="h4">No charge for the guardian's account</h3>
               <p>
                 Their login, the read-only view of every invoice, and the
-                year-end summary are all part of it. The $15 is the only thing
-                that ever reaches them.
+                year-end summary are all part of it. Pro's $15 is the only
+                subscription that ever reaches them.
               </p>
             </article>
           </div>
@@ -528,64 +560,69 @@
             <details>
               <summary>What happens if a client never pays?</summary>
               <p class="faq__a">
-                You owe nothing. The fee is charged on money that lands in your
-                account, so an unpaid invoice costs you the chasing and nothing
-                else. fuime keeps it in your books as outstanding, not as
-                income, so your year-end total stays honest.
+                You owe nothing. The platform fee is charged on money that
+                arrives, so an unpaid invoice costs you the chasing and nothing
+                else. fuime keeps it in the books as outstanding, not as income,
+                so your year-end total stays honest.
               </p>
             </details>
 
             <details>
-              <summary>Why 7% and not less?</summary>
+              <summary>Why 7% on Standard and not less?</summary>
               <p class="faq__a">
                 Because there is no floor underneath it. No setup fee, no
-                per-invoice charge, and no monthly bill until the business
-                clears $250 in 30 days. When you are small, the percentage is
-                paying for all of it. A cheaper rate with a fixed fee attached
-                would cost you more in every month you barely worked, which for
-                most people starting out is most months.
+                per-invoice charge, and no monthly bill on Standard at all. When
+                you are small, the percentage is paying for all of it. If you are
+                collecting enough that 7% hurts, Pro trades $15 a month for a 4%
+                fee and comes out cheaper above about $500 collected in a month.
               </p>
             </details>
 
             <details>
-              <summary>Who pays the $15 a month?</summary>
+              <summary>Who pays fuime's fees?</summary>
               <p class="faq__a">
-                The guardian, on the card attached to the account, because they
-                are the legal owner of it. It is charged only in a month where
-                more than $250 came in during the previous 30 days. Below that
-                the account is $0 and stays fully working.
+                The parent or legal guardian who owns the account, on the card
+                attached to it, because they are the account holder and the
+                person on the hook for it. Never the young founder. Nothing is
+                billed at all during the private beta, because payments run in
+                Stripe test mode and no real money moves.
               </p>
             </details>
 
             <details>
               <summary>What does Stripe charge on top?</summary>
               <p class="faq__a">
-                2.9% plus 30 cents on a card payment, taken by Stripe before the
-                money reaches your account. That is Stripe's price for
-                processing a card and every business that takes one pays it. It
-                is shown as its own line on the invoice so the number you read
-                is the number that lands.
+                2.9% plus 30 cents on a card payment, taken by Stripe out of the
+                payment. That is Stripe's price for processing a card, every
+                business that takes one pays it, and it is charged on top of
+                whichever fuime plan you are on — the 7%, the 4%, or the 0%. It is
+                shown as its own line on the invoice so the number you read is
+                the number that is left.
               </p>
             </details>
 
             <details>
               <summary>Does fuime ever hold the money?</summary>
               <p class="faq__a">
-                No. fuime is not a bank. The payment goes from your client into
-                the Stripe account your guardian owns, and our 7% is collected
-                as a fee on that payment. We never sit in the middle holding a
-                balance, and there is no fuime wallet for money to get stuck in.
+                Today no real money moves at all: fuime is in private beta and
+                payments run in Stripe test mode, into a Stripe account fuime
+                controls, with nothing settling anywhere. fuime is a financial
+                technology company and not a bank. At live launch the design is a
+                Stripe account owned by your parent or legal guardian, so the
+                payment goes from your client to your family and the platform fee
+                is collected as a fee on that payment rather than as a balance we
+                sit on. That is the plan we are building, not the state of things
+                right now.
               </p>
             </details>
 
             <details>
               <summary>What happens when I turn 18?</summary>
               <p class="faq__a">
-                Nothing resets. Your invoices, clients and books stay attached
-                to the account, and the price stays the same: 7%, and $0 a month
-                under $250. What we have not built yet is moving the Stripe
-                account itself out of your guardian's name and into yours. We
-                will say so here when we have.
+                Nothing resets. Your invoices, clients and books stay attached to
+                the account, and the plan and its price stay the same. What we
+                have not built yet is moving the account itself out of your
+                guardian's name and into yours. We will say so here when we have.
               </p>
             </details>
           </div>
@@ -653,12 +690,16 @@
             </div>
           </div>
         </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Venture accounts are opened and owned by a parent
+          or legal guardian; young founders operate them with guardian
+          oversight.
+        </p>
         <div class="foot__bot">
           <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span
-            >fuime is not a bank. Payments settle into your own Stripe
-            account.</span
-          >
+          <span>Private beta in test mode — no real money moves yet.</span>
         </div>
       </div>
     </footer>

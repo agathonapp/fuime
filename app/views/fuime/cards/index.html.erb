@@ -1,0 +1,179 @@
+<% title "Cards — #{@event.name}" %>
+
+<%= render "events/nav", selected: :cards %>
+
+<h1 class="heading">Cards</h1>
+
+<%# Fuime: the venture's business cards.
+
+    Two audiences, split by what each may do rather than by what each may see. The teen
+    can see every card and FREEZE one, because a lost card has to be stoppable in the
+    moment. Creating a card, raising a limit and unfreezing are the guardian's alone —
+    they are the Accountholder who carries the liability. See Fuime::CardsController. %>
+
+<%# Stripe's US Issuing compliance rules REQUIRE this sentence wherever the card program
+    is described, and forbid the consumer-flavoured phrasings. Do not reword it; a spec
+    checks this page against Fuime::CardSpendPolicy. %>
+<%= render "application/callout", type: "info", title: "These are business cards" do %>
+  <p class="mb-0">
+    A card issued here <%= Fuime::CardSpendPolicy::REQUIRED_DISCLOSURE %>.
+    It works for things like supplies, materials, shipping, software and advertising, and
+    is declined for food, entertainment, gift cards and cash.
+  </p>
+<% end %>
+
+<% if @cards.none? %>
+  <h2>No cards yet</h2>
+  <p class="secondary">
+    <% if @can_issue %>
+      Issue a card below and it can be used straight away for business purchases.
+    <% else %>
+      Your parent or guardian can issue you a card for buying things the business needs.
+    <% end %>
+  </p>
+<% else %>
+  <h2>Cards</h2>
+
+  <table class="table--autosize">
+    <thead>
+      <tr>
+        <th>Held by</th>
+        <th>Card</th>
+        <th>Limit</th>
+        <th>Status</th>
+        <th><%# freeze / limit / cancel actions %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @cards.each do |card| %>
+        <% holder = card.venture_cardholder %>
+        <tr>
+          <td>
+            <%= holder.user.name.presence || holder.user.email %>
+            <% if holder.accountholder? %>
+              <span class="badge bg-muted">Account owner</span>
+            <% end %>
+          </td>
+          <td>
+            <%# Never the full number. Fuime does not receive it — Stripe shows it to the
+                cardholder through its own components, which keeps Fuime out of PCI
+                scope entirely. %>
+            <%= card.brand %> ····&nbsp;<%= card.last4 %>
+            <% unless card.commercial_controls? %>
+              <%# Loud on purpose: a card without the category allowlist is an
+                  unrestricted commercial card, which is a compliance problem rather than
+                  a cosmetic one. %>
+              <span class="badge bg-error">Spending restrictions missing</span>
+            <% end %>
+          </td>
+          <td>
+            <% if card.spending_limit_cents.present? %>
+              <%= number_to_currency(card.spending_limit) %>
+              <span class="secondary">/ <%= card.spending_limit_interval.to_s.sub("ly", "") %></span>
+            <% else %>
+              <span class="muted">No limit</span>
+            <% end %>
+          </td>
+          <td>
+            <% case card.status
+               when "active" %>
+              <span class="badge bg-success">Active</span>
+            <% when "inactive" %>
+              <span class="badge bg-info">Frozen</span>
+            <% when "canceled" %>
+              <span class="badge bg-muted">Cancelled</span>
+            <% else %>
+              <span class="badge bg-muted"><%= card.status %></span>
+            <% end %>
+          </td>
+          <td>
+            <div class="flex flex-wrap items-center" style="gap: 0.5rem;">
+              <% unless card.status == "canceled" %>
+                <% if card.active? && @can_freeze %>
+                  <%# Available to the teen as well as the guardian: freezing can only
+                      reduce what is spendable, and the person who lost the card notices
+                      first. %>
+                  <%= button_to "Freeze", fuime_card_freeze_path(event_slug: @event.slug, id: card.id),
+                                method: :post, class: "btn btn-small bg-info" %>
+                <% elsif !card.active? && @can_manage %>
+                  <%# Guardian only. Restoring spend is the Accountholder's decision, and
+                      this is what stops freeze/unfreeze becoming a way around limits. %>
+                  <%= button_to "Unfreeze", fuime_card_unfreeze_path(event_slug: @event.slug, id: card.id),
+                                method: :post, class: "btn btn-small bg-success" %>
+                <% end %>
+
+                <% if @can_manage %>
+                  <%= form_with url: fuime_card_path(event_slug: @event.slug, id: card.id),
+                                method: :patch, class: "flex items-center", style: "gap: 0.25rem;" do |f| %>
+                    <%= f.text_field :spending_limit, placeholder: "New limit",
+                                     inputmode: "decimal", autocomplete: "off",
+                                     style: "max-width: 7rem;",
+                                     aria: { label: "New monthly limit" } %>
+                    <%= f.hidden_field :interval, value: "monthly" %>
+                    <%= f.submit "Set", class: "btn btn-small bg-accent" %>
+                  <% end %>
+
+                  <%= button_to "Cancel", fuime_card_cancel_path(event_slug: @event.slug, id: card.id),
+                                method: :delete, class: "btn btn-small bg-error",
+                                data: { turbo_confirm: "Cancelling can't be undone. Freeze it instead if you just want to pause it. Cancel this card?" } %>
+                <% end %>
+              <% end %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @can_issue %>
+  <h2 class="mt2">Issue a card</h2>
+
+  <% if @issuable_cardholders.any? %>
+    <%= form_with url: fuime_cards_create_path(event_slug: @event.slug), method: :post do |f| %>
+      <div class="field">
+        <%= f.label :venture_cardholder_id, "Who is this card for?", class: "bold" %>
+        <%= f.select :venture_cardholder_id,
+                     @issuable_cardholders.map { |h| [h.user.name.presence || h.user.email, h.id] },
+                     {} %>
+      </div>
+
+      <div class="field">
+        <%= f.label :spending_limit, "Monthly limit", class: "bold" %>
+        <%= f.text_field :spending_limit,
+                         value: number_with_precision(Fuime::CardIssuingService::DEFAULT_SPENDING_LIMIT_CENTS / 100.0, precision: 2),
+                         inputmode: "decimal", autocomplete: "off",
+                         style: "max-width: 10rem;" %>
+        <%= f.hidden_field :interval, value: "monthly" %>
+        <p class="text-sm secondary mb-0">
+          You can change this at any time. The card is also limited to business
+          categories, which you can't turn off.
+        </p>
+      </div>
+
+      <%= f.submit "Issue card", class: "btn bg-accent" %>
+    <% end %>
+  <% else %>
+    <p class="secondary">
+      There's nobody ready for a card yet.
+    </p>
+  <% end %>
+
+  <% if @blocked_cardholders.any? %>
+    <h3 class="mt2">Waiting on something first</h3>
+    <ul>
+      <% @blocked_cardholders.each do |holder| %>
+        <li>
+          <strong><%= holder.user.name.presence || holder.user.email %></strong> —
+          <%= holder.issuance_blockers.to_sentence %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>
+
+<p class="secondary mt2">
+  Cards are issued by Stripe on this venture's own account, which is owned by a parent or
+  legal guardian. Fuime is a financial technology company, not a bank, and never holds
+  this money.
+</p>

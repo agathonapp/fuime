@@ -565,6 +565,35 @@ class User < ApplicationRecord
     guardianships_as_guardian.active.exists?
   end
 
+  # Fuime: is this user the active guardian of someone on `event`'s team?
+  #
+  # Backs the read access the guardian agreement §3 promises. See
+  # Guardianship.overseeing_event for why this is derived from the guardianship
+  # rather than from an organizer position.
+  def guardian_of_event?(event)
+    Guardianship.overseeing_event(self, event).exists?
+  end
+
+  # Fuime: minors this user is the *active* guardian of. `wards` spans every
+  # guardianship including pending and revoked ones, which is not what any
+  # authorization decision wants.
+  def active_wards
+    User.where(id: guardianships_as_guardian.active.select(:minor_id))
+  end
+
+  # Fuime: every venture this user can oversee as a guardian.
+  #
+  # Scoped to the teams of active wards only — a guardian is entitled to see the
+  # ventures of the minors they signed for, and nothing else. Ordered so the
+  # dashboard is stable between requests.
+  def overseen_events
+    Event
+      .joins(:organizer_positions)
+      .where(organizer_positions: { user_id: guardianships_as_guardian.active.select(:minor_id), deleted_at: nil })
+      .distinct
+      .order(:name)
+  end
+
   # Fuime: what kind of account is this, in Fuime's own vocabulary?
   #
   # Admin and support staff kept having to reverse-engineer this from a birthday

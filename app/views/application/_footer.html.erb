@@ -21,6 +21,22 @@
     <%= link_to "FAQ", faq_path %>
   </p>
 
+  <%# Standing status disclosure. Fuime shows balances, ledgers and cards, which is
+      exactly the presentation that invites a reader to assume a bank and deposit
+      insurance sit behind it. 12 CFR 328.102(b)(3)(ii) treats omitting the
+      information needed to prevent that assumption as the violation, so this is
+      stated unconditionally rather than only on money-related pages, and it is in
+      the always-visible block for the same reason the legal links are.
+      When a partner bank exists, this becomes the "banking services provided by
+      [Bank], Member FDIC" form — until then, naming a bank here would itself be
+      the false claim. %>
+  <p class="text-xs text-center mx-auto" style="max-width: 44rem;">
+    Fuime is a financial technology company, not a bank. Fuime does not hold
+    deposits and does not offer FDIC-insured products. Payments are processed by
+    Stripe. Venture accounts are opened and owned by a parent or legal guardian;
+    young founders operate them with guardian oversight.
+  </p>
+
   <% if !Rails.env.production? || auditor_signed_in? %>
     <% @sql_cached_count = ActiveRecord::RuntimeRegistry.stats.cached_queries_count %>
     <% @sql_count = ActiveRecord::RuntimeRegistry.stats.queries_count - @sql_cached_count %>

@@ -61,7 +61,11 @@ Rails.application.routes.draw do
   # invite token, not a record id, because a guardian follows these links from
   # an email before they have an account. :revoke and :resend_invite are
   # id-addressed and authenticated; they are management actions, not invites.
-  resources :guardianships, only: [:new, :create, :show], path: "guardian" do
+  # GET /guardian is the guardian's own overview of the ventures they signed for
+  # — the surface that makes agreement §3 ("You can see everything") real. It is
+  # :index on this resource rather than a separate route because :show is
+  # token-addressed, so the two never collide.
+  resources :guardianships, only: [:index, :new, :create, :show], path: "guardian" do
     member do
       post :accept
       post :revoke
@@ -70,14 +74,62 @@ Rails.application.routes.draw do
     end
   end
 
-  # Fuime: Stripe webhook for payment links
+  # Fuime: Stripe webhooks.
+  #
+  # Two endpoints, not one, because Stripe scopes webhook endpoints separately for
+  # the platform's own account and for connected accounts, and each has its own
+  # signing secret. `stripe` takes payment events; `connect` takes the onboarding
+  # lifecycle (`account.updated`).
   namespace :fuime do
     post "webhooks/stripe", to: "webhooks#stripe"
+    post "webhooks/stripe/connect", to: "webhooks#connect"
   end
 
   # Fuime: Tax Tracker
   get "/:event_slug/taxes", to: "fuime/taxes#show", as: :fuime_taxes
   get "/:event_slug/taxes/download", to: "fuime/taxes#download_packet", as: :fuime_taxes_download
+
+  # Fuime: guardian-owned Stripe payment setup for a venture.
+  #
+  # Note on `return`/`refresh`: these are NOT Stripe's `return_url`/`refresh_url`
+  # parameters — those belong to Account Links, and this flow uses embedded
+  # components, which have no redirect contract. They are Fuime's own paths, and
+  # the embedded component's `setOnExit` callback navigates to `return`.
+  # `refresh` exists because an Account Session client secret expires while the
+  # page is open; it mints a new one rather than showing the guardian an error.
+  get "/:event_slug/payments", to: "fuime/payment_setups#show", as: :fuime_payment_setup
+  get "/:event_slug/payments/setup", to: "fuime/payment_setups#new", as: :new_fuime_payment_setup
+  get "/:event_slug/payments/return", to: "fuime/payment_setups#return", as: :fuime_payment_setup_return
+  get "/:event_slug/payments/refresh", to: "fuime/payment_setups#refresh", as: :fuime_payment_setup_refresh
+
+  # Fuime: the guardian supplying their own identity details, for `:cards_enabled`
+  # ventures where `requirement_collection = application` makes that Fuime's job.
+  # Payments-only ventures never reach here — Stripe collects from them directly via the
+  # embedded component at /payments/setup above, and the controller redirects away.
+  get "/:event_slug/payments/verify", to: "fuime/requirement_collections#show", as: :fuime_requirement_collection
+  post "/:event_slug/payments/verify", to: "fuime/requirement_collections#create", as: :fuime_requirement_collection_submit
+
+  # Fuime: moving money out to the family's bank. The teen asks (#create), the
+  # guardian decides (#approve / #reject) — see Fuime::PayoutsController for why
+  # those are separate authorizations rather than one "can manage payouts".
+  #
+  # Approve and reject are POSTs on a member route rather than a PATCH on the
+  # request, because each is a distinct decision being recorded, not an edit to a
+  # field.
+  get "/:event_slug/payouts", to: "fuime/payouts#index", as: :fuime_payouts
+  post "/:event_slug/payouts", to: "fuime/payouts#create", as: :fuime_payouts_create
+  post "/:event_slug/payouts/:id/approve", to: "fuime/payouts#approve", as: :fuime_payout_approve
+  post "/:event_slug/payouts/:id/reject", to: "fuime/payouts#reject", as: :fuime_payout_reject
+
+  # Fuime: the venture's business cards. Note the verbs are split by WHO may do them,
+  # not by REST tidiness — freeze is available to the teen (a lost card must be stoppable
+  # immediately), unfreeze and limits are the guardian's alone. See Fuime::CardsController.
+  get "/:event_slug/cards", to: "fuime/cards#index", as: :fuime_cards
+  post "/:event_slug/cards", to: "fuime/cards#create", as: :fuime_cards_create
+  patch "/:event_slug/cards/:id", to: "fuime/cards#update", as: :fuime_card
+  post "/:event_slug/cards/:id/freeze", to: "fuime/cards#freeze", as: :fuime_card_freeze
+  post "/:event_slug/cards/:id/unfreeze", to: "fuime/cards#unfreeze", as: :fuime_card_unfreeze
+  delete "/:event_slug/cards/:id", to: "fuime/cards#destroy", as: :fuime_card_cancel
 
   # Fuime: Public storefront
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront

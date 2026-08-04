@@ -11,7 +11,7 @@
 
   <%= render "application/callout", type: "info" do %>
     <strong>What happens next:</strong> We'll send your parent an email with a link to accept.
-    Once they do, your business account will be fully activated.
+    Once they do, your venture will be fully activated.
   <% end %>
 
   <%= form_with model: @guardianship, url: guardianships_path, class: "mt-4" do |f| %>
@@ -29,7 +29,15 @@
     </div>
   <% end %>
 
+  <%# Fuime performs no identity verification today — Guardianship#accept! records a
+      checkbox, a timestamp, an IP and a user agent, and the Guardian Agreement itself
+      says so in §6. This copy previously promised the parent would "verify their
+      identity", which the product does not do; saying so was the overclaim, not the
+      missing feature. Reword here when real verification ships, not before. %>
   <p class="text-sm muted mt-4 text-center">
-    Your parent will receive an email asking them to verify their identity and accept responsibility for your Fuime account.
+    Your parent will receive an email asking them to read and accept the
+    <%= link_to "Guardian Agreement", guardian_agreement_path, class: "underline" %>,
+    which makes them the legal signer for your venture. Accepting confirms they agree
+    to that responsibility; it is not an identity check.
   </p>
 </main>

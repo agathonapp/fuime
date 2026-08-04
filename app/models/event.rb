@@ -477,6 +477,22 @@ class Event < ApplicationRecord
   has_one :column_account_number, class_name: "Column::AccountNumber"
   delegate :account_number, :routing_number, :bic_code, to: :column_account_number, allow_nil: true
 
+  # Fuime: the guardian-owned Stripe account this venture is paid into. Absent
+  # until a guardian completes payment setup, which is why every caller goes
+  # through #accepts_payments? rather than assuming it exists.
+  has_one :stripe_connected_account, dependent: :destroy
+
+  # Fuime: teens' requests to move money to the family's bank, and the guardian
+  # decisions on them. Not `dependent: :destroy` — these are the record of who
+  # authorised moving money, so they outlive the venture on purpose.
+  has_many :payout_requests, dependent: :restrict_with_error
+
+  # Fuime: people who can hold a business card on this venture's own Stripe account
+  # (the guardian as Accountholder, the teen as Authorized User). Cards hang off the
+  # cardholder, matching Stripe's own shape.
+  has_many :venture_cardholders, dependent: :destroy
+  has_many :venture_cards, through: :venture_cardholders
+
   has_one :application
 
   has_many :grants
@@ -652,6 +668,48 @@ class Event < ApplicationRecord
     Ledger.where(card_grant: self.card_grants).find_each do |ledger|
       ledger.refresh_all!
     end
+  end
+
+  # Fuime: can this venture take a card payment right now?
+  #
+  # The single question the storefront, the checkout endpoint and the venture
+  # dashboard all ask. Answered locally (no network call) from the mirrored
+  # Stripe state, and false when no guardian has set payments up — which is the
+  # correct answer for every venture until one has.
+  def accepts_payments?
+    stripe_connected_account&.ready_for_payments? || false
+  end
+
+  # Fuime: the adults legally responsible for this venture.
+  #
+  # There was no query for this, and the absence produced a real bug: the public
+  # storefront derived its "Guardian on account" badge from
+  # `point_of_contact.has_active_guardian?`, but `point_of_contact` is set to the
+  # *activating admin* (see Event::Application#activate_event!), so the badge was
+  # reporting whether a Fuime staff member has a parent.
+  #
+  # Defined as: active guardians of the minors who hold a position on this
+  # venture. Returns a relation because a venture can legitimately have more than
+  # one — two teen co-founders with different parents, or one teen with two
+  # guardians — and picking `.first` is how you end up asserting something about
+  # the wrong family.
+  def overseeing_guardians
+    User.where(
+      id: Guardianship
+            .active
+            .joins("INNER JOIN organizer_positions ON organizer_positions.user_id = guardianships.minor_id")
+            .where(organizer_positions: { event_id: id, deleted_at: nil })
+            .select(:guardian_id)
+    )
+  end
+
+  # Fuime: does a responsible adult exist for this venture at all?
+  #
+  # This, not `point_of_contact.has_active_guardian?`, is what the storefront
+  # badge means to ask. An adult-run venture correctly answers false — there is
+  # no guardian because none is required.
+  def has_overseeing_guardian?
+    overseeing_guardians.exists?
   end
 
   def total_raised

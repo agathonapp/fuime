@@ -81,9 +81,9 @@ module Fuime
       end
 
       # One ledger line per Stripe object, no matter how often Stripe retries.
-      transaction_key = "fuime_#{object.id}"
+      transaction_key = ::Fuime::VentureLedger.payment_key(object.id)
 
-      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: transaction_key)
+      existing = ::Fuime::VentureLedger.find_row(transaction_key)
       if existing
         Rails.logger.info("[Fuime] Webhook #{object.id} already recorded; skipping")
         return existing
@@ -139,8 +139,8 @@ module Fuime
       fee_cents = platform_fee_cents(object, gross_cents)
       return nil if fee_cents <= 0
 
-      fee_key = "fuime_fee_#{object.id}"
-      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: fee_key)
+      fee_key = ::Fuime::VentureLedger.fee_key(object.id)
+      existing = ::Fuime::VentureLedger.find_row(fee_key)
       return existing if existing
 
       raw = ::RawPendingDonationTransaction.create!(
@@ -199,7 +199,7 @@ module Fuime
         return nil
       end
 
-      original = ::RawPendingDonationTransaction.find_by(donation_transaction_id: "fuime_#{intent_id}")
+      original = ::Fuime::VentureLedger.find_row(::Fuime::VentureLedger.payment_key(intent_id))
       unless original
         Rails.logger.warn("[Fuime] #{kind} #{object.id} references unrecorded payment #{intent_id}; ignoring")
         return nil
@@ -214,9 +214,11 @@ module Fuime
       # A charge can be refunded in several increments; key on the cumulative
       # refunded amount so each distinct total posts exactly once. The intent id
       # is embedded so all reversals of one payment can be summed by prefix.
-      reversal_key = "#{reversal_key_prefix(intent_id)}#{kind}_#{object.id}_#{amount_cents}"
+      reversal_key = ::Fuime::VentureLedger.reversal_key(
+        intent_id:, kind:, object_id: object.id, amount_cents:
+      )
 
-      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: reversal_key)
+      existing = ::Fuime::VentureLedger.find_row(reversal_key)
       if existing
         Rails.logger.info("[Fuime] #{kind} #{reversal_key} already recorded; skipping")
         return existing
@@ -275,7 +277,7 @@ module Fuime
     def refund_platform_fee(object:, event:, intent_id:, reversal_cents:, gross_cents:)
       return nil if gross_cents <= 0
 
-      fee_raw = ::RawPendingDonationTransaction.find_by(donation_transaction_id: "fuime_fee_#{intent_id}")
+      fee_raw = ::Fuime::VentureLedger.find_row(::Fuime::VentureLedger.fee_key(intent_id))
       return nil if fee_raw.nil?
 
       original_fee = fee_raw.amount_cents.abs
@@ -288,8 +290,10 @@ module Fuime
       rebate = [rebate, original_fee - already_rebated].min
       return nil if rebate <= 0
 
-      rebate_key = "#{fee_rebate_key_prefix(intent_id)}#{object.id}_#{reversal_cents}"
-      existing = ::RawPendingDonationTransaction.find_by(donation_transaction_id: rebate_key)
+      rebate_key = ::Fuime::VentureLedger.fee_rebate_key(
+        intent_id:, object_id: object.id, reversal_cents:
+      )
+      existing = ::Fuime::VentureLedger.find_row(rebate_key)
       return existing if existing
 
       raw = ::RawPendingDonationTransaction.create!(
@@ -318,46 +322,47 @@ module Fuime
       raw
     end
 
+    # ── Ledger keys are NOT defined here ────────────────────────────────────
+    #
+    # They all delegate to Fuime::VentureLedger, which is the single owner of the
+    # key scheme. That matters for a specific reason: the Connect money-in path
+    # (Fuime::ConnectPaymentRecorder) posts with the SAME keys on purpose, so that
+    # if a Stripe webhook endpoint is ever misconfigured to receive both platform
+    # and connected-account events, a payment delivered twice produces one ledger
+    # line instead of two. If this class kept its own copies of these strings, one
+    # of them could be changed without the other and that protection would
+    # disappear silently. See VentureLedger's header.
+    #
+    # The posting bodies above are still duplicated between the two handlers. That
+    # is accepted rather than overlooked: this class serves the pooled-account
+    # simulator, which L1 retires to test mode permanently, so it is code with a
+    # scheduled end. The keys are shared because getting them wrong double-posts
+    # real money; the boilerplate is not, because it is going away.
     def fee_rebate_key_prefix(intent_id)
-      "fuime_feerev_#{intent_id}_"
+      ::Fuime::VentureLedger.fee_rebate_key_prefix(intent_id)
     end
 
     def fee_rebated_cents_for(intent_id)
-      ::RawPendingDonationTransaction
-        .where("donation_transaction_id LIKE ?", "#{sanitize_like(fee_rebate_key_prefix(intent_id))}%")
-        .sum(:amount_cents)
+      ::Fuime::VentureLedger.fee_rebated_cents_for(intent_id)
     end
 
-    # Reversal rows are keyed "fuime_rev_<intent_id>_<kind>_<obj>_<amount>", so
-    # every reversal of a given payment shares a prefix and can be summed
-    # directly — no join back through the ledger, and no risk of picking up
-    # reversals belonging to a different payment to the same business.
     def reversal_key_prefix(intent_id)
-      "fuime_rev_#{intent_id}_"
+      ::Fuime::VentureLedger.reversal_key_prefix(intent_id)
     end
 
     # Total already reversed against a payment intent, as a positive number.
     def reversed_cents_for(intent_id)
-      ::RawPendingDonationTransaction
-        .where("donation_transaction_id LIKE ?", "#{sanitize_like(reversal_key_prefix(intent_id))}%")
-        .sum(:amount_cents)
-        .abs
-    end
-
-    def sanitize_like(str)
-      ActiveRecord::Base.sanitize_sql_like(str)
+      ::Fuime::VentureLedger.reversed_cents_for(intent_id)
     end
 
     def event_for_raw(raw)
-      cpt = ::CanonicalPendingTransaction.find_by(raw_pending_donation_transaction_id: raw.id)
-      return nil unless cpt
-
-      ::CanonicalPendingEventMapping.find_by(canonical_pending_transaction_id: cpt.id)&.event
+      ::Fuime::VentureLedger.event_for_row(raw)
     end
 
     def memo_for(object, event)
       description = object.respond_to?(:description) ? object.description : nil
       description.presence || "Payment to #{event.name}"
     end
+
   end
 end

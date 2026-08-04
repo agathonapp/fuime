@@ -43,4 +43,20 @@ RSpec.describe "Funders landing page", type: :request do
     expect(response.body).not_to include("The Hack Foundation")
     expect(response.body).not_to include("Deploy your capital as grants")
   end
+
+  # Fuime has no bank partner and no deposit insurance. The disabled copy claims
+  # both ("funds are held at Fuime's banking partners, Column N.A. and The
+  # Business Bank, and are FDIC-insured through the IntraFi network"), which is
+  # the class of claim the FDIC polices directly under 12 CFR 328 Subpart B —
+  # non-banks may not represent or imply insured status. Pinned separately from
+  # the charitable claims above so that re-enabling the pages trips on the
+  # banking claims too, not just the 501(c)(3) ones.
+  it "never renders bank-partner or deposit-insurance claims" do
+    get funders_path
+    follow_redirect!
+
+    expect(response.body).not_to include("FDIC")
+    expect(response.body).not_to include("Column N.A.")
+    expect(response.body).not_to include("IntraFi")
+  end
 end

@@ -93,30 +93,44 @@
         </p>
       <% end %>
 
-      <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
-                    class: "flex flex-col items-center gap-3" do |form| %>
-        <div class="field w-full" style="max-width: 20rem;">
-          <%= form.label :amount, "Amount (USD)", class: "text-left block" %>
-          <%= form.text_field :amount, placeholder: "25.00", inputmode: "decimal",
-                              required: true, class: "w-full" %>
-        </div>
-        <div class="field w-full" style="max-width: 20rem;">
-          <%= form.label :description, "What's this for?", class: "text-left block" %>
-          <%= form.text_field :description, placeholder: "Custom print",
-                              class: "w-full" %>
-        </div>
-        <%= form.submit stripe_live ? "Pay #{@event.name}" : "Try a test payment",
-                        class: "btn btn--lg #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
-      <% end %>
+      <%# Fuime: a venture can only be paid once its guardian has completed Stripe
+          setup — there is otherwise no account for the money to land in, and the
+          checkout endpoint refuses. Rendering the form anyway would put a dead
+          "Pay" button on a public URL a teenager has shared with real customers,
+          which is the same class of mistake as the pre-launch copy above. %>
+      <% if @accepts_payments %>
+        <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
+                      class: "flex flex-col items-center gap-3" do |form| %>
+          <div class="field w-full" style="max-width: 20rem;">
+            <%= form.label :amount, "Amount (USD)", class: "text-left block" %>
+            <%= form.text_field :amount, placeholder: "25.00", inputmode: "decimal",
+                                required: true, class: "w-full" %>
+          </div>
+          <div class="field w-full" style="max-width: 20rem;">
+            <%= form.label :description, "What's this for?", class: "text-left block" %>
+            <%= form.text_field :description, placeholder: "Custom print",
+                                class: "w-full" %>
+          </div>
+          <%= form.submit stripe_live ? "Pay #{@event.name}" : "Try a test payment",
+                          class: "btn btn--lg #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
+        <% end %>
 
-      <p class="text-sm muted mt-3 m-0">
-        Secure checkout by Stripe.
-        <%# Fuime takes its platform fee out of the payment; the business's
-            ledger line is the net. Stated up front so a customer paying a
-            teenager knows exactly where their money goes. %>
-        Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>%
-        to run the platform.
-      </p>
+        <p class="text-sm muted mt-3 m-0">
+          Secure checkout by Stripe.
+          <%# Reads the venture's plan rather than a constant: the hardcoded 4%
+              this replaced ignored the plan entirely, so a Founders-plan venture
+              advertised a fee it does not pay. %>
+          Fuime keeps
+          <%= number_to_percentage(@event.plan.revenue_fee * 100, precision: 1) %>
+          to run the platform.
+        </p>
+      <% else %>
+        <p class="muted m-0">
+          <strong><%= @event.name %> isn't set up to take payments yet.</strong>
+          A parent or guardian still needs to finish setting up the account money
+          is paid into. Please check back soon.
+        </p>
+      <% end %>
       <% unless stripe_live %>
         <p class="text-sm mt-1 m-0">
           Test card <strong>4242 4242 4242 4242</strong>, any future expiry,
@@ -199,6 +213,17 @@
     <p class="muted text-sm mt-2">
       <%= link_to "Terms", terms_path, class: "text-primary" %> ·
       <%= link_to "Privacy", privacy_path, class: "text-primary" %>
+    </p>
+    <%# Same reason the legal links are duplicated here: the standing status
+        disclosure lives in application/_footer, which this layout branch never
+        renders. A payer on this page is handing over a card number, so this is
+        the surface where an unrebutted assumption of "bank" and "insured" does
+        the most damage — 12 CFR 328.102(b)(3)(ii) makes the omission itself the
+        violation. Keep this in sync with application/_footer. %>
+    <p class="muted text-xs mt-3 mx-auto" style="max-width: 34rem;">
+      Fuime is a financial technology company, not a bank. Fuime does not hold
+      deposits and does not offer FDIC-insured products. Payments are processed
+      by Stripe. This venture's account is owned by a parent or legal guardian.
     </p>
   </div>
 </div>

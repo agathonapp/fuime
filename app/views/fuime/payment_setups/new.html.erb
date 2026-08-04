@@ -1,0 +1,83 @@
+<% title "Set up payments — #{@event.name}" %>
+
+<h1 class="heading">Set up payments for <%= @event.name %></h1>
+
+<%# Fuime: the guardian-facing Stripe onboarding form.
+    Two things in this page are deliberate and should not be "tidied":
+
+    1. The warning about a Stripe window below. Because Fuime is configured so
+       that STRIPE carries negative-balance liability rather than Fuime, Stripe
+       necessarily also collects the identity requirements — and that combination
+       means the guardian hits a Stripe-owned authentication popup inside this
+       otherwise-embedded form. It cannot be disabled: the flag that would
+       (`disable_stripe_user_authentication`) requires Fuime to collect
+       requirements itself, which would mean owning every chargeback. Warning the
+       guardian turns an alarming surprise into an expected security step, and is
+       the highest-leverage sentence in the whole flow.
+
+    2. The fee disclosure. Fuime's platform fee is charged on this account, and a
+       platform is expected to disclose its fees to a connected account before
+       imposing them. Saying it here, in the consent moment, is both the honest
+       and the defensible place. %>
+
+<%= render "application/callout", type: "info", title: "What to expect" do %>
+  <ul class="list-disc pl-5 mb-2">
+    <li class="mb-1">
+      Stripe — Fuime's payments partner — will ask you to confirm your identity in
+      a secure Stripe window. That step is Stripe's, not Fuime's.
+    </li>
+    <li class="mb-1">
+      You'll be asked for your name, date of birth, address and the last four
+      digits of your Social Security number. <strong>Fuime never sees or stores
+      any of it</strong> — it goes directly to Stripe.
+    </li>
+    <li class="mb-1">
+      You will own this payment account. Money your young founder collects settles
+      to the bank account you connect, not to Fuime.
+    </li>
+    <li class="mb-0">
+      Fuime's platform fee is
+      <strong><%= number_to_percentage(@event.plan.revenue_fee * 100, precision: 1) %></strong>
+      of what the venture collects, charged on this account. Stripe's own card
+      processing fee applies separately and goes to Stripe.
+    </li>
+  </ul>
+<% end %>
+
+<% if StripeService.live? %>
+  <p class="muted text-sm">This is a real Stripe account and real money will move.</p>
+<% else %>
+  <%= render "application/callout", type: "warning", title: "Test mode" do %>
+    <p class="mb-0">
+      Fuime is running against Stripe's test mode, so this creates a
+      <strong>test</strong> account and no real money can move. You do not need to
+      enter real personal details.
+    </p>
+  <% end %>
+<% end %>
+
+<%# The component mounts here. Stripe's Connect JS is loaded and driven by the
+    Stimulus controller in app/javascript/controllers/stripe_connect_onboarding_controller.js;
+    the client secret is fetched fresh on each render because Account Sessions
+    are short-lived. %>
+<div
+  data-controller="stripe-connect-onboarding"
+  data-stripe-connect-onboarding-publishable-key-value="<%= @publishable_key %>"
+  data-stripe-connect-onboarding-client-secret-value="<%= @client_secret %>"
+  data-stripe-connect-onboarding-return-url-value="<%= fuime_payment_setup_return_path(event_slug: @event.slug) %>"
+  data-stripe-connect-onboarding-refresh-url-value="<%= fuime_payment_setup_refresh_path(event_slug: @event.slug) %>"
+  class="mt-4">
+  <div data-stripe-connect-onboarding-target="container"></div>
+
+  <%# Shown until the component mounts, and left in place if it never does — a
+      blank rectangle gives a parent no way to tell "still loading" from "broken". %>
+  <p data-stripe-connect-onboarding-target="fallback" class="muted text-sm">
+    Loading Stripe's secure setup form…
+    If this doesn't appear, check that your browser isn't blocking scripts from
+    Stripe, then <%= link_to "try again", new_fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+  </p>
+</div>
+
+<p class="muted text-sm mt-4">
+  <%= link_to "← Back to payment status", fuime_payment_setup_path(event_slug: @event.slug) %>
+</p>

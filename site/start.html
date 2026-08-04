@@ -226,9 +226,9 @@
                   You're already working.<br />Start billing.
                 </h1>
                 <p class="dv-join__lead">
-                  Send a real invoice, get paid into an account you run day to
-                  day, and know what you owe at tax time. A parent co-signs
-                  once. After that it's yours.
+                  Write a real invoice, keep books that hold up, and know what
+                  you owe at tax time. A parent or guardian owns the account and
+                  signs once. You operate it.
                 </p>
                 <form class="capture" data-source="start-dive" novalidate>
                   <div class="capture__row">
@@ -251,9 +251,11 @@
                   </p>
                 </form>
                 <p class="dv-join__fine">
-                  One email when it's your turn, nothing after that. fuime is
-                  not a bank — payments go from your client into your own Stripe
-                  account.
+                  One email when it's your turn, nothing after that. fuime is a
+                  financial technology company, not a bank, and is in private
+                  beta in Stripe test mode — no real money moves yet. Venture
+                  accounts are owned by a parent or legal guardian; young
+                  founders operate them.
                 </p>
               </div>
             </div>
@@ -266,5 +268,25 @@
         </div>
       </section>
     </main>
+
+    <!-- ── the standing disclosure ──────────────────────────────────────
+         Outside the glass on purpose. The panel above is drawn at 1600x1000
+         and scaled onto a laptop screen — clipped to it outright on a phone,
+         where the join panel is 420x880 with overflow hidden. A disclosure
+         that can be cropped is not a disclosure, so it sits here on the same
+         night ground the dive lands on, in the footer component the other
+         three pages already use for exactly this paragraph. -->
+    <footer class="foot">
+      <div class="wrap">
+        <p class="foot__legal" style="padding-top: 0">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Venture accounts are opened and owned by a parent
+          or legal guardian; young founders operate them with guardian
+          oversight. fuime is in private beta in Stripe test mode: payments are
+          not live and no real money moves yet.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>

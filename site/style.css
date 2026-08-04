@@ -803,6 +803,37 @@ section[id] {
   text-wrap: pretty;
 }
 
+/* The state-of-the-product chip, above the headline on every hero. It is not
+   fine print and must not read as fine print: nothing under it — the price
+   list, the three steps, the parents page — is true of a live payment yet, so
+   the reader has to have this before they have any of that. Full --on-dark on
+   an opaque --night-2 ground rather than the muted disclaimer grey, and an
+   accent dot, because the one thing a status chip has to survive is being sat
+   on top of a photograph. The dot cannot shrink or the flex row collapses it
+   to nothing when the label wraps on a phone. */
+.beta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s5);
+  padding: var(--s2) var(--s4);
+  border-radius: var(--r-pill);
+  background: var(--night-2);
+  box-shadow: inset 0 0 0 1px var(--on-dark-faint);
+  font-size: var(--t-small);
+  font-weight: var(--w-ui);
+  letter-spacing: var(--track-hud);
+  text-transform: uppercase;
+  color: var(--on-dark);
+}
+.beta::before {
+  content: '';
+  flex: 0 0 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent-lit);
+}
+
 /* ── email capture ─────────────────────────────────────────────────────── */
 
 .capture {
@@ -1510,6 +1541,19 @@ section[id] {
 }
 .foot__col a:hover {
   color: var(--on-dark);
+}
+/* The standing disclosure. It is four sentences, which is three too many for
+   the space-between row below — as a second span it would have wrapped into
+   the wordmark's column and read as an accident. Its own block, above the row,
+   measure-capped so the lines break where a paragraph's lines should. */
+.foot__legal {
+  max-width: 92ch;
+  padding-top: var(--s5);
+  font-size: var(--t-small);
+  line-height: 1.6;
+  letter-spacing: 0.42px;
+  color: var(--on-dark-mu);
+  text-wrap: pretty;
 }
 .foot__bot {
   display: flex;

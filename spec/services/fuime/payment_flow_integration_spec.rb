@@ -23,7 +23,7 @@ RSpec.describe "Fuime payment flow", type: :request do
       created: Time.current.to_i,
       description: "Custom print",
       metadata: {
-        "fuime_event_id" => event.id.to_s,
+        "fuime_event_id"  => event.id.to_s,
         "fuime_fee_cents" => fee.to_s,
       },
     }

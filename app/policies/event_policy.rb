@@ -358,6 +358,113 @@ class EventPolicy < ApplicationPolicy
 
   alias hide_onboarding_message? request_call?
 
+  # Fuime: who may set up (or repair) the venture's payment account.
+  #
+  # The guardian only, plus admins for support. Not the minor, and this is the
+  # one place in the policy where that restriction is not about the guardianship
+  # gate but about who the account legally belongs to: Stripe requires the
+  # account owner and representative of an under-18 account to be the adult, and
+  # onboarding collects that adult's identity details (DOB, address, SSN last 4).
+  # A teen cannot supply those and must not be asked to.
+  #
+  # Note this does NOT require `permitted_to_operate_business?`: the guardian is
+  # an adult and is never subject to that gate, and the whole point of the flow
+  # is that it runs before the venture can trade.
+  #
+  # MUST STAY ABOVE `private`. Pundit resolves a query with `public_send`, and
+  # Fuime::PaymentSetupsController both calls `authorize @event, :setup_payments?`
+  # and reads `policy(@event).setup_payments?` directly. Below the `private`
+  # keyword — where this and #payment_setup_status? were originally written — every
+  # request to the Connect onboarding flow raised NoMethodError, so the whole
+  # payment-setup feature 500'd. The private section below is for helpers like
+  # #reader? and #member? that only this class calls.
+  def setup_payments?
+    return false if user.blank?
+    return true if user.admin?
+
+    guardian_reader?
+  end
+
+  # Fuime: the venture's payment status page. Readable by the team as well as the
+  # guardian — a teen needs to know whether they can be paid and whose action is
+  # outstanding, even though they cannot act on it themselves.
+  #
+  # Public for the same reason as #setup_payments? above.
+  def payment_setup_status?
+    auditor_or_reader?
+  end
+
+  # Fuime: who may ask to move money out, and who may decide.
+  #
+  # Requesting is a member action (the teen running the venture). Deciding is the
+  # guardian's alone, because they own the account and the funds — see
+  # PayoutRequest and CLAUDE.md L2. Admins can decide too, for support on stuck
+  # payouts.
+  def request_payout?
+    return false if user.blank?
+    return true if user.admin?
+
+    member?
+  end
+
+  def decide_payout?
+    return false if user.blank?
+    return true if user.admin?
+
+    # Deliberately NOT `member? || guardian_reader?`. A teen approving their own
+    # payout would defeat the entire ownership structure, and PayoutRequest
+    # validates the same rule at the record level.
+    guardian_reader?
+  end
+
+  # The payouts screen itself: the team needs to see the balance and the state of
+  # their request, the guardian needs to see what they are being asked to approve.
+  def payouts?
+    auditor_or_reader?
+  end
+
+  # Fuime: cards. Four predicates rather than one, because the interesting design here
+  # is that they do NOT all belong to the same person.
+  #
+  # The teen operates the business and so needs to see the cards and be able to FREEZE
+  # one. The guardian is the Accountholder who carries the card liability and so is the
+  # only one who can create a card, raise a limit, or unfreeze.
+  def cards?
+    auditor_or_reader?
+  end
+
+  # Issuing a card creates a liability the guardian carries. Not the teen's to create.
+  def issue_cards?
+    return false if user.blank?
+    return true if user.admin?
+
+    guardian_reader?
+  end
+
+  # Limits, unfreezing, cancelling. Same reasoning as #issue_cards?: each of these
+  # increases what can be spent or restores the ability to spend, which is the
+  # Accountholder's decision.
+  def manage_cards?
+    return false if user.blank?
+    return true if user.admin?
+
+    guardian_reader?
+  end
+
+  # Freezing is the deliberate exception, and it is the one control a minor SHOULD have.
+  #
+  # A teenager who has lost their card needs to stop it in the moment, not wait for a
+  # parent to wake up. Freezing can only ever reduce what is spendable, so handing it to
+  # the person most likely to notice a problem first costs nothing and prevents real
+  # loss. Unfreezing stays with the guardian, which is what keeps this from being a way
+  # around #manage_cards?.
+  def freeze_cards?
+    return false if user.blank?
+    return true if user.admin?
+
+    member? || guardian_reader?
+  end
+
   private
 
   def admin_or_member?
@@ -384,7 +491,28 @@ class EventPolicy < ApplicationPolicy
     # Read access is NOT gated on guardianship: a teen waiting on their parent
     # can still see their own business, and a guardian needs to see the ledger
     # they are responsible for. Only acting on the business is gated.
-    OrganizerPosition.role_at_least?(user, record, :reader)
+    OrganizerPosition.role_at_least?(user, record, :reader) || guardian_reader?
+  end
+
+  # Fuime: the guardian's side of that sentence, which until now had no
+  # mechanism behind it. §3 of the guardian agreement promises the signing adult
+  # visibility into "transactions, balances, and the people on their team", and
+  # says it "cannot be turned off by the minor" — but accepting a guardianship
+  # created no organizer position, so `reader?` was false for every guardian and
+  # the promise was unimplemented.
+  #
+  # Granting it here rather than by inserting an OrganizerPosition at acceptance
+  # is what makes the "cannot be turned off by the minor" half true: positions
+  # are membership rows a manager can delete, and the minor is the manager.
+  # See Guardianship.overseeing_event.
+  #
+  # Read-only by construction: `member?` and `manager?` do not consult this, so
+  # a guardian can see a venture and act on nothing in it. Acting is the
+  # minor's job, and a guardian who wants to intervene revokes instead.
+  def guardian_reader?
+    return false if user.blank?
+
+    user.guardian_of_event?(record)
   end
 
   # Fuime: member and manager are the roles that can *act* on a business —

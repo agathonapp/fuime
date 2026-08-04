@@ -62,6 +62,29 @@ class Guardianship < ApplicationRecord
   scope :for_minor, ->(user) { where(minor: user) }
   scope :for_guardian, ->(user) { where(guardian: user) }
 
+  # Active guardianships held by `user` over a minor who holds a position on
+  # `event` — i.e. "is this user entitled to oversee this venture?"
+  #
+  # §3 of the agreement ("You can see everything") promises the guardian
+  # visibility that "cannot be turned off by the minor". That sentence is the
+  # reason this derives from the guardianship rather than from an
+  # OrganizerPosition granted at acceptance: an organizer position is org
+  # membership, and a manager — the minor — can delete it, which would make the
+  # one guarantee the guardian is asked to rely on revocable by exactly the
+  # person it exists to be independent of. Revoking a *guardianship* is already
+  # restricted to the guardian and admins (GuardianshipPolicy#revoke?).
+  #
+  # Positions are soft-deleted (acts_as_paranoid), so the join is scoped to
+  # live ones; a removed team member's guardian loses oversight with them.
+  scope :overseeing_event, ->(user, event) {
+    return none if user.blank? || event.blank?
+
+    active
+      .where(guardian: user)
+      .joins("INNER JOIN organizer_positions ON organizer_positions.user_id = guardianships.minor_id")
+      .where(organizer_positions: { event_id: event.id, deleted_at: nil })
+  }
+
   # Reasons this guardianship cannot go active yet, as user-facing sentences.
   # Empty array means it can. Activation is the moment Fuime starts telling the
   # public "parent-signed account", so every precondition is checked here.

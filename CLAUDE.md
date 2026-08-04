@@ -14,11 +14,16 @@ Fuime is a fork of HCB, repurposed from *fiscal sponsorship for teen nonprofits*
 *a financial platform for teen-run businesses (13–17)*. Key differences from upstream HCB:
 
 - HCB: one legal entity (Hack Club 501c3) owns ALL money; bank feeds from Column; cards via Stripe Issuing.
-- Fuime: **one pooled platform Stripe account (TEST MODE ONLY, forever, in this repo)**;
-  payments carry the business's org id in metadata and the existing ledger pipeline
-  allocates them per business — the same one-pot/many-ledgers design HCB already uses.
-  In production this is a regulated merchant-of-record structure; that's a Phase 2
-  lawyers-and-Stripe conversation, never a code change here.
+  Verified against upstream: HCB has **zero Stripe Connect usage**. Cards are platform-level
+  Issuing funded by `topup_stripe_job.rb` into one shared Issuing balance, and HCB itself
+  approves each swipe against its own subledger. That works only because a 501(c)(3) legally
+  owns the funds as restricted charitable funds. A for-profit cannot copy it.
+- Fuime: **a Stripe connected account per venture, owned by the guardian** (shipped
+  2026-08-03). Stripe holds and settles the funds; Fuime takes its cut as a Connect
+  application fee on direct charges and is never in the flow of funds. Still
+  TEST MODE by default everywhere including production (`StripeService.mode`).
+  ~~one pooled platform Stripe account~~ — the pooled model is retired to a
+  test-mode simulator only; in production it is money transmission (see L1).
 - New concept HCB doesn't have: **guardianship** — every teen user requires a linked
   parent/guardian who is the legal signer. Parent visibility is a feature, not an afterthought.
 - HCB's "Event" (organization) becomes Fuime's "Venture" — but see Rule 6 before renaming anything.
@@ -62,6 +67,52 @@ Fuime is a fork of HCB, repurposed from *fiscal sponsorship for teen nonprofits*
 8. **Log every divergence from upstream** in `docs/fuime/UPSTREAM_DIVERGENCE.md`
    (one line per change: what, why, files touched). This preserves our ability to merge
    upstream ledger/security fixes later.
+
+---
+
+## LEGAL CONSTRAINTS (from docs/fuime/LEGAL_RESEARCH.md, Aug 2026 — read it before product/copy/money work)
+
+L1. **The pooled-account model can never go live.** In production it is unlicensed money
+    transmission (18 U.S.C. § 1960 — criminal) and violates Stripe's ToS (aggregation outside
+    Connect). It stays a test-mode simulator. The production architecture is **Stripe Connect
+    Standard: one guardian-owned connected account per venture**, direct charges + 4%
+    application fee, payouts to the family's own bank. "Column + Stripe like Hack Club" does
+    not transfer to a for-profit: HCB works only because donations are the 501(c)(3)'s own funds.
+
+L2. **The parent/guardian is the legal party everywhere.** Guardian = account owner /
+    Stripe Representative / principal obligor on ToS, fees, chargebacks, arbitration,
+    indemnity. Teen co-clicks; ratification-at-18 clause. Under-13s click nothing contractual.
+    A teen-only clickwrap is voidable (infancy doctrine — Doe v. Epic Games (N.D. Cal. 2020)).
+
+L3. **SSN-free onboarding is only possible while no real money moves.** Live payments require
+    guardian KYC: Stripe demands the Representative's SSN last-4 (full SSN at $500K); any bank
+    account requires a TIN (31 CFR 1020.220). Plan the parent flow around that, don't fight it.
+
+L4. **Never store ID images.** Parent verification = COPPA-grade method (ID + database check,
+    ID + selfie match, or card micro-transaction), then **delete the image**; keep only the
+    consent record (method, vendor ref, timestamp, doc-version hash, IP/UA). BIPA applies to
+    face-matching.
+
+L5. **Forbidden vocabulary in all user-facing copy while no partner bank exists:** bank,
+    banking, neobank, checking, savings, deposits, insured, FDIC, "your money is safe/
+    guaranteed", bank-ish domains. (Cal. Fin. Code § 562; 205 ILCS 5/46; FDIC Part 328
+    Subpart B; DFPI v. Chime.) Say: "financial platform / financial tools for young founders";
+    accounts are "opened and owned by a parent or guardian." Standing footer disclosure:
+    "Fuime is a financial technology company, not a bank…" (full text in LEGAL_RESEARCH.md §7).
+
+L6. **Under-13 users are a deliberate, gated expansion, not a copy change.** It requires the
+    full amended-COPPA program (VPC, dual notices, retention/security programs, $53,088/
+    violation exposure) AND a parent-owned merchant account (Stripe's floor is 13 even with a
+    guardian). Until that program exists, the under-13 refusal validation stays.
+
+L7. **No targeted advertising, sale, or profiling of minors' data — ever** (CT flat ban; TX
+    SCOPE; NY CDPA "strictly necessary"). Paid acquisition targets parents. Transactional-only
+    notifications to minors, none 12–6 a.m. No algorithmic/social feed without legal review.
+
+L8. **fuime.com must describe the product that exists.** The site currently claims a Stripe
+    Connect no-custody architecture, a Stripe ID check, and 7% + $15/mo pricing — none
+    implemented (app: pooled account, no KYC, 4%, no monthly fee). Fixing this divergence is
+    P0; never let site copy lead the code again.
 
 ---
 
@@ -162,6 +213,11 @@ Objective: turn off what Fuime doesn't need, guided by the Milestone 1 inventory
   `# FUIME-DISABLED` so they're findable); click-through confirms no dead nav links.
 
 ## MILESTONE 6 — The funding-source spike (pooled Stripe account, test mode)
+
+&gt; **Superseded in direction by L1 (Aug 2026):** the pooled-account pipeline built here stays
+&gt; as the test-mode simulator; the *production* money-in is a new spike — Stripe Connect
+&gt; Standard, guardian-owned connected accounts, direct charges + 4% application fee. See
+&gt; docs/fuime/LEGAL_RESEARCH.md "Recommended path" P1.
 
 Objective: prove the new money model feeds the old ledger. Spike = learning, not shipping.
 

@@ -60,5 +60,6 @@ module Fuime
         csv << [packet[:disclaimer]]
       end
     end
+
   end
 end
