@@ -36,7 +36,21 @@ gem "country_select", "~> 8.0"
 
 gem "faraday" # web requests
 
-gem "stripe", "11.7.0"
+# Fuime: upgraded from upstream's 11.7.0 (a deliberate divergence from hackclub/hcb,
+# logged in docs/fuime/UPSTREAM_DIVERGENCE.md).
+#
+# Forced by Stripe, not chosen: as of Aug 2026 Stripe REFUSES V1 connected-account
+# creation for new Connect integrations. `POST /v1/accounts` returns "Stripe no longer
+# recommends Accounts v1 for new Connect integrations. Create connected accounts with
+# POST /v2/core/accounts instead." The V2 Core Accounts API needs `.v2` on the client,
+# which 11.7.0 does not have at all.
+#
+# Why this was safe to do: all 19 module-level V1 paths this app uses
+# (`Stripe::Account.create`, `Stripe::Issuing::Card.update`, `Stripe::Topup.create`, …)
+# are still present in 19.x, verified by introspecting the gem before upgrading. HCB's
+# ledger and Issuing code therefore keeps working unchanged, which is what Rule 3
+# requires.
+gem "stripe", "~> 19.4"
 gem "plaid", "~> 44.0"
 gem "yellow_pages", github: "hackclub/yellow_pages"
 
