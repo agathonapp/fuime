@@ -1,0 +1,14 @@
+<h1>Something went wrong</h1>
+
+<div class="callout warn">
+  <%# Stripe's own message is shown verbatim. In a SAMPLE that is right: its wording
+      is far more actionable than any paraphrase.
+
+      In production it is not. A Stripe validation error can echo the submitted value
+      back, so rendering it can put a customer's details on an error page. The main
+      app strips Stripe's message for exactly this reason — see
+      Fuime::RequirementCollectionService#submit!. %>
+  <pre style="white-space: pre-wrap; margin: 0; font: inherit;"><%= h message %></pre>
+</div>
+
+<p><a href="/">Back to the dashboard</a></p>

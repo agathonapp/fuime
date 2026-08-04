@@ -1,0 +1,162 @@
+<h1>Connect sample — platform dashboard</h1>
+<p class="secondary">
+  Every status below is read live from the Stripe API on each page load. Nothing about
+  onboarding state is cached, which is deliberate: a stored "ready" flag is how a
+  platform tells a user they can take payments after Stripe has disabled them.
+</p>
+
+<% if params[:returned_from] %>
+  <div class="callout">
+    <strong>Back from onboarding.</strong> Returning from an Account Link does not mean
+    onboarding succeeded, only that the flow was entered and exited. The status below
+    comes from the API, so it is the real answer.
+  </div>
+<% end %>
+
+<% if params[:subscribed] %>
+  <div class="callout">
+    <strong>Subscription checkout completed.</strong> The authoritative record arrives on
+    the <code>/webhooks/snapshot</code> endpoint, not from this redirect.
+  </div>
+<% end %>
+
+<h2>Create a connected account</h2>
+<div class="card">
+  <form method="post" action="/accounts">
+    <div class="field">
+      <label for="display_name">Business name</label>
+      <input id="display_name" name="display_name" placeholder="Maya Prints" required>
+    </div>
+    <div class="field">
+      <label for="email">Contact email</label>
+      <input id="email" name="email" type="email" placeholder="owner@example.com" required>
+    </div>
+    <button class="btn" type="submit">Create account</button>
+    <p class="text-sm secondary" style="margin-bottom:0;">
+      Creates a V2 account with the <code>merchant</code> and <code>customer</code>
+      configurations. No top-level <code>type</code> is sent — V2 has no
+      express/standard/custom.
+    </p>
+  </form>
+</div>
+
+<h2>Accounts</h2>
+
+<% if @accounts.empty? %>
+  <div class="card secondary">No accounts yet. Create one above.</div>
+<% else %>
+  <div class="card" style="padding:0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Can take payments?</th>
+          <th>Requirements</th>
+          <th><%# onboarding, product, storefront and billing actions %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @accounts.each do |acct| %>
+          <% s = acct[:status] %>
+          <tr>
+            <td>
+              <strong><%= h acct[:display_name] %></strong><br>
+              <span class="text-sm secondary"><%= h acct[:email] %></span><br>
+              <span class="text-sm secondary"><code><%= h acct[:account_id] %></code></span>
+            </td>
+            <td>
+              <% if s[:error] %>
+                <span class="badge bg-error">API error</span>
+                <div class="text-sm secondary"><%= h s[:error] %></div>
+              <% elsif s[:ready_to_process] %>
+                <span class="badge bg-success">Yes</span>
+              <% else %>
+                <span class="badge bg-info">Not yet</span>
+                <div class="text-sm secondary">
+                  card_payments: <%= h s[:card_payments_status] %>
+                </div>
+              <% end %>
+            </td>
+            <td>
+              <% if s[:onboarding_complete] %>
+                <span class="badge bg-success">Nothing outstanding</span>
+              <% else %>
+                <span class="badge bg-error"><%= h s[:requirements_status] %></span>
+              <% end %>
+              <div class="text-sm secondary">
+                <%#
+                  Shown raw because "which requirement" is the question a user
+                  actually has, and Stripe's own wording is more accurate than any
+                  paraphrase a platform invents.
+                %>
+                summary.minimum_deadline.status
+              </div>
+            </td>
+            <td>
+              <div class="row">
+                <form method="post" action="/accounts/<%= h acct[:account_id] %>/onboarding_link">
+                  <button class="btn btn-small" type="submit">
+                    <%= s[:onboarding_complete] ? "Update details" : "Onboard to collect payments" %>
+                  </button>
+                </form>
+
+                <a class="btn btn-small bg-info" href="/storefront/<%= h acct[:account_id] %>">
+                  View storefront
+                </a>
+
+                <% if @platform_price_id.empty? %>
+                  <span class="text-sm secondary" title="Set STRIPE_PLATFORM_PRICE_ID in .env">
+                    (set a platform price to enable subscriptions)
+                  </span>
+                <% else %>
+                  <form method="post" action="/accounts/<%= h acct[:account_id] %>/subscribe">
+                    <button class="btn btn-small bg-success" type="submit">Subscribe to platform</button>
+                  </form>
+                  <form method="post" action="/accounts/<%= h acct[:account_id] %>/billing_portal">
+                    <button class="btn btn-small bg-muted" type="submit">Billing portal</button>
+                  </form>
+                <% end %>
+              </div>
+
+              <h3>Add a product</h3>
+              <form method="post" action="/accounts/<%= h acct[:account_id] %>/products">
+                <div class="field">
+                  <label for="name-<%= h acct[:account_id] %>">Name</label>
+                  <input id="name-<%= h acct[:account_id] %>" name="name" placeholder="Sticker pack" required>
+                </div>
+                <div class="field">
+                  <label for="desc-<%= h acct[:account_id] %>">Description (optional)</label>
+                  <input id="desc-<%= h acct[:account_id] %>" name="description" placeholder="Ten vinyl stickers">
+                </div>
+                <div class="field">
+                  <label for="price-<%= h acct[:account_id] %>">Price (USD)</label>
+                  <input id="price-<%= h acct[:account_id] %>" name="price" inputmode="decimal" placeholder="12.00" required>
+                </div>
+                <button class="btn btn-small" type="submit">Create product</button>
+                <% unless s[:ready_to_process] %>
+                  <p class="text-sm secondary" style="margin-bottom:0;">
+                    Products can be created before onboarding finishes, but nothing can be
+                    bought until <code>card_payments</code> is active.
+                  </p>
+                <% end %>
+              </form>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
+
+<h2>Platform fee</h2>
+<div class="card">
+  <p style="margin-top:0;">
+    Storefront sales are <strong>direct charges</strong> on the connected account with an
+    <code>application_fee_amount</code> of <strong><%= @fee_percent %>%</strong>. The
+    connected account is the merchant of record, funds settle to it, and the platform
+    never holds the money.
+  </p>
+  <p class="text-sm secondary" style="margin-bottom:0;">
+    Change with <code>PLATFORM_FEE_BPS</code> in <code>.env</code>.
+  </p>
+</div>

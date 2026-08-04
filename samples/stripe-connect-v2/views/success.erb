@@ -1,0 +1,41 @@
+<h1>Payment received</h1>
+
+<% if @error %>
+  <div class="callout warn">
+    <strong>Could not load the session.</strong> <%= h @error %>
+  </div>
+<% elsif @session %>
+  <div class="card">
+    <p style="margin-top:0;">
+      <span class="badge bg-success"><%= h @session[:payment_status] %></span>
+    </p>
+    <table>
+      <tr>
+        <th>Amount</th>
+        <td>
+          <% if @session[:amount_total] %>
+            $<%= format("%.2f", @session[:amount_total] / 100.0) %>
+            <%= h @session[:currency].to_s.upcase %>
+          <% else %>
+            &mdash;
+          <% end %>
+        </td>
+      </tr>
+      <tr><th>Session</th><td><code><%= h @session[:id] %></code></td></tr>
+      <tr><th>Sold by</th><td><code><%= h @account_id %></code></td></tr>
+    </table>
+  </div>
+
+  <div class="callout">
+    <strong>Do not treat this page as proof of payment.</strong>
+    <p class="text-sm secondary" style="margin-bottom:0;">
+      A buyer can close the tab before being redirected here, and this page is
+      reachable by anyone with the session ID. Fulfilment should key off the
+      <code>checkout.session.completed</code> or
+      <code>payment_intent.succeeded</code> webhook instead, which is the only signal
+      that arrives whether or not the browser came back.
+    </p>
+  </div>
+<% end %>
+
+<p><a href="/storefront/<%= h @account_id %>">Back to the storefront</a></p>

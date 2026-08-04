@@ -1,0 +1,28 @@
+# frozen_string_literal: true
+
+# Deliberately SEPARATE from the Rails app's Gemfile.
+#
+# The main app pins `stripe` to 11.7.0, which has no `.v2` namespace and no
+# `parse_thin_event` — so none of the V2 Core Accounts API used by this sample
+# exists there. Upgrading the app's pin from 11 to 19 is eight majors of breaking
+# changes across HCB's ledger, Issuing and payout code (CLAUDE.md Rule 3 forbids
+# touching the ledger engine, Rule 8 wants upstream merges to stay possible).
+#
+# Keeping this sample on its own Gemfile means it can use the current SDK without
+# putting a single line of the shipped integration at risk.
+source "https://rubygems.org"
+
+ruby ">= 3.2"
+
+# V2 Core Accounts, V2 Account Links and thin-event parsing all require a modern
+# SDK. 19.4.0 is the latest at the time of writing.
+gem "stripe", "~> 19.4"
+
+# Tiny web layer so the sample is readable top to bottom rather than spread across
+# a framework.
+gem "sinatra", "~> 4.1"
+gem "puma", "~> 6.4"
+gem "rackup", "~> 2.2"
+
+# Loads .env so secrets never end up in the source.
+gem "dotenv", "~> 3.1"

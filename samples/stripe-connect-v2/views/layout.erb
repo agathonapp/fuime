@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connect sample</title>
+    <%#
+      Standalone CSS on purpose. The sample cannot load the Rails app's compiled
+      stylesheet, so this is a deliberately small approximation of its look: an
+      accent button, muted secondary text, and status badges in the same colour
+      language (success / info / error / muted).
+    %>
+    <style>
+      :root {
+        --accent: #5a4fcf;
+        --success: #1f8a4c;
+        --info: #2a6fb0;
+        --error: #b3261e;
+        --muted: #6b7280;
+        --border: #e3e5e8;
+        --bg: #fbfbfc;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem 1rem 4rem;
+        background: var(--bg);
+        color: #16181d;
+        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+      .wrap { max-width: 60rem; margin: 0 auto; }
+      h1 { font-size: 1.7rem; margin: 0 0 .25rem; }
+      h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; }
+      h3 { font-size: 1rem; margin: 1.25rem 0 .5rem; }
+      a { color: var(--accent); }
+      .secondary { color: var(--muted); }
+      .text-sm { font-size: .875rem; }
+
+      .card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: .6rem;
+        padding: 1.1rem 1.25rem;
+        margin-bottom: 1rem;
+      }
+
+      .btn {
+        display: inline-block;
+        border: 0;
+        border-radius: .4rem;
+        padding: .5rem .9rem;
+        font-size: .95rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent);
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .btn:hover { filter: brightness(1.08); }
+      .btn-small { padding: .3rem .6rem; font-size: .82rem; }
+      .btn.bg-info { background: var(--info); }
+      .btn.bg-success { background: var(--success); }
+      .btn.bg-error { background: var(--error); }
+      .btn.bg-muted { background: var(--muted); }
+
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: .1rem .55rem;
+        font-size: .75rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--muted);
+      }
+      .badge.bg-success { background: var(--success); }
+      .badge.bg-info { background: var(--info); }
+      .badge.bg-error { background: var(--error); }
+
+      .field { margin-bottom: .75rem; }
+      .field label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: .2rem; }
+      .field input, .field textarea {
+        width: 100%;
+        max-width: 26rem;
+        border: 1px solid var(--border);
+        border-radius: .35rem;
+        padding: .45rem .55rem;
+        font: inherit;
+        font-size: .95rem;
+      }
+
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: .55rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+
+      .callout {
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--info);
+        border-radius: .4rem;
+        background: #fff;
+        padding: .9rem 1.1rem;
+        margin-bottom: 1.25rem;
+      }
+      .callout.warn { border-left-color: var(--error); }
+      .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+      code { background: #f1f2f4; padding: .1rem .3rem; border-radius: .25rem; font-size: .85em; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <%= yield %>
+    </div>
+  </body>
+</html>

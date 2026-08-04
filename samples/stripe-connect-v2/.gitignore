@@ -1,0 +1,9 @@
+# Secrets. The repo root .gitignore already covers `.env`; repeated here so this
+# directory is safe if it is ever copied out on its own.
+.env
+
+# Resolved per machine. A sample should not pin a lockfile, so that `bundle install`
+# picks up SDK fixes without an edit here.
+Gemfile.lock
+.bundle/
+vendor/bundle/

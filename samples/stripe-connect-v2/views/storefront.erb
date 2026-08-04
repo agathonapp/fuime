@@ -1,0 +1,77 @@
+<%#
+  The customer-facing page for ONE connected account.
+
+  The account ID is in the URL only to keep the sample to one moving part. See the
+  comment above the `/storefront/:account_id` route in app.rb for why that is not
+  shippable, and why it matters more than usual for this repo specifically.
+%>
+
+<h1><%= h(@status[:display_name] || "Storefront") %></h1>
+<p class="secondary text-sm">
+  Selling through Connect. Payment is taken by this business directly.
+</p>
+
+<% if @load_error %>
+  <div class="callout warn">
+    <strong>Could not load products.</strong> <%= h @load_error %>
+  </div>
+<% elsif !@status[:ready_to_process] %>
+  <%#
+    The honest branch. Rendering a Buy button that checkout would refuse puts a dead
+    button on a public URL the owner has shared with real customers.
+  %>
+  <div class="callout warn">
+    <strong>This business can't take payments yet.</strong>
+    <p class="text-sm secondary" style="margin-bottom:0;">
+      The owner still needs to finish verification with Stripe
+      (<code>card_payments: <%= h @status[:card_payments_status] %></code>).
+    </p>
+  </div>
+<% end %>
+
+<% if @products.empty? %>
+  <div class="card secondary">Nothing for sale yet.</div>
+<% else %>
+  <% @products.each do |product| %>
+    <% price = product[:default_price] %>
+    <% amount = price.is_a?(Hash) ? price[:unit_amount] : nil %>
+    <div class="card">
+      <div class="row" style="justify-content: space-between; align-items: flex-start;">
+        <div style="flex:1 1 18rem;">
+          <strong><%= h product[:name] %></strong>
+          <% if product[:description] %>
+            <div class="text-sm secondary"><%= h product[:description] %></div>
+          <% end %>
+        </div>
+        <div style="text-align:right;">
+          <% if amount %>
+            <div style="font-size:1.15rem; font-weight:700;">
+              $<%= format("%.2f", amount / 100.0) %>
+            </div>
+            <% if @status[:ready_to_process] %>
+              <form method="post" action="/storefront/<%= h @account_id %>/checkout">
+                <input type="hidden" name="price_id" value="<%= h price[:id] %>">
+                <input type="hidden" name="amount_cents" value="<%= amount %>">
+                <input type="hidden" name="product_name" value="<%= h product[:name] %>">
+                <button class="btn btn-small" type="submit">Buy</button>
+              </form>
+            <% else %>
+              <span class="badge">Unavailable</span>
+            <% end %>
+          <% else %>
+            <%#
+              A product with no default price cannot be bought. Saying so beats
+              rendering a button that fails at checkout.
+            %>
+            <span class="badge">No price set</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+<% end %>
+
+<p class="text-sm secondary">
+  Test card <strong>4242 4242 4242 4242</strong>, any future expiry, any CVC.
+</p>
+<p><a href="/">Back to the platform dashboard</a></p>
