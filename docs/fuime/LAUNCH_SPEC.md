@@ -32,20 +32,86 @@ Nobody signs up until every box is ticked.
 - [ ] Identity verification vendor contracted and integrated (§2.2)
 - [ ] Sending domain verified; DKIM/SPF/DMARC passing (§3.4)
 
-**Engineering**
+**Engineering** *(status updated 2026-08-04 — see §0.5)*
 - [ ] All §3 credentials set in Render for **both** `fuime-web` and `fuime-worker`
-- [ ] S3 configured — receipts currently die on every deploy (§3.2)
+- [x] S3 configured — boot now refuses to start on `:local` (§3.2)
 - [ ] Error tracking live with alerting (§3.5)
-- [ ] Payments wired end to end and tested with real cards (§4.1)
-- [ ] Guardian identity verification blocking activation (§4.2)
+- [~] Payments wired end to end — **built and unit-tested, never run against Stripe** (§4.1).
+      Not tickable until a `stripe listen` pass in test mode, then real cards.
+- [~] Guardian identity verification — **collection exists, verification does not** (§4.2).
+      No vendor decision gate, so activation is not yet blocked on it.
 - [ ] Data export + deletion working (§4.6)
-- [ ] Full test suite green, with a recorded baseline
+- [~] Test suite green with a recorded baseline — **573 examples, 1 known failure** on the
+      Fuime subset (`known-failures.md`). The full repo suite has not been run.
 - [ ] Backup restore rehearsed, not just configured (§4.9)
+- [ ] **Stripe's three open questions answered in writing** (`LEGAL_RESEARCH.md`). Gates the
+      card path entirely, and one of them gates payouts.
 
 **Operational**
 - [ ] Support inbox staffed with a written response-time commitment
 - [ ] Incident runbook: who is called, in what order, for a money bug
 - [ ] Someone on call who can freeze payments within minutes
+
+---
+
+## §0.5. Where we actually are — updated 2026-08-04, after PR #28
+
+The checklist above was written when none of the money code existed. It now does, in test
+mode. This section is the honest position so nobody re-derives it.
+
+### Built and tested (573 examples, 1 known failure)
+
+A venture can be onboarded onto a **guardian-owned Stripe connected account**, publish a
+storefront, take a **direct charge**, and have that charge land on the ledger with all
+three deductions visible (gross, Fuime's application fee, Stripe's processing fee). A teen
+can **request a payout**, a guardian approves it, and Stripe sends it to the family's own
+bank. Refunds, disputes, failed payouts and cancelled payouts all reverse correctly. The
+tax tracker counts what it should and excludes what it should.
+
+Cards exist behind a flag: a **category allowlist** enforcing business-purchases-only, the
+guardian as **Accountholder** and the teen as **Authorized User**, freeze available to the
+teen but unfreeze only to the guardian, and card spend flowing back onto the ledger.
+Guardian identity collection exists as **collect-and-forward** — values go straight to
+Stripe, the ID image goes to Stripe's Files API, and Fuime persists only the consent record.
+
+**Fuime is never in the flow of funds.** That is the single most important property and it
+is now structural rather than aspirational.
+
+### The one sentence that matters most
+
+**Nothing here has been exercised against Stripe, in any mode.** Every webhook payload
+shape and API parameter set was written from Stripe's documentation. Two of the three bugs
+PR #28 fixed were invisible until code was actually run.
+
+### Specifically unverified, in order of how badly it hurts to be wrong
+
+1. **`payouts.schedule.interval = manual`.** If Stripe refuses it on a Stripe-liable
+   account, the guardian approval gate is decorative *and* `Stripe::Payout.create` fails
+   outright. The entire payout feature rests on this.
+2. **Issuing underwriting.** Whether a teen sole-prop with a guardian representative is a
+   supported Issuing use case, or gets classed as consumer. Can invalidate the whole card
+   path. This is open question 3 in `LEGAL_RESEARCH.md`.
+3. **A mixed `losses.payments` fleet.** The `:cards_enabled` profile assumes a platform can
+   run Stripe-liable and application-liable accounts side by side. That is an
+   **inference**, not a documented Stripe pattern.
+4. Every webhook payload shape, collectively.
+
+### What is deliberately inert
+
+Cards deploy dead: gated behind `Flipper.enabled?(:fuime_cards_2026_08_04, event)`, off by
+default, and unreachable for every existing venture because Stripe's `controller` property
+is create-only and all current accounts are payments-only. A `:cards_enabled` account puts
+**Fuime on the hook for every chargeback on a minor's business**, which is a
+capitalisation decision, not a product toggle.
+
+### Corrected understanding worth carrying forward
+
+Earlier planning assumed a minor's age was the obstacle to cards. It is not. Stripe's
+Issuing cardholder floor is **13**, and Celtic Bank's Authorized User Terms carry **no
+minimum age at all**. What is actually restricted is *what the card buys* — "you may not
+use your card for personal, family or household purposes" — which is why the enforcement
+lives in a category allowlist rather than in an age check. Nothing needed to be withheld
+from Stripe; the compliant structure was more permissive than the assumption.
 
 ---
 
@@ -357,28 +423,76 @@ pre-hardening baseline.
 
 ---
 
-## §5. Sequence
+## §5. Sequence — rewritten 2026-08-04
 
-**Phase A — decisions (weeks 1–4, mostly not engineering)**
-Counsel on §1.1. Form the entity. Draft the agreements. Talk to Stripe. Choose an
-identity vendor. Get insurance quotes. Engage a CPA.
-*Engineering in parallel:* S3 (stop the data loss), error tracking, restore the
-orphaned fixes, fix `/privacy`, strip unused credentials.
+The original sequence assumed the money code did not exist. It does. What changed is that
+**engineering is no longer the critical path**, and the plan has to say so rather than
+generate more code to feel productive.
 
-**Phase B — build to the decision (weeks 4–10)**
-Payments end to end against the chosen structure. Guardian identity verification.
-Parent dashboard. Data export and deletion. Tax Tracker per CPA. Security review.
+### Step 0 — This week, and it is one engineer-day
 
-**Phase C — prove it (weeks 10–12)**
-Full suite green. Penetration test. Restore drill. Load check. Runbooks.
-**Closed beta: 5–10 families you can call by name.** Watch every transaction by hand.
+**Run `stripe listen` against test mode and drive the whole flow by hand.** Onboard an
+account, take a charge, request and approve a payout, trigger a refund. This is first
+because it is cheap, because it validates roughly 3,000 lines of
+documentation-derived assumptions, and because two of the three bugs in PR #28 were
+invisible until code ran. Everything below is worth less until this is done.
 
-**Phase D — launch**
-Open signups slowly. Cap the number of businesses at first. Have someone on call.
+Expect it to find things. Fix them, then re-baseline `known-failures.md`.
 
-Realistically **10–14 weeks**, and Phase A gates everything. If §1.1 comes back as
-"licences required," the timeline becomes years and the product needs rethinking —
-which is exactly why that memo is the first deliverable.
+### Step 1 — In parallel, start the two things with the longest lead times
+
+Both are letters and conversations, not commits, and both can sit for weeks with no
+warning:
+
+1. **The §1.1 counsel memo.** Still the gate on everything, but the question is now much
+   narrower and cheaper to answer than it was: *"Fuime never receives, holds, or directs
+   customer funds; charges settle directly to a guardian-owned Stripe account and Fuime
+   takes a Connect application fee. Confirm this is not money transmission in our
+   operating states, and confirm the guardian-as-principal agreement structure."* That is
+   a reviewable memo rather than an open-ended research project.
+2. **Stripe, in writing.** Disclose the teen-user model (§2.1) *and* get answers to the
+   three questions in `LEGAL_RESEARCH.md`. Do this before any further card work — a "no"
+   on Issuing underwriting deletes a feature, and it is better to learn that from an email
+   than from a rejected account belonging to a real family.
+
+### Step 2 — Engineering that does not depend on either answer
+
+Ordered by what blocks a real user soonest:
+
+- **Error tracking with alerting** (§3.5). Still absent. Taking real money without it means
+  a family's failed payout is discovered by the family.
+- **The agreements as versioned, hash-recorded documents** (§1.3). The plumbing already
+  exists and is proven: `Guardianship` records version + IP + UA, and the verification
+  disclosure is content-hashed. The documents themselves do not exist. Counsel writes the
+  words; wiring them in is small.
+- **Data export and deletion** (§4.6). COPPA-blocking, and it does not depend on the
+  money structure at all.
+- **Parent dashboard** (§4.3). The guardian can currently see a venture and approve
+  payouts, but there is no one place that answers "how is my kid's business doing?" This
+  is the value proposition, and it is the cheapest remaining differentiator.
+- **Stripe processing fee on the pooled simulator.** Only the Connect path posts it. Low
+  priority, but the asymmetry will confuse someone.
+
+### Step 3 — Only after Stripe answers on Issuing
+
+Guardian identity **verification** (§4.2), meaning a vendor decision gate rather than
+today's collect-and-forward, and then cards to a real cohort. Both are wasted work if
+underwriting says consumer.
+
+### Step 4 — Prove it
+
+Full repo suite green (not just the Fuime subset). Restore drill. Security review. Then a
+**closed beta of 5–10 families you can call by name**, with every transaction watched by
+hand. Under-13 stays refused until the COPPA program in §1.4 actually exists — that is a
+funded compliance workstream, not a validation change.
+
+### Honest timeline
+
+**6–10 weeks**, down from 10–14, and the reduction is entirely because Phase B is largely
+built. The floor is set by the counsel memo and by Stripe's response, neither of which
+goes faster because engineering is ready. If §1.1 comes back needing licences, the money
+architecture already survives — Fuime is not in the flow of funds — which is precisely why
+that structure was worth building before the answer arrived.
 
 ---
 
@@ -393,8 +507,22 @@ uploads and **survives the next deploy**. The tax page shows an honest estimate 
 CPA-approved disclaimer. The parent can revoke consent, export everything, or delete
 it. If something breaks at 2am, someone gets paged.
 
-None of that is true today. Most of it is a few weeks of engineering. The part that is
-not — §1.1 — is the part to start on tomorrow morning.
+**Updated 2026-08-04:** most of that paragraph is now true in test mode. A teen is parked
+until a guardian is invited; the guardian accepts a versioned agreement with IP, timestamp
+and version recorded; the teen can create a business, publish a storefront, take a card
+payment, and see it on the ledger; the money settles to an account the parent legally owns;
+both can see it; receipts survive a deploy; the tax page shows an honest estimate.
+
+Four things in it are still false, and they are the remaining list:
+
+1. The guardian **verifies their identity** — collection exists, verification does not.
+2. The agreement they read is **written by counsel** — the plumbing is real, the words are not.
+3. The parent can **export or delete everything** — not built.
+4. **Someone gets paged** when it breaks at 2am — no error tracking, no on-call.
+
+And one thing that paragraph never said, which now matters more than any of them: none of
+it has run against Stripe. The §1.1 memo is still the gate on real money, but it is no
+longer the gate on knowing whether the code works.
 
 ---
 

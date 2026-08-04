@@ -116,6 +116,39 @@ L8. **fuime.com must describe the product that exists.** The site currently clai
 
 ---
 
+## CURRENT POSITION — updated 2026-08-04, after PR #28
+
+**Phase 0 milestones 0–6 below are DONE.** They are kept as the record of how the fork was
+de-risked, and Rules 1–8 above still bind every session. Do not start at Milestone 0.
+
+**Where the work actually is now: `docs/fuime/LAUNCH_SPEC.md` §0.5 and §5.** Read
+`docs/fuime/README.md` first — it says which of the eight docs to trust for what, and which
+one is history rather than status.
+
+What exists: guardian-owned Stripe connected accounts, direct charges reaching the ledger
+with all three deductions visible, payouts gated on guardian approval, cards behind a
+default-off flag with a business-purchases-only category allowlist, and guardian identity
+collection that forwards to Stripe while persisting only the consent record.
+
+**The single most important caveat: none of it has been exercised against Stripe, in any
+mode.** Every API parameter shape is documentation-derived. The next engineering task is a
+`stripe listen` pass in test mode, and it outranks writing more features.
+
+**Engineering is no longer the critical path.** The gates are a counsel memo on §1.1 and
+three unanswered questions to Stripe. Adding code does not move either.
+
+Two corrections to earlier assumptions, both worth carrying:
+
+- **A minor's age is not the obstacle to cards.** Stripe's Issuing cardholder floor is 13
+  and Celtic's Authorized User Terms have no minimum age. What is restricted is what the
+  card *buys*, which is why enforcement is a category allowlist and not an age check.
+- **L1 is settled in direction.** The pooled model is a test-mode simulator only;
+  production is direct charges on guardian-owned accounts and Fuime is never in the flow of
+  funds. Counsel sign-off remains outstanding, but the architecture no longer depends on
+  the answer.
+
+---
+
 ## MILESTONE 0 — It runs on my machine (do nothing else until this is done)
 
 Objective: HCB boots locally with seed data; you can log in and click through.
@@ -239,6 +272,8 @@ Objective: prove the new money model feeds the old ledger. Spike = learning, not
 
 ## Session ritual (every Claude Code session)
 
+0. Read `docs/fuime/README.md` and the CURRENT POSITION block above before anything else.
+   Several docs here describe blockers that have since been closed; the README says which.
 1. Read this file + `docs/fuime/SETUP_NOTES.md` + `UPSTREAM_DIVERGENCE.md`.
 2. State which milestone you're on and what "done" means before writing code.
 3. Work on a branch named `fuime/m<N>-<slug>`.

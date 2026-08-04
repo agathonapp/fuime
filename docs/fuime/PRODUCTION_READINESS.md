@@ -10,6 +10,30 @@ that and "real teenagers, real people" is the subject of this document.
 
 ---
 
+> ## ⚠️ THIS DOCUMENT IS HISTORY, NOT STATUS
+>
+> The audit below is dated **2026-08-01**. Its findings are still the clearest write-up of
+> *why* each control in the codebase exists, and its section numbers (§1.4, §2.1, …) are
+> cited from code comments and should never be renumbered.
+>
+> **Its "still open" list is out of date.** PR #28 (2026-08-04) closed several items it
+> lists as blocking, and moved one it lists as unresolved:
+>
+> | It says | Now |
+> |---|---|
+> | §2.1 "the product doesn't take payments yet" | **Built.** `PaymentLinkService` is called from `Fuime::CheckoutsController`, the storefront Pay button works, and direct charges reach the ledger via `Fuime::ConnectPaymentRecorder`. |
+> | §1.5 "no legal structure for holding other people's money" | **Architecturally settled, not legally signed off.** The pooled model is retired to a test-mode simulator; production is Stripe Connect direct charges on guardian-owned accounts, so Fuime is never in the flow of funds. Counsel sign-off is still outstanding — see LAUNCH_SPEC §1.1. |
+> | §1.2 "nothing verifies the guardian" | **Half closed.** A collection flow now exists (`Fuime::RequirementCollectionService`) that forwards identity details and an ID image to Stripe while storing only the consent record. No verification *vendor* or decision gate is integrated, so the storefront badge still honestly says "parent-signed", not "parent-verified". |
+> | §2.7 "68 specs" | **573 examples**, 1 known failure. |
+>
+> Items it lists as open that remain open: **§1.6 CPA review**, **§2.5 error tracking**, and
+> the ToS / privacy policy / guardian agreement, none of which exist.
+>
+> **For current status and what is left, read `LAUNCH_SPEC.md`.** This file is kept because
+> deleting the reasoning would lose more than the stale summary costs.
+
+---
+
 ## STATUS — 2026-08-01, after the hardening pass
 
 Branch `fuime/production-hardening`. See `UPSTREAM_DIVERGENCE.md` for the change-by-change log.
