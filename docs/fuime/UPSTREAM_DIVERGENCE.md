@@ -1883,3 +1883,830 @@ has no `endpoint` key at all; with it set to an R2 host,
 `ActiveStorage::Service.configure` builds an `S3Service` whose client reports
 that endpoint and `force_path_style: true`. The service name stays `amazon` —
 renaming it would be a migration of every deployment's env for no gain.
+
+---
+
+## 2026-08-03 — P0: say only what is true (legal review remediation)
+
+Branch `fuime/p0-honest-posture`. Prompted by `docs/fuime/LEGAL_RESEARCH.md`, a
+seven-workstream primary-source review of whether Fuime can operate at all in
+the U.S. Its two structural findings are recorded in `CLAUDE.md` as constraints
+L1–L8; this entry covers only the copy and disclosure work, which needed no
+counsel and no architecture change.
+
+The review's finding that mattered most for this pass is narrow and cheap to
+fix: **Fuime was describing a product it does not have.** Three separate
+surfaces asserted capabilities and relationships that do not exist in the
+codebase. None of that requires a lawyer to correct — it requires saying less.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Guardian invite no longer promises the parent will "verify their identity" | Fuime performs no identity verification. `Guardianship#accept!` records a checkbox, timestamp, IP and user agent — the Guardian Agreement §6 says so in writing, and the storefront badge was already downgraded to "Guardian on account" for this reason. The promise was the defect, not the missing feature. Now names what accepting actually is, and links the agreement. | `app/views/guardianships/new.html.erb` |
+| Standing status disclosure added to the app footer | Fuime shows balances, a ledger and cards — the presentation that invites an assumption of a bank and deposit insurance. 12 CFR 328.102(b)(3)(ii) (binds non-banks since 2025-01-01, untouched by the 2025–26 amendments, which reached Subpart A signage only) makes the *omission* of information needed to prevent that assumption the violation. Stated unconditionally, and in the always-visible block rather than `.footer-extras`, for the same reason the legal links are. | `app/views/application/_footer.html.erb` |
+| Disclosure duplicated into the public storefront | The storefront renders through the no-nav layout branch, which never renders `application/_footer`. It is also the one page where a stranger is asked for a card number, so it is where an unrebutted assumption costs most. A refactor that unifies the layouts should delete the duplicate. | `app/views/fuime/storefronts/show.html.erb` |
+| "business account" → "venture" across guardian, onboarding and mailer copy | "Your business account" asserts the minor holds a deposit-style account; no bank account exists, and under the intended architecture the account is the guardian's. The phrasing also inverted ownership — "their account, with you on it" misdescribes who carries the obligations. The guardian is the signer and responsible adult; the minor operates. | `app/views/guardianship_mailer/{invite,accepted}.html.erb`, `app/views/user_mailer/onboarded.html.erb`, `app/views/event/applications/_begin.html.erb`, `app/views/guardianships/show.html.erb`, `app/controllers/concerns/fuime/guardianship_enforcement.rb` |
+| FAQ no longer says an under-18 "cannot sign a contract on your own" | Not what the law says. A minor *can* sign; the contract is voidable at the **minor's** option (infancy doctrine — Cal. Fam. Code §§ 6700/6710, and *Doe v. Epic Games*, 435 F. Supp. 3d 1024 (N.D. Cal. 2020), where a minor's disaffirmance defeated an arbitration clause). That asymmetry is the entire reason the guardian structure exists, so the answer now teaches it instead of flattening it into a false absolute. | `app/views/static_pages/faq.html.erb` |
+| Marketing spec pins bank-partner and insurance claims separately | `spec/requests/marketing_spec.rb` already pinned the disabled funders pages against the 501(c)(3)/EIN claims. It did not pin the *banking* claims in the same copy ("held at Fuime's banking partners, Column N.A. and The Business Bank, and are FDIC-insured through the IntraFi network"), which are the class the FDIC polices directly. Re-enabling those pages now trips on both. | `spec/requests/marketing_spec.rb` |
+| New spec pins the status disclosure itself | The failure mode is silent: nobody notices a missing footer paragraph until it is quoted back at them. Asserts the load-bearing clauses (not the full paragraph, which will be edited) on `/faq`, `/terms` and a public storefront, plus the inverse — that the storefront makes no affirmative insurance claim. | `spec/requests/fuime/status_disclosure_spec.rb` (new) |
+
+**Not changed, deliberately.** The disabled `/for/funders` marketing surface and
+the fiscal-sponsorship / verification letters keep their FDIC and 501(c)(3) copy
+in the tree. Both are unreachable *and* pinned by specs that go red on
+re-enabling (`marketing_spec.rb`, `documents_letters_spec.rb`), which is two
+locks rather than one; deleting ~1,600 lines of upstream marketing would also
+cost the ability to diff against `hackclub/hcb`. CLAUDE.md Rule 2.
+
+**Verification.** rspec could not be run: `bundle exec rspec` reports the
+executable missing and the Docker daemon is down, so the container path in
+`known-failures.md` was unavailable too. This is the same toolchain gap that
+file already documents. Substituted for it:
+`ruby -c` on every changed `.rb` (all pass); a grep sweep of `app/views`,
+`app/mailers` and the Fuime helpers for `banking|neobank|checking|savings|FDIC`,
+whose only remaining hits are the intended disclaimers, factual statements about
+*Stripe's* partners, and the two disabled-and-pinned surfaces above. ERB was
+**not** verified by `ruby -rerb` — stdlib ERB rejects the multi-line `<%# %>`
+comments this codebase uses throughout, and an unedited file from `HEAD` fails
+the same check, so that signal is noise. Rails uses Erubi. **The new and
+amended specs have not been executed; run them in Docker before merging.**
+
+### Same pass — the marketing site and the brief it was built from
+
+`site/` is a separate Node service on `fuime.com` (the Rails app is on
+`app.fuime.com`), and it described a **materially different product** from the
+one the code implements: Stripe Connect and "we never hold your money" (no
+Connect code exists), a parent ID check with "Stripe holds your ID, not fuime"
+(no verification of any kind exists), and 7% + $15/mo (the app charges 4%, no
+monthly fee). This was the largest single divergence in the repo.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Connect / no-custody architecture restated as roadmap, not fact | It is the committed plan (CLAUDE.md L1) but is not built. Pages now say what happens today — private beta, Stripe test mode, no real money — and label the target architecture as future. | `site/index.html`, `site/parents.html`, `site/pricing.html` |
+| ID-check claims removed | "One ID check at signup. That is the whole ask." and a whole card headed "Stripe holds your ID, not fuime" described a KYC flow that does not exist. Replaced with what acceptance actually is. | `site/parents.html` |
+| Pricing aligned to the plan lineup, with Stripe's cut disclosed | Starter $0 / Standard 7% / Pro ~$15/mo + 4% / Founders 0%, and Stripe's ~2.9% + 30¢ named wherever a fee appears. A headline rate that hides the processing fee is the hidden-fee pattern the FTC pleaded against Dave Inc. (2024). Subscriptions bill the guardian — a minor's payment authorisation is voidable, the guardian's is not. | `site/pricing.html`, `site/index.html`, `site/style.css` |
+| **`site/docs/BRIEF.md` rewritten — the root cause** | The brief is the file "every worker on this site reads first… It is the contract", and it asserted the target architecture in the present tense. The site was built faithfully *from* it, which is how the false claims got there. Fixing only the HTML would have let the next contributor regenerate them. It now separates **Shipped today** from **Roadmap, and must be labelled as such**, and carries the pricing and ownership rules. | `site/docs/BRIEF.md` |
+
+**Verification.** Grep sweep over `site/` and `app/` for `one ID check`,
+`Stripe holds your ID`, `government ID you upload`, `7% of collections`,
+`verify their identity`, and present-tense `never hold your money` returns no
+false claims; the only survivors are the new pricing copy and explicitly
+labelled roadmap statements. The status disclosure now appears on
+`site/{index,parents,pricing}.html`, the app footer, and the storefront. The
+site is static HTML with no build step or test suite.
+
+#### Known gap this pass created, deliberately left open
+
+Aligning the site to the agreed pricing lineup (Starter / Standard 7% / Pro
+$15/mo + 4% / Founders 0%) moved the site **ahead of the app**, which is the same
+class of divergence this pass existed to close — just pointing the other way.
+The app today ships `Event::Plan::Standard` at **4%**
+(`Event::Plan::FALLBACK_REVENUE_FEE = 0.04`), a `Founders` plan at 0%, and has
+**no Starter or Pro class at all**; `Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`
+is likewise `4`.
+
+Why it was not fixed here: that constant is stamped into Stripe metadata, posted
+as its own negative ledger line, and read back by the proportional
+refund/chargeback reversal logic (`PaymentWebhookHandler#refund_platform_fee`).
+Three interacting money paths, and **the test suite could not be run this
+session** (see the verification note above). Changing fee arithmetic with no way
+to execute a spec is not a trade worth making for copy parity.
+
+Why it is survivable in the meantime: the site states "nothing is billed during
+the private beta" in its metadata, its hero chip and its pricing FAQ, and the app
+bills nobody — Stripe runs in test mode. The published lineup is therefore a
+forward price list for a product that is not charging, not a
+misdescription of what anyone is paying.
+
+**Top P1 item, before anyone is billed:** move the plan lineup to the published
+tiers — `app/models/event/plan.rb` (`FALLBACK_REVENUE_FEE`),
+`app/models/event/plan/standard.rb`, new `Starter` and `Pro` classes,
+`app/services/fuime/payment_link_service.rb` (`FUIME_PLATFORM_FEE_PERCENT`) —
+with specs, in a container where rspec runs. Preserve the existing rule that a
+retired plan stays selectable for an org already on it, so nothing silently
+migrates. Subscription billing must charge the guardian, never the minor.
+
+---
+
+## 2026-08-03 — Guardian oversight: implementing a promise the agreement already made
+
+Same branch. This is platform work, not copy: §3 of the guardian agreement
+("You can see everything") tells the signing adult they will have visibility
+into the minor's "transactions, balances, and the people on their team" and that
+it **"cannot be turned off by the minor"** — and nothing implemented it.
+`guardianships_as_guardian` was rendered in exactly one template, the *admin*
+user page. A guardian's only authenticated surfaces were the invite, the
+agreement record, revoke and resend. `EventPolicy#reader?` carried a comment
+saying "a guardian needs to see the ledger they are responsible for", but it
+resolved solely through `OrganizerPosition`, and accepting a guardianship creates
+none — so the predicate was false for every guardian who ever signed.
+
+### The design decision CLAUDE.md Milestone 4 asked to have recorded
+
+Milestone 4 left this open: "Implement as a new OrganizerPosition role if the map
+shows that's clean; otherwise a parallel association."
+
+**Chosen: derive guardian read access from the `Guardianship` record, not from an
+OrganizerPosition granted at acceptance.** The deciding clause is "cannot be
+turned off by the minor". An organizer position is org membership, and the minor
+is a *manager* of their own venture (the column defaults to `role: 100`,
+manager) — so they could delete the row and switch off the single guarantee their
+parent was asked to rely on when they signed. Revoking a *guardianship* is
+already correctly restricted to the guardian and admins
+(`GuardianshipPolicy#revoke?` excludes the minor deliberately). Deriving the
+access from the guardianship makes the promise structurally true rather than
+true-by-convention. It also avoids listing a parent as a team member on the
+venture's own team surfaces, which they are not.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `Guardianship.overseeing_event(user, event)` scope | "Is this user entitled to oversee this venture?" — active guardianships held by the user over a minor with a live position on the event. Join is scoped to `deleted_at: nil` because positions are `acts_as_paranoid`, so a removed team member's guardian loses oversight along with them. | `app/models/guardianship.rb` |
+| `User#guardian_of_event?`, `#active_wards`, `#overseen_events` | `wards` spans pending and revoked guardianships, which is not what any authorization decision wants; `active_wards` is the scoped version. | `app/models/user.rb` |
+| `EventPolicy#reader?` also grants `guardian_reader?` | The mechanism the existing comment described but did not have. | `app/policies/event_policy.rb` |
+| `GET /guardian` → `guardianships#index` + view | The guardian's overview: wards, their ventures, settled balances, links into the ledger — and, in the other direction, a teen's view of their own invite so chasing an unresponsive parent no longer requires keeping the email. `:index` on the existing resource rather than a new route, because `:show` is token-addressed and the two never collide. | `config/routes.rb`, `app/controllers/guardianships_controller.rb`, `app/views/guardianships/index.html.erb` |
+| Nav entry, shown only to users with a guardianship either way | An adult running their own venture sees no stray parental furniture. | `app/views/application/_user_menu.html.erb` |
+
+**Read-only by construction.** `member?` and `manager?` do not consult
+`guardian_reader?`, so a guardian can see a venture and act on nothing in it —
+oversight is not participation, and a guardian who wants to intervene revokes.
+Verified by auditing all 27 `reader?` call sites in `EventPolicy`: every
+reader-gated predicate is a view (`show?`, `team?`, `balance_by_date?`,
+`reimbursements?`, …). The one that reads write-adjacent, `new_transfer?`, is the
+*form*; the write is `create_transfer?`, which requires `admin_or_manager?` — and
+`disbursements` writes are independently blocked by `Fuime::DisabledModules`.
+The guardianship-enforcement filter already exempts anyone who
+`permitted_to_operate_business?`, so an adult guardian is not bounced, while a
+not-yet-onboarded stub guardian can still reach `/guardian` because
+`guardianships` is on its allowlist.
+
+Balances shown are `settled_balance_cents` only. Fuime posts incoming payments as
+**unfronted** pending transactions (`fronted: false`), so a figure that counted
+them would tell a parent money is available that their teen cannot spend.
+
+**Verification.** Still no runnable suite (see the note above — no rspec
+executable, Docker daemon down). `ruby -c` passes on all eight changed Ruby
+files. Two new spec files were written and **have not been executed**:
+`spec/policies/event_policy_guardian_spec.rb` (the §3 contract: active grants
+read, pending does not, revocation takes effect immediately, an unrelated adult
+gets nothing, and the two examples pinning that the minor cannot turn it off) and
+`spec/controllers/guardianships_controller_index_spec.rb` (controller-spec style
+with `SessionSupport` + `render_views`, matching this repo's convention for
+authenticated coverage). **Run both before merging.**
+
+---
+
+## 2026-08-03 — Stripe Connect: ending the pooled-account model
+
+Same branch. This is the change CLAUDE.md L1 exists to require. Money-in no longer
+lands in Fuime's own Stripe balance; each venture gets a **connected account the
+guardian owns**, Stripe holds and settles the funds, and Fuime takes its cut as a
+platform fee. Fuime is out of the flow of funds, which is what removes the
+money-transmission exposure (18 U.S.C. § 1960) and the Stripe ToS violation the
+pooled model carried.
+
+### The account configuration, and why every field is forced
+
+```ruby
+controller: {
+  losses:                 { payments: "stripe" },
+  fees:                   { payer: "account" },
+  requirement_collection: "stripe",
+  stripe_dashboard:       { type: "none" }
+}
+```
+
+`losses.payments = stripe` is the choice; the rest follows from it. Stripe
+documents `requirement_collection = application` as **incompatible** with
+`losses.payments = stripe`, so choosing "Stripe eats negative balances" forces
+"Stripe collects the KYC" — which is also a privacy win: the guardian's SSN and
+identity documents go to Stripe and never enter Fuime's database.
+`stripe_dashboard.type = none` keeps the guardian inside Fuime. This combination
+is permitted and is Stripe's own recommended default for platforms new to
+embedding payments.
+
+**The unavoidable consequence, documented in the flow's copy rather than hidden:**
+because requirement collection is Stripe's, onboarding must use embedded
+components, and the guardian hits one Stripe-owned authentication popup inside the
+otherwise-embedded form. The flag that would remove it
+(`disable_stripe_user_authentication`) requires `requirement_collection =
+application`, i.e. owning every chargeback. The trade is obviously right for a
+pre-launch company serving minors, so the popup is accepted and the guardian is
+warned about it in advance — a surprise Stripe window in a flow about a child's
+money reads as a phishing attempt.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `stripe_connected_accounts` table + `StripeConnectedAccount` | One per venture (`event_id` UNIQUE — that index *is* the anti-commingling guarantee; sharing an account across ventures would recombine the revenue this migration exists to separate). Mirrors Stripe's fields so "can this venture be paid?" is answerable without a network call on every storefront render. | `db/migrate/20260803120000_*`, `app/models/stripe_connected_account.rb` |
+| **No AASM**, despite it being this repo's state-machine gem | Stripe owns this object's state: capabilities change because a verification cleared or a document expired *at Stripe*, not because Fuime transitioned anything. A local machine would give a second authoritative-looking answer that can silently disagree, and the failure modes are the worst available — telling a family they can take payments when they cannot, or refusing payments Stripe would have accepted. Fields are mirrored verbatim; `#status` is derived. | `app/models/stripe_connected_account.rb` |
+| `ready_for_payments?` ignores `requirements.currently_due` | Stripe routinely leaves requirements on an account it is still happy to charge for — a grace period, not an outage. Gating on it would take a working venture's storefront down. Surfaced separately as `#requirements_outstanding?`. | same |
+| Charging and paying out are separate predicates | A venture can legitimately collect before its bank details clear. Collapsing them produces the one failure a fifteen-year-old cannot debug: money arrives, then appears stuck. | same |
+| `Fuime::ConnectOnboardingService` | Creates the account, mints Account Sessions, re-syncs. Local row written **before** the Stripe call so a crash leaves a visibly-incomplete row rather than a Stripe account Fuime has no record of (mirrors `StripeCardholderService::Create`). | `app/services/fuime/connect_onboarding_service.rb` |
+| **Every Stripe call passes `api_key:` explicitly** | `config/initializers/stripe.rb` sets the global `Stripe.api_key` from `Rails.env.production? ? :live : :test`, which does **not** consult `StripeService.mode`. In production with `STRIPE_MODE=test` — the current, intended posture — the global key is the LIVE one. Creating a connected account under it would produce a real live Stripe account for a child's business while every screen says "test mode". | onboarding service, payment link service |
+| Checkout is now a **direct charge** on the connected account | `stripe_account:` request option + `payment_intent_data[application_fee_amount]`. Direct charges put refunds and disputes on the venture's balance, which is the only charge type coherent with Stripe carrying negative-balance liability — destination charges route every chargeback through Fuime's balance first. | `app/services/fuime/payment_link_service.rb` |
+| Platform fee now reads `event.plan.revenue_fee` | The hardcoded `FUIME_PLATFORM_FEE_PERCENT = 4` never consulted the plan, so a **Founders-plan venture whose entire promise is 0% was still being charged 4%**. The constant survives, derived from `Event::Plan::FALLBACK_REVENUE_FEE`, for prose that is not venture-scoped (FAQ, Terms) and as a webhook fallback. Zero fees omit the parameter entirely — Stripe rejects a zero application fee. | payment link service, `app/views/fuime/storefronts/show.html.erb` |
+| `create_payment_link` deleted | Dead code (no callers in app, lib or specs) that built Product + Price + PaymentLink on Fuime's own account. Removed rather than migrated: the first person to reach for "we already have a payment-link helper" would silently reintroduce custody. A note marks where it was. | payment link service |
+| Guardian onboarding flow: status / setup / return / refresh | `return` re-asks Stripe rather than trusting the exit — leaving the flow means only that it was entered and exited, and treating it as success is the classic Connect bug. `refresh` serves JSON to the component and HTML to a human. | `app/controllers/fuime/payment_setups_controller.rb`, `app/views/fuime/payment_setups/*`, `config/routes.rb` |
+| `EventPolicy#setup_payments?` — the deliberate exception | This is the one place a guardian may *write*. Justified because the thing written is not the venture but the guardian's own Stripe account: Stripe requires the under-18 account's owner to be the adult, and onboarding collects that adult's DOB/address/SSN-last-4, which a teen cannot supply and must not be asked for. So the teen who runs the business is excluded from setup — the example most likely to look like a bug without the reasoning. | `app/policies/event_policy.rb` |
+| Second, Connect-scoped webhook endpoint | Stripe scopes endpoints separately for the platform and for connected accounts, each with its own signing secret, so these cannot share the payment endpoint however similar the code looks. `account.updated` is the only signal that arrives when verification completes asynchronously — without it a guardian finishes onboarding, Stripe verifies ten minutes later, and the venture's storefront stays dark with nothing to point at. | `app/controllers/fuime/webhooks_controller.rb`, `app/services/fuime/connect_webhook_handler.rb`, `render.yaml` |
+| Storefront and checkout now gate on `Event#accepts_payments?` | `is_public` defaults to **true**, so it never gated anything: every activated venture rendered a working payment form with nowhere for the money to go. | `app/controllers/fuime/checkouts_controller.rb`, storefront view |
+| `@stripe/connect-js` added | `loadConnectAndInitialize` ships in this package; only `@stripe/stripe-js` was present. Installed (3.4.6), lockfile updated. | `package.json`, `yarn.lock`, `app/javascript/controllers/stripe_connect_onboarding_controller.js` |
+
+### Bug fixed on the way past
+
+`Fuime::StorefrontsController` computed its public "Guardian on account" badge
+from `point_of_contact.has_active_guardian?` — but `point_of_contact` is the
+**admin who activated the venture** (`Event::Application#activate_event!` passes
+the acting admin), so the badge was publishing whether a *Fuime staff member* has
+a parent. There was no query anywhere for "who is the responsible adult for this
+venture"; there is now (`Event#overseeing_guardians` / `#has_overseeing_guardian?`),
+returning a relation because a venture can legitimately have two — two co-founders
+with different parents — and picking `.first` is how you assert something about the
+wrong family.
+
+### ⚠️ Product decision this forces, for a human not an engineer
+
+**Choosing Stripe-liability means Fuime cannot use Stripe Issuing or Treasury.**
+Stripe lists this among the consequences of `losses.payments = stripe`, alongside
+"you can't pause payments or payouts for your connected accounts" and "you can't
+directly debit connected account balances".
+
+This collides with a decision made in this repo *yesterday*: `stripe_cards` and
+`stripe_cardholders` were **removed from the disabled-modules list on 2026-08-02**
+and the cards UI re-enabled. Issuing debit cards for ventures and pushing
+negative-balance losses to Stripe are **mutually exclusive**. Fuime must pick:
+
+* **Keep Stripe-liability** (this commit): no venture debit cards, ever, under this
+  configuration. Suspension must be enforced in Fuime's own layer — refuse to
+  create Checkout Sessions — because Stripe will not let the platform pause a
+  connected account.
+* **Keep the cards roadmap**: switch to `losses.payments = application`, and Fuime
+  owns every chargeback and negative balance on every teenager's business.
+
+Nobody should discover this after building card UI. Flagged here, in
+`docs/fuime/LEGAL_RESEARCH.md`, and in the handoff note.
+
+### Verification — read this before trusting any of it
+
+Still no runnable suite (no rspec executable, Docker daemon down — same gap
+`known-failures.md` documents). `ruby -c` passes on all changed Ruby; `yarn add`
+succeeded. Beyond that:
+
+* **Nothing here has been executed against Stripe, even in test mode.** No account
+  has been created, no Account Session minted, no webhook received. The parameter
+  shapes come from Stripe's current documentation, not from a successful call.
+* **The Stripe gem is pinned to 11.7.0** (late 2024). `Stripe::AccountSession`
+  is expected to exist in it but **was not verified** — the gems are not installed,
+  so the class could not be introspected. If `AccountSession` is missing, upgrade
+  the gem or fall back to Account Links (which would mean giving up the embedded
+  flow and accepting a redirect). **Check this first.**
+* Five new/changed spec files are **unexecuted**:
+  `spec/models/stripe_connected_account_spec.rb`,
+  `spec/policies/event_policy_payment_setup_spec.rb`,
+  `spec/policies/event_policy_guardian_spec.rb`,
+  `spec/controllers/guardianships_controller_index_spec.rb`,
+  `spec/requests/fuime/status_disclosure_spec.rb`.
+* The **ledger semantics are not reworked**. Under direct charges the gross payment
+  lands in the family's Stripe balance and Fuime sees only its application fee, so
+  `Fuime::PaymentWebhookHandler`'s `CanonicalPendingTransaction` is now a *mirror of
+  someone else's balance* rather than a record of funds Fuime holds — which is what
+  `docs/fuime/LEGAL_RESEARCH.md` concluded it should become, but the handler's
+  `record_platform_fee` still posts its own fee line and is now redundant with
+  `application_fee_amount`. Next session's work.
+
+---
+
+## 2026-08-04 — Ledger for Connect direct charges, and payouts to the family's bank
+
+Completes the item the previous entry left open ("the ledger semantics are not
+reworked … next session's work") and adds the money-out half of the no-custody
+architecture.
+
+### Resolved from the previous session's open questions
+
+* **`Stripe::AccountSession` DOES exist in the pinned stripe 11.7.0.** So does
+  `Stripe::Payout`, `Stripe::Balance` and `Stripe::ApplicationFee`. The embedded
+  onboarding flow does not need to fall back to Account Links. Verified by
+  introspecting the installed gem, not by reading docs.
+* **The previously unexecuted spec files now run.** `bundle exec rspec` works via
+  Docker (daemon was simply down; `docker compose up -d db redis` plus
+  `rails db:migrate` on RAILS_ENV=test was all that was needed).
+
+### Bug found and fixed: the whole Connect onboarding flow was 500ing
+
+`EventPolicy#setup_payments?` and `#payment_setup_status?` were defined BELOW the
+`private` keyword. Pundit resolves a query with `public_send`, and
+`Fuime::PaymentSetupsController` both calls `authorize @event, :setup_payments?`
+and reads `policy(@event).setup_payments?` directly — so every request to the
+payment-setup flow raised `NoMethodError`. Moved above `private`, with a comment
+saying why they must stay there. `spec/policies/event_policy_payouts_spec.rb` pins
+the visibility of all five Fuime predicates so it cannot regress silently.
+
+The previous session's own specs were reporting this; they had never been run.
+
+### New: the ledger sees direct charges (files added)
+
+* `app/services/fuime/venture_ledger.rb` — single owner of the ledger-posting
+  primitive AND of the idempotency key scheme. The key scheme is deliberately
+  SHARED with the pooled path: keys identify a Stripe object, not a delivery of
+  one, so if a webhook endpoint is ever misconfigured to receive both platform and
+  connected-account events, a payment delivered twice posts one ledger line rather
+  than two. `Fuime::PaymentWebhookHandler` was refactored to delegate its key
+  construction here (keys byte-identical, behaviour unchanged).
+* `app/services/fuime/connect_payment_recorder.rb` — money in for direct charges.
+  Three deliberate differences from the pooled handler:
+  1. the venture is resolved from `event.account`, not from `fuime_event_id`
+     metadata (Stripe's statement beats Fuime's own annotation);
+  2. the fee is READ from `application_fee_amount` rather than computed from the
+     plan, so a posted line can never disagree with what Stripe deducted, and a
+     0%-plan venture gets no phantom fee line;
+  3. **the fee rebate waits for `application_fee.refunded`.** Stripe does not
+     return a platform's application fee when a charge is refunded unless the
+     refund asked it to, so the pooled handler's proportional rebate-on-refund
+     would print a credit into a family's ledger for money still in Fuime's
+     account.
+* `app/services/fuime/connect_payout_recorder.rb` — money out. Debits at
+  `payout.created` (that is when Stripe moves the balance, not `payout.paid`),
+  credits back on `payout.failed`/`canceled`, and only ever reverses a debit it
+  actually posted.
+
+### New: payouts (teen requests, guardian approves)
+
+* `db/migrate/20260804120000_create_payout_requests.rb`, `app/models/payout_request.rb`,
+  `app/services/fuime/payout_service.rb`, `app/controllers/fuime/payouts_controller.rb`,
+  `app/views/fuime/payouts/index.html.erb`, four routes, one nav item.
+* The approval gate is the ownership structure from L2 made operational, not a
+  parental-controls feature: the guardian owns the account and the funds, so a
+  minor cannot move money out of it alone. Enforced in THREE places —
+  `EventPolicy#decide_payout?`, `Fuime::PayoutService#approve!`, and a
+  `PayoutRequest` validation that the approver is an overseeing guardian.
+* `Fuime::ConnectOnboardingService` now creates accounts with
+  `settings.payouts.schedule.interval = manual`. Without it Stripe drains the
+  balance on a timer and refuses platform-created payouts, which would make the
+  approval gate theatre over money that was leaving anyway.
+* `Fuime::TaxTrackerService::EXCLUDED_MEMO_PATTERNS` gains `"payout"`. A payout is
+  the family moving already-earned money to their own bank — neither income nor a
+  deductible expense. Counting it as an expense would UNDERSTATE a teen's taxable
+  income, which is the harmful direction.
+
+### Verification
+
+`spec/services/fuime/ spec/models/{payout_request,stripe_connected_account,guardianship,user_guardianship}_spec.rb
+spec/policies/ spec/controllers/fuime/ spec/requests/fuime/` — green except the
+one pre-existing `comment_policy_spec` factory failure already recorded in
+`known-failures.md` ("Company name is too long"). New coverage: 22 examples for
+the Connect payment recorder, 19 for the payout recorder, 24 for PayoutRequest, 21
+for PayoutService, 15 for the payout policy, 16 for the payouts controller.
+
+### Still not done
+
+* **Nothing here has touched a real Stripe account, even in test mode.** No
+  connected account created, no payout sent, no webhook received from Stripe
+  itself. Every payload shape in the specs is constructed by hand from Stripe's
+  documentation. `settings.payouts.schedule.interval = manual` in particular is
+  the claim most worth verifying against a live test-mode account, because
+  platform control of the payout schedule interacts with
+  `controller.losses.payments = stripe` and that combination was not confirmed.
+* **Stripe's own processing fee is not posted to the ledger.** The venture's
+  balance is gross minus Stripe's fee minus Fuime's fee, but only Fuime's fee gets
+  a line, so the ledger currently overstates the balance by Stripe's cut. Needs
+  the charge's `balance_transaction`.
+* **No refund-creation path exists**, so whether a family gets Fuime's fee back on
+  a refund is currently decided by nobody. When that path is built,
+  `refund_application_fee` is the switch, and choosing not to pass it means Fuime
+  keeps its cut on a sale the family had to unwind.
+* Under-13 support (L6) is untouched: `User#minimum_age_requirement` still refuses
+  under 13, and the COPPA program it would require does not exist.
+
+### Addendum, same session — three more pre-existing bugs the specs were already reporting
+
+Running the *tracked* Fuime specs (which the previous session's work had broken but
+never executed) surfaced these. None were caused by the payout/ledger work above.
+
+1. **The standing "not a bank" disclosure never rendered for signed-out visitors.**
+   `app/views/layouts/application.html.erb` rendered `application/_footer` in the
+   app-shell branch only, not in the signed-out branch — so `/faq`, `/terms`,
+   `/privacy` and the guardian agreement showed no FDIC disclosure to anyone
+   without an account. A parent reading the terms before accepting an emailed
+   guardian invite is exactly that reader, and 12 CFR 328.102(b)(3)(ii) makes the
+   OMISSION the violation. Footer now renders on both branches;
+   `Fuime::StorefrontsController` opts out with `hide_footer` because it carries its
+   own payer-facing copy and stating it twice reads as boilerplate.
+
+2. **`Fuime::CheckoutsController` and the storefront specs were written for the
+   pooled model.** Both now require a venture to have a Stripe account Stripe will
+   charge on (`accepts_payments?`), which is correct, but nine tracked examples
+   still assumed the old always-payable behaviour. Specs updated to create a ready
+   connected account, and the refusal branch — previously covered by nothing — is
+   now pinned in both files. Also fixed an assertion that expected `"4%"` when the
+   view renders `number_to_percentage(precision: 1)` = `"4.0%"`; it now derives the
+   expected string from `event.plan.revenue_fee` so a plan change cannot leave it
+   passing against the wrong number.
+
+3. **A seed-dependent flake in the storefront spec.** `include("Pay #{event.name}")`
+   asserted against rendered HTML with a Faker-generated name, so any name
+   containing `'` or `&` was escaped in the output and failed on some seeds only.
+   The name is now pinned to one with no escapable characters.
+
+**Suite state after all of the above:** `spec/services/fuime/ spec/models/{payout_request,
+stripe_connected_account,guardianship,user_guardianship}_spec.rb spec/policies/
+spec/controllers/fuime/ spec/requests/fuime/ spec/requests/marketing_spec.rb`
+= **370 examples, 1 failure**, that one being the pre-existing `comment_policy_spec`
+factory issue in `known-failures.md`. Was 16 failures when this session started
+measuring, before any of the above was written.
+
+---
+
+## 2026-08-04 (later) — Card groundwork: create-time account profiles
+
+Founder decision: pursue a **business-expense card** on Stripe Issuing with a
+**mixed `losses.payments` fleet**, so only card-cohort families pay the cost.
+
+### Why this shape, and what was explicitly NOT built
+
+The original ask was to issue cards without disclosing to Stripe that a minor is
+the spender. That was not built, and it is also unnecessary: per
+`docs/fuime/LEGAL_RESEARCH.md`, Stripe's Issuing cardholder floor is **13**, and
+Celtic Bank's Authorized User Terms carry **no minimum age at all**. The guardian
+accepts the Accountholder Terms, the minor accepts the Authorized User Terms, and
+the arrangement is disclosed and permitted.
+
+What Celtic actually restricts is **what the card buys**, not who holds it:
+"You may not use your card for personal, family or household purposes." So a
+business-expense card (inventory, supplies, software) is compliant; a card the kid
+spends earnings on is a consumer product on a different rail regardless of what
+Stripe is told. Concealment would not have changed which of those two Fuime is
+operating.
+
+### What shipped
+
+`controller` is **create-only** — Stripe's Account update endpoint accepts no
+controller parameters — so the profile decision is permanent per account and a
+venture can never be upgraded into card support. That makes the create-time
+mechanism the prerequisite for any card work, and it is what this change is.
+
+* `Fuime::ConnectOnboardingService::PROFILES` — two named configurations.
+  `:payments_only` is today's Stripe-liable posture and remains the default.
+  `:cards_enabled` moves `losses.payments`, `requirement_collection` and
+  `fees.payer` to `application` and requests `card_issuing`. Each of those three is
+  documented at the point of definition with what it costs: Fuime absorbing every
+  negative balance, guardian SSNs landing in Fuime's systems, and Fuime paying
+  ~2.9% + 30¢ (which a 4% platform fee does not cover).
+* `db/migrate/20260804140000_*` — `controller_profile` (Fuime's intent, written
+  BEFORE the Stripe call so a retry cannot silently fall back to the default) and
+  `controller` (Stripe's actual config, mirrored).
+* `StripeConnectedAccount#controller_matches_requested_profile?` and
+  `#ready_for_cards?` — card-capability is derived from what STRIPE reports, never
+  from Fuime's intent, because the mixed fleet is an inference and Stripe returning
+  a different configuration than requested is a real possibility.
+* `#find_or_create_account!` raises rather than reusing an account under a
+  different profile. There is no third answer when `controller` is immutable.
+* `#account_session_client_secret` **raises for `:cards_enabled`**. The embedded
+  onboarding component is built for `requirement_collection = stripe`; the cards
+  profile makes Fuime responsible for collecting the guardian's identity details,
+  which is a different surface with different obligations (L4: never store ID
+  images). Serving the existing flow would collect nothing while appearing to work.
+
+### Deliberately not built
+
+* **No `Stripe::Issuing::Cardholder` or `Card` creation.** Open question 3 in
+  LEGAL_RESEARCH ("does a teen sole-prop with a guardian representative qualify as
+  a supported Issuing business use case, or will underwriting class it as
+  consumer?") is unanswered, and it is the question most likely to sink the
+  application. Building issuance against an unapproved use case is speculative.
+* **No `requirement_collection = application` onboarding flow.** See above.
+* **HCB's Issuing UI stays hidden.** Un-hiding it would expose a non-functional flow.
+
+### Still blocking, and it is not code
+
+The three questions in LEGAL_RESEARCH "Three questions for Stripe" must be
+answered first. Question 2 (may one platform run a mixed `losses.payments` fleet?)
+is the one this entire change assumes; if the answer is "the Issuing restriction is
+platform-wide", `PROFILES` collapses to an all-or-nothing choice and the mixed
+fleet is dead.
+
+Separately, **funding is gated**: revenue → card spend instantly needs the Balance
+Transfer API private beta. The GA fallback is payout to the family's bank then a
+pull top-up into the Issuing balance, a multi-day round trip. "Sell a sticker, buy
+supplies an hour later" does not work yet.
+
+**Suite:** 390 examples, 1 failure (the pre-existing `comment_policy_spec` factory
+issue). 20 new examples for the profile mechanism.
+
+---
+
+## 2026-08-04 (later still) — Cards: spend policy, issuance, and card spend on the ledger
+
+Built on the profile mechanism from the previous entry. Cards are issued on the
+venture's OWN connected account with `stripe_account:` on every call, so Fuime is not
+the issuer and does not hold the funds behind them.
+
+### The centrepiece: `Fuime::CardSpendPolicy`
+
+Celtic's terms forbid using an Issuing card "for personal, family or household
+purposes". That cannot be left as a sentence in an agreement a fifteen-year-old
+scrolled past, so it is enforced as `spending_controls.allowed_categories`.
+
+**Allowlist, not blocklist**, and the reasoning is the failure mode. A category missing
+from an allowlist declines a legitimate purchase — annoying, recoverable, the list
+grows. A category missing from a blocklist lets a minor buy something personal on a
+commercial card — invisible until an audit, not recoverable. A blocklist also silently
+permits every category Stripe adds after the file was written.
+
+Every category string was copied from `app/services/breakdown_engine/categorizer.rb`,
+upstream HCB code already running against Stripe's real enum, rather than typed from
+memory. That mattered: `package_stores_beer_wine_and_liquor` carries an "and" that
+recall would have dropped, and an invalid category fails the entire Card create call. A
+spec asserts every allowed string still appears in that upstream file.
+
+Explicitly excluded with the reason recorded: **cash equivalents** (gift cards,
+stored-value loads, money orders — these convert a restricted card into unrestricted
+spending money and defeat every other control), food/drink/pharmacy, and
+games/entertainment. Clothing and travel are excluded as opt-in-later rather than
+never, because a teen printing shirts genuinely buys blanks from a clothing store.
+
+Also pins Stripe's **required** commercial-purpose disclosure and its **forbidden**
+consumer phrasings ("Personal cards", "for anything you want"), so a copy edit cannot
+quietly drop one or reintroduce the other.
+
+### Issuance
+
+* `venture_cardholders` / `venture_cards` — separate from HCB's `stripe_cardholders`
+  and `stripe_cards`, which are PLATFORM-level Issuing funded by `topup_stripe_job.rb`
+  and legal only because a 501(c)(3) owns the funds (Rule 3 forbids touching that
+  pipeline anyway).
+* The role split is the whole legal structure: guardian is the **Accountholder**
+  (liable), minor is an **Authorized User** (holds an access device). Validated in the
+  model and again in the service. A minor can never hold `accountholder`; a guardian
+  can never hold `authorized_user`, because oversight is not participation.
+* Terms acceptance is versioned, and an acceptance of a superseded version does not
+  carry forward. It is reported to Stripe via
+  `individual.card_issuing.user_terms_acceptance`, so it is a fact Stripe holds rather
+  than a claim in Fuime's database.
+* `Fuime::CardIssuingService#issue_card!` **cancels the card and raises** if Stripe
+  does not echo the category allowlist back. An unrestricted commercial card in a
+  minor's hands is worse than no card.
+* Virtual cards only. A physical card mailed to a minor raises delivery and signature
+  questions that are not answered.
+* Default spending limit of $250/month rather than unlimited — the guardian raises it
+  deliberately instead of discovering it was open.
+
+### Card spend on the ledger
+
+`Fuime::ConnectCardRecorder` handles `issuing_transaction.created` only.
+Authorizations are deliberately NOT posted: an authorization is a hold that can expire,
+reverse, or capture a different amount, and posting them would put phantom expenses on
+a teenager's books. The honest cost is that the ledger lags a purchase by up to a
+couple of days.
+
+Sign comes from the transaction `type`, never from the reported `amount`. Stripe
+reports captures as negative today; trusting that would mean a convention change
+silently turns a teenager's expenses into income and inflates the tax figure shown to
+their family.
+
+Unlike a payout, card spend **is** a deductible expense, so it is deliberately NOT
+added to `TaxTrackerService::EXCLUDED_MEMO_PATTERNS` — and a spec asserts the memo
+matches none of them.
+
+### Bug fixed along the way: `Fuime::StripeHash`
+
+`Stripe::StripeObject#to_h` is SHALLOW in the pinned stripe 11.7.0 — nested values stay
+StripeObjects, which do not implement `dig`. It therefore fails on the SECOND key, so
+any code digging one level passes and gives no warning that the same pattern breaks a
+level down. This had already made `StripeConnectedAccount#stripe_hash` produce a
+diggable `controller` mirror only by accident of jsonb serialising it en route to the
+database. Both now route through a JSON round-trip.
+
+### Still not verified
+
+Nothing here has run against Stripe. The three questions in LEGAL_RESEARCH remain
+open, and question 3 (does a teen sole-prop with a guardian representative qualify as a
+supported Issuing use case, or will underwriting class it as consumer?) can still
+invalidate all of it. `Fuime::ConnectOnboardingService#account_session_client_secret`
+still refuses the cards profile, because the `requirement_collection = application`
+onboarding flow does not exist — so no card can actually be issued end to end yet.
+
+**Suite:** 459 examples, 1 failure (the pre-existing `comment_policy_spec` factory
+issue). 85 new examples across the spend policy, issuance, the card recorder and the
+cardholder model.
+
+---
+
+## 2026-08-04 (evening) — Guardian requirement collection, without becoming a PII store
+
+Completes the gap the card work left open: `:cards_enabled` sets
+`requirement_collection = application`, which makes gathering the guardian's identity
+details Fuime's job. `account_session_client_secret` refused that profile, so no card
+could be issued end to end. This is the flow that closes it.
+
+### The governing constraint
+
+Taking on collection is unavoidable for cards. Becoming a store of Social Security
+numbers and ID photographs is not, and L4 is explicit: "ID images: verify then delete…
+Store the consent *record* (method, vendor ref, timestamp, doc-version hash, IP/UA) —
+never the image." The reasons stack: COPPA's VPC methods mandate prompt deletion, BIPA
+(IL) gives a **private right of action** at $1K–5K per violation over stored face-match
+data, and holding ID documents pulls Fuime into state breach-notification statutes it is
+otherwise entirely outside.
+
+So the architecture is **collect and forward**: identity values arrive as method
+arguments, go into a Stripe API call, and are never assigned to an ActiveRecord
+attribute, written to disk, cached, or logged. The ID image goes STRAIGHT TO STRIPE via
+the Files API and Fuime keeps only the returned token — which makes "verify then delete"
+structurally true rather than dependent on a deletion job that might not run.
+
+### Making the claim enforceable rather than aspirational
+
+"We don't store PII" is a claim that decays: someone adds a column to make a screen
+easier, or pastes a value into a field while debugging. Four mechanisms:
+
+1. `guardian_verifications` is a metadata-only table. A spec enumerates its columns and
+   FAILS if any name suggests identity data (ssn, dob, address, id_number, image, …), so
+   adding one breaks the suite rather than shipping.
+2. `fields_forwarded` is validated against an ALLOWLIST of field NAMES. A value cannot
+   land there even by accident, because no value is a member of the allowed set.
+3. `GuardianVerification#no_personal_data_in_attributes` scans the row's own string
+   attributes for SSN-shaped and base64-blob-shaped content and refuses to save.
+4. **`config/initializers/filter_parameter_logging.rb` gained `:id_number`** and the
+   other identity params. `:ssn` already covered `ssn_last_4` by substring, but NOT
+   `id_number` — which is Stripe's field for the FULL Social Security number, the most
+   sensitive value the app handles. That gap would have put whole SSNs in production
+   logs.
+
+### Also built
+
+* `Fuime::RequirementCollectionService` — refuses to run on the payments-only profile,
+  where Stripe collects directly and gathering an SSN would be taking on breach
+  liability for nothing. Snapshots what Stripe was asking for BEFORE the update, since
+  afterwards Stripe has cleared whatever was satisfied. Never interpolates Stripe's
+  error message, which can echo the submitted value back into logs.
+* `#outstanding_descriptions` translates Stripe's dotted machine identifiers into
+  sentences a parent can act on, passing unknown ones through humanised rather than
+  dropping them — a requirement nobody can see is a venture that never activates.
+* Controller + views at `/:event_slug/payments/verify`, guardian-only. **Redirects rather
+  than re-renders on error**, because a re-rendered form puts an SSN into the HTML of an
+  error page.
+* The disclosure partial is **content-hashed** into `doc_version_hash`, so the consent
+  record proves what was agreed to without storing a copy per guardian. Editing the copy
+  changes the hash by design.
+* `Fuime::PaymentSetupsController#new` now redirects cards-profile ventures here, turning
+  the earlier hard refusal into a working path.
+* `account.updated` now marks a `GuardianVerification` accepted once requirements clear.
+  Stripe exposes no "we accepted it" flag, so an empty `currently_due` with nothing
+  pending verification IS the acceptance — and until then a family is told Stripe is
+  still checking rather than that they are verified.
+
+### An API asymmetry worth knowing
+
+Uploading a file FOR a connected account requires the `Stripe-Account` header. Updating
+that same account does NOT — the id is the first argument and the platform key is used.
+Getting either backwards produces errors that read like permission problems. Both are
+asserted in specs.
+
+### Also fixed
+
+`Fuime::CardSpendPolicy.copy_violations` now normalises HTML entities. The required
+disclosure contains "can't", which ERB renders as `can&#39;t`, so a page carrying it
+correctly was reported as missing it — a false alarm that would train someone to ignore
+the check.
+
+### Still not verified, and still the same three questions
+
+Nothing has run against Stripe. The three questions in LEGAL_RESEARCH remain open, and
+question 3 (does a teen sole-prop with a guardian representative qualify as a supported
+Issuing use case?) can still invalidate the card path entirely. What HAS changed is that
+there is no longer a structural gap: a cards-profile venture now has a complete
+onboarding path in code.
+
+**Suite:** 514 examples, 1 failure (the pre-existing `comment_policy_spec` factory
+issue). 55 new examples across the verification model, the collection service and the
+controller.
+
+---
+
+## 2026-08-04 (late) — Stripe's processing fee, card screens, and a UI-conventions pass
+
+### The ledger now reconciles
+
+Every venture's balance was overstated by roughly 2.9% + 30¢ per sale: the gross and
+Fuime's cut were posted, Stripe's own cut was not, even though it comes out of the same
+balance. `Fuime::ConnectPaymentRecorder#record_processing_fee` fixes it.
+
+**Why `fee_details` and not `balance_transaction.fee`:** on a direct charge that `fee` is
+the TOTAL deducted from the connected account and INCLUDES the application fee. Posting
+it alongside the existing platform-fee line would have charged families Fuime's cut
+twice. Only the `stripe_fee`-typed entries are summed, and a spec asserts the two fees
+never double-count.
+
+**Why a failure here raises:** the fee needs an API call the webhook payload cannot
+supply. Raising lets Stripe retry the whole webhook, and because every ledger key is
+shared and idempotent, the retry re-posts nothing for the payment and simply tries the
+fee again. Swallowing it would leave the balance permanently wrong with only a log line.
+`nil` (could not determine) and `0` (Stripe took no fee) are treated differently — the
+latter posts nothing rather than a phantom zero line.
+
+### Card screens
+
+`Fuime::CardsController` + `/:event_slug/cards`, with the authorization split as the
+actual design rather than an afterthought:
+
+| Action | Who | Why |
+|---|---|---|
+| view | teen + guardian | both need to see the card and its limit |
+| issue | **guardian** | issuing creates a liability they carry |
+| set limit | **guardian** | raising a limit increases what can be spent |
+| **freeze** | **teen + guardian** | a lost card must be stoppable in the moment |
+| unfreeze | **guardian** | restoring spend is the Accountholder's decision |
+| cancel | **guardian** | permanent, unlike freezing |
+
+Freeze-but-not-unfreeze is the whole idea: freezing can only ever REDUCE what is
+spendable, so the person most likely to notice a lost card first should be able to act.
+Keeping unfreeze with the guardian is what stops it becoming a route around the limit
+controls. `EventPolicy#freeze_cards?` vs `#manage_cards?` encode exactly that, and a spec
+states the asymmetry as a single assertion so it cannot be "simplified" away.
+
+Freeze uses Stripe's `status: "inactive"`, deliberately NOT collapsed with `"canceled"` —
+cancellation is permanent and needs a new card, so a lost card should be frozen.
+
+The nav item only appears for ventures whose account was created with card support:
+`controller` is create-only, so a payments-only venture can never have cards and a nav
+link to a permanent dead end is worse than no link.
+
+### UI conventions pass (dev-docs/code_style.md)
+
+Audited the Fuime views against actual repo usage rather than assumption, and found four
+real deviations:
+
+* **`class: "input"` on form fields — used in ZERO other views.** HCB styles inputs
+  through the `.field` wrapper. Removed from all three Fuime forms.
+* **`btn--sm` is not a convention** (1 outlier file); the real class is `btn-small`.
+* **Destructive buttons are `bg-error`**, not `bg-primary`. Cancel-card and decline-payout
+  corrected, as were the failure badges.
+* **An empty `<th>` needs an explanatory comment**, which the style guide states
+  explicitly. Added to the cards table.
+
+Also: labels now carry `class: "bold"` (the dominant convention), the new disclosure
+partial declares strict locals per the guide, and headings were checked for sentence case.
+
+`Fuime::CardSpendPolicy.copy_violations` now normalises HTML entities — the required
+disclosure contains "can't", which ERB renders as `can&#39;t`, so a page carrying it
+correctly was reported as missing it.
+
+**Suite:** 559 examples, 1 failure (the pre-existing `comment_policy_spec` factory issue).
+
+---
+
+## 2026-08-04 (night) — Cards become reachable, and two production bugs
+
+### The gap this closes
+
+`Fuime::ConnectOnboardingService` accepted a `profile:` argument, but nothing ever passed
+`:cards_enabled` — so the entire card stack was unreachable code. Because `controller` is
+create-only at Stripe, the choice has to be made BEFORE the account exists, which means
+the payment-setup entry point was the only place it could live.
+
+`Fuime::PaymentSetupsController` now offers it, gated by
+`Flipper.enabled?(:fuime_cards_2026_08_04, event)`, **off by default and deliberately not
+self-serve.** A `:cards_enabled` account means Fuime absorbs every negative balance on
+that venture, collects the guardian's SSN, and pays Stripe's processing fees. That is a
+capitalisation and compliance decision, not a preference a family should make from a form
+— and with LEGAL_RESEARCH open question 3 unanswered, broad availability could create
+accounts Stripe later rejects, which (create-only) those families could not be migrated
+out of. The flag makes the path reachable and testable per venture without making it
+available.
+
+Three safety properties, each with a spec:
+
+* **`?profile=cards_enabled` is validated server-side, not merely hidden in the view.** It
+  is a URL anyone can type, and it selects the one configuration where Fuime carries a
+  minor's chargebacks. With the flag off it is ignored.
+* **An existing account's profile always wins**, read back from the row rather than from
+  params, so a stale or tampered link cannot make the service raise on a mismatch.
+* **The choice disappears once an account exists**, because re-offering it would promise
+  something only a full re-onboarding could deliver.
+
+### Bug 1: the global Stripe key was LIVE in production
+
+`config/initializers/stripe.rb` computed `Rails.env.production? ? :live : :test`, ignoring
+STRIPE_MODE. Fuime runs test mode by default *including in production* (render.yaml), so
+the process had a LIVE global `Stripe.api_key` while every screen said "test mode". Any
+call not passing `api_key:` explicitly would have moved real money — created a real Stripe
+account for a minor's business, or issued a real card. Every Fuime service does pass it
+explicitly (all 14 call sites audited), which is why nothing has gone wrong, but a
+convention every future caller must remember is not a control.
+
+Now derived from `StripeService.mode`. Assigned inside `config.after_initialize` because
+`StripeService` is Zeitwerk-managed and unavailable while initializers run — verified by
+the `uninitialized constant StripeService` this first produced. Duplicating the
+STRIPE_MODE logic inline would have recreated the two-sources-of-truth problem, and
+`require_relative`-ing a reloadable app/services file puts a Zeitwerk constant outside
+Zeitwerk's control.
+
+### Bug 2: the payment-setup flow raised on every request in dev and test
+
+`before_action :authorize_setup, only: [:new, :create, :return, :refresh]` named a
+`create` action that does not exist on the controller (there are four actions and four
+routes, none of them create). Rails raises `AbstractController::ActionNotFound` for that
+whenever `raise_on_missing_callback_actions` is on, which is the default in development
+and test. Production defaults it off, so the bug was invisible precisely where it would
+have been hit least and broken locally for anyone trying to use the flow. Found because
+this was the first controller spec ever written for it.
+
+**Suite:** 573 examples, 1 failure (the pre-existing `comment_policy_spec` factory issue).
