@@ -41,12 +41,62 @@ RSpec.describe OrganizerPositionInvitesController do
       expect(invite.initial_control_allowance_amount_cents).to eq(123_45)
     end
 
+    # Fuime: split from one test into two.
+    #
+    # The original asserted that inviting a signee sends a fiscal sponsorship
+    # contract to DocuSeal. Fuime deliberately does not: OrganizerPositionInvite#
+    # send_contract returns early unless `event.plan.contract_available?`, because
+    # no Fuime agreement exists yet and the upstream templates are Hack Club's own
+    # legal documents (see Event::Plan#contract_docuseal_template_id).
+    #
+    # So the param handling — which still works and is what the test is named for —
+    # is asserted here, and the contract expectations are preserved below rather
+    # than deleted (CLAUDE.md Rule 2), to be un-skipped when a Fuime template exists.
     it "supports additional params for admins" do
       user = create(:user, :make_admin)
       event = create(:event, organizers: [user])
 
-      # `Contract` makes external requests to Docuseal which we don't want to
-      # perform in this context.
+      create_docuseal_request =
+        stub_request(:post, "https://api.docuseal.co/submissions")
+
+      create_session(user, verified: true)
+
+      post(
+        :create,
+        params: {
+          event_id: event.friendly_id,
+          organizer_position_invite: {
+            email: "orpheus@hackclub.com",
+            role: "manager",
+            enable_controls: "false",
+            cosigner_email: "cosigner@hackclub.com",
+            include_videos: "true",
+            is_signee: "true",
+          }
+        }
+      )
+
+      expect(response).to redirect_to(event_team_path(event))
+      expect(flash[:success]).to eq("Invite successfully sent to orpheus@hackclub.com")
+
+      invite = event.organizer_position_invites.last
+      expect(invite.is_signee).to eq(true)
+
+      # The point of the divergence: no agreement is sent, and nothing external is
+      # contacted. If this starts failing, a Hack Club legal template is being
+      # mailed to a Fuime user.
+      expect(create_docuseal_request).not_to have_been_made
+      expect(invite.contracts).to be_empty
+    end
+
+    # FUIME-DISABLED: fiscal sponsorship contracts. Restore this once a Fuime
+    # agreement template exists and Event::Plan#contract_docuseal_template_id
+    # returns it; until then send_contract is a no-op by design and these
+    # expectations cannot pass.
+    it "sends a fiscal sponsorship contract for a signee", skip: "FUIME-DISABLED" do
+      user = create(:user, :make_admin)
+      event = create(:event, organizers: [user])
+
       create_docuseal_request =
         stub_request(:post, "https://api.docuseal.co/submissions")
         .to_return(
@@ -58,7 +108,7 @@ RSpec.describe OrganizerPositionInvitesController do
         stub_request(:get, "https://api.docuseal.co/submissions/STUBBED")
         .to_return(
           status: 200,
-          body: { submitters: [{ role: "HCB", slug: "STUBBED" }, { role: "Contract Signee", slug: "STUBBED" }, { role: "Cosigner", slug: "STUBBED" }] }.to_json,
+          body: { submitters: [{ role: "Fuime", slug: "STUBBED" }, { role: "Contract Signee", slug: "STUBBED" }, { role: "Cosigner", slug: "STUBBED" }] }.to_json,
           headers: { content_type: "application/json" }
         )
 
@@ -82,12 +132,7 @@ RSpec.describe OrganizerPositionInvitesController do
       expect(create_docuseal_request).to(have_been_made.once)
       expect(fetch_docuseal_request).to(have_been_made.once)
 
-      expect(response).to redirect_to(event_team_path(event))
-      expect(flash[:success]).to eq("Invite successfully sent to orpheus@hackclub.com")
-
       invite = event.organizer_position_invites.last
-      expect(invite.is_signee).to eq(true)
-
       contract = invite.contracts.sole
 
       expect(contract.party(:cosigner)&.email).to eq("cosigner@hackclub.com")

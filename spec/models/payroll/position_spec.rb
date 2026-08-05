@@ -160,7 +160,7 @@ RSpec.describe Payroll::Position, type: :model do
       stub_request(:get, "https://api.docuseal.co/submissions/#{submission_id}")
         .to_return(
           status: 200,
-          body: { submitters: [{ role: "HCB", slug: "hcb-slug" }, { role: "Organizer", slug: "organizer-slug" }, { role: "Contractor", slug: "contractor-slug" }] }.to_json,
+          body: { submitters: [{ role: "Fuime", slug: "hcb-slug" }, { role: "Organizer", slug: "organizer-slug" }, { role: "Contractor", slug: "contractor-slug" }] }.to_json,
           headers: { content_type: "application/json" }
         )
     end
@@ -210,7 +210,7 @@ RSpec.describe Payroll::Position, type: :model do
       stub_request(:get, "https://api.docuseal.co/submissions/STUBBED")
         .to_return(
           status: 200,
-          body: { submitters: [{ role: "HCB", slug: "hcb-slug" }, { role: "Organizer", slug: "organizer-slug" }, { role: "Contractor", slug: "contractor-slug" }] }.to_json,
+          body: { submitters: [{ role: "Fuime", slug: "hcb-slug" }, { role: "Organizer", slug: "organizer-slug" }, { role: "Contractor", slug: "contractor-slug" }] }.to_json,
           headers: { content_type: "application/json" }
         )
     end
