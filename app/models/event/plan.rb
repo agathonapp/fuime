@@ -88,6 +88,29 @@ class Event
       contract_docuseal_template_id.present?
     end
 
+    # Fuime: is the responsible adult an institution rather than a parent?
+    #
+    # Fuime's default assumption is that a minor operating a venture is backed by
+    # a guardian who is the legal party — that is what LEGAL_RESEARCH L2 requires
+    # and what the guardianships table records. A school is the exception: it
+    # stands in loco parentis, its families have already signed enrolment
+    # contracts, and there is no per-student guardian for Fuime to find.
+    #
+    # Three things key off this, and each of them is a wall for a school today:
+    #
+    #   * EventPolicy#setup_payments? authorises only a guardian or a Fuime admin,
+    #     so a business-office manager cannot connect Stripe at all.
+    #   * PaymentSetupsController#acting_guardian raises unless it finds exactly
+    #     one overseeing guardian; for a school it finds zero.
+    #   * EventPolicy#member? gates on permitted_to_operate_business?, so a
+    #     14-year-old with no guardianship row cannot act on their own venture.
+    #
+    # Returning true here does NOT weaken the guardian requirement for anyone
+    # else — it says the institution has already discharged it.
+    def institutionally_sponsored?
+      false
+    end
+
     # Organizations on plans that force transparency can't opt out of it while
     # their parent organization is transparent.
     def forces_transparency?

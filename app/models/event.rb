@@ -352,6 +352,26 @@ class Event < ApplicationRecord
   has_many :plans, class_name: "Event::Plan", inverse_of: :event
   has_one :plan, -> { where(aasm_state: :active) }, class_name: "Event::Plan", inverse_of: :event, required: true
 
+  # Fuime: does an institution stand as the responsible adult for this org?
+  #
+  # Answered from self OR any ancestor, deliberately. A school programme is a
+  # tree — the school is the main org and each student's venture is a sub org —
+  # and the plan is set once at the top. Requiring the School plan on all several
+  # hundred student sub orgs would be busywork that fails open the moment someone
+  # forgets one, which for this predicate means asking a school for a parent
+  # guardian who does not exist.
+  #
+  # Same direction of inheritance as CardGrant::InheritablePolicy: the
+  # institution's answer flows down and nothing beneath it can contradict it.
+  def institutionally_sponsored?
+    return @institutionally_sponsored if defined?(@institutionally_sponsored)
+
+    @institutionally_sponsored =
+      Event.where(id: ancestor_ids)
+           .includes(:plan)
+           .any? { |event| event.plan&.institutionally_sponsored? }
+  end
+
   has_one :config, class_name: "Event::Configuration"
   accepts_nested_attributes_for :config
 
