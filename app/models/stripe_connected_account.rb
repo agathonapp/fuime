@@ -248,7 +248,14 @@ class StripeConnectedAccount < ApplicationRecord
       # or created before this column existed would otherwise have an empty
       # controller forever and read as a mismatch.
       controller: stripe_hash(account, :controller),
-      livemode: !!account.livemode,
+      # v1 Account objects carry no `livemode` field — calling it raises
+      # NoMethodError, which crashed sync on the FIRST account this codebase ever
+      # created at Stripe (2026-08-05; every shape before that was
+      # documentation-derived, and this line was derived wrong). The mode is a
+      # property of the KEY that made the request, so record what StripeService
+      # says rather than probing the object with try/respond_to?, either of which
+      # would silently write false forever.
+      livemode: StripeService.mode == :live,
       stripe_synced_at: Time.current,
       # First time Stripe reports a completed submission, record when. Never
       # overwritten, so the date survives a later re-verification cycle.
