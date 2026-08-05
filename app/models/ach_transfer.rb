@@ -196,7 +196,21 @@ class AchTransfer < ApplicationRecord
   before_validation { self.recipient_name = recipient_name.presence&.strip }
 
   before_validation do
-    self.company_name = "Fuime (Hack Club)" # Column requires "Hack Club" to be included in the company_name for all outgoing ACHs
+    # Fuime: "Fuime", not "Fuime (Hack Club)".
+    #
+    # This was a real bug, not a cosmetic one. company_name is capped at 16
+    # characters (see the validation below); "Fuime (Hack Club)" is 17, so EVERY
+    # outgoing ACH failed validation, not merely the specs. It went unnoticed
+    # because ACH origination is disabled (Milestone 5) and the recorded suite
+    # baseline was a subset that did not include these specs.
+    #
+    # The suffix existed because Column required "Hack Club" in the company_name
+    # for HCB's outgoing ACHs. Fuime has no Column relationship and will not get
+    # one (docs/fuime/LEGAL_RESEARCH.md: Column banks Hack Club because the funds
+    # are Hack Club's own), so the constraint does not apply. Keeping it would
+    # also print a Hack Club trademark on the recipient's bank statement, which
+    # CLAUDE.md Rule 7 forbids — the licence covers the code, not the brand.
+    self.company_name = "Fuime"
   end
 
   include HasHcbCode

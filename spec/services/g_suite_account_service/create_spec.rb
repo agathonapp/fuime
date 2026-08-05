@@ -50,7 +50,7 @@ RSpec.describe GSuiteAccountService::Create, type: :model do
     mail = ActionMailer::Base.deliveries.last
 
     expect(mail.to).to eql(["backup@mailinator.com"])
-    expect(mail.subject).to include("Your Google Workspace account via HCB is ready")
+    expect(mail.subject).to include("Your Google Workspace account via Fuime is ready")
     expect(mail.body.encoded).to include("address@event.example.com")
     expect(mail.body.encoded).to include(g_suite_account.initial_password)
   end

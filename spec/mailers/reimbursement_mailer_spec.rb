@@ -51,7 +51,7 @@ RSpec.describe ReimbursementMailer do
       mail = described_class.with(report:, expenses: report.expenses).expenses_approved
 
       expect { mail.deliver_now }.to send_email(
-        from: "hcb@staging.hcb.hackclub.com",
+        from: "no-reply@localhost",
         to: "user@example.com",
         subject: "[Reimbursements] Expenses approved for Food & drinks for event"
       )

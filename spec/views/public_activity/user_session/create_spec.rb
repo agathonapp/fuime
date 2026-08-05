@@ -93,15 +93,28 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
 
   # The `|| "an account"` fallback belongs to a session with no user row at all
   # — the shape `SessionsHelper#create_session` builds before a login resolves.
-  context "when the impersonated session has no user at all" do
+  # Fuime: this context previously built the session with `user: nil` and then
+  # read `session.activities.sole`. That can never pass — User::Session's
+  # `after_save :create_login_activity` is guarded by
+  # `user(allow_unverified: true).present?` (upstream #13577), so a session with
+  # no user produces no activity at all and `.sole` raised RecordNotFound.
+  #
+  # The fallback it was reaching for is still worth guarding, just from the
+  # direction that is actually reachable: the activity exists, and the user
+  # becomes unresolvable afterwards (deleted, or scrubbed). update_column is used
+  # deliberately to bypass validations and callbacks, so the row ends up in the
+  # state the partial has to survive rather than one the model would refuse.
+  context "when the impersonated session's user is no longer resolvable" do
+    let(:shadow) { create(:user, verified: false) }
+
     let(:session) do
       create(
         :user_session,
-        user: nil,
+        user: shadow,
         verified: false,
         impersonated_by: admin,
         expiration_at: 1.hour.from_now,
-      )
+      ).tap { |s| s.update_column(:user_id, nil) }
     end
 
     it "falls back to a placeholder rather than raising" do

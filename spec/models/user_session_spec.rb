@@ -109,7 +109,7 @@ RSpec.describe User::Session, type: :model do
 
       activity = PublicActivity::Activity.sole
       rendered = rendered_text(activity.render(ApplicationController.renderer, current_user: user))
-      expect(rendered).to eq("You logged into HCB less than a minute ago")
+      expect(rendered).to eq("You logged into Fuime less than a minute ago")
     end
 
     specify "impersonated sessions are only rendered to admins" do
@@ -126,7 +126,7 @@ RSpec.describe User::Session, type: :model do
 
       activity = PublicActivity::Activity.sole
       admin_rendered = rendered_text(activity.render(ApplicationController.renderer, current_user: admin))
-      expect(admin_rendered).to eq("You impersonated Hack Clubber on HCB less than a minute ago")
+      expect(admin_rendered).to eq("You impersonated Hack Clubber on Fuime less than a minute ago")
     end
 
     def rendered_text(raw_html)

@@ -370,3 +370,75 @@ ACH would fail validation, not just the spec.** Harmless today because ACH is di
 the trailing "(Hack Club)" only existed to satisfy Column, which Fuime has no relationship
 with. Fix it whenever ACH is revisited; do not simply truncate to keep a Hack Club reference
 Fuime does not need.
+
+---
+
+## Spec hygiene pass, 2026-08-05 (after the upstream merge)
+
+The 54 failures recorded above were worked through. Almost none were what they looked like.
+
+### The largest cluster was a stale stub, not missing credentials
+
+19 failures across `payroll/positions_controller_spec`, `payroll/position_spec`,
+`payroll/position_mailer_spec` and `organizer_position_invites_controller_spec` reported
+`Contract Party (N) role and/or slug missing in DocuSeal.` That reads as an absent DOCUSEAL
+credential. It was not: `Contract::Party#docuseal_role` returns **"Fuime"** for the `:hcb`
+role since the rebrand, while five spec stubs still answered `"HCB"`. The submitter lookup
+in `Contract#send_to_docuseal!` found no matching slug and called
+`Rails.error.unexpected`, which raises under test.
+
+### Three real bugs were hiding behind spec failures
+
+1. **`AchTransfer#company_name` was 17 characters against a 16-character limit.** Every
+   outgoing ACH would have failed validation, not merely the specs — invisible because ACH
+   is disabled and the recorded baseline was a subset. Now `"Fuime"`; the `(Hack Club)`
+   suffix existed only to satisfy Column, which Fuime has no relationship with, and it would
+   have printed a Hack Club trademark on a recipient's bank statement (Rule 7). **One line,
+   13 failures.**
+2. **`Invoice#set_fields_from_stripe_invoice` had an unreachable branch.** It guarded the
+   Stripe `finalized_at` -> `status_transitions.finalized_at` move with
+   `inv.respond_to?(:status_transitions)`, but `inv` is a `Stripe::StripeObject`, which
+   answers `respond_to?` affirmatively for essentially any name via `method_missing`. The
+   guard was always true, the fallback was dead code, and an object with the old flat shape
+   hit `nil.finalized_at`. Branches on presence now.
+3. **`public_activity/user_session/create_spec` asserted an unreachable state** — a session
+   built with `user: nil` then read via `.activities.sole`, when
+   `after_save :create_login_activity` is guarded by `user(...).present?` (upstream #13577),
+   so no activity is ever created. Rewritten to reach the fallback from the direction that
+   is actually reachable.
+
+### One spec was fixed by NOT making it pass
+
+`organizer_position_invites_controller_spec` asserted that inviting a signee sends a fiscal
+sponsorship contract. Fuime deliberately does not: `send_contract` returns early unless
+`event.plan.contract_available?`, because no Fuime agreement exists and the upstream
+templates are Hack Club's own legal documents. Correcting the stub would have made a test
+pass by asserting behaviour we intentionally removed. Split instead: the param handling it is
+named for still runs and now asserts that **no** DocuSeal request is made and no contract is
+created, so the test fails if a Hack Club legal template is ever mailed to a Fuime user. The
+original expectations are preserved in a `skip: "FUIME-DISABLED"` sibling (Rule 2).
+
+### Stale rebrand assertions (Milestone 3's unfinished work)
+
+Specs asserting Hack Club copy the code had already changed: G Suite mailer subject and
+recipient, `"interested in HCB"`, `"You logged into HCB"`, the Stripe statement descriptor
+`"HCB* Scrapyard"`, and the reimbursement mailer sender `hcb@staging.hcb.hackclub.com`.
+
+### Tagged disabled (Milestone 5's unfinished work)
+
+`wires_controller_spec` — wires are an outbound money path Fuime does not offer, and
+`spec/controllers/fuime/disabled_modules_spec.rb` already asserts it. The create action
+redirects (302) rather than reaching the sudo check (401).
+
+### Environment-specific, NOT a Fuime issue — do not tag these disabled
+
+`spec/mailboxes/receipt_bin_mailbox_spec.rb` (4 failures) fails only on **Apple Silicon**:
+
+```
+Invalid platform ... (missing binary: wkhtmltopdf_debian_13_arm64)
+```
+
+The `wkhtmltopdf-binary` gem ships no arm64 Debian 13 build. These pass on any supported
+platform, so they are a local-toolchain gap and must not be marked FUIME-DISABLED — doing so
+would hide a working feature. Anyone triaging on an M-series Mac should expect exactly these
+four.
