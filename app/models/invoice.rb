@@ -285,11 +285,16 @@ class Invoice < ApplicationRecord
     self.due_date = Time.at(inv.due_date).to_datetime # convert from unixtime
     self.ending_balance = inv.ending_balance
 
-    finalized_value = if inv.respond_to?(:status_transitions)
-                        inv.status_transitions.finalized_at
-                      else
-                        inv.try(:finalized_at)
-                      end
+    # Stripe moved `finalized_at` under `status_transitions`. This shim handles
+    # both shapes, but it cannot branch on `respond_to?`: `inv` is a
+    # Stripe::StripeObject, which answers respond_to? affirmatively for
+    # essentially any name via its method_missing. So the guard was always true,
+    # the `else` was unreachable, and an object carrying the old flat shape hit
+    # `nil.finalized_at` instead of falling through.
+    #
+    # Branching on presence rather than respond_to? makes the fallback reachable.
+    transitions = inv.try(:status_transitions)
+    finalized_value = transitions.present? ? transitions.finalized_at : inv.try(:finalized_at)
     self.finalized_at = finalized_value ? Time.at(finalized_value.to_i).to_datetime : nil
 
     self.hosted_invoice_url = inv.hosted_invoice_url

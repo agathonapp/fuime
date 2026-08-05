@@ -73,7 +73,7 @@ RSpec.describe InvoiceService::Create, type: :model do
               footer: "\n\n\n\n\nNeed to pay by mailed paper check?\n\nPlease pay the amount to the order of The Hack Foundation, and include 'Scrapyard (##{event.id})' in the memo. Checks can be mailed to:\n\nScrapyard (##{event.id}) c/o The Hack Foundation\n8605 Santa Monica Blvd #86294\nWest Hollywood, CA 90069",
               metadata: { event_id: event.id },
               payment_settings: {},
-              statement_descriptor: "HCB* Scrapyard",
+              statement_descriptor: "Fuime* Scrapyard",
               status: nil
             }
           )

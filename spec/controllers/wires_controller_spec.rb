@@ -5,7 +5,16 @@ require "rails_helper"
 RSpec.describe WiresController do
   include SessionSupport
 
-  describe "create" do
+  # FUIME-DISABLED: wires are an outbound money path Fuime does not offer.
+  # spec/controllers/fuime/disabled_modules_spec.rb asserts "wires" is among the
+  # disabled modules, so the create action is blocked — the request redirects (302)
+  # instead of reaching the sudo check (401), and no Wire row is written. Both
+  # examples in this file exercise exactly that action and cannot pass while the
+  # module is off.
+  #
+  # Left in place rather than deleted (CLAUDE.md Rule 2): re-enabling the module
+  # should re-enable its tests.
+  describe "create", skip: "FUIME-DISABLED" do
     render_views
 
     def wire_params
