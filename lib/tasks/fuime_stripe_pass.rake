@@ -24,7 +24,10 @@
 
 namespace :fuime do
   namespace :stripe_pass do
-    SLUG = "stripe-pass-venture"
+    # Override with SLUG=... to run the pass against a different venture; the
+    # harness (below) uses stripe-pass-full so the ToS-blocked payments_only
+    # venture and the fully-headless one never share an account.
+    SLUG = ENV.fetch("SLUG", "stripe-pass-venture")
 
     def sp_abort_unless_test!
       abort "development only" unless Rails.env.development?
@@ -108,6 +111,61 @@ namespace :fuime do
       end
     end
 
+    # Why this exists: proving money-in/money-out today requires an account whose
+    # requirements the PLATFORM may complete — including tos_acceptance, which
+    # Stripe only allows when requirement_collection=application. The product
+    # profile with that semantics (cards_enabled) cannot be created yet because it
+    # requests card_issuing, which is sales-gated. This harness creates the same
+    # application-collected account WITHOUT the issuing capability — identical
+    # collection semantics, no Issuing — so RequirementCollectionService, the
+    # payment recorder and PayoutService can be exercised for real. It is a test
+    # harness, not a product profile: the account_params shape it bypasses was
+    # already validated when onboard created acct_1U1DpR2WL7iAvZOC.
+    desc "2h. HARNESS: application-collected account without card_issuing (SLUG=stripe-pass-full)"
+    task harness_account: :environment do
+      sp_abort_unless_test!
+      sp_step("harness account (application-collected, no issuing)") do
+        existing = sp_venture.stripe_connected_account
+        if existing&.stripe_id.present?
+          puts "  · already exists: #{existing.stripe_id}"
+          next
+        end
+
+        # Idempotency across partial failures: the first run created the Stripe
+        # account and then died on the local write ("Owner must exist"), leaving
+        # an orphan. Adopt an existing harness account for this venture before
+        # ever creating another.
+        orphan = Stripe::Account.list({ limit: 50 }, sp_opts).data.find do |a|
+          a.metadata["fuime_harness"] == "stripe_pass" && a.metadata["fuime_event_slug"] == sp_venture.slug
+        end
+        acct = orphan || Stripe::Account.create(
+          {
+            country: "US",
+            email: sp_guardian.email,
+            business_type: "individual",
+            controller: {
+              losses: { payments: "application" },
+              fees: { payer: "application" },
+              requirement_collection: "application",
+              stripe_dashboard: { type: "none" }
+            },
+            capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+            business_profile: { name: sp_venture.name },
+            settings: { payouts: { schedule: { interval: "manual" } } },
+            metadata: { fuime_event_id: sp_venture.id, fuime_event_slug: sp_venture.slug,
+                        fuime_guardian_user_id: sp_guardian.id, fuime_harness: "stripe_pass" }
+          },
+          sp_opts
+        )
+        puts "  · adopted orphan #{acct.id}" if orphan
+        record = existing || StripeConnectedAccount.create!(event: sp_venture, owner: sp_guardian,
+                                                            controller_profile: "cards_enabled")
+        record.sync_from_stripe!(acct)
+        puts "  ✓ #{acct.id} — application-collected, platform may complete ToS"
+        puts "    currently due: #{acct.requirements.currently_due.inspect}"
+      end
+    end
+
     desc "3a. payments_only: prefill identity + bank by API; ToS stays with the guardian"
     task prefill: :environment do
       sp_abort_unless_test!
@@ -178,7 +236,12 @@ namespace :fuime do
           sp_acct_id,
           {
             business_profile: { mcc: "5945", url: "https://fuime.com/b/#{SLUG}",
-                                product_description: "Teen-run venture (Fuime stripe pass)" },
+                                product_description: "Teen-run venture (Fuime stripe pass)",
+                                support_phone: "0000000000" },
+            # Allowed here and ONLY here: on requirement_collection=application
+            # accounts the platform accepts ToS by API. On Stripe-collected
+            # profiles this exact call is refused (verified 2026-08-05) and the
+            # guardian does it in the embedded flow instead.
             tos_acceptance: { date: Time.current.to_i, ip: "127.0.0.1" }
           },
           sp_opts
@@ -204,7 +267,11 @@ namespace :fuime do
         intent = Stripe::PaymentIntent.create(
           {
             amount: 25_00, currency: "usd",
-            payment_method: "pm_card_visa", confirm: true,
+            # bypass-pending: ordinary test cards settle into the PENDING balance,
+            # which would make the payout step fail with insufficient funds even
+            # though the charge succeeded. This test card makes funds available
+            # immediately, which is what a manual-schedule payout needs.
+            payment_method: "pm_card_bypassPending", confirm: true,
             automatic_payment_methods: { enabled: true, allow_redirects: "never" },
             description: "Stripe pass — first real money-in",
             metadata: { fuime_event_id: sp_venture.id }
@@ -216,12 +283,36 @@ namespace :fuime do
       end
 
       sp_step("record into the ledger (ConnectPaymentRecorder)") do
-        Fuime::ConnectPaymentRecorder.new(event: sp_venture)
-                                     .record_payment(object: intent, amount_cents: intent.amount)
-        ct = CanonicalTransaction.where("memo ILIKE ?", "%stripe pass%").order(:id).last ||
-             CanonicalTransaction.order(:id).last
-        puts "  ✓ ledger line: ct##{ct.id} \"#{ct.memo}\" $#{ct.amount_cents / 100.0}"
-        puts "    venture balance now: $#{sp_venture.reload.balance_v2_cents / 100.0}"
+        # The recorder is webhook-shaped: it takes the STRIPE event (whose
+        # top-level `account` names the connected account) and exposes only
+        # #handle — the first draft of this task called a private method with a
+        # Rails Event and learned that the hard way. Fetch the real
+        # payment_intent.succeeded event Stripe just generated and hand it over
+        # exactly as the webhook endpoint would.
+        stripe_event = Stripe::Event.list(
+          { type: "payment_intent.succeeded", limit: 10 },
+          sp_opts.merge(stripe_account: sp_acct_id)
+        ).data.find { |ev| ev.data.object.id == intent.id }
+        abort "  no payment_intent.succeeded event found yet — re-run in a few seconds" if stripe_event.nil?
+
+        if stripe_event.try(:account).blank?
+          # Events LISTED from a connected account do not carry the `account`
+          # field; events DELIVERED to a Connect webhook endpoint do, and the
+          # recorder keys venture lookup off it. Mirror the delivered shape.
+          stripe_event = Stripe::Event.construct_from(stripe_event.to_hash.merge(account: sp_acct_id))
+        end
+
+        Fuime::ConnectPaymentRecorder.new(event: stripe_event).handle
+
+        # CPTs reach events through mapping tables, not an event_id column — the
+        # first draft printed an unrelated seeded row by querying CTs directly.
+        mapping = CanonicalPendingEventMapping.where(event_id: sp_venture.id)
+                                              .includes(:canonical_pending_transaction)
+                                              .order(:id).last
+        abort "  recorder ran but no pending line reached the venture" if mapping.nil?
+        t = mapping.canonical_pending_transaction
+        puts "  ✓ pending ledger line: cpt##{t.id} $#{t.amount_cents / 100.0} #{t.memo.inspect} (fronted=#{t.fronted})"
+        puts "    settled lines so far: #{CanonicalEventMapping.where(event_id: sp_venture.id).count} — settlement is a separate webhook path"
       end
     end
 
@@ -294,6 +385,15 @@ namespace :fuime do
     task payout: :environment do
       sp_abort_unless_test!
       sp_step("payout request + guardian approval (PayoutService)") do
+        # PayoutService's guard reads the LOCAL mirror, and Stripe enables
+        # payouts asynchronously after the last requirement clears — in
+        # production account.updated keeps the mirror fresh; here we must. The
+        # first run of this task failed exactly this way ("Stripe has paused
+        # this account") while Stripe itself already said payouts_enabled=true.
+        remote = Stripe::Account.retrieve(sp_acct_id, sp_opts)
+        sp_venture.stripe_connected_account.sync_from_stripe!(remote)
+        puts "  · mirror re-synced: payouts_enabled=#{remote.payouts_enabled}"
+
         service = Fuime::PayoutService.new(event: sp_venture)
         request = service.request!(amount_cents: 10_00, requested_by: sp_teen)
         puts "  ✓ requested $#{request.amount_cents / 100.0} by #{sp_teen.email}"
