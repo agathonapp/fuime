@@ -145,7 +145,7 @@ RSpec.describe "Users::FirstController", type: :request do
       allow_any_instance_of(SessionsHelper).to receive(:find_current_session).and_return(session)
     end
 
-    context "when the team org exists on HCB" do
+    context "when the team org exists on Fuime" do
       let!(:team_event) { create(:event) }
       let!(:event_affiliation) do
         Event::Affiliation.create!(affiliable: team_event, name: "first", metadata: affiliation_metadata)
@@ -172,11 +172,11 @@ RSpec.describe "Users::FirstController", type: :request do
         it "renders teammate avatars inside the teammates card" do
           get "/first"
           expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Your teammates are interested in HCB, too!")
+          expect(response.body).to include("Your teammates are interested in Fuime, too!")
           expect(response.body).to include("Maya")
           expect(response.body).to include("Eli")
           expect(response.body).to include("FRC #9999")
-          expect(response.body).to include("are already interested in HCB")
+          expect(response.body).to include("are already interested in Fuime")
         end
 
         it "excludes the current user from the teammate list" do
@@ -184,7 +184,7 @@ RSpec.describe "Users::FirstController", type: :request do
           # so we have to scope the assertion to the teammate sentence to prove self-exclusion.
           user.update!(full_name: "Zorblax Probely")
           get "/first"
-          sentence = response.body[/\b[\w,\s]+(?:is|are) already interested in HCB/]
+          sentence = response.body[/\b[\w,\s]+(?:is|are) already interested in Fuime/]
           expect(sentence).not_to be_nil, "expected a teammate sentence in the rendered page"
           expect(sentence).not_to include("Zorblax")
         end
@@ -202,7 +202,7 @@ RSpec.describe "Users::FirstController", type: :request do
           get "/first"
           expect(response).to have_http_status(:ok)
           expect(response.body).to include("Your students are interested")
-          expect(response.body).to include("are already interested in HCB")
+          expect(response.body).to include("are already interested in Fuime")
           expect(response.body).to include("Start your team&#39;s organization")
         end
       end
@@ -221,7 +221,7 @@ RSpec.describe "Users::FirstController", type: :request do
     context "when no teammates have signed up" do
       it "does not render the teammate sentence" do
         get "/first"
-        expect(response.body).not_to include("are already interested in HCB")
+        expect(response.body).not_to include("are already interested in Fuime")
         expect(response.body).not_to include("Your students are interested")
       end
     end
