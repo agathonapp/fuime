@@ -8,6 +8,7 @@
 #  aasm_state                                   :string           not null
 #  activated_at                                 :datetime
 #  address                                      :text
+#  business_category                            :string
 #  can_front_balance                            :boolean          default(TRUE), not null
 #  country                                      :integer
 #  deleted_at                                   :datetime
@@ -37,6 +38,7 @@
 #  show_recent_donors                           :boolean          default(FALSE), not null
 #  show_top_donors                              :boolean          default(FALSE), not null
 #  slug                                         :text
+#  storefront_tagline                           :string
 #  stripe_card_shipping_type                    :integer          default(0), not null
 #  website                                      :string
 #  created_at                                   :datetime         not null

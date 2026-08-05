@@ -1,0 +1,9 @@
+<%= turbo_frame_tag "event_missing_receipts_#{@event.public_id}" do %>
+  <% if @missing_receipts_count.zero? %>
+    <span class="badge bg-success">Receipts complete</span>
+  <% else %>
+    <%= link_to event_transactions_path(@event, missing_receipts: true), class: "badge bg-warning" do %>
+      <%= pluralize(@missing_receipts_count, "receipt") %> missing
+    <% end %>
+  <% end %>
+<% end %>

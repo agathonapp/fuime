@@ -321,3 +321,52 @@ pooled-to-Connect migration. One was a seed-dependent flake.
 was flaky on name escaping (now fixed). If a single storefront or checkout example
 fails on one run and passes on another, check for a Faker-generated string being
 asserted against rendered HTML before assuming a regression.
+
+---
+
+## Full-suite baseline, 2026-08-05 (post upstream merge)
+
+**2549 examples, 54 failures, 14 pending.**
+
+**The previously recorded baseline of "573 examples, 1 known failure" was not the full
+suite.** The suite is 2549 examples. Earlier sessions ran subsets — the Fuime-specific
+directories listed in SETUP_NOTES — and recorded the result as if it were the whole thing.
+Treat 2549/54 as the real number from here.
+
+### None of the 54 are caused by the upstream merge
+
+Attributed by cross-referencing the failing spec files against `git diff --name-only`
+across the merge. Exactly one failing spec file was touched by the merge —
+`spec/services/canonical_pending_transaction_service/unsettle_spec.rb:27` — and its failure
+is `Validation failed: Company name is too long (maximum is 16 characters)`, from
+`AchTransfer#company_name` being rebranded `"HCB (Hack Club)"` (15 chars) ->
+`"Fuime (Hack Club)"` (17). That commit predates the merge.
+
+The four `Ledger::Item` status migrations and the new unique indexes on
+`canonical_pending_settled_mappings` broke nothing, which was the main risk going in.
+
+### What the 54 actually are, by cause
+
+1. **Stale rebrand assertions — specs still asserting Hack Club copy** (g_suite ×3,
+   and others). e.g. `expected "Your Google Workspace account via Fuime is ready!" to
+   include "...via HCB is ready"`, and `expected ["hcb@hackclub.com"] got
+   ["support@fuime.com"]`. Milestone 3 required updating specs that assert copy; this was
+   not finished.
+2. **Disabled-module specs that were never marked pending** (ACH ×12, G Suite ×3, wires ×2,
+   invoices ×1). Milestone 5 disabled these modules and asked for `# FUIME-DISABLED` tags.
+   14 specs carry the tag; these do not.
+3. **DocuSeal without credentials** (payroll/positions ×19, the single largest cluster):
+   `Contract Party (N) role and/or slug missing in DocuSeal.` Environmental — DOCUSEAL_SETUP.md
+   is already flagged as unverified against current code.
+4. **`comment_policy_spec` ×1** — the failure the divergence log already records.
+5. **Remainder** (`users/first_controller` ×3, `receipt_bin_mailbox` ×4, `user_session` ×2,
+   and singles) — unexamined. `receipt_bin_mailbox` is the likely consequence of
+   `HcbCode#receipt_email` deliberately returning nil now that Fuime has no inbound parser.
+
+### Real bug worth carrying
+
+`AchTransfer#company_name` is 17 characters against a 16-character limit, so **every outgoing
+ACH would fail validation, not just the spec.** Harmless today because ACH is disabled, and
+the trailing "(Hack Club)" only existed to satisfy Column, which Fuime has no relationship
+with. Fix it whenever ACH is revisited; do not simply truncate to keep a Hack Club reference
+Fuime does not need.

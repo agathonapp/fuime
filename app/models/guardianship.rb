@@ -9,20 +9,20 @@
 #  agreement_signed_at  :datetime
 #  agreement_user_agent :string
 #  agreement_version    :string
-#  created_at           :datetime         not null
-#  guardian_id          :bigint           not null
 #  invite_sent_at       :datetime
 #  invite_token         :string
-#  minor_id             :bigint           not null
 #  revoked_at           :datetime
-#  revoked_by_id        :bigint
 #  status               :integer          default(0), not null
+#  created_at           :datetime         not null
 #  updated_at           :datetime         not null
+#  guardian_id          :bigint           not null
+#  minor_id             :bigint           not null
+#  revoked_by_id        :bigint
 #
 # Indexes
 #
 #  index_guardianships_on_guardian_id               (guardian_id)
-#  index_guardianships_on_guardian_id_and_minor_id  (guardian_id, minor_id) UNIQUE
+#  index_guardianships_on_guardian_id_and_minor_id  (guardian_id,minor_id) UNIQUE
 #  index_guardianships_on_invite_token              (invite_token) UNIQUE
 #  index_guardianships_on_minor_id                  (minor_id)
 #  index_guardianships_on_revoked_by_id             (revoked_by_id)

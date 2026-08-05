@@ -538,11 +538,29 @@ class User < ApplicationRecord
     guardianships_as_minor.active.exists?
   end
 
+  # Fuime: is this user the signing guardian for someone else?
+  #
+  # Deliberately scoped to ACTIVE guardianships, which is what keeps this from
+  # becoming a way around the age gate. Guardianship#guardian_must_be_adult lets a
+  # guardianship be CREATED for a guardian whose age is not yet known — a stub user
+  # invited by email — but refuses to let it go active until `guardian.known_adult?`
+  # is true. So an active guardianship is proof of a confirmed adult, whereas a
+  # pending one is proof of nothing, and two minors could name each other.
+  def guardian_of_active_ward?
+    guardianships_as_guardian.active.exists?
+  end
+
   # Fuime: Does this user require a guardian before they can operate a business?
   #
   # Unknown age counts as requiring one (see #minor_or_unknown_age?). Adults and
   # minors with an ACTIVE guardianship do not.
   def needs_guardian?
+    # Someone who is already the signing guardian for another user is a confirmed
+    # adult (see #guardian_of_active_ward?), so asking them to invite a parent is
+    # both wrong and a dead end — the invite flow would have them name a guardian
+    # for themselves while they are mid-way through being one for their kid.
+    return false if guardian_of_active_ward?
+
     minor_or_unknown_age? && !has_active_guardian?
   end
 

@@ -16,6 +16,12 @@ module Errors
   class StripeInvalidNameError < StandardError
   end
 
+  # Fuime: a card grant whose spending policy resolves to nothing it may buy.
+  # Raised instead of activating, because the empty allowlist such a policy
+  # produces would reach Stripe as no restriction at all.
+  class CardGrantPolicyConflictError < StandardError
+  end
+
   class TwilioAbuseError < StandardError
   end
 

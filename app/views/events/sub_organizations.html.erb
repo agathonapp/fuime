@@ -51,7 +51,7 @@
 
 <% if @sub_organizations.any? %>
   <ul id="sub_organizations" class="grid grid--medium-narrow text-left w-100 mt0">
-    <%= render partial: "events/event_card", collection: @sub_organizations, as: :event, locals: { show_scoped_tags: true } %>
+    <%= render partial: "events/event_card", collection: @sub_organizations, as: :event, locals: { show_scoped_tags: true, show_card_controls: true } %>
   </ul>
   <%= paginate @sub_organizations %>
 <% elsif @hidden_sub_organizations.none? %>

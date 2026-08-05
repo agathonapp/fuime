@@ -5,7 +5,7 @@
 # Table name: payout_requests
 #
 #  id               :bigint           not null, primary key
-#  aasm_state       :string           not null, default("pending")
+#  aasm_state       :string           default("pending"), not null
 #  amount_cents     :integer          not null
 #  approved_at      :datetime
 #  failure_code     :string
@@ -13,12 +13,26 @@
 #  paid_at          :datetime
 #  rejected_at      :datetime
 #  rejection_reason :text
-#  stripe_payout_id :text
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
 #  approved_by_id   :bigint
 #  event_id         :bigint           not null
 #  requested_by_id  :bigint           not null
+#  stripe_payout_id :text
+#
+# Indexes
+#
+#  index_payout_requests_on_approved_by_id    (approved_by_id)
+#  index_payout_requests_on_event_id          (event_id)
+#  index_payout_requests_on_requested_by_id   (requested_by_id)
+#  index_payout_requests_on_stripe_payout_id  (stripe_payout_id) UNIQUE WHERE (stripe_payout_id IS NOT NULL)
+#  index_pending_payout_requests_on_event     (event_id,created_at) WHERE ((aasm_state)::text = 'pending'::text)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (approved_by_id => users.id)
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (requested_by_id => users.id)
 #
 # Fuime: a teen's request to move money out of the venture, and the guardian's
 # decision on it.

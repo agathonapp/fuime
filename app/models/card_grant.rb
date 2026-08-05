@@ -57,6 +57,7 @@ class CardGrant < ApplicationRecord
   include Freezable
   include Commentable
   include HasPaperTrailHelpers
+  include InheritablePolicy
 
   belongs_to :event
   has_one :ledger, -> { where(primary: true) }, inverse_of: :card_grant
@@ -266,6 +267,12 @@ class CardGrant < ApplicationRecord
     self.with_lock do
       return if stripe_card.present?
 
+      # Fuime: fail closed on a contradictory policy. An allowlist that resolves
+      # to nothing would otherwise reach Stripe as no allowlist, i.e. a card that
+      # can buy anything — the exact opposite of what was configured. See
+      # CardGrant::InheritablePolicy.
+      raise Errors::CardGrantPolicyConflictError, spending_policy_conflict_message if spending_policy_conflict?
+
       begin
         self.stripe_card = StripeCardService::Create.new(
           card_type: "virtual",
@@ -282,12 +289,14 @@ class CardGrant < ApplicationRecord
     end
   end
 
+  # Fuime: resolved through the event tree, and allowlists narrow rather than
+  # widen. See CardGrant::InheritablePolicy for why each direction is what it is.
   def allowed_merchants
-    (merchant_lock + (setting&.merchant_lock || [])).uniq
+    narrowed_policy(merchant_lock, policy_settings.map(&:merchant_lock))
   end
 
   def disallowed_merchants
-    (banned_merchants + (setting&.banned_merchants || [])).uniq
+    widened_policy(banned_merchants, policy_settings.map(&:banned_merchants))
   end
 
   def allowed_merchant_names
@@ -295,11 +304,11 @@ class CardGrant < ApplicationRecord
   end
 
   def allowed_categories
-    (category_lock + (setting&.category_lock || [])).uniq
+    narrowed_policy(category_lock, policy_settings.map(&:category_lock))
   end
 
   def disallowed_categories
-    (banned_categories + (setting&.banned_categories || [])).uniq
+    widened_policy(banned_categories, policy_settings.map(&:banned_categories))
   end
 
   def allowed_category_names
@@ -307,7 +316,7 @@ class CardGrant < ApplicationRecord
   end
 
   def keyword_lock
-    super || setting&.keyword_lock
+    nearest_policy(super, policy_settings.map(&:keyword_lock))
   end
 
   def default_expiration_at

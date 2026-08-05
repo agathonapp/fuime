@@ -9,7 +9,14 @@
       </div>
       <div class="flex flex-col justify-center">
         <p class="h2 bold m0"><%= organizer_position.user.name %></p>
-        <div class="g0 line-height-0">
+        <%# Fuime: leading-tight, not line-height-0. Upstream's role labels were
+            single words ("Member"), so a collapsed line height was invisible here.
+            RolesHelper renames member -> "Team member" and reader -> "Parent",
+            and "Team member" wraps in this narrow column — with line-height: 0
+            both lines then render in the same vertical space, printing "Teammber".
+            The class is correct elsewhere (icon and clipboard alignment in 10+
+            partials), so it is replaced here rather than redefined. %>
+        <div class="g0 leading-tight">
           <% if policy(organizer_position).change_position_role? %>
             <div data-controller="menu" data-menu-placement-value="bottom-start">
               <div class="flex items-center cursor-pointer" data-menu-target="toggle" data-action="click->menu#toggle click@document->menu#close keydown@document->menu#keydown">

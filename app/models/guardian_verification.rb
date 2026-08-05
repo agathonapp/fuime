@@ -21,6 +21,17 @@
 #  event_id                     :bigint           not null
 #  user_id                      :bigint           not null
 #
+# Indexes
+#
+#  index_guardian_verifications_on_event_id              (event_id)
+#  index_guardian_verifications_on_event_id_and_user_id  (event_id,user_id)
+#  index_guardian_verifications_on_user_id               (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (user_id => users.id)
+#
 # Fuime: the record that a guardian was verified. Deliberately NOT the evidence.
 #
 # See the migration for why. Short version: L4 requires "verify then delete" — COPPA's

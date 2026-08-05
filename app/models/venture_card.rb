@@ -14,11 +14,20 @@
 #  spending_limit_cents        :integer
 #  spending_limit_interval     :string
 #  status                      :string
-#  stripe_id                   :text
 #  stripe_synced_at            :datetime
 #  created_at                  :datetime         not null
 #  updated_at                  :datetime         not null
+#  stripe_id                   :text
 #  venture_cardholder_id       :bigint           not null
+#
+# Indexes
+#
+#  index_venture_cards_on_stripe_id              (stripe_id) UNIQUE WHERE (stripe_id IS NOT NULL)
+#  index_venture_cards_on_venture_cardholder_id  (venture_cardholder_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (venture_cardholder_id => venture_cardholders.id)
 #
 # Fuime: one card on a venture's own Stripe account.
 #
