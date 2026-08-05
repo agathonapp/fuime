@@ -2710,3 +2710,70 @@ have been hit least and broken locally for anyone trying to use the flow. Found 
 this was the first controller spec ever written for it.
 
 **Suite:** 573 examples, 1 failure (the pre-existing `comment_policy_spec` factory issue).
+
+---
+
+## Card grant policy inherits through the event tree, and a school seed (2026-08-05)
+
+**Why:** the first real customer conversation (a school network whose high schoolers each
+run a venture) maps onto `Event` hierarchy — School as the main org, one sub org per
+student, grants on the sub org. Everything that use case needs was already upstream:
+`Event#parent_id` with recursive ancestor traversal, `OrganizerPosition.role_at_least?`
+resolving roles *through* ancestors, `CardGrant` with category/merchant locks, `Freezable`.
+Verified empirically against a seeded tree: a guide holding manager on the school gets
+`freeze?`/`defrost?`/`cancel?` on every student sub org, a student gets member on their own
+and nothing at all on another student's. No new authorization path was needed.
+
+One thing did not transfer, and it failed open.
+
+**`app/models/concerns/card_grant/inheritable_policy.rb` (new), `card_grant.rb`:**
+`CardGrantSetting` is reached by `has_one :card_grant_setting, through: :event` with a
+UNIQUE index on `event_id` — the grant's own event and nowhere else. With grants on student
+sub orgs, a policy set on the school never reached one. Worse,
+`before_validation :create_card_grant_setting` calls `find_or_create_by!(event_id:)`, which
+manufactures an *empty* setting on the sub org, and an empty allowlist plus an empty grant
+lock is an unrestricted card, not a restricted one. Policy now resolves over
+`Event#ancestor_ids`: bans **union** upward (a school ban cannot be undone beneath it),
+allowlists **intersect** downward skipping empty levels (each level may only narrow).
+
+That direction change is the load-bearing part. Upstream used `+` on allowlists, which
+*widens* — a grant-level lock ADDED categories the school never allowed. Harmless for HCB,
+where a grant is a one-off gift from the org that holds the money; inverted for an
+institution delegating to teachers. Empty still means "inherit", not "deny", or every
+existing HCB grant relying on a setting-level lock would break.
+
+**`spending_policy_conflict?` + `Errors::CardGrantPolicyConflictError`:** intersection
+introduced a second way to reach `[]`, and the two meanings are opposite. "Nobody
+configured a lock" is unrestricted by design. "The school allows {hardware} and this grant
+locks to {gambling}" must deny everything — but as a bare `[]` it reaches Stripe as *no
+allowlist*, i.e. unrestricted. Since `category_lock` is free text validated nowhere
+(`edit_usage_restrictions.html.erb` is a `text_field` with a placeholder), a single typo
+lands in exactly that state. `create_stripe_card` now raises rather than activating.
+
+**`app/views/events/_sub_organization_card_control.html.erb` (new), `_event_card.html.erb`,
+`sub_organizations.html.erb`:** freeze from the parent org's roster instead of three clicks
+deep. Same two routes and the same `StripeCardPolicy` guards as
+`stripe_cards/actions/_freeze`, which is styled `btn--list-item` for a dropdown and would
+dominate a card tile. Gated on `show_scoped_tags`, the branch where the tile is *not*
+wrapped in `link_to`, so a button can never nest inside an anchor. `_event_card` uses strict
+locals, so `show_card_controls: false` had to be added to its magic comment — omitting it
+raised `unknown keyword` and broke 7 specs before it was declared.
+
+**`lib/tasks/fuime_school.rake` (new):** seeds School -> sub-org-per-student with guides as
+managers on the main org. Two things learned by running it: `OrganizerPosition` cannot be
+created directly (`has_one :organizer_position_invite, required: true`), so positions come
+from `OrganizerPositionInvite#accept` as in `db/seeds.rb`; and users need `verified: true`
+or `user_must_be_verified` refuses. Categories come from `Fuime::CardSpendPolicy`
+(51 slugs, sourced from upstream's `breakdown_engine/categorizer.rb`) rather than a
+hand-written list — its own header explains why typing Stripe slugs from memory is a trap.
+
+**Not done:** the guardianship gate was expected to block a 14-year-old holding a position
+and did not fire at all. Nothing here has touched Stripe; `create_stripe_card` remains
+unexercised in any mode.
+
+**Suite:** 86 examples green across the card grant, spend policy, and inheritance specs;
+49 in `events_controller_spec` + `event_policy_spec` with 1 failure
+(`events_controller_spec.rb:72`, "#index includes all events if the user is an admin"),
+confirmed pre-existing by stashing these changes and re-running. Note this is a *different*
+failure from the `comment_policy_spec` one recorded above — the full suite was not re-run,
+so the total is unverified.

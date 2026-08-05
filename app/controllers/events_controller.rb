@@ -547,6 +547,17 @@ class EventsController < ApplicationController
     render :async_sub_organization_balance, layout: false
   end
 
+  # Fuime: how many of this org's transactions still owe a receipt. Authorized
+  # against @event exactly like async_balance, so a guide reaches it for the sub
+  # orgs their role already covers and nobody reaches it for the ones it doesn't.
+  def async_missing_receipts
+    authorize @event
+
+    @missing_receipts_count = @event.hcb_codes.missing_receipt.receipt_required.count
+
+    render :async_missing_receipts, layout: false
+  end
+
   def async_sub_organizations_graph
     authorize @event
     data = Rails.cache.fetch("sub_organizations_graph_#{@event.id}", expires_in: 5.minutes) do

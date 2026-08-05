@@ -1138,6 +1138,11 @@ Rails.application.routes.draw do
     get "async_balance"
     get "async_sub_organization_balance"
     get "async_sub_organizations_graph"
+    # Fuime: outstanding-receipt count for one org, loaded lazily on the parent's
+    # roster. Async for the same reason async_balance is — HcbCode's
+    # receipt_required scope carries several LEFT JOINs, and a school roster
+    # renders one of these per student.
+    get "async_missing_receipts"
     get "reimbursements_pending_review_icon"
 
     get "documentation", to: redirect("/%{event_id}/documents", status: 302)

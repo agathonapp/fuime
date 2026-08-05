@@ -1,0 +1,68 @@
+<%# locals: (event:) %>
+<%#
+  Fuime: freeze a sub organization's card from the parent org's roster.
+
+  Why this exists rather than reusing stripe_cards/actions/_freeze: that partial is
+  styled `btn--list-item` with a heading and a description paragraph, built for a
+  dropdown menu. In a card grid it would dominate the tile. This is the same two
+  routes and the same policy guards in a compact form — no new authorization path.
+
+  The permission itself is upstream's and needs no change: StripeCardPolicy#freeze?
+  calls admin_or_manager?, which resolves through OrganizerPosition.role_at_least?
+  and therefore through the event tree. A guide holding manager on the school
+  passes on every student sub org beneath it; a student passes only on their own
+  card. That is exactly the oversight model, so this partial only has to surface it.
+%>
+
+<div class="flex items-center gap-2 flex-wrap">
+
+<%# Receipt status, lazily. Mirrors how the balance stat on this same tile is
+    loaded: HcbCode's receipt_required scope carries several LEFT JOINs, and a
+    school roster renders one of these per student.
+
+    The policy check is not redundant with the one in the controller. A lazy frame
+    whose src 302s to the login page makes Turbo escalate the missing frame into a
+    full page visit — the bug spec/controllers/events_controller_spec.rb:215 exists
+    to catch for async_balance. So the src must not be emitted at all unless this
+    viewer can actually fetch it. %>
+<% if policy(event).async_missing_receipts? %>
+  <%= turbo_frame_tag "event_missing_receipts_#{event.public_id}",
+                      src: event_async_missing_receipts_path(event),
+                      loading: :lazy do %>
+    <span class="badge bg-muted">—</span>
+  <% end %>
+<% end %>
+
+<% cards = event.stripe_cards.active.on_main_ledger.to_a %>
+
+<% if cards.one? %>
+  <% card = cards.first %>
+  <% if card.stripe_status == "inactive" %>
+    <%= link_to defrost_stripe_card_path(card),
+                method: :post,
+                class: "btn btn--secondary",
+                disabled: !policy(card).defrost?,
+                title: policy(card).defrost? ? "Unfreeze this card" : "You don't have permission to unfreeze this card" do %>
+      <%= inline_icon "freeze", size: 16 %>
+      Frozen
+    <% end %>
+  <% elsif card.stripe_status == "active" %>
+    <%= link_to freeze_stripe_card_path(card),
+                method: :post,
+                class: "btn btn--secondary",
+                disabled: !policy(card).freeze?,
+                title: policy(card).freeze? ? "Freeze this card now" : "You don't have permission to freeze this card" do %>
+      <%= inline_icon "freeze", size: 16 %>
+      Freeze
+    <% end %>
+  <% end %>
+<% elsif cards.many? %>
+  <%# More than one card: freezing the wrong one silently is worse than one more
+      click, so send the guide to the sub org to choose. %>
+  <%= link_to event_path(event), class: "btn btn--secondary" do %>
+    <%= inline_icon "card", size: 16 %>
+    <%= cards.size %> cards
+  <% end %>
+<% end %>
+
+</div>

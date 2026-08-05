@@ -1,4 +1,4 @@
-<%# locals: (event:, show_category_badge: false, show_date_stat: false, show_scoped_tags: false, link_path: nil) %>
+<%# locals: (event:, show_category_badge: false, show_date_stat: false, show_scoped_tags: false, link_path: nil, show_card_controls: false) %>
 
 <% link_path ||= event %>
 
@@ -104,6 +104,15 @@
         </span>
       <% end %>
     </div>
+    <%# Fuime: freeze from the roster, for the school oversight flow. Gated on
+        show_scoped_tags because that is the branch below where the tile is NOT
+        wrapped in a link_to — rendering a button inside an anchor would nest
+        interactive elements. %>
+    <% if show_card_controls && show_scoped_tags %>
+      <div class="mb2">
+        <%= render "events/sub_organization_card_control", event: %>
+      </div>
+    <% end %>
     <div class="avatar-row">
       <% if event.organizer_positions.size > 9 %>
         <div class="rounded-full text-white justify-center items-center flex tabular-nums" style="width: 24px; height: 24px; font-weight: 300; font-size: 10px; background: #273444;">

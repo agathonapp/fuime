@@ -281,6 +281,38 @@ RSpec.describe EventsController do
     end
   end
 
+  # Fuime: the receipt-status badge on a parent's roster, for the school oversight
+  # flow. Guarded by EventPolicy#async_missing_receipts? (reader?), deliberately
+  # stricter than async_balance?'s show? — a transparent org's balance is public by
+  # design, but how far behind it is on receipts is internal compliance state.
+  describe "#async_missing_receipts" do
+    let(:parent) { create(:event, is_public: true) }
+    let!(:sub) { create(:event, parent:, is_public: true, name: "Student Venture", slug: "student-venture") }
+
+    it "refuses a signed out visitor even on a transparent org" do
+      get(:async_missing_receipts, params: { event_id: sub.slug })
+
+      expect(response).not_to have_http_status(:ok)
+    end
+
+    it "answers for an organizer of the parent, through the ancestor cascade" do
+      sign_in_organizer_of(parent)
+
+      get(:async_missing_receipts, params: { event_id: sub.slug })
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    # The paired half of the guard. A lazy frame whose src 302s makes Turbo
+    # escalate into a full page visit, so the roster must not emit a src the
+    # viewer cannot fetch — same failure mode as the async_balance case above.
+    it "omits the frame src from the roster for a signed out visitor" do
+      get(:sub_organizations, params: { event_id: parent.slug })
+
+      expect(response.body).not_to include(event_async_missing_receipts_path(sub))
+    end
+  end
+
   describe "#async_sub_organizations_graph" do
     let(:parent) { create(:event, is_public: true) }
     let!(:transparent_sub) { create(:event, parent:, is_public: true) }

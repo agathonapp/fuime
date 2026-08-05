@@ -148,6 +148,18 @@ class EventPolicy < ApplicationPolicy
     sub_organizations?
   end
 
+  # Fuime: outstanding-receipt count for one org, shown on a parent's roster.
+  #
+  # Deliberately NOT show? (which async_balance? uses). A transparent org's
+  # balance is public by design; how far behind it is on receipt collection is
+  # internal compliance state, and on a school roster it is a per-student
+  # figure. reader? keeps it to people with a role in the org or an ancestor,
+  # which is what makes it safe for a guide to see across their students while
+  # remaining invisible to the public on a transparent org.
+  def async_missing_receipts?
+    reader?
+  end
+
   def create_transfer?
     admin_or_manager? && !record.demo_mode?
   end
