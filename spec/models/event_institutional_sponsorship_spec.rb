@@ -45,6 +45,18 @@ RSpec.describe "institutional sponsorship", type: :model do
     end
   end
 
+  describe "the plan itself" do
+    it "charges no revenue fee" do
+      # Schools are billed per student per year for the software. A percentage of
+      # each student's revenue on top would charge the same customer twice.
+      expect(Event::Plan::School.new.revenue_fee).to eq(0.00)
+    end
+
+    it "is offerable in the plan picker" do
+      expect(Event::Plan::School.selectable?).to be true
+    end
+  end
+
   describe "EventPolicy#setup_payments?" do
     it "lets a manager of the school connect Stripe on a student sub org" do
       school, venture = school_tree
