@@ -5,6 +5,7 @@
 # Table name: stripe_connected_accounts
 #
 #  id                    :bigint           not null, primary key
+#  capabilities          :jsonb            not null
 #  charges_enabled       :boolean          default(FALSE), not null
 #  controller            :jsonb            not null
 #  controller_profile    :string           default("payments_only"), not null
@@ -15,12 +16,24 @@
 #  onboarding_started_at :datetime
 #  payouts_enabled       :boolean          default(FALSE), not null
 #  requirements          :jsonb            not null
-#  stripe_id             :text
 #  stripe_synced_at      :datetime
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  event_id              :bigint           not null
 #  owner_id              :bigint           not null
+#  stripe_id             :text
+#
+# Indexes
+#
+#  index_stripe_connected_accounts_on_event_id             (event_id) UNIQUE
+#  index_stripe_connected_accounts_on_non_default_profile  (controller_profile) WHERE ((controller_profile)::text <> 'payments_only'::text)
+#  index_stripe_connected_accounts_on_owner_id             (owner_id)
+#  index_stripe_connected_accounts_on_stripe_id            (stripe_id) UNIQUE WHERE (stripe_id IS NOT NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (owner_id => users.id)
 #
 # Fuime: the Stripe account a guardian owns on behalf of one venture.
 #

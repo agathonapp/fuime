@@ -4,20 +4,32 @@
 #
 # Table name: venture_cardholders
 #
-#  id                      :bigint           not null, primary key
-#  requirements            :jsonb            not null
-#  role                    :string           not null
-#  status                  :string
-#  stripe_id               :text
-#  stripe_synced_at        :datetime
-#  terms_accepted_at       :datetime
-#  terms_accepted_ip       :string
+#  id                        :bigint           not null, primary key
+#  requirements              :jsonb            not null
+#  role                      :string           not null
+#  status                    :string
+#  stripe_synced_at          :datetime
+#  terms_accepted_at         :datetime
+#  terms_accepted_ip         :string
 #  terms_accepted_user_agent :text
-#  terms_version           :string
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  event_id                :bigint           not null
-#  user_id                 :bigint           not null
+#  terms_version             :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  event_id                  :bigint           not null
+#  stripe_id                 :text
+#  user_id                   :bigint           not null
+#
+# Indexes
+#
+#  index_venture_cardholders_on_event_id              (event_id)
+#  index_venture_cardholders_on_event_id_and_user_id  (event_id,user_id) UNIQUE
+#  index_venture_cardholders_on_stripe_id             (stripe_id) UNIQUE WHERE (stripe_id IS NOT NULL)
+#  index_venture_cardholders_on_user_id               (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (user_id => users.id)
 #
 # Fuime: a person who can hold a card on a venture's own Stripe account.
 #
