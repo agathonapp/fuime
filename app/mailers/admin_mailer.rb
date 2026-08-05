@@ -126,6 +126,15 @@ class AdminMailer < ApplicationMailer
     )
   end
 
+  def linked_object_anomalies(anomalous_items:)
+    @anomalous_items = anomalous_items
+
+    mail(
+      to: engineers,
+      subject: "#{anomalous_items.length} items have linked object anomalies"
+    )
+  end
+
   private
 
   # Fuime: was a hardcoded list of Hack Club staff, which would have sent Fuime
