@@ -276,6 +276,20 @@ module Fuime
             "account cannot be converted — the venture must be re-onboarded onto a new account."
     end
 
+    # Fuime: a school is a company, not an individual.
+    #
+    # Getting this wrong is not cosmetic. With business_type "individual", Stripe
+    # asks the person completing onboarding for THEIR personal identity — SSN
+    # last-4, home address, date of birth — and makes them the account's legal
+    # owner. For a school that means a business-office employee personally backing
+    # the institution's payment account, which is both wrong and something no
+    # sensible administrator would agree to. "company" asks for the school's EIN
+    # and business address instead, with the administrator merely as the
+    # representative completing the form.
+    def institutional?
+      @event.institutionally_sponsored?
+    end
+
     def account_params
       {
         country: "US",
@@ -284,7 +298,10 @@ module Fuime
         # has no field expressing "this adult is the guardian of the person who
         # actually runs the business" — that relationship lives only in Fuime's
         # guardianships table, which is why it goes into metadata below.
-        business_type: "individual",
+        #
+        # On an institutionally sponsored venture there is no guardian and the
+        # entity itself is the account holder — see #institutional? above.
+        business_type: institutional? ? "company" : "individual",
         # Both come from the profile. See PROFILES for what each choice costs;
         # `controller` in particular is create-only and permanent.
         controller: profile_config[:controller],
@@ -316,7 +333,11 @@ module Fuime
         metadata: {
           fuime_event_id: @event.id,
           fuime_event_slug: @event.slug,
-          fuime_guardian_user_id: @guardian.id
+          # On a school venture this is the manager who completed onboarding, not
+          # a guardian. Recorded under a distinct key so reconciliation can never
+          # mistake a business-office employee for a student's parent.
+          **(institutional? ? { fuime_onboarded_by_user_id: @guardian.id, fuime_sponsorship: "institution" }
+                            : { fuime_guardian_user_id: @guardian.id })
         }
       }
     end

@@ -207,6 +207,17 @@ module Fuime
     # one — silently picking `.first` is how a second teen's parent ends up owning
     # someone else's business.
     def acting_guardian
+      # Fuime: an institutionally sponsored venture has no guardian, by design —
+      # the school is in loco parentis. Before this branch existed, every school
+      # request fell through to the raise below with "(0 candidates)", which is
+      # what took app.fuime.com/:slug/payments/setup down with a 400.
+      #
+      # The account owner is the manager performing the onboarding: they are the
+      # person supplying the institution's own identity details to Stripe, and
+      # EventPolicy#setup_payments? has already confirmed they are a manager of
+      # this org or an ancestor of it. Nobody else reaches this line.
+      return current_user if @event.institutionally_sponsored?
+
       return current_user if current_user.guardian_of_event?(@event)
 
       guardians = @event.overseeing_guardians.to_a

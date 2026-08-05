@@ -394,6 +394,16 @@ class EventPolicy < ApplicationPolicy
     return false if user.blank?
     return true if user.admin?
 
+    # Fuime: on an institutionally sponsored org there is no guardian to be, so
+    # the guardian check below can never pass and a school could not connect
+    # Stripe at all. The equivalent responsible party is a manager — the business
+    # office — and manager? already resolves through the event tree, so a manager
+    # on the school qualifies on each student's sub org beneath it.
+    #
+    # Kept as a separate branch rather than widening guardian_reader?, so the
+    # rule stays legible: a parent-backed venture is still guardian-only.
+    return manager? if record.institutionally_sponsored?
+
     guardian_reader?
   end
 
@@ -549,6 +559,18 @@ class EventPolicy < ApplicationPolicy
   def permitted_to_operate_business?
     return true if user.blank?
     return true if user.admin?
+
+    # Fuime: the guardianship control asks "has an adult taken responsibility for
+    # this minor?". On an institutionally sponsored org the school already has,
+    # in loco parentis and under enrolment contracts its families signed. Without
+    # this, a 14-year-old at a school would hold the correct member role on their
+    # own venture and still be refused every action on it, because
+    # User#needs_guardian? is fail-closed and no guardianship row exists — nor
+    # should one.
+    #
+    # Scoped to this record, not to the user: the same student operating a
+    # personal venture outside the school programme still needs a guardian.
+    return true if record.institutionally_sponsored?
 
     user.permitted_to_operate_business?
   end
