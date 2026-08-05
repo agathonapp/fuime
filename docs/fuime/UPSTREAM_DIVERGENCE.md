@@ -2777,3 +2777,46 @@ unexercised in any mode.
 confirmed pre-existing by stashing these changes and re-running. Note this is a *different*
 failure from the `comment_policy_spec` one recorded above — the full suite was not re-run,
 so the total is unverified.
+
+---
+
+## Spec hygiene: three real bugs behind the failing specs (2026-08-05)
+
+**Why:** the post-merge baseline showed 54 failures, and the recorded baseline of "573
+examples, 1 failure" turned out to have been a subset rather than the suite. Working through
+them found more than test debt.
+
+**`app/models/ach_transfer.rb`:** `company_name` is capped at 16 characters; the rebrand set
+it to `"Fuime (Hack Club)"`, which is 17. **Every outgoing ACH would have failed validation**,
+not merely the specs — invisible because ACH origination is disabled and the recorded
+baseline never ran these files. Now `"Fuime"`. The suffix existed because Column required
+"Hack Club" in the company_name for HCB's outgoing ACHs; Fuime has no Column relationship and
+will not get one (LEGAL_RESEARCH: Column banks Hack Club because the funds are Hack Club's
+own), and keeping it would have printed a Hack Club trademark on a recipient's bank statement,
+which Rule 7 forbids. One line, 13 failures.
+
+**`app/models/invoice.rb`:** the shim handling Stripe's move of `finalized_at` under
+`status_transitions` branched on `inv.respond_to?(:status_transitions)`. `inv` is a
+`Stripe::StripeObject`, which answers `respond_to?` affirmatively for essentially any name via
+`method_missing`, so the guard was always true and the `else` was unreachable — an object
+carrying the old flat shape hit `nil.finalized_at` rather than falling through. Now branches
+on presence. Surfaced by the Stripe 11.7.0 -> 19.4.0 upgrade.
+
+**`spec/controllers/organizer_position_invites_controller_spec.rb`:** fixed by *not* making it
+pass. It asserted that inviting a signee sends a fiscal sponsorship contract;
+`OrganizerPositionInvite#send_contract` returns early unless `event.plan.contract_available?`,
+because no Fuime agreement exists and the upstream templates are Hack Club's own legal
+documents. Correcting the stub would have asserted behaviour we deliberately removed. Split:
+the param handling still runs and now asserts that no DocuSeal request is made and no contract
+is created — so it fails if a Hack Club legal template is ever mailed to a Fuime user. The
+original expectations survive in a `skip: "FUIME-DISABLED"` sibling (Rule 2).
+
+**Also:** five DocuSeal role stubs still answered `"HCB"` where `Contract::Party#docuseal_role`
+now returns `"Fuime"` (19 failures, the largest cluster, and it looked like missing
+credentials); eight further stale rebrand assertions; `wires_controller_spec` tagged
+FUIME-DISABLED to match `fuime/disabled_modules_spec`; and an unreachable premise in
+`public_activity/user_session/create_spec` rewritten.
+
+**Not ours:** `receipt_bin_mailbox_spec` (4) fails only on Apple Silicon — the
+`wkhtmltopdf-binary` gem ships no arm64 Debian 13 build. Deliberately NOT tagged disabled,
+since that would hide a feature that works everywhere else. See known-failures.md.
