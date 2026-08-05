@@ -233,3 +233,77 @@ namespace :fuime do
     NEXT
   end
 end
+
+namespace :fuime do
+  # Fabricates VIRTUAL StripeCard rows so the parent org's roster — the freeze
+  # control and the card count — can be looked at without Stripe.
+  #
+  # This exists because create_stripe_card has never run against Stripe in any
+  # mode, so there is no other way to see the oversight UI in a browser. Virtual
+  # is not an arbitrary choice: stripe_card_personalization_design_id and the
+  # stripe_shipping_* fields are both required `unless virtual?`, so a virtual
+  # card is the only shape that can be built without inventing a personalization
+  # design and a mailing address too.
+  #
+  # The stripe_ids are deliberately prefixed "ic_FAKE_" so no one, and nothing,
+  # mistakes these for cards that exist at Stripe. They will not authorize, they
+  # will not appear in any Stripe dashboard, and freezing one updates only this
+  # database — the point is to verify our own UI and policy wiring.
+  desc "Fabricate fake virtual cards on a school's student sub orgs (dev only)"
+  task :seed_school_cards, [:school_slug] => :environment do |_t, args|
+    abort "Refusing to run outside development." unless Rails.env.development?
+
+    school = Event.find_by(slug: args[:school_slug].presence || "founders-school")
+    abort "School not found. Run fuime:seed_school first." if school.nil?
+
+    created = 0
+
+    school.subevents.each_with_index do |venture, i|
+      if venture.stripe_cards.any?
+        puts "  = #{venture.name} already has a card"
+        next
+      end
+
+      student = venture.organizer_positions.first&.user
+      if student.nil?
+        warn "  ! #{venture.name} has no organizer to hold a card"
+        next
+      end
+
+      cardholder = StripeCardholder.find_or_initialize_by(user: student)
+      cardholder.stripe_id ||= "ich_FAKE_#{venture.id}"
+      unless cardholder.save
+        warn "  ! cardholder for #{student.email}: #{cardholder.errors.full_messages.join("; ")}"
+        next
+      end
+
+      card = StripeCard.new(
+        event: venture,
+        stripe_cardholder: cardholder,
+        card_type: "virtual",
+        stripe_id: "ic_FAKE_#{venture.id}",
+        stripe_brand: "Visa",
+        stripe_exp_month: 12,
+        stripe_exp_year: Date.current.year + 3,
+        last4: format("%04d", 1000 + venture.id),
+        # One frozen on purpose, so the roster shows both states side by side and
+        # the Frozen/Freeze branch of the control partial is actually exercised.
+        stripe_status: i.zero? ? "inactive" : "active",
+        # StripeCard's `frozen` scope is stripe_status "inactive" AND
+        # initially_activated, so without this the frozen one reads as
+        # never-activated rather than as frozen.
+        initially_activated: true
+      )
+
+      if card.save
+        created += 1
+        puts "  + #{venture.name} — •••• #{card.last4} (#{card.stripe_status})"
+      else
+        warn "  ! #{venture.name}: #{card.errors.full_messages.join("; ")}"
+      end
+    end
+
+    puts "\n#{created} fake card(s) created. Open #{school.slug} -> Sub-organizations."
+    puts "These are NOT real Stripe cards. Freezing one writes only to this database."
+  end
+end

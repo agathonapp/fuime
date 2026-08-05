@@ -33,7 +33,11 @@
   <% end %>
 <% end %>
 
-<% cards = event.stripe_cards.active.on_main_ledger.to_a %>
+<%# Not `.active`, which is stripe_status: "active" ONLY. Using it here hid frozen
+    cards from the roster entirely and made the defrost branch below dead code —
+    exactly backwards, since a frozen card is the one a guide most needs to see.
+    Canceled cards are excluded because there is nothing left to do with them. %>
+<% cards = event.stripe_cards.where.not(stripe_status: "canceled").on_main_ledger.to_a %>
 
 <% if cards.one? %>
   <% card = cards.first %>
