@@ -74,18 +74,19 @@ class StaticPagesController < ApplicationController
   end
 
   def branding
-    @logos = [
-      { name: "Original Light", criteria: "For white or light colored backgrounds.", background: "smoke" },
-      { name: "Original Dark", criteria: "For black or dark colored backgrounds.", background: "black" },
-      { name: "Outlined Black", criteria: "For white or light colored backgrounds.", background: "snow" },
-      { name: "Outlined White", criteria: "For black or dark colored backgrounds.", background: "black" }
+    # Fuime's own marks. The previous lists described HCB's four-logo brand kit
+    # and served Hack Club's actual logo files out of /brand/hcb-icon-*
+    # (CLAUDE.md Rule 7: their trademarks come out of our UI).
+    @marks = [
+      { name: "Mark", criteria: "The arch monogram. For light backgrounds.",
+        background: "smoke", svg: "/brand/fuime-mark.svg", png: "/brand/fuime-logo-light.png" },
+      { name: "Mark, white", criteria: "The arch monogram for dark backgrounds.",
+        background: "black", svg: "/brand/fuime-mark-white.svg", png: "/brand/fuime-logo-dark.png" },
+      { name: "App icon", criteria: "The mark on its blue tile. For avatars and app listings.",
+        background: "smoke", svg: "/brand/fuime-icon.svg", png: "/android-chrome-512x512.png" }
     ]
-    @icons = [
-      { name: "Icon Original", criteria: "The original Fuime logo.", background: "smoke" },
-      { name: "Icon Dark", criteria: "Fuime logo in dark mode.", background: "black" }
-    ]
-    @event_name = signed_in? && current_user.events.first&.name || "Hack Pennsylvania"
-    @event_slug = signed_in? && current_user.events.first&.slug || "hack-pennsylvania"
+    @event_name = signed_in? && current_user.events.first&.name || "Ada's Print Shop"
+    @event_slug = signed_in? && current_user.events.first&.slug || "adas-print-shop"
 
     render layout: "docs"
   end

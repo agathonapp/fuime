@@ -1,8 +1,8 @@
 <% content_for :title, "Funder FAQ: funding through Fuime" %>
 
 <% content_for :head do %>
-  <% description = "For funders and donors: answers to common questions about funding through Fuime by Hack Club, including funding projects that aren't 501(c)(3)s, how it compares to a private foundation or donor-advised fund, tax-deductibility, control, fees, and transparency." %>
-  <% share_image = "#{request.base_url}/brand/hcb-icon-icon-original.png" %>
+  <% description = "For funders and donors: answers to common questions about funding through Fuime, including funding projects that aren't 501(c)(3)s, how it compares to a private foundation or donor-advised fund, tax-deductibility, control, fees, and transparency." %>
+  <% share_image = "#{request.base_url}/brand/fuime-social.png" %>
   <meta name="description" content="<%= description %>">
   <link rel="canonical" href="<%= funders_faq_url %>">
 
@@ -23,15 +23,15 @@
     <%= raw({
           "@context": "https://schema.org",
           "@graph": [
+            # See funders.html.erb: this node used to publish The Hack
+            # Foundation's legalName, EIN and charity records under Fuime's
+            # name. Fuime is not Hack Club and is not a 501(c)(3).
             {
               "@type": "Organization",
               "name": "Fuime",
-              "legalName": "The Hack Foundation",
-              "url": "https://hcb.hackclub.com",
-              "logo": "https://hcb.hackclub.com/brand/hcb-icon-icon-original.png",
-              "taxID": "81-2908499",
-              "identifier": { "@type": "PropertyValue", "propertyID": "EIN", "value": "81-2908499" },
-              "sameAs": ["https://github.com/hackclub/hcb", "https://hackclub.com", "https://en.wikipedia.org/wiki/Hack_Club", "https://projects.propublica.org/nonprofits/organizations/812908499"]
+              "url": root_url,
+              "logo": "#{root_url.chomp('/')}/brand/fuime-logo-light.png",
+              "description": "Fuime is a financial technology company, not a bank. It provides financial tools for teen-run businesses, with a parent or guardian as the legal account owner."
             },
             {
               "@type": "FAQPage",

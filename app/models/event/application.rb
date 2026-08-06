@@ -211,10 +211,7 @@ class Event
     # against the free slot: a kid can run their class venture AND their first
     # personal one for free.
     def free_venture_slot_available?
-      return true if user.fuime_pro?
-      return true if user.guardians.any?(&:fuime_pro?)
-
-      user.events.not_hidden.reject(&:institutionally_sponsored?).empty?
+      user.venture_slot_available?
     end
 
     def rejection_messages

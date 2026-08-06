@@ -1,0 +1,28 @@
+<%# Fuime: the paywall's signage, shown where the teen is instead of where the
+    admin is. The HARD wall lives in Event::Application#activate_event! — this
+    banner exists so nobody discovers it there. Rendered only when the free
+    slot is already used and no institution vouches for the applicant. %>
+<% if current_user && !current_user.institutionally_vouched_for? && !current_user.venture_slot_available? %>
+  <%= render "application/callout", type: "info", title: "This one needs the family plan" do %>
+    <p class="mb-1">
+      The free plan includes one venture, and you already have one.
+      The family plan is <strong>$<%= Event::Plan::Pro.new.monthly_fee_cents / 100 %>/month</strong> for
+      <strong>unlimited businesses</strong> at
+      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %> —
+      you can apply now either way; approval just waits on the upgrade.
+    </p>
+    <% if current_user.minor_or_unknown_age? %>
+      <% guardians = current_user.guardians.to_a %>
+      <p class="mb-0">
+        <% if guardians.any? %>
+          Ask <strong><%= guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong> —
+          they can upgrade from their <%= link_to "billing page", my_billing_path, class: "underline" %>.
+        <% else %>
+          A parent or guardian upgrades from their billing page once they've joined.
+        <% end %>
+      </p>
+    <% else %>
+      <%= link_to "Upgrade — $#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo", my_billing_path, class: "btn bg-accent" %>
+    <% end %>
+  <% end %>
+<% end %>
