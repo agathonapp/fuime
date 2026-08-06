@@ -472,6 +472,32 @@ class EventPolicy < ApplicationPolicy
     manager?
   end
 
+  # Fuime: a school putting its own money into a student's venture ("$100 per A").
+  #
+  # A manager question and never a student one, and the direction is what makes that
+  # obvious: unlike a payout, nobody asks for this — the school initiates it, and it
+  # spends the school's own balance. There is no second approval step for the same
+  # reason. A payout needs one because a minor is moving money out of an account they
+  # do not own; here the account owner IS the party acting.
+  #
+  # Institutional trees only. On a family venture the equivalent — a parent putting
+  # money into their child's business — has no shared account to move it within, so
+  # there is nothing this could post against.
+  def grant_school_award?
+    return false if user.blank?
+    return true if user.admin?
+    return false unless record.institutionally_sponsored?
+
+    manager?
+  end
+
+  # Seeing the awards a venture has received. The student needs this — it is their
+  # money and their running total toward the school's 1099 threshold — so it is
+  # reader-level, unlike granting.
+  def school_awards?
+    auditor_or_reader?
+  end
+
   # The payouts screen itself: the team needs to see the balance and the state of
   # their request, the guardian needs to see what they are being asked to approve.
   def payouts?

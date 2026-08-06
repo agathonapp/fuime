@@ -71,6 +71,37 @@ RSpec.describe "Legal pages", type: :request do
     end
   end
 
+  # Every one of these pages previously wrote "Fuime" where a contracting party
+  # belongs, so the documents named no counterparty at all — L2 makes the guardian
+  # the principal obligor, and an obligor needs someone to be obligated to. The
+  # entity is also the Stripe Connect platform account holder, so it is the party
+  # a chargeback or an indemnity claim actually reaches.
+  describe "naming the legal entity" do
+    let(:entity) { Rails.configuration.constants.legal_entity_name }
+
+    it "is configured" do
+      expect(entity).to be_present
+    end
+
+    ["/terms", "/privacy", "/guardian-agreement"].each do |path|
+      it "names the entity on #{path}" do
+        get path
+
+        expect(response.body).to include(entity)
+      end
+    end
+
+    # The footer disclosure is the one a reader sees without clicking anything,
+    # which is why 12 CFR 328.102(b)(3)(ii) reasoning put it there unconditionally
+    # in the first place.
+    it "names the entity in the standing footer disclosure" do
+      get "/terms"
+
+      expect(response.body).to include("Fuime is a product of #{entity}")
+      expect(response.body).to include("not a bank")
+    end
+  end
+
   describe "search indexing" do
     # Terms nobody can find are terms nobody read. These are the pages that
     # should be indexable; most of the app deliberately is not.

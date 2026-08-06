@@ -126,6 +126,16 @@ Rails.application.routes.draw do
   post "/:event_slug/payouts/:id/reject", to: "fuime/payouts#reject", as: :fuime_payout_reject
   post "/:event_slug/payouts/:id/settle", to: "fuime/payouts#settle", as: :fuime_payout_settle
 
+  # Fuime: a school funding a student's venture ("$100 per A"). Money IN from the
+  # school, as against the payout routes above which move it out.
+  #
+  # No request verb, deliberately — the school initiates and spends its own balance,
+  # so unlike a payout there is nobody for it to ask. See
+  # Fuime::SchoolAwardsController.
+  get "/:event_slug/awards", to: "fuime/school_awards#index", as: :fuime_school_awards
+  post "/:event_slug/awards", to: "fuime/school_awards#create", as: :fuime_school_awards_create
+  post "/:event_slug/awards/:id/void", to: "fuime/school_awards#void", as: :fuime_school_award_void
+
   # Fuime: the venture's business cards. Note the verbs are split by WHO may do them,
   # not by REST tidiness — freeze is available to the teen (a lost card must be stoppable
   # immediately), unfreeze and limits are the guardian's alone. See Fuime::CardsController.

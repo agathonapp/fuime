@@ -102,6 +102,27 @@ module EventsHelper
       symbol: :payouts,
       available_proc: ->(event) { policy(event).payouts? && organizer_signed_in? }
     },
+    # Fuime: money the school put in ("$100 per A").
+    #
+    # Only shown inside a school programme, because on a family venture there is no
+    # shared account for an award to move within and the page would say so and nothing
+    # else. `shares_payment_account?` rather than `institutionally_sponsored?` — a
+    # school tree that has not onboarded Stripe yet has nowhere to move money from.
+    #
+    # `bank-account.svg` is verified to exist in app/assets/images/icons (there is no
+    # bare `bank.svg` — the family is bank-account/bank-circle/bank-icon). See the
+    # Taxes note below for why a missing icon 500s the whole org nav rather than one
+    # entry.
+    {
+      name: "School awards",
+      path_proc: ->(event_id) { fuime_school_awards_path(event_slug: event_id) },
+      tooltip: "Money your school has put into this venture",
+      icon: "bank-account",
+      symbol: :awards,
+      available_proc: lambda { |event|
+        event.shares_payment_account? && policy(event).school_awards? && organizer_signed_in?
+      }
+    },
     # Fuime: business cards.
     #
     # Only shown for ventures whose Stripe account was actually created with card

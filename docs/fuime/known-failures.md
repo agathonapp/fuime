@@ -462,3 +462,20 @@ view-rendering spec fails without it (see the asset section above), which makes 
 worktree baseline useless for controller specs — it showed 13 failures where the working
 tree showed 2. Copy `app/assets/builds/.` into the worktree before comparing anything
 that renders a view.
+
+### School-awards rescue branch — measured 2026-08-06 against `f467a507d`
+
+The awards work itself: **45 examples, 0 failures**. The regression set around it —
+`spec/policies`, `event_spec`, `event_institutional_sponsorship_spec`,
+`event_school_payment_account_spec`, both `payout_request` specs, `spec/services/fuime`
+and `spec/controllers/fuime` — **653 examples, 1 failure**, and that one is new to this
+file:
+
+| Spec | Verdict | How attributed |
+|---|---|---|
+| `event_spec.rb:296` "uses the standard plan as a fallback" | Pre-existing | Expects `Event::Plan::Standard`, gets `Event::Plan::Free`. `8f372bd0a` ("The pricing ladder") deliberately changed the root-venture fallback at `event.rb:1350` and did not update this upstream spec. **Reproduced on a detached checkout of clean `origin/main`**, with none of the awards commits applied. |
+
+That last one is a stale assertion rather than a defect: the code comment at
+`event.rb:1345` states the new default on purpose. Fixing it means editing an upstream
+spec, so it wants its own commit and an `UPSTREAM_DIVERGENCE` line — deliberately not
+folded into the rescue branch, whose job was to recover lost work unchanged.

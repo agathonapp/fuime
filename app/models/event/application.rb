@@ -401,8 +401,15 @@ class Event
       # could activate a guardianless minor's application and produce a venture
       # its owner cannot act on; with it, the L2 control is exactly as strong as
       # before, just later in the funnel. Institutionally sponsored applicants
-      # (school students) pass — the school is their responsible adult.
-      if user.minor_or_unknown_age? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+      # (school students) pass — the school is their responsible adult. So do
+      # staff applicants (User#staff?): a Fuime admin standing up their own
+      # venture has no birthday on file and so reads as a parentless minor,
+      # which left staff unable to activate even a demo. Note this tests the
+      # APPLICANT, not whoever is clicking activate — an admin activating a
+      # teen's application is still held to the guardian requirement, which is
+      # the case this gate was written for.
+      if user.minor_or_unknown_age? && !user.has_active_guardian? &&
+         !user.institutionally_vouched_for? && !user.staff?
         raise ArgumentError,
               "Cannot activate #{hashid}: #{user.email} is a minor with no active guardian. " \
               "Their parent or guardian must accept the guardianship invite first (L2)."

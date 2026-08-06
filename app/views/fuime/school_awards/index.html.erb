@@ -1,0 +1,154 @@
+<% title "School awards — #{@event.name}" %>
+
+<%= render "events/nav", selected: :awards %>
+
+<h1 class="heading">School awards</h1>
+
+<%# Fuime: the school putting its own money into a student's venture — Alpha School's
+    "$100 per A".
+
+    Two audiences, as on the payouts page. The student sees what they've been given
+    and what it means for their own taxes; the guide sees the school's remaining
+    balance and the grant form. Only the guide gets controls, and there is no
+    student-side "ask" verb at all — the school initiates this.
+
+    Plain markup on purpose (Milestone 4: correctness over beauty). %>
+
+<% if @school.blank? %>
+  <%= render "application/callout", type: "warning", title: "This venture isn't part of a school programme" %>
+<% else %>
+  <p class="secondary">
+    <%= @event.name %> is part of <strong><%= @school.name %></strong>'s programme.
+    Money the school awards moves straight into this venture's balance — it can be
+    spent on the business or taken out like any other funds.
+  </p>
+
+  <% if @can_grant %>
+    <h2 class="mt2">Award money</h2>
+
+    <p class="secondary mt0">
+      <%# Not Stripe's balance, which is the whole programme's and mostly students'
+          own sales revenue. This is what the school itself has to give away. %>
+      <strong><%= number_to_currency(@available_cents / 100.0) %></strong> available in
+      <%= @school.name %>'s account to award.
+    </p>
+
+    <%= form_with url: fuime_school_awards_create_path(event_slug: @event.slug), method: :post do |f| %>
+      <div class="field">
+        <%= f.label :awarded_to_id, "Who earned it?", class: "bold" %>
+        <%= f.select :awarded_to_id,
+                     @candidates.map { |u| [u.name.presence || u.email, u.id] },
+                     {},
+                     required: true %>
+        <p class="secondary mb0">
+          Named because the $600-a-year reporting threshold is per student, not per
+          venture.
+        </p>
+      </div>
+
+      <div class="field">
+        <%= f.label :amount, "Amount", class: "bold" %>
+        <%= f.text_field :amount, placeholder: "100.00", inputmode: "decimal", autocomplete: "off" %>
+      </div>
+
+      <div class="field">
+        <%= f.label :reference, "Your reference (optional)", class: "bold" %>
+        <%# Deliberately not a grade field. Grades are education records under FERPA
+            and Fuime has no use for them — see CreateSchoolAwards. The school keeps
+            the gradebook; Fuime keeps the money and a pointer back to it. %>
+        <%= f.text_field :reference, placeholder: "e.g. gradebook entry or term ref", autocomplete: "off" %>
+        <p class="secondary mb0">
+          For your own records so you can reconcile this against your gradebook.
+          Don't put grades or coursework here — Fuime doesn't store student academic
+          records.
+        </p>
+      </div>
+
+      <%= f.submit "Award to this venture", class: "btn bg-accent" %>
+    <% end %>
+  <% end %>
+
+  <h2 class="mt2">Awards received</h2>
+
+  <% if @awards.empty? %>
+    <p class="secondary">Nothing awarded to this venture yet.</p>
+  <% else %>
+    <table class="table--autosize">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Earned by</th>
+          <th>Granted by</th>
+          <% if @can_grant %><th></th><% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @awards.each do |award| %>
+          <tr>
+            <td><%= award.awarded_on.strftime("%b %-d, %Y") %></td>
+            <td>
+              <%= number_to_currency(award.amount) %>
+              <% if award.voided? %>
+                <span class="badge bg-muted">Reversed</span>
+                <% if award.void_reason.present? %>
+                  <span class="secondary">— <%= award.void_reason %></span>
+                <% end %>
+              <% end %>
+            </td>
+            <td><%= award.awarded_to.name.presence || award.awarded_to.email %></td>
+            <td>
+              <%= award.awarded_by.name.presence || award.awarded_by.email %>
+              <% if award.reference.present? %>
+                <span class="secondary">— <%= award.reference %></span>
+              <% end %>
+            </td>
+            <% if @can_grant %>
+              <td>
+                <% unless award.voided? %>
+                  <%= form_with url: fuime_school_award_void_path(event_slug: @event.slug, id: award.id),
+                                method: :post, class: "flex items-start", style: "gap: 0.5rem;" do |f| %>
+                    <%= f.text_field :void_reason, placeholder: "Reason (optional)",
+                                     aria: { label: "Reason for reversing" } %>
+                    <%= f.submit "Reverse", class: "btn bg-error",
+                                 data: { turbo_confirm: "Take back #{number_to_currency(award.amount)}? " \
+                                                        "If it's already been spent the venture will go negative." } %>
+                  <% end %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%# The tax point, stated once and plainly.
+
+      Two different taxpayers are involved and conflating them is how a family gets a
+      surprise. Cash for grades is a taxable prize under IRC § 74 — NOT a qualified
+      scholarship under § 117, which covers tuition and required fees — so it is the
+      student's own income. It is not the venture's business revenue, which is why it
+      is excluded from the tax tracker on both sides (see
+      Fuime::TaxTrackerService::EXCLUDED_MEMO_PATTERNS). %>
+  <% crossed = @reportable.select { |_user, cents| cents >= SchoolAward::REPORTABLE_CENTS } %>
+
+  <% if crossed.any? && @can_grant %>
+    <%= render "application/callout", type: "info", title: "Reporting threshold reached" do %>
+      <p class="mb-0">
+        <%= crossed.map { |user, cents| "#{user.name.presence || user.email} (#{number_to_currency(cents / 100.0)})" }.to_sentence %>
+        <%= crossed.one? ? "has" : "have" %> received $600 or more from
+        <%= @school.name %> this year, which is the 1099-MISC reporting threshold.
+        That's the school's filing obligation, not Fuime's — Fuime doesn't withhold or
+        file anything.
+      </p>
+    <% end %>
+  <% end %>
+
+  <p class="secondary mt2">
+    Money the school awards isn't counted as business revenue in this venture's tax
+    estimate — it isn't a sale. It may still be taxable income for whoever earned it, at their own
+    rate. Fuime is a financial technology company, not a bank, and doesn't give tax
+    advice.
+  </p>
+<% end %>

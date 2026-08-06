@@ -3034,3 +3034,174 @@ literal in `funders_faq`, which is `<%= raw({...}.to_json) %>` and takes `#` com
   and both `transfer_confirmation_letter.pdf.erb` now carry Fuime letterhead, but their
   *body copy* still certifies Hack Club's charity status and EIN. A fiscal-sponsorship
   letter is an artifact Fuime cannot issue at all.
+
+---
+
+## School awards: "$100 per A" as a ledger reattribution (2026-08-06)
+
+**Why:** Alpha School pays each student $100 per A. The obvious implementations are all
+wrong — Fuime sending the money would be custody (L1), and posting a credit without
+backing it would be inventing money.
+
+**The insight.** A school and every venture beneath it share one Stripe account
+(`Event#payment_account`), so moving $100 from school to student **does not move money
+at Stripe at all** — it changes which subledger owns it. Two settled ledger lines that
+cancel; no Stripe call; Fuime is not in the flow of funds because no funds flow. This is
+structurally HCB's `Disbursement`, which stays disabled: its state machine models bank
+transit that does not exist here, and `mark_approved` sets `fronted: true`, which
+`VentureLedger` forbids outright (Fuime has no reserves).
+
+**The rule that makes it safe.** The school must actually hold the money, and
+`Fuime::SchoolAwardService` refuses the award otherwise. This is not fastidiousness:
+`Fuime::PayoutService` caps a withdrawal at the venture's own ledger balance, so an
+unfunded award would be **immediately withdrawable out of other students' sales
+revenue**, discoverable only afterwards. Conservation across the tree is what keeps the
+pool backing the sum of its parts, and it is asserted directly in the specs.
+
+**`Fuime::VentureLedger#post_settled!` (new).** `#post!` writes PENDING, which is right
+for a Stripe charge awaiting release. An award has no such phase — the money is already
+available — and `Event#balance_v2_cents` deliberately excludes pending *incoming* money,
+so a pending credit would leave an awarded student unable to see or spend $100 and
+invisible in the exact figure the payout cap reads. Settled lines go in through the same
+entry point the settlement sweep's final step uses; Rule 3 holds, the pipeline is only
+fed.
+
+**No grades, anywhere — the load-bearing decision.** "$100 per A" is grade data, and
+grades are education records under FERPA (20 U.S.C. § 1232g). Alpha is the covered
+entity; a vendor holding them is a "school official" under 34 CFR 99.31(a)(1)(i)(B) only
+with a written agreement, direct institutional control, and the exception named in the
+school's annual notification — for data Fuime has no use for. Fuime needs "$100, this
+student, this date, school ref ABC-123"; it does not need to know it was an A in Algebra
+II. `reference` is an opaque school-side string, there is no subject/grade/GPA/term
+column, and `spec/models/school_award_spec.rb` **fails the suite if a grade-shaped
+column is ever added**. Same principle as never storing ID images (L4) and never storing
+bank details on a payout request.
+
+**Awards do not touch the tax tracker, on either side.** Only sales are revenue. To the
+venture an award is a capital contribution, which never reaches Schedule C; counting it
+would inflate the profit a family is told to pay self-employment tax on, and the
+school's own debit did not buy the school anything. The student's personal exposure is
+real and deliberately kept out of this calculation: cash for grades is a taxable prize
+under IRC § 74, **not** a qualified scholarship under § 117, and at six A's the school
+crosses the $600 1099-MISC threshold. That is the school's filing obligation against
+the student's own return — the awards page surfaces the per-student total, Fuime files
+and withholds nothing, and the venture's Schedule C estimate ignores it entirely.
+
+**Void, not destroy.** An award granted in error posts a reversing pair. If the student
+already spent it the venture goes negative, which is the truth and the same shape as a
+late chargeback; erasing the original lines would misstate what a balance was and when.
+
+**Verification:** 33 new examples, all green; 621 across the touched surfaces, no
+regressions. **Not exercised against Stripe — and uniquely, it never needs to be:** this
+is the first Fuime money path with no Stripe call in it at all.
+
+**Open, and it gates a real launch:** how the school gets money into its Stripe account
+in the first place. Awards can only redistribute what is already there, and nothing in
+the app funds a connected account. A school with $0 of its own balance can award
+nothing.
+
+---
+
+## Staff are not parentless minors: `User#staff?` (2026-08-06)
+
+**The report:** "as an admin I can't see what parents would see, and I can't upgrade my
+own account." Both halves have the same cause, and it is a Fuime bug, not an upstream one.
+
+Fuime's age check is fail-closed on purpose — `User#minor_or_unknown_age?` reads a missing
+birthday as "minor", because the alternative is an opt-out legal control (see the comment
+at `app/models/user.rb`). No staff account has a birthday on file. So every Fuime admin
+resolves to *a minor with no guardian*, and every gate written on that predicate refuses
+them on their own account. Two places had already noticed and each grew its own escape
+hatch — `EventPolicy#permitted_to_operate_business?` (`return true if user.admin?`) and
+`Fuime::GuardianshipEnforcement` (`admin? || auditor?`, added after the filter locked
+admins out of the admin console). Everything written since missed it.
+
+**What changed**
+
+- `User#staff?` (`app/models/user.rb`) — the exemption named once: `admin? || auditor?`.
+  Pretend-aware deliberately, so an admin with `pretend_is_not_admin` still hits every
+  gate; that toggle is the only honest way to preview what a teen actually experiences.
+- `Fuime::BillingController#adult?` — now `known_adult? || staff?`. This was the reported
+  symptom: the family-plan page showed its own operators "the family plan is billed to a
+  parent or guardian — ask them to upgrade", with no parent to ask, and `subscribe`/
+  `portal` refused outright. Fuime staff could not buy, or demo, the plan Fuime sells.
+- `fuime/billing/show.html.erb` — staff without a confirmed birthday get a line naming
+  whose card this is. `BillingController` always acts on `current_user`, and a staff
+  account arriving here has usually just been looking at somebody else's.
+- `event/applications/_family_plan_banner` — same fix, same reason: an admin was told to
+  ask their parent instead of being shown the upgrade button.
+- `Event::Application#activate_event!` — the guardian gate now exempts a **staff
+  applicant**. Note the subject: this tests `user` (whose venture it is), not whoever is
+  clicking activate, so an admin activating a teen's application is still held to the
+  requirement. That is the case the gate was written for and it is unchanged.
+- `application/_user_menu` — the "Guardian" link, previously shown only to users with a
+  guardianship in either direction, is now always shown to staff. This is the "see what
+  parents see" half. It is safe rather than a leak: `GuardianshipPolicy#index?` already
+  admits any signed-in user, and the page lists only the viewer's own guardianships, so an
+  admin with none gets the empty state — not somebody else's family.
+
+**What did NOT change, and why.** Impersonation already answers "see what everyone sees"
+properly — `/admin/users` → Impersonate, or the spy icon beside an organizer position, with
+an exit banner in `application/_banner_container`. It swaps `current_user`, so the admin
+gets the real parent/teen experience rather than an approximation. Nothing was built to
+duplicate it. Worth knowing: while impersonating, the billing buttons act on the
+impersonated user's Stripe customer, not the admin's.
+
+**Verification:** `spec/models/user_guardianship_spec.rb`, `spec/requests/fuime_billing_spec.rb`
+(new: staff buys the plan with no birthday on file, and the pretend-not-admin case),
+`spec/models/d2c_golden_path_spec.rb`, `spec/requests/family_signup_flow_spec.rb`,
+`spec/controllers/event/applications_controller_spec.rb`, `spec/services/fuime/`,
+`spec/models/guardianship_spec.rb`, `spec/models/user_guardian_exemption_spec.rb` — 297
+examples, 0 failures. Full suite not re-run.
+
+---
+
+## The legal surface names a legal entity (2026-08-06)
+
+**Why:** every legal document in the app wrote "Fuime" where a contracting party
+belongs — "This agreement is between Fuime and you", "when this policy says *we* it
+means Fuime", "Fuime is a financial technology company". Fuime is a product name. It is
+not a legal person, cannot hold an obligation, and cannot be sued or sue. So the guardian
+agreement recorded consent to an agreement with nobody.
+
+That is not a copy problem. **L2 makes the guardian the principal obligor** — the whole
+architecture rests on an adult being bound where a minor's clickwrap would be voidable
+(*Doe v. Epic Games*) — and an obligor has to be obligated *to* someone. The same entity
+is the Stripe Connect platform account holder, the recipient of the application fee, and
+the party a chargeback, an indemnity claim, or a regulator actually reaches.
+
+The entity is **Ninth Street Labs, LLC**; Fuime is its product.
+
+| Change | Why | Files |
+|---|---|---|
+| `legal_entity_name` / `legal_entity_dba` in `constants.yml` | Four surfaces state the counterparty; four surfaces disagreeing is the failure worth engineering against. Same home as `github_url`, which exists for the same reason | `config/constants.yml` |
+| Guardian agreement **v2** — new versioned partial, names the entity, and states plainly that the guardian and not the minor is bound | The substance of L2, not just a naming fix | `app/views/guardianships/agreements/_2026_08_06_v2.html.erb`, `app/models/guardianship.rb` |
+| Terms: new §1 "Who you are agreeing with"; §§2–15 renumbered | A reader should learn who they are contracting with before what the product does | `app/views/static_pages/terms.html.erb` |
+| Privacy: "we" defined as the entity; contact names it | It is the party responsible for the data and the one a deletion request must reach | `app/views/static_pages/privacy.html.erb` |
+| Footer disclosure: "Fuime is a product of …, a financial technology company, not a bank" | The disclosure a reader sees without clicking. The old wording invited exactly the reading that Fuime *is* the company | `app/views/application/_footer.html.erb` |
+
+**Bumping the agreement version is additive, and now provably so.** `agreement_partial_for`
+resolves each stored version to its own file, so v1 signatures keep rendering v1's text.
+A new example asserts every superseded version still resolves — it fails the moment
+someone deletes or renames a retired partial.
+
+**One bug found while doing it.** v1's footer rendered
+`Guardianship::CURRENT_AGREEMENT_VERSION` rather than a literal. Harmless while only one
+version existed; the moment this commit bumped the constant, every historical v1 record
+would have displayed **v1's terms under v2's number** — the signature record and the text
+it points at silently disagreeing, which is precisely what that partial's own header
+comment warns against, arriving through the version line instead of the terms. Fixed to a
+literal, and guarded by a spec that reads the partials off disk and fails if any of them
+interpolates the constant or omits the version in its own filename. That guard holds for
+versions not yet written.
+
+**Verification:** 63 examples across `legal_pages`, `status_disclosure`,
+`guardianship_agreement`, `guardianship`, `guardianships_render`, `onboarding_terms` and
+`family_signup_flow` — 0 failures. The `status_disclosure` examples matter most here:
+they match on the load-bearing clauses ("not a bank", "does not offer FDIC-insured
+products"), so the footer rewording is pinned against L5 rather than trusted.
+
+**Not done, and deliberately outside the code:** the d/b/a is only true once the
+fictitious-name registration is filed, and the Stripe platform account has to be
+registered to the entity with an 18+ representative. `LAUNCH_SPEC.md` §1.2 and §2.1 carry
+both.

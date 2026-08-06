@@ -1,6 +1,13 @@
 <%# locals: (minor:, guardian: nil) %>
 <%#
-  Fuime Guardian Agreement, version 2026-08-01-v1.
+  Fuime Guardian Agreement, version 2026-08-06-v2.
+
+  Changed from v1: the agreement now names the entity on the other side of it.
+  v1 said "between Fuime and you", and Fuime is a product, not a legal person —
+  so the document a guardian signs identified no counterparty. L2 makes the
+  guardian the principal obligor; that only means something against a named
+  party. Section 1 now also states plainly that the guardian, not the minor, is
+  the one bound, which is the substance of L2 rather than a naming fix.
 
   This file IS the agreement text for that version. It is rendered both when a
   guardian signs and, afterwards, on the permanent record page — so a guardian
@@ -10,11 +17,21 @@
   bump Guardianship::CURRENT_AGREEMENT_VERSION instead: guardianships store the
   version they were signed under, and editing this text in place would silently
   rewrite what past guardians are recorded as having accepted.
+
+  Note the version below is written as a literal, not as
+  Guardianship::CURRENT_AGREEMENT_VERSION. v1 interpolated the constant, so the
+  day the constant moved every historical v1 record would have relabelled itself
+  as the new version while displaying the old text — the exact silent rewrite the
+  paragraph above warns about, arriving through the version line instead of the
+  terms.
 %>
 
 <div class="guardian-agreement">
   <p>
-    This agreement is between Fuime and you, the parent or legal guardian of
+    This agreement is between
+    <strong><%= Rails.configuration.constants.legal_entity_name %></strong>, the
+    company that operates Fuime (&ldquo;Fuime&rdquo;, &ldquo;we&rdquo;), and you,
+    the parent or legal guardian of
     <strong><%= minor.name.presence || minor.email %></strong> (&ldquo;the minor&rdquo;).
     By signing, you agree to the following.
   </p>
@@ -24,6 +41,12 @@
     You confirm that you are at least 18 years old and that you are the parent
     or legal guardian of the minor. You accept legal responsibility for the
     minor's use of Fuime, including any business they operate through it.
+  </p>
+  <p>
+    You are the person bound by this agreement. The minor is not, and cannot be
+    — a contract signed by a minor is generally voidable, which is why the adult
+    signs. Where Fuime's <%= link_to "Terms of Service", terms_path %> place an
+    obligation on the account, that obligation is yours.
   </p>
 
   <h4>2. You consent to the minor's account</h4>
@@ -55,6 +78,12 @@
     help, but Fuime does not give tax or legal advice, and you are responsible
     for the minor's tax filings to the extent the law assigns them to you.
   </p>
+  <p>
+    A venture's payment account is opened in your name with Stripe, and money
+    from it is paid out to a bank account you own.
+    <%= Rails.configuration.constants.legal_entity_name %> does not hold that
+    money at any point.
+  </p>
 
   <h4>6. What this agreement is not</h4>
   <p>
@@ -64,15 +93,9 @@
     accept this invitation on behalf of someone else.
   </p>
 
-  <%# The version is a literal because this partial IS version 2026-08-01-v1 and
-      always will be. It previously interpolated
-      Guardianship::CURRENT_AGREEMENT_VERSION, which meant this historical text
-      relabelled itself as whatever the newest version happened to be — so a
-      guardian who signed v1 would open their permanent record and see v1's terms
-      under v2's number. That is the silent rewrite the header comment warns
-      about, arriving through the version line rather than the terms. %>
   <p class="muted text-sm">
-    Agreement version 2026-08-01-v1.
+    Agreement version 2026-08-06-v2, between you and
+    <%= Rails.configuration.constants.legal_entity_name %>.
     Questions? Email <%= mail_to "support@fuime.com" %>.
   </p>
 </div>

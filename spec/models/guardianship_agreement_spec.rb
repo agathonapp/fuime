@@ -10,10 +10,18 @@ RSpec.describe Guardianship, type: :model do
   describe ".agreement_partial_for" do
     it "resolves the current version to its partial" do
       expect(described_class.agreement_partial_for(described_class::CURRENT_AGREEMENT_VERSION))
-        .to eq("guardianships/agreements/2026_08_01_v1")
+        .to eq("guardianships/agreements/2026_08_06_v2")
     end
 
     it "translates dashes in the version to underscores in the filename" do
+      expect(described_class.agreement_partial_for("2026-08-06-v2"))
+        .to eq("guardianships/agreements/2026_08_06_v2")
+    end
+
+    # Bumping the version must never strand the guardians who signed the old
+    # one. This is the assertion that makes a bump additive: it fails the moment
+    # someone deletes a superseded partial or renames it in place.
+    it "still resolves every superseded version whose text is on disk" do
       expect(described_class.agreement_partial_for("2026-08-01-v1"))
         .to eq("guardianships/agreements/2026_08_01_v1")
     end
@@ -40,6 +48,44 @@ RSpec.describe Guardianship, type: :model do
       ].each do |unsafe|
         expect(described_class.agreement_partial_for(unsafe)).to be_nil,
                                                                  "expected #{unsafe.inspect} to be rejected"
+      end
+    end
+  end
+
+  # A versioned agreement partial is a historical document: it must state the
+  # version it IS, not the version that happens to be current. v1 interpolated
+  # Guardianship::CURRENT_AGREEMENT_VERSION in its footer, so bumping to v2 would
+  # have made every past v1 record display v1's terms under v2's number — the
+  # signature record and the text it points at silently disagreeing.
+  #
+  # Asserted against the files rather than by rendering, because the property
+  # should hold for every version that will ever be added, including ones written
+  # after this spec.
+  describe "the versioned agreement partials" do
+    let(:partials) do
+      Rails.root.glob("app/views/guardianships/agreements/_*.html.erb")
+    end
+
+    it "has at least one on disk" do
+      expect(partials).not_to be_empty
+    end
+
+    it "never interpolates the current-version constant" do
+      offenders = partials.select do |path|
+        # Strip ERB comments first: the partials discuss the constant by name in
+        # their own header comments, which is documentation rather than output.
+        path.read.gsub(/<%#.*?%>/m, "").include?("CURRENT_AGREEMENT_VERSION")
+      end
+
+      expect(offenders.map { |p| p.basename.to_s }).to be_empty
+    end
+
+    it "states its own version, taken from its filename" do
+      partials.each do |path|
+        version = path.basename(".html.erb").to_s.delete_prefix("_").tr("_", "-")
+
+        expect(path.read).to include(version),
+                             "expected #{path.basename} to state the version #{version.inspect} it is"
       end
     end
   end

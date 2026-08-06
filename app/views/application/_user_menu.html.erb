@@ -21,8 +21,13 @@
               a guardian needs their wards' ventures, and a teen needs to see
               whether their invite has been accepted without digging out the
               email. Hidden entirely for users with neither, so an adult running
-              their own venture sees no stray parental furniture. %>
-          <% if @current_user.guardianships_as_guardian.any? || @current_user.guardianships_as_minor.any? %>
+              their own venture sees no stray parental furniture. Staff always
+              see it: support cannot answer "what does the parent dashboard
+              look like?" from a page they have no door to, and the page is
+              already safe for them — GuardianshipPolicy#index? admits any
+              signed-in user and it lists only their own guardianships, so an
+              admin with none gets the empty state, not someone else's family. %>
+          <% if @current_user.staff? || @current_user.guardianships_as_guardian.any? || @current_user.guardianships_as_minor.any? %>
             <%= link_to guardianships_path do %>
               <%= inline_icon "friend", size: 23 %>
               Guardian

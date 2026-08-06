@@ -11,7 +11,10 @@
       <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %> —
       you can apply now either way; approval just waits on the upgrade.
     </p>
-    <% if current_user.minor_or_unknown_age? %>
+    <%# Staff buy their own upgrade (User#staff?) — sending an admin to "ask
+        your parent" is the same fail-closed-on-missing-birthday miss the
+        billing page had. %>
+    <% if current_user.minor_or_unknown_age? && !current_user.staff? %>
       <% guardians = current_user.guardians.to_a %>
       <p class="mb-0">
         <% if guardians.any? %>

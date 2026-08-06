@@ -29,6 +29,27 @@ RSpec.describe User, "Fuime age and guardianship rules" do
     end
   end
 
+  # The gates above are fail-closed on a missing birthday, and no staff account
+  # has one — so without this exemption every Fuime admin reads as a parentless
+  # minor and is refused on their own account (the family plan being the case
+  # that surfaced it).
+  describe "#staff?" do
+    it "is true for admins and auditors" do
+      expect(build(:user, :make_admin, :unknown_age).staff?).to be true
+      expect(build(:user, :make_auditor, :unknown_age).staff?).to be true
+    end
+
+    it "is false for an ordinary user" do
+      expect(build(:user).staff?).to be false
+    end
+
+    # An admin who has asked to be treated as a normal user means it — including
+    # the gates, which is the only way to preview what a teen actually hits.
+    it "is false for an admin pretending not to be one" do
+      expect(build(:user, :make_admin, pretend_is_not_admin: true).staff?).to be false
+    end
+  end
+
   describe "#permitted_to_operate_business?" do
     it "allows an adult" do
       expect(create(:user, birthday: 30.years.ago.to_date).permitted_to_operate_business?).to be true

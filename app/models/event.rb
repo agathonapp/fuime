@@ -515,6 +515,18 @@ class Event < ApplicationRecord
   # authorised moving money, so they outlive the venture on purpose.
   has_many :payout_requests, dependent: :restrict_with_error
 
+  # Fuime: money a school put into this venture ("$100 per A"). Restricted for the
+  # same reason as payout_requests, plus one of its own: these rows are what a school
+  # reconciles its 1099-MISC reporting against, and that obligation outlives the
+  # student's venture.
+  has_many :school_awards, dependent: :restrict_with_error
+
+  # Awards this event handed OUT as the school. The inverse of the above, and a
+  # separate association because the two mean opposite things on the same table.
+  has_many :school_awards_granted, class_name: "SchoolAward",
+                                   foreign_key: :school_event_id,
+                                   dependent: :restrict_with_error
+
   # Fuime: people who can hold a business card on this venture's own Stripe account
   # (the guardian as Accountholder, the teen as Authorized User). Cards hang off the
   # cardholder, matching Stripe's own shape.

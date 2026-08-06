@@ -344,6 +344,21 @@ class User < ApplicationRecord
     ["auditor", "admin", "superadmin"].include?(self.access_level)
   end
 
+  # Fuime: a staff account — never a teen founder, so never subject to the
+  # guardian/age gates that exist to protect minors.
+  #
+  # Those gates are fail-closed on missing data (#minor_or_unknown_age?), and no
+  # staff account has a birthday on file, so every one of them reads as "a minor
+  # with no parent". EventPolicy and the guardianship filter each grew their own
+  # `admin? || auditor?` escape hatch for exactly that reason; this is the same
+  # exemption named once, so the next age gate can spell it in one word instead
+  # of inventing a third variant. Pretend-aware on purpose: an admin who has
+  # switched on `pretend_is_not_admin` is asking to be treated as an ordinary
+  # user, and that must include the gates.
+  def staff?
+    admin? || auditor?
+  end
+
   def make_admin!
     admin!
   end
