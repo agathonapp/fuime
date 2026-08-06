@@ -1737,24 +1737,16 @@ class AdminController < Admin::BaseController
     end
   end
 
-  def pending_identity_vault_verifications_task_size
-    client = Faraday.new(request: { open_timeout: 5, timeout: 8 }) do |c|
-      c.response :json
-      c.response :raise_error
-    end
-
-    client.get("https://identity.hackclub.com/api/v1/hcb").body["pending"] || 0
-  rescue => e
-    Rails.error.report(e)
-    9999 # return something invalidly high to get the ops team to report it
-  end
+  # FUIME-REMOVED: pending_identity_vault_verifications_task_size — a live
+  # authenticated call to identity.hackclub.com. Its only caller was already
+  # FUIME-DISABLED in admin_tools; Milestone 2 says code that can reach Hack
+  # Club production shouldn't exist even unreachable, so the method is gone
+  # (same treatment as hackathons_task_size).
 
   def pending_task(task_name)
     @pending_tasks ||= {}
     @pending_tasks[task_name] ||= begin
       case task_name
-      when :pending_identity_vault_verifications
-        pending_identity_vault_verifications_task_size
       when :emburse_card_requests
         EmburseCardRequest.under_review.size
       when :emburse_transactions

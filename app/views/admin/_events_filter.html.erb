@@ -32,7 +32,8 @@
 
   <%= form.label :organized_by do %>
     Organized by
-    <%= form.select :organized_by, [["Anyone", "anyone"], ["Teenagers", "teenagers"], ["Hack Clubbers", "hack_clubbers"], ["Adults", "adults"]], selected: @organized_by %>
+    <%# Fuime: dropped "Hack Clubbers" — it filtered on an HCB event tag no Fuime org carries. %>
+    <%= form.select :organized_by, [["Anyone", "anyone"], ["Teenagers", "teenagers"], ["Adults", "adults"]], selected: @organized_by %>
   <% end %>
 
   <%= form.label :country do %>

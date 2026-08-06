@@ -40,13 +40,14 @@
       <ul class="grid text-left w-100 mt0" id="task-grid">
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Applications (Airtable)", link_to_airtable_task(:bank_applications), async_badge: :pending_bank_applications_airtable %>
         <%= card_to "Ledger", ledger_admin_index_path, badge: CanonicalTransaction.not_stripe_top_up.unmapped.count %>
-        <%= card_to "ACH transfers", ach_admin_index_path, badge: AchTransfer.pending.count %>
-        <%= card_to "Checks", increase_checks_admin_index_path, badge: IncreaseCheck.pending.count %>
-        <%= card_to "Check deposits", admin_check_deposits_path, badge: CheckDeposit.unprocessed.count %>
-        <%= card_to "Wires", wires_admin_index_path, badge: Wire.pending.count %>
-        <%= card_to "Wise transfers", wise_transfers_admin_index_path, badge: WiseTransfer.pending.count %>
-        <%= card_to "Disbursements", disbursements_admin_index_path, badge: Disbursement.reviewing.count %>
-        <%= card_to "Reimbursements", reimbursements_admin_index_path, badge: Reimbursement::Report.reimbursement_requested.count %>
+        <%# FUIME-DISABLED (HCB outbound-money rails via Column/Increase/Wise — Fuime money-out is Stripe payouts on guardian-owned connected accounts):
+            card_to "ACH transfers", ach_admin_index_path, async_badge omitted
+            card_to "Checks", increase_checks_admin_index_path
+            card_to "Check deposits", admin_check_deposits_path
+            card_to "Wires", wires_admin_index_path
+            card_to "Wise transfers", wise_transfers_admin_index_path
+            card_to "Disbursements", disbursements_admin_index_path
+            card_to "Reimbursements", reimbursements_admin_index_path %>
         <%= card_to "OPDRs", organizer_position_deletion_requests_path, badge: OrganizerPositionDeletionRequest.under_review.count %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Disputes", link_to_airtable_task(:disputed_transactions), async_badge: :pending_disputed_transactions_airtable %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Feedback", link_to_airtable_task(:feedback), async_badge: :pending_feedback_airtable %>
@@ -61,19 +62,19 @@
         <%= card_to "Organizations", events_admin_index_path, badge: Event.approved.where.not(id: EventMappingEngine::EventIds.constants.map { |c| EventMappingEngine::EventIds.const_get(c) }).count, subtle_badge: true %>
         <%= card_to "Applications (Fuime)", applications_admin_index_path, badge: Event::Application.under_review.count %>
         <%= card_to "Users", users_admin_index_path %>
-        <%= card_to "Donations", donations_admin_index_path %>
+        <%# FUIME-DISABLED (HCB nonprofit money-in; Fuime money-in is direct charges + invoices):
+            card_to "Donations", donations_admin_index_path
+            card_to "Sponsors", sponsors_admin_index_path %>
         <%= card_to "Invoices", invoices_admin_index_path %>
-        <%= card_to "Sponsors", sponsors_admin_index_path %>
         <%= card_to "Cards", stripe_cards_admin_index_path %>
-        <%= card_to "Card designs", stripe_card_personalization_designs_admin_index_path %>
+        <%# FUIME-DISABLED (physical-card personalization — Fuime cards are the flagged virtual-card feature):
+            card_to "Card designs", stripe_card_personalization_designs_admin_index_path %>
         <%= card_to "Emails", emails_admin_index_path, badge: Ahoy::Message.count, subtle_badge: true %>
         <%= card_to "Contracts", contracts_admin_index_path, badge: Contract.count, subtle_badge: true %>
       </ul>
-      <h2>Perks</h2>
-      <ul class="grid text-left w-100 mt0" id="perks-grid">
-        <%= card_to "Google Workspaces", google_workspaces_admin_index_path, badge: GSuite.needs_ops_review.count %>
-        <%# FUIME-DISABLED (Hack Club perks, backed by Hack Club Airtable): Stickers, Hackathons, 1Password, Domains, The Event Helper, Google Workspace waitlist %>
-      </ul>
+      <%# FUIME-DISABLED (the whole Perks section was Hack Club programs):
+          card_to "Google Workspaces", google_workspaces_admin_index_path — G Suite provisioning, disabled in M5
+          plus the Airtable-backed perks: Stickers, Hackathons, 1Password, Domains, The Event Helper, Google Workspace waitlist %>
       <h2>Accounting</h2>
       <ul class="grid text-left w-100 mt0" id="accounting-grid">
         <%= card_to "Bank fees", bank_fees_admin_index_path, badge: BankFee.in_transit_or_pending.count %>
@@ -81,15 +82,17 @@
         <%= card_to "Ledger audits", admin_ledger_audits_path, badge: Admin::LedgerAudit.pending.count %>
         <%= card_to "Organization balances", balances_admin_index_path %>
         <%= card_to "Blazer", blazer_path %>
-        <%= card_to "Column statements", admin_column_statements_path %>
+        <%# FUIME-DISABLED (Fuime has no Column relationship):
+            card_to "Column statements", admin_column_statements_path %>
       </ul>
       <h2>Other</h2>
       <ul class="grid text-left w-100 mt0" id="other-grid">
         <%= card_to "Common docs", common_documents_path %>
         <%= card_to "Flipper", flipper_path %>
         <%= card_to "Pending ledger", pending_ledger_admin_index_path, badge: CanonicalPendingTransaction.unsettled.count %>
-        <%= card_to "Account numbers", account_numbers_admin_index_path, badge: Column::AccountNumber.count, subtle_badge: true %>
-        <%= card_to "Recurring donations", recurring_donations_admin_index_path, badge: RecurringDonation.active.count %>
+        <%# FUIME-DISABLED (Column account numbers; recurring donations are HCB nonprofit money-in):
+            card_to "Account numbers", account_numbers_admin_index_path
+            card_to "Recurring donations", recurring_donations_admin_index_path %>
       </ul>
       <details>
         <summary>Old cards</summary>
@@ -97,17 +100,20 @@
           <%# FUIME-DISABLED (Hack Club programs, backed by Hack Club Airtable): YSWS verification, PVSA %>
           <%= card_to "Organizations", events_path, id: "card-organizations-old" %>
           <%= card_to "Negative organizations", negative_events_path %>
-          <%= card_to "Sponsors", sponsors_path, id: "card-sponsors-old" %>
-          <%= card_to "Google Workspace accounts", g_suite_accounts_path %>
+          <%# FUIME-DISABLED (HCB leftovers — sponsors/G Suite are nonprofit modules, Emburse is HCB's
+              retired card vendor, the knowledgebase is Hack Club's internal docs at hack.af, and the
+              bank-account cards manage Plaid/Column feeds Fuime doesn't have):
+              card_to "Sponsors", sponsors_path
+              card_to "Google Workspace accounts", g_suite_accounts_path
+              card_to "Emburse cards", emburse_cards_path
+              card_to "Emburse card requests", emburse_card_requests_path
+              card_to "Emburse transactions", emburse_transactions_path
+              card_to "Knowledgebase", "https://hack.af/hcb-knowledgebase"
+              card_to "Bank accounts", bank_accounts_path
+              card_to "Setup", new_bank_account_path
+              card_to "Bank accounts", bank_accounts_admin_index_path %>
           <%= card_to "Bookkeeping", bookkeeping_path %>
-          <%= card_to "Emburse cards", emburse_cards_path %>
-          <%= card_to "Emburse card requests", emburse_card_requests_path %>
-          <%= card_to "Emburse transactions", emburse_transactions_path %>
           <%= card_to "Search by user", admin_search_path %>
-          <%= card_to "Knowledgebase", "https://hack.af/hcb-knowledgebase" %>
-          <%= card_to "Bank accounts", bank_accounts_path, id: "card-bank-accounts-old" %>
-          <%= card_to "Setup Fuime", new_bank_account_path %>
-          <%= card_to "Bank accounts", bank_accounts_admin_index_path, badge: BankAccount.failing.count %>
           <%= card_to "Fuime codes", hcb_codes_admin_index_path %>
           <%= card_to "Raw transactions", raw_transactions_admin_index_path, badge: RawCsvTransaction.unhashed.count %>
         </ul>

@@ -73,22 +73,25 @@ module Admin
 
     def sections
       [
-        spending,
+        # FUIME-DISABLED: `spending` (ACH, checks, wires, Wise, disbursements,
+        # reimbursements, payments) is HCB's outbound-money desk via Column/
+        # Increase. Fuime's money-out is Stripe payouts on guardian-owned
+        # connected accounts (PayoutRequest) — none of these rails exist here.
         ledger,
         incoming_money,
         organizations,
-        payroll,
+        # FUIME-DISABLED: `payroll` (contractors, legal entities, tax forms) is
+        # HCB payroll via Column. School ventures pay students through
+        # PayoutRequest#personal_transfer instead.
         misc
       ]
     end
 
     def section_names
       [
-        "Spending",
         "Ledger",
         "Incoming Money",
         "Organizations",
-        "Payroll",
         "Misc"
       ]
     end
@@ -121,6 +124,8 @@ module Admin
       )
     end
 
+    # FUIME-DISABLED: not in `sections` — see the note there. Kept so upstream
+    # diffs stay readable (Rule 2: disable, don't delete).
     def spending
       Section.new(
         name: "Spending",
@@ -193,12 +198,14 @@ module Admin
             count: ->{ RawCsvTransaction.unhashed.count },
             count_type: :records
           ),
-          make_item(
-            name: "Intrafi Transactions",
-            path: raw_intrafi_transactions_admin_index_path,
-            count: ->{ RawIntrafiTransaction.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: Intrafi is HCB's sweep-network feed via Column;
+          # Fuime has no bank feeds.
+          # make_item(
+          #   name: "Intrafi Transactions",
+          #   path: raw_intrafi_transactions_admin_index_path,
+          #   count: ->{ RawIntrafiTransaction.count },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Fuime Codes",
             path: hcb_codes_admin_index_path,
@@ -225,36 +232,39 @@ module Admin
       Section.new(
         name: "Incoming Money",
         items: [
-          make_item(
-            name: "Donations",
-            path: donations_admin_index_path,
-            count: ->{ Donation.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Recurring Donations",
-            path: recurring_donations_admin_index_path,
-            count: ->{ RecurringDonation.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: donations/sponsors are HCB's nonprofit money-in;
+          # check deposits arrive via Column. Fuime's money-in is direct
+          # charges on connected accounts (payment links) plus invoices.
+          # make_item(
+          #   name: "Donations",
+          #   path: donations_admin_index_path,
+          #   count: ->{ Donation.count },
+          #   count_type: :records
+          # ),
+          # make_item(
+          #   name: "Recurring Donations",
+          #   path: recurring_donations_admin_index_path,
+          #   count: ->{ RecurringDonation.count },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Invoices",
             path: invoices_admin_index_path,
             count: ->{ Invoice.count },
             count_type: :records
           ),
-          make_item(
-            name: "Sponsors",
-            path: sponsors_admin_index_path,
-            count: ->{ Sponsor.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Check Deposits",
-            path: admin_check_deposits_path,
-            count: ->{ CheckDeposit.unprocessed.count },
-            count_type: :tasks
-          )
+          # make_item(
+          #   name: "Sponsors",
+          #   path: sponsors_admin_index_path,
+          #   count: ->{ Sponsor.count },
+          #   count_type: :records
+          # ),
+          # make_item(
+          #   name: "Check Deposits",
+          #   path: admin_check_deposits_path,
+          #   count: ->{ CheckDeposit.unprocessed.count },
+          #   count_type: :tasks
+          # )
         ]
       )
     end
@@ -287,22 +297,25 @@ module Admin
             count: ->{ OrganizerPositionDeletionRequest.under_review.count },
             count_type: :records
           ),
-          make_item(
-            name: "Google Workspaces",
-            path: google_workspaces_admin_index_path,
-            count: ->{ GSuite.needs_ops_review.count },
-            count_type: :tasks
-          ),
-          make_item(
-            name: "Account Numbers",
-            path: account_numbers_admin_index_path,
-            count: ->{ Column::AccountNumber.count },
-            count_type: :records
-          )
+          # FUIME-DISABLED: G Suite provisioning is a Hack Club perk (M5);
+          # account numbers are Column-issued and Fuime has no Column.
+          # make_item(
+          #   name: "Google Workspaces",
+          #   path: google_workspaces_admin_index_path,
+          #   count: ->{ GSuite.needs_ops_review.count },
+          #   count_type: :tasks
+          # ),
+          # make_item(
+          #   name: "Account Numbers",
+          #   path: account_numbers_admin_index_path,
+          #   count: ->{ Column::AccountNumber.count },
+          #   count_type: :records
+          # )
         ]
       )
     end
 
+    # FUIME-DISABLED: not in `sections` — see the note there.
     def payroll
       Section.new(
         name: "Payroll",
@@ -351,12 +364,13 @@ module Admin
             count: ->{ Document.common.count },
             count_type: :records
           ),
-          make_item(
-            name: "Bank Accounts",
-            path: bank_accounts_admin_index_path,
-            count: ->{ BankAccount.failing.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: Plaid-fed bank accounts — no bank feeds in Fuime.
+          # make_item(
+          #   name: "Bank Accounts",
+          #   path: bank_accounts_admin_index_path,
+          #   count: ->{ BankAccount.failing.count },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Fuime Fees",
             path: bank_fees_admin_index_path,
@@ -369,12 +383,13 @@ module Admin
             count: ->{ FeeRevenue.count },
             count_type: :records
           ),
-          make_item(
-            name: "Column Statements",
-            path: admin_column_statements_path,
-            count: ->{ Column::Statement.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: Fuime has no Column relationship.
+          # make_item(
+          #   name: "Column Statements",
+          #   path: admin_column_statements_path,
+          #   count: ->{ Column::Statement.count },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Users",
             path: users_admin_index_path,
@@ -387,12 +402,14 @@ module Admin
             count: ->{ StripeCard.count },
             count_type: :records
           ),
-          make_item(
-            name: "Card Designs",
-            path: stripe_card_personalization_designs_admin_index_path,
-            count: ->{ StripeCard::PersonalizationDesign.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: physical-card personalization designs — Fuime cards
+          # are the flagged virtual-card feature; a later phase revives this.
+          # make_item(
+          #   name: "Card Designs",
+          #   path: stripe_card_personalization_designs_admin_index_path,
+          #   count: ->{ StripeCard::PersonalizationDesign.count },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Emails",
             path: emails_admin_index_path,

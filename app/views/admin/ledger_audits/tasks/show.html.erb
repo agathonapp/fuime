@@ -94,15 +94,9 @@
             <strong>Fee on revenue</strong>
             <span><%= number_to_percentage(@event.revenue_fee * 100, significant: true, strip_insignificant_zeros: true) %></span>
           </p>
-          <% if @event.plan.is_a?(Event::Plan::HighSchoolHackathon) %>
-            <p>
-              <strong>
-                <a
-                  href="https://blog.hcb.hackclub.com/posts/hackathon-grants-and-0-fee-241524">Fee waiver</a> expiration
-              </strong>
-              <span>December 31st, 2023</span>
-            </p>
-          <% end %>
+          <%# FUIME-DISABLED (Hack Club program): the HighSchoolHackathon fee-waiver
+              note linked auditors to an HCB blog post about a waiver that expired
+              in 2023. No Fuime org is on that plan. %>
           <p>
             <strong>Organization ID</strong>
             <span><%= @event.id %></span>

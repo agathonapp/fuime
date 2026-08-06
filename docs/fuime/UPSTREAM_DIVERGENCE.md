@@ -2906,3 +2906,39 @@ known-failures.md.
 
 **Still not exercised against Stripe.** Nothing here changes that; the shared-account
 money-in path and `Stripe::Payout` on an owned account remain documentation-derived.
+
+## Admin trim: retiring HCB's ops desk from nav and dashboard (2026-08-05)
+
+The admin console still surfaced every disabled HCB banking rail — each one a
+live count query per page load and a click-path onto pages for money movement
+Fuime legally cannot do (L1). None of this touches capability: the modules were
+already off (M5); this removes their control panels from view. All disabled with
+`FUIME-DISABLED` markers, not deleted (Rule 2).
+
+| Change | Why | Files touched |
+|---|---|---|
+| Nav: dropped "Spending" section (ACH, Checks, Wires, Wise, Disbursements, Reimbursements, Payments) | HCB outbound money via Column/Increase/Wise; Fuime money-out is Stripe payouts on guardian-owned connected accounts | `app/models/admin/nav.rb` |
+| Nav: dropped "Payroll" section (Contractors, Legal Entities, Tax Forms) | HCB payroll via Column; school ventures pay students via `PayoutRequest#personal_transfer` | `app/models/admin/nav.rb` |
+| Nav: dropped Donations, Recurring Donations, Sponsors, Check Deposits (kept Invoices) | Nonprofit money-in; Fuime's is direct charges + invoices | `app/models/admin/nav.rb` |
+| Nav: dropped Google Workspaces, Account Numbers, Intrafi, Bank Accounts, Column Statements, Card Designs | Hack Club perk + Column/Plaid feeds + physical-card personalization | `app/models/admin/nav.rb` |
+| admin_tools dashboard: same trim mirrored (Tasks grid, Info, Perks section, Accounting, Other, Old cards incl. Emburse trio, hack.af knowledgebase link, bank-account setup cards) | Same rails, same reasons; the Knowledgebase card linked Hack Club's internal docs | `app/views/static_pages/admin_tools.html.erb` |
+| Events filter: dropped "Hack Clubbers" organized-by option | Filtered on an HCB event tag no Fuime org carries (scope kept in `event.rb`) | `app/views/admin/_events_filter.html.erb` |
+| Referral program form placeholder `hcb.hackclub.com` → `fuime.com` | Leftover brand string | `app/views/admin/referral_programs.html.erb` |
+| Ledger audits: removed HighSchoolHackathon fee-waiver block | Linked auditors to an HCB blog post about a Hack Club waiver that expired 2023 | `app/views/admin/ledger_audits/tasks/show.html.erb` |
+| Removed `pending_identity_vault_verifications_task_size` | Live authenticated call to `identity.hackclub.com`; only caller already FUIME-DISABLED. M2: code that can reach Hack Club production shouldn't exist even unreachable (same treatment as `hackathons_task_size`) | `app/controllers/admin_controller.rb` |
+| Nav spec examples Donations → Invoices | Donations left the nav | `spec/models/admin/nav_spec.rb` |
+
+Deliberately kept: Invoices, Reimbursements *pages/routes* (only nav/dashboard
+entries removed — the underlying routes still resolve if bookmarked), Fuime
+Fees/Fee Revenues (pooled-simulator fee machinery), Stripe Cards (the flagged
+Fuime card feature needs its admin index), Referral Programs, leaderboards.
+
+**What admin still lacks (follow-up, spec'd separately):** queues for
+`PayoutRequest` (esp. `failed`), `StripeConnectedAccount` status,
+pending `Guardianship`/`GuardianVerification`, and `Fuime::Subscription`
+(`past_due`). Today a failed family payout is visible to nobody in ops.
+
+**Verification:** `spec/models/admin/nav_spec.rb` 5 examples 0 failures
+(Docker); rubocop clean on the three touched Ruby files; ERB templates
+syntax-checked. Full suite not re-run — no model/controller logic changed
+beyond removing an uncalled private method.
