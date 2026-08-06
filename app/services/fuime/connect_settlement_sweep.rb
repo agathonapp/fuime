@@ -96,7 +96,9 @@ module Fuime
     private
 
     def account
-      @account ||= @event.stripe_connected_account
+      # The charge lives on whichever account took it, which for a school student
+      # venture is the school's. See Event#payment_account.
+      @account ||= @event.payment_account
     end
 
     # This venture's Fuime-keyed pendings that have no settled twin yet, grouped

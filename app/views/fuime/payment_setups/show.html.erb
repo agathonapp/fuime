@@ -12,7 +12,25 @@
 
 <% account = @connected_account %>
 
-<% if account.blank? || account.status == :not_started %>
+<% if @inherited_account %>
+  <%# A student venture inside a school programme. There is nothing for anyone here
+      to set up: the school's account already serves this venture, and offering a
+      "Set up payments" button would create a second Stripe account per student —
+      splitting the programme's balance and breaking the resolution in
+      Event#payment_account. Fuime::PaymentSetupsController#new refuses it too. %>
+  <%= render "application/callout", type: "success", title: "Payments are set up through your school" do %>
+    <p class="mb-0">
+      <%= @event.name %> is paid into <strong><%= account.event.name %></strong>'s payment
+      account, which the school owns and set up.
+      <% if account.ready_for_payments? %>
+        You can take payments now.
+      <% else %>
+        The school still has something outstanding with Stripe before money can come
+        in: <%= account.status_description %>
+      <% end %>
+    </p>
+  <% end %>
+<% elsif account.blank? || account.status == :not_started %>
   <%= render "application/callout", type: "warning", title: "This venture can't be paid yet" do %>
     <p>
       <% if @event.institutionally_sponsored? %>

@@ -1,5 +1,25 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: event_plans
+#
+#  id          :bigint           not null, primary key
+#  aasm_state  :string           not null
+#  inactive_at :datetime
+#  type        :string
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  event_id    :bigint           not null
+#
+# Indexes
+#
+#  index_event_plans_on_event_id  (event_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (event_id => events.id)
+#
 class Event
   class Plan
     # Fuime: a venture run inside a school programme, where the school is the
@@ -44,6 +64,15 @@ class Event
 
       def institutionally_sponsored?
         true
+      end
+
+      # Schools pay a per-student subscription negotiated in the pilot
+      # agreement and billed by invoice — not by a card-on-file Stripe
+      # subscription, which no school business office would put through
+      # procurement. Zero here means "not billed through
+      # Fuime::SubscriptionService", not "free".
+      def monthly_fee_cents
+        0
       end
     end
   end

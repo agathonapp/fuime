@@ -102,12 +102,18 @@ module Fuime
     # both over the same event would post one payment through two code paths.
     PLATFORM_EVENTS_FOR_CONNECT_LEDGER = %w[application_fee.refunded].freeze
 
+    # Stripe Billing events for the monthly software fee — Fuime's own revenue,
+    # so they arrive on the platform endpoint, not the Connect one.
+    SUBSCRIPTION_EVENTS = Fuime::SubscriptionWebhookHandler::HANDLED_TYPES
+
     # Stripe retries any non-2xx, so a handler crash returning 500 is safe —
     # but a crash that leaves a partial ledger write is not. The handler wraps
     # its writes in a transaction; here we just make failures visible.
     def process_event(event)
       if PLATFORM_EVENTS_FOR_CONNECT_LEDGER.include?(event.type)
         Fuime::ConnectPaymentRecorder.new(event: event).handle
+      elsif SUBSCRIPTION_EVENTS.include?(event.type)
+        Fuime::SubscriptionWebhookHandler.new(event: event).handle
       else
         Fuime::PaymentWebhookHandler.new(event: event).handle
       end

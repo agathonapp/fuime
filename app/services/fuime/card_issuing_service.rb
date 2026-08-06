@@ -184,7 +184,9 @@ module Fuime
     private
 
     def account
-      @account ||= @event.stripe_connected_account
+      # Cards are issued on the account that holds the funds, which inside a school
+      # programme is the school's. See Event#payment_account.
+      @account ||= @event.payment_account
     end
 
     def ensure_cards_available!

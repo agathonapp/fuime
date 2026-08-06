@@ -20,9 +20,11 @@
 #   * Fuime's cut arrives as `application_fee_amount` rather than as a separate
 #     ledger line Fuime has to compute and reconcile itself.
 #
-# The fee now reads `event.plan.revenue_fee` instead of a hardcoded 4%. The old
-# constant silently ignored the plan, so a venture on the Founders plan — whose
-# entire promise is 0% — was still being charged.
+# The fee now reads `event.revenue_fee` instead of a hardcoded 4%. The old constant
+# silently ignored the plan, so a venture on the Founders plan — whose entire
+# promise is 0% — was still being charged. `Event#revenue_fee` rather than the
+# venture's own plan, because inside a school programme the school's terms govern
+# and a student sub org defaults to Standard: see Event#billing_plan.
 module Fuime
   class PaymentLinkService
     class NotAcceptingPayments < StandardError; end
@@ -34,7 +36,8 @@ module Fuime
     # the number lives. It used to be a hardcoded `4` that every caller treated as
     # authoritative, including the per-payment fee calculation, which is how a
     # Founders-plan venture (0%) was charged anyway. Anything venture-specific
-    # must read `event.plan.revenue_fee`; this is for prose only.
+    # must read `event.revenue_fee` — which resolves through a school above the
+    # venture, see Event#billing_plan; this is for prose only.
     FUIME_PLATFORM_FEE_PERCENT = (Event::Plan::FALLBACK_REVENUE_FEE * 100).round
 
     def initialize(event:, amount_cents:, description:)
@@ -44,7 +47,11 @@ module Fuime
     end
 
     def create_checkout_session(success_url:, cancel_url:)
-      account = @event.stripe_connected_account
+      # #payment_account, not #stripe_connected_account: inside a school programme
+      # the account belongs to the school and serves every student venture beneath
+      # it. Reading the venture's own account here is what made a student sub org
+      # unpayable no matter how completely the school had onboarded.
+      account = @event.payment_account
 
       # Belt and braces with Fuime::CheckoutsController, which checks the same
       # thing before it gets here. Without a connected account there is no
@@ -110,8 +117,13 @@ module Fuime
     # waives the fee. Rounded to whole cents; Stripe caps the application fee at
     # the captured amount anyway, but computing something larger would be a bug
     # worth not writing.
+    #
+    # `Event#revenue_fee` rather than `plan.revenue_fee` so a school's terms reach
+    # its students: the plan on a student sub org defaults to Standard (4%) while
+    # the school it belongs to is fee-waived, and charging the venture's own plan
+    # billed a school customer twice for one product. See Event#billing_plan.
     def fee_cents
-      @fee_cents ||= (@amount_cents * @event.plan.revenue_fee).round
+      @fee_cents ||= (@amount_cents * @event.revenue_fee).round
     end
 
     def metadata

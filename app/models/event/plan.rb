@@ -88,6 +88,19 @@ class Event
       contract_docuseal_template_id.present?
     end
 
+    # Fuime: the software subscription in cents/month, on top of revenue_fee.
+    #
+    # The two dials of the pricing model are deliberately separate: revenue_fee
+    # is Fuime's cut of money a venture COLLECTS (taken as a Connect
+    # application fee on each charge), and monthly_fee_cents is the
+    # subscription for the software itself (billed to the responsible adult's
+    # card via Stripe Billing — see Fuime::SubscriptionService). Stripe's own
+    # processing (~2.9% + 30¢) is neither: on payments_only profiles the
+    # venture pays it, itemised as its own ledger line.
+    def monthly_fee_cents
+      0
+    end
+
     # Fuime: is the responsible adult an institution rather than a parent?
     #
     # Fuime's default assumption is that a minor operating a venture is backed by

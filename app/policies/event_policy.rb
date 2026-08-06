@@ -433,10 +433,43 @@ class EventPolicy < ApplicationPolicy
     return false if user.blank?
     return true if user.admin?
 
+    # Fuime: on an institutionally sponsored venture there is no guardian, by
+    # design — the school is in loco parentis and no Guardianship row exists or
+    # should. So `guardian_reader?` could never pass, and the effect was not a
+    # locked door but a trap: `request_payout?` resolves through `member?`, which
+    # #permitted_to_operate_business? lets a school's students through, so a
+    # student could file a request that nobody on earth except a Fuime admin could
+    # decide. `one_pending_request_per_venture` then blocked them from ever filing
+    # another. Every school venture was one click from being permanently wedged.
+    #
+    # The equivalent responsible party is a manager — the guide or business office
+    # — exactly as in #setup_payments?, and `manager?` already resolves through the
+    # event tree so a manager on the school qualifies on each student's sub org.
+    #
+    # Segregation of duties still holds: a manager is >= member and so could both
+    # request and decide, which PayoutRequest#approver_must_not_be_the_requester
+    # refuses at the record level.
+    return manager? if record.institutionally_sponsored?
+
     # Deliberately NOT `member? || guardian_reader?`. A teen approving their own
     # payout would defeat the entire ownership structure, and PayoutRequest
     # validates the same rule at the record level.
     guardian_reader?
+  end
+
+  # Fuime: confirming that a school actually paid a student.
+  #
+  # Only reachable on the personal_transfer path, which only exists on a venture
+  # inside a school programme, so this is a manager question and never a guardian
+  # one. Kept separate from #decide_payout? because it is a different assertion at a
+  # different time — "I approve this" vs "the money has gone" — and the business
+  # office making the second one is not necessarily the guide who made the first.
+  def settle_payout?
+    return false if user.blank?
+    return true if user.admin?
+    return false unless record.institutionally_sponsored?
+
+    manager?
   end
 
   # The payouts screen itself: the team needs to see the balance and the state of
@@ -460,6 +493,13 @@ class EventPolicy < ApplicationPolicy
     return false if user.blank?
     return true if user.admin?
 
+    # Fuime: same substitution as #setup_payments? and #decide_payout?. On a school
+    # venture the liability sits with the institution, so the manager who acts for
+    # it is the one who may create the liability. Without this branch "reinvest the
+    # money rather than cash it out" was not actually available to a school
+    # student — the balance was reachable only through a card nobody could issue.
+    return manager? if record.institutionally_sponsored?
+
     guardian_reader?
   end
 
@@ -469,6 +509,8 @@ class EventPolicy < ApplicationPolicy
   def manage_cards?
     return false if user.blank?
     return true if user.admin?
+
+    return manager? if record.institutionally_sponsored?
 
     guardian_reader?
   end

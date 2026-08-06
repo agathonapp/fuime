@@ -88,7 +88,7 @@ module Fuime
     # ConnectWebhookHandler: Stripe legitimately delivers events for accounts a
     # platform created and abandoned, and replaying old events after a database
     # restore hits this honestly. Raising would make Stripe retry forever.
-    def venture_for_account
+    def venture_for_account(object = nil)
       if stripe_account_id.blank?
         Rails.logger.warn(
           "[Fuime] #{@stripe_event.type} arrived with no connected account; cannot map to a venture"
@@ -104,14 +104,74 @@ module Fuime
         return nil
       end
 
-      record.event
+      narrow_to_sub_venture(record, object)
+    end
+
+    # One account can serve many ventures, so the account alone is no longer a
+    # complete answer.
+    #
+    # Inside a school programme the school owns one Stripe account and every
+    # student venture beneath it is paid into it (Event#payment_account). The
+    # account therefore identifies the TREE, and metadata identifies which venture
+    # in that tree earned the money. Without this step every student's sale landed
+    # on the school's own ledger and no student ever showed a balance.
+    #
+    # ── Why trusting metadata here is safe, when the header says it isn't ──────
+    #
+    # This file's header argues the account field beats metadata, and that stands:
+    # metadata is something Fuime wrote and could be absent, so it is never the
+    # primary lookup and its absence falls back to the account holder.
+    #
+    # What makes it safe as a NARROWING step is that the claim is verified against
+    # the same resolution the rest of the app uses rather than believed. The claimed
+    # venture must independently resolve its own payment account to this exact
+    # account record, which can only hold for the account's owner or a descendant
+    # in an institutionally sponsored tree. So a forged or stale `fuime_event_id`
+    # cannot move money to an unrelated venture, to a sibling school, or out of the
+    # tree — the worst it can do is name a venture in the same programme, which is
+    # the school's own business and visible to the school's own managers.
+    def narrow_to_sub_venture(account_record, object)
+      account_holder = account_record.event
+      claimed_id = claimed_event_id(object)
+
+      return account_holder if claimed_id.blank? || claimed_id == account_holder&.id
+
+      claimed = ::Event.find_by(id: claimed_id)
+      if claimed.blank?
+        Rails.logger.info(
+          "[Fuime] #{@stripe_event.type} claims unknown venture #{claimed_id}; " \
+          "booking to account holder #{account_holder&.id}"
+        )
+        return account_holder
+      end
+
+      unless claimed.payment_account&.id == account_record.id
+        Rails.logger.warn(
+          "[Fuime] #{@stripe_event.type} claims venture #{claimed_id}, which is not paid into " \
+          "account #{stripe_account_id}; booking to account holder #{account_holder&.id}"
+        )
+        return account_holder
+      end
+
+      claimed
+    end
+
+    # `Integer(..., exception: false)` rather than `to_i`, so a non-numeric value
+    # reads as absent (fall back to the account holder) instead of silently
+    # becoming venture 0.
+    def claimed_event_id(object)
+      value = StripeHash.deep(object).dig(:metadata, :fuime_event_id)
+      return nil if value.blank?
+
+      parsed = Integer(value.to_s, exception: false)
+      parsed&.positive? ? parsed : nil
     end
 
     def record_payment(object:, amount_cents:)
       amount_cents = amount_cents.to_i
       return nil if amount_cents <= 0
 
-      venture = venture_for_account
+      venture = venture_for_account(object)
       return nil if venture.blank?
 
       ledger = VentureLedger.new(event: venture)

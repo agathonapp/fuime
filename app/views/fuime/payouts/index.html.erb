@@ -4,13 +4,27 @@
 
 <h1 class="heading">Payouts</h1>
 
-<%# Fuime: moving money out of the venture to the family's bank.
+<%# Fuime: moving money out of the venture.
 
     Two audiences on one page, deliberately. The teen sees what they have and can
-    ask for it; the guardian sees what they are being asked to approve. Neither
-    gets the other's controls — a teen approving their own payout would defeat the
-    ownership structure the whole company rests on (CLAUDE.md L2), and it is
-    blocked in EventPolicy, in Fuime::PayoutService and in PayoutRequest.
+    ask for it; the responsible adult sees what they are being asked to approve.
+    Neither gets the other's controls — a teen approving their own payout would
+    defeat the ownership structure the whole company rests on (CLAUDE.md L2), and it
+    is blocked in EventPolicy, in Fuime::PayoutService and in PayoutRequest.
+
+    TWO SHAPES, and every piece of copy on this page depends on which one:
+
+      * family venture — the guardian owns the Stripe account, so a payout is
+        Stripe sending money to the guardian's own bank. `@school_settled` false.
+
+      * school venture — the school owns one account for the whole programme, so
+        Stripe cannot send this student's share to this student's own bank (see
+        the AddDestinationToPayoutRequests migration). The school pays them and
+        confirms it here. `@school_settled` true.
+
+    The page previously assumed the first shape unconditionally and told school
+    students to "ask my guardian" — a person who by design does not exist, on a
+    request nobody but a Fuime admin could then approve.
 
     Plain markup on purpose (Milestone 4: correctness over beauty). %>
 
@@ -20,9 +34,14 @@
   <%= render "application/callout", type: "warning", title: "Money can't be sent out yet" do %>
     <p class="mb-0">
       <% if account.blank? %>
-        A parent or guardian needs to set up this venture's payment account first.
-        They will own that account, and payouts go to their bank.
-        <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+        <% if @event.institutionally_sponsored? %>
+          The school needs to set up this programme's payment account first.
+          <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+        <% else %>
+          A parent or guardian needs to set up this venture's payment account first.
+          They will own that account, and payouts go to their bank.
+          <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+        <% end %>
       <% else %>
         <%= account.status_description %>
         <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
@@ -45,29 +64,53 @@
 </p>
 
 <p class="secondary mt0">
-  This is what Stripe says can be sent today. Money from a sale takes a couple of
-  days to become available, so a recent payment may not be included yet.
+  <% if @school_settled %>
+    <%# On a shared account this figure is NOT Stripe's balance — it is this
+        venture's own ledger balance, capped by what Stripe has available. Saying
+        "what Stripe says" here would be false, and would also imply the whole
+        programme's money is this student's to ask for. %>
+    This is what <%= @event.name %> has earned and not yet spent. Money from a sale
+    takes a couple of days to become available, so a recent payment may not be
+    included yet.
+  <% else %>
+    This is what Stripe says can be sent today. Money from a sale takes a couple of
+    days to become available, so a recent payment may not be included yet.
+  <% end %>
 </p>
 
 <% if @pending_request.present? %>
   <%= render "application/callout", type: "info",
-             title: "#{number_to_currency(@pending_request.amount)} waiting for a guardian's approval" do %>
+             title: "#{number_to_currency(@pending_request.amount)} waiting for approval" do %>
     <p>
       Requested by <strong><%= @pending_request.requested_by.name.presence || @pending_request.requested_by.email %></strong>
       on <%= @pending_request.created_at.strftime("%B %-d, %Y") %>.
+      <% if @pending_request.destination_note.present? %>
+        <br>
+        To be sent to: <strong><%= @pending_request.destination_note %></strong>
+      <% end %>
     </p>
 
     <% if @can_decide %>
-      <%# The guardian's decision. Both buttons are here rather than the reject
-          being hidden behind a second page, because a parent who cannot easily say
-          no will say nothing, and a request that sits forever is worse for the
-          teen than a decline with a reason. %>
+      <%# The adult's decision. Both buttons are here rather than the reject being
+          hidden behind a second page, because someone who cannot easily say no will
+          say nothing, and a request that sits forever is worse for the teen than a
+          decline with a reason. %>
       <div class="flex flex-wrap items-start" style="gap: 1rem;">
-        <%= button_to "Approve and send",
-                      fuime_payout_approve_path(event_slug: @event.slug, id: @pending_request.id),
-                      method: :post,
-                      class: "btn bg-success",
-                      data: { turbo_confirm: "Send #{number_to_currency(@pending_request.amount)} to your bank account?" } %>
+        <% if @pending_request.personal_transfer? %>
+          <%= button_to "Approve",
+                        fuime_payout_approve_path(event_slug: @event.slug, id: @pending_request.id),
+                        method: :post,
+                        class: "btn bg-success",
+                        data: { turbo_confirm: "Approve paying #{number_to_currency(@pending_request.amount)} " \
+                                               "to #{@pending_request.requested_by.first_name}? " \
+                                               "You'll mark it as paid once the school has sent it." } %>
+        <% else %>
+          <%= button_to "Approve and send",
+                        fuime_payout_approve_path(event_slug: @event.slug, id: @pending_request.id),
+                        method: :post,
+                        class: "btn bg-success",
+                        data: { turbo_confirm: "Send #{number_to_currency(@pending_request.amount)} to your bank account?" } %>
+        <% end %>
 
         <%= form_with url: fuime_payout_reject_path(event_slug: @event.slug, id: @pending_request.id),
                       method: :post, class: "flex items-start", style: "gap: 0.5rem;" do |f| %>
@@ -79,19 +122,25 @@
       </div>
     <% else %>
       <p class="mb-0">
-        <% guardians = @event.overseeing_guardians %>
-        <% if guardians.any? %>
-          Waiting on <strong><%= guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>
-          to approve it.
+        <% if @school_settled %>
+          <%# No guardian exists on a school venture, and the old copy sent the
+              student to a guardian-invite page that would never resolve this. %>
+          Waiting on the school to approve it.
         <% else %>
-          There's no active guardian on this venture yet, so nobody can approve it.
-          <%= link_to "Invite your guardian", new_guardianship_path, class: "underline" %>.
+          <% guardians = @event.overseeing_guardians %>
+          <% if guardians.any? %>
+            Waiting on <strong><%= guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>
+            to approve it.
+          <% else %>
+            There's no active guardian on this venture yet, so nobody can approve it.
+            <%= link_to "Invite your guardian", new_guardianship_path, class: "underline" %>.
+          <% end %>
         <% end %>
       </p>
     <% end %>
   <% end %>
 <% elsif @can_request %>
-  <h2 class="mt2">Request a payout</h2>
+  <h2 class="mt2"><%= @school_settled ? "Take money out" : "Request a payout" %></h2>
 
   <%= form_with url: fuime_payouts_create_path(event_slug: @event.slug), method: :post do |f| %>
     <div class="field">
@@ -102,18 +151,94 @@
                        autocomplete: "off" %>
     </div>
 
-    <p class="secondary">
-      Your guardian has to approve this before any money moves. It goes to their
-      bank account, not to Fuime.
-    </p>
+    <% if @school_settled %>
+      <div class="field">
+        <%= f.label :destination_note, "Where should it go?", class: "bold" %>
+        <%# Free text, and no bank fields anywhere. The school already has whatever
+            details it needs to pay a student it enrolled; Fuime collecting a
+            minor's account number to hand back to them would be a store of exactly
+            the data CLAUDE.md L4 says not to hold, for no capability at all. %>
+        <%= f.text_field :destination_note,
+                         placeholder: "e.g. my own bank account",
+                         autocomplete: "off" %>
+        <p class="secondary mb0">
+          Just a note for the school — don't put your account number here. They'll
+          use the details they already have on file.
+        </p>
+      </div>
 
-    <%= f.submit "Ask my guardian", class: "btn bg-accent" %>
+      <p class="secondary">
+        The school has to approve this, and then pays you the same way it pays
+        anyone. The money is held in the school's account, so Fuime doesn't send it
+        and never holds it.
+      </p>
+
+      <%= f.submit "Ask the school", class: "btn bg-accent" %>
+    <% else %>
+      <p class="secondary">
+        Your guardian has to approve this before any money moves. It goes to their
+        bank account, not to Fuime.
+      </p>
+
+      <%= f.submit "Ask my guardian", class: "btn bg-accent" %>
+    <% end %>
+  <% end %>
+
+  <% if @school_settled %>
+    <p class="secondary">
+      You don't have to take it out. Anything you leave here stays in the venture
+      and you can spend it on the business.
+    </p>
   <% end %>
 <% elsif @can_decide %>
   <p class="secondary">
     There's nothing waiting for you to approve. When
     <%= @event.name %> asks for a payout, it will show up here.
   </p>
+<% end %>
+
+<% if @unsettled_requests.present? && @unsettled_requests.any? %>
+  <h2 class="mt2">Approved, not yet paid</h2>
+
+  <%# The business office's to-do list. Distinct from History because the ledger has
+      NOT been debited yet: the debit waits for someone to assert the money actually
+      went, so an approved-but-unpaid transfer is still spendable balance. %>
+  <table class="table--autosize">
+    <thead>
+      <tr>
+        <th>Approved</th>
+        <th>Amount</th>
+        <th>To</th>
+        <% if @can_settle %><th></th><% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @unsettled_requests.each do |request| %>
+        <tr>
+          <td><%= request.approved_at&.strftime("%b %-d, %Y") %></td>
+          <td><%= number_to_currency(request.amount) %></td>
+          <td>
+            <%= request.requested_by.name.presence || request.requested_by.email %>
+            <% if request.destination_note.present? %>
+              <span class="secondary">— <%= request.destination_note %></span>
+            <% end %>
+          </td>
+          <% if @can_settle %>
+            <td>
+              <%= button_to "Mark as paid",
+                            fuime_payout_settle_path(event_slug: @event.slug, id: request.id),
+                            method: :post,
+                            class: "btn bg-success",
+                            data: { turbo_confirm: "Confirm the school has sent " \
+                                                   "#{number_to_currency(request.amount)} to " \
+                                                   "#{request.requested_by.first_name}? " \
+                                                   "This takes it off the venture's balance." } %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
 <% end %>
 
 <h2 class="mt2">History</h2>
@@ -138,14 +263,24 @@
           <td>
             <%# Each state gets its own sentence rather than the raw aasm_state,
                 because "failed" on its own tells a family nothing about whether
-                they still have the money. They do — Stripe returns it. %>
+                they still have the money. They do — Stripe returns it.
+
+                "approved" means two different things on the two paths: Stripe has
+                already sent it, or a school still owes it. Showing "Sent to your
+                bank" for the second would be a straight falsehood. %>
             <% case request.aasm_state
                when "pending" %>
               <span class="badge bg-info">Waiting for approval</span>
             <% when "approved" %>
-              <span class="badge bg-info">Sent to your bank</span>
+              <% if request.personal_transfer? %>
+                <span class="badge bg-info">Approved — school is paying it</span>
+              <% else %>
+                <span class="badge bg-info">Sent to your bank</span>
+              <% end %>
             <% when "paid" %>
-              <span class="badge bg-success">Arrived</span>
+              <span class="badge bg-success">
+                <%= request.personal_transfer? ? "Paid to you" : "Arrived" %>
+              </span>
             <% when "rejected" %>
               <span class="badge bg-muted">Declined</span>
               <% if request.rejection_reason.present? %>
@@ -162,6 +297,9 @@
           <td>
             <% if request.approved_by.present? %>
               <%= request.approved_by.name.presence || request.approved_by.email %>
+              <% if request.settled_by.present? && request.settled_by_id != request.approved_by_id %>
+                <span class="secondary">— paid by <%= request.settled_by.name.presence || request.settled_by.email %></span>
+              <% end %>
             <% else %>
               <span class="muted">—</span>
             <% end %>
@@ -172,10 +310,17 @@
   </table>
 <% end %>
 
-<%# Standing disclosure. Fuime is not a bank and never holds this money — the
-    connected account and the bank account are both the guardian's (L5). %>
+<%# Standing disclosure. Fuime is not a bank and never holds this money — on a
+    family venture the connected account and the bank account are both the
+    guardian's; on a school venture they are both the school's (L5). %>
 <p class="secondary mt2">
-  Payouts are sent by Stripe from the venture's own account to the bank account
-  the parent or guardian connected. Fuime is a financial technology company, not a
-  bank, and never holds this money.
+  <% if @school_settled %>
+    This venture's money is held in the school's own Stripe account, and the school
+    pays students from it. Fuime is a financial technology company, not a bank, and
+    never holds this money.
+  <% else %>
+    Payouts are sent by Stripe from the venture's own account to the bank account
+    the parent or guardian connected. Fuime is a financial technology company, not a
+    bank, and never holds this money.
+  <% end %>
 </p>

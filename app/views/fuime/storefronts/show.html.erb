@@ -121,7 +121,7 @@
               this replaced ignored the plan entirely, so a Founders-plan venture
               advertised a fee it does not pay. %>
           Fuime keeps
-          <%= number_to_percentage(@event.plan.revenue_fee * 100, precision: 1) %>
+          <%= number_to_percentage(@event.revenue_fee * 100, precision: 1) %>
           to run the platform.
         </p>
       <% else %>

@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1270,6 +1270,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
   end
 
+  create_table "fuime_subscriptions", force: :cascade do |t|
+    t.bigint "billed_to_id", null: false
+    t.boolean "cancel_at_period_end", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "current_period_end"
+    t.bigint "event_id"
+    t.string "status", default: "incomplete", null: false
+    t.string "stripe_customer_id"
+    t.string "stripe_subscription_id"
+    t.datetime "updated_at", null: false
+    t.index ["billed_to_id"], name: "index_fuime_subscriptions_family_per_guardian", unique: true, where: "(event_id IS NULL)"
+    t.index ["billed_to_id"], name: "index_fuime_subscriptions_on_billed_to_id"
+    t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true, where: "(event_id IS NOT NULL)"
+    t.index ["stripe_subscription_id"], name: "index_fuime_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
+  end
+
   create_table "g_suite_accounts", force: :cascade do |t|
     t.datetime "accepted_at", precision: nil
     t.text "address"
@@ -2071,6 +2087,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
     t.datetime "approved_at"
     t.bigint "approved_by_id"
     t.datetime "created_at", null: false
+    t.string "destination", default: "account_owner_bank", null: false
+    t.text "destination_note"
     t.bigint "event_id", null: false
     t.string "failure_code"
     t.text "failure_message"
@@ -2078,13 +2096,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
     t.datetime "rejected_at"
     t.text "rejection_reason"
     t.bigint "requested_by_id", null: false
+    t.datetime "settled_at"
+    t.bigint "settled_by_id"
     t.text "stripe_payout_id"
     t.datetime "updated_at", null: false
     t.index ["approved_by_id"], name: "index_payout_requests_on_approved_by_id"
     t.index ["event_id", "created_at"], name: "index_pending_payout_requests_on_event", where: "((aasm_state)::text = 'pending'::text)"
     t.index ["event_id"], name: "index_payout_requests_on_event_id"
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
+    t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying]::text[])", name: "payout_requests_destination_known"
   end
 
   create_table "paypal_transfers", force: :cascade do |t|
@@ -3249,6 +3271,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"
   add_foreign_key "fees", "canonical_event_mappings"
+  add_foreign_key "fuime_subscriptions", "events"
+  add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "g_suite_accounts", "g_suites"
   add_foreign_key "g_suite_accounts", "users", column: "creator_id"
   add_foreign_key "g_suite_aliases", "g_suite_accounts"
@@ -3320,6 +3344,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
   add_foreign_key "payout_requests", "events"
   add_foreign_key "payout_requests", "users", column: "approved_by_id"
   add_foreign_key "payout_requests", "users", column: "requested_by_id"
+  add_foreign_key "payout_requests", "users", column: "settled_by_id"
   add_foreign_key "paypal_transfers", "events"
   add_foreign_key "paypal_transfers", "users"
   add_foreign_key "payroll_invoices", "payments"

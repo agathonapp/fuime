@@ -49,19 +49,49 @@ module Fuime
     def available_balance_cents
       return 0 unless account&.stripe_id.present?
 
-      balance = Stripe::Balance.retrieve({}, request_options)
-      usd = Array(balance.available).find { |b| b.currency.to_s == "usd" }
-      usd&.amount.to_i
-    rescue Stripe::StripeError => e
-      # Deliberately not re-raised: a balance we cannot read must not take down
-      # the venture's dashboard. Logged, and the caller shows "unavailable".
-      Rails.logger.error("[Fuime] could not read balance for event #{@event.id}: #{e.message}")
-      nil
+      stripe_available = stripe_available_cents
+      return nil if stripe_available.nil?
+      return stripe_available unless @event.shares_payment_account?
+
+      # ── The pooled-account cap ────────────────────────────────────────────
+      #
+      # Inside a school programme one Stripe account holds every student's money,
+      # so Stripe's available balance is the WHOLE PROGRAMME's. Returning it here
+      # would tell a student who earned $40 that $9,000 was available to them, and
+      # the amount check in #request! would have happily agreed — one student could
+      # withdraw another student's revenue, and the ledger would only reveal it
+      # afterwards.
+      #
+      # So on a shared account the venture's own ledger balance is the binding
+      # constraint and Stripe's number is only a ceiling. `balance_v2_cents` is the
+      # right figure rather than gross revenue: it is settled money in, less
+      # everything already spent or committed, which is exactly what is left to
+      # take out.
+      #
+      # Clamped at zero because a venture can legitimately go negative (a
+      # chargeback after the money was spent) and "you may withdraw minus $12" is
+      # not a sentence to show a teenager.
+      [stripe_available, [@event.balance_v2_cents, 0].max].min
     end
 
-    # A teen asks. Validates against the live balance so the request a parent sees
+    # Which destination this venture's requests go to, decided by the venture rather
+    # than by the caller.
+    #
+    # Not a user choice, and not a parameter with a default: it follows from who
+    # owns the account, PayoutRequest#destination_must_suit_the_account refuses the
+    # other value, and letting a form post it would mean a controller could ask for
+    # the impossible one and get a validation error instead of the right behaviour.
+    def destination
+      if @event.shares_payment_account?
+        PayoutRequest::PERSONAL_TRANSFER
+      else
+        PayoutRequest::ACCOUNT_OWNER_BANK
+      end
+    end
+
+    # A teen asks. Validates against the live balance so the request an adult sees
     # was affordable at the moment it was made.
-    def request!(amount_cents:, requested_by:)
+    def request!(amount_cents:, requested_by:, destination_note: nil)
       ensure_payouts_possible!
 
       available = available_balance_cents
@@ -78,19 +108,19 @@ module Fuime
       PayoutRequest.create!(
         event: @event,
         requested_by:,
-        amount_cents: amount_cents.to_i
+        amount_cents: amount_cents.to_i,
+        destination:,
+        destination_note: destination_note.presence
       )
     end
 
-    # The guardian says yes, and the money actually moves.
+    # The responsible adult says yes.
     #
-    # The Stripe call happens INSIDE the database transaction on purpose, which is
-    # the opposite of the usual advice. The reasoning: if the payout succeeds at
-    # Stripe and the local commit then fails, Fuime has sent money it has no record
-    # of sending, and the next approval would send it again. Holding the
-    # transaction open across the API call means a failure to record is a failure
-    # to send. The Stripe idempotency key covers the remaining window where Stripe
-    # processed a call whose response we never saw.
+    # What happens next depends on the destination, and the difference is not
+    # cosmetic: on the account_owner_bank path approval IS the money moving, and on
+    # the personal_transfer path approval is an authorisation the school still has
+    # to act on. Both re-read the balance first, because in both cases the number
+    # the adult is looking at may have gone stale.
     def approve!(request:, approver:)
       raise Error, "This payout request has already been decided." unless request.pending?
 
@@ -108,6 +138,19 @@ module Fuime
               "The balance changed after the request was made."
       end
 
+      return approve_personal_transfer!(request:, approver:) if request.personal_transfer?
+
+      approve_stripe_payout!(request:, approver:)
+    end
+
+    # Approval of a Stripe payout. The Stripe call happens INSIDE the database
+    # transaction on purpose, which is the opposite of the usual advice. The
+    # reasoning: if the payout succeeds at Stripe and the local commit then fails,
+    # Fuime has sent money it has no record of sending, and the next approval would
+    # send it again. Holding the transaction open across the API call means a failure
+    # to record is a failure to send. The Stripe idempotency key covers the remaining
+    # window where Stripe processed a call whose response we never saw.
+    def approve_stripe_payout!(request:, approver:)
       ActiveRecord::Base.transaction do
         request.approved_by = approver
         request.approved_at = Time.current
@@ -119,6 +162,72 @@ module Fuime
         Rails.logger.info(
           "[Fuime] payout #{payout.id} created for event #{@event.id}: " \
           "#{format_cents(request.amount_cents)} approved by user #{approver.id}"
+        )
+
+        request
+      end
+    end
+
+    # Approval of a school-settled transfer. No Stripe call, and deliberately no
+    # ledger line yet.
+    #
+    # The money has not moved. The school has agreed to move it. Posting the debit
+    # here would show a student a reduced balance for money still sitting in the
+    # school's Stripe account, and — worse — would let the venture spend against a
+    # balance while the same funds were queued to be paid out in cash. The debit
+    # waits for #settle!, which is somebody asserting the money actually went.
+    #
+    # Same principle as Fuime::ConnectPayoutRecorder writing the ledger from
+    # `payout.created` rather than from approve!: the ledger follows what happened,
+    # not what was authorised.
+    def approve_personal_transfer!(request:, approver:)
+      request.approved_by = approver
+      request.approved_at = Time.current
+      request.approve!
+      request.save!
+
+      Rails.logger.info(
+        "[Fuime] personal transfer request #{request.id} on event #{@event.id} " \
+        "approved by user #{approver.id}: #{format_cents(request.amount_cents)} " \
+        "for the school to pay out"
+      )
+
+      request
+    end
+
+    # The school confirms it actually paid the student, and the ledger follows.
+    #
+    # This is the only place a personal_transfer debit is written. It is keyed on the
+    # PayoutRequest rather than on a Stripe object because there is no Stripe object
+    # — that is the whole nature of this path — and Fuime::VentureLedger's
+    # idempotency means clicking it twice cannot debit twice.
+    #
+    # `settled_by` is recorded separately from `approved_by` because approving a
+    # disbursement and having completed it are different claims: a guide approves,
+    # the business office pays, and a reconciliation months later needs to know
+    # which person made which assertion.
+    def settle!(request:, settled_by:)
+      unless request.awaiting_settlement?
+        raise Error, "This request isn't waiting to be marked as paid."
+      end
+
+      ActiveRecord::Base.transaction do
+        request.settled_by = settled_by
+        request.settled_at = Time.current
+        request.paid_at = Time.current
+        request.mark_paid!
+        request.save!
+
+        VentureLedger.new(event: @event).post!(
+          key: VentureLedger.personal_transfer_key(request.id),
+          amount_cents: -request.amount_cents,
+          memo: personal_transfer_memo(request),
+          date: Date.current
+        )
+
+        Rails.logger.info(
+          "[Fuime] personal transfer request #{request.id} on event #{@event.id} " \
+          "marked paid by user #{settled_by.id}"
         )
 
         request
@@ -138,8 +247,22 @@ module Fuime
 
     private
 
+    # What Stripe says is available on the account, with no Fuime interpretation.
+    def stripe_available_cents
+      balance = Stripe::Balance.retrieve({}, request_options)
+      usd = Array(balance.available).find { |b| b.currency.to_s == "usd" }
+      usd&.amount.to_i
+    rescue Stripe::StripeError => e
+      # Deliberately not re-raised: a balance we cannot read must not take down
+      # the venture's dashboard. Logged, and the caller shows "unavailable".
+      Rails.logger.error("[Fuime] could not read balance for event #{@event.id}: #{e.message}")
+      nil
+    end
+
+    # #payment_account, so a student venture inside a school programme resolves to
+    # the school's account — which is where its money actually is.
     def account
-      @account ||= @event.stripe_connected_account
+      @account ||= @event.payment_account
     end
 
     def ensure_payouts_possible!
@@ -194,6 +317,15 @@ module Fuime
     # never taken from the global Stripe.api_key.
     def request_options
       { api_key: StripeService.secret_key, stripe_account: account.stripe_id }
+    end
+
+    # Reads on the venture's ledger, so it has to say where the money went without
+    # quoting a student's free text back at them as though Fuime verified it.
+    def personal_transfer_memo(request)
+      note = request.destination_note.to_s.strip
+      return "Paid out to #{request.requested_by.first_name} by the school" if note.blank?
+
+      "Paid out to #{request.requested_by.first_name} by the school (#{note.truncate(60)})"
     end
 
     def format_cents(cents)

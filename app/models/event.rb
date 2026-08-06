@@ -502,6 +502,12 @@ class Event < ApplicationRecord
   # Fuime: the guardian-owned Stripe account this venture is paid into. Absent
   # until a guardian completes payment setup, which is why every caller goes
   # through #accepts_payments? rather than assuming it exists.
+  #
+  # This is deliberately the venture's OWN account and nothing else. Code asking
+  # "where does a payment for this venture go?" wants #payment_account, which
+  # resolves through a school above it; code asking "does this venture own an
+  # account?" wants this. Conflating the two is how a family venture would end up
+  # taking payments into an unrelated parent org's account.
   has_one :stripe_connected_account, dependent: :destroy
 
   # Fuime: teens' requests to move money to the family's bank, and the guardian
@@ -692,6 +698,47 @@ class Event < ApplicationRecord
     end
   end
 
+  # Fuime: the Stripe account a payment to THIS venture actually lands in.
+  #
+  # For a family venture that is its own account and nothing else — the guardian
+  # owns it, and no parent org can lend one.
+  #
+  # For a venture inside a school programme it is the school's account, resolved
+  # up the tree. `Event::Plan::School` already states this outright ("the school
+  # owns the account and the money"), but nothing implemented it: every call site
+  # read `stripe_connected_account`, which is per-event with a UNIQUE index and no
+  # fallback, so a student sub org under a fully onboarded school could take
+  # exactly $0. The storefront rendered a working payment form and the checkout
+  # endpoint then refused it.
+  #
+  # ── Why inheritance is gated on institutional sponsorship ────────────────
+  #
+  # Upstream HCB has sub-organizations too, and they are ordinary orgs that happen
+  # to sit under a parent. If this walked the tree unconditionally, an HCB-shaped
+  # parent/child pair would silently start routing the child's money into the
+  # parent's Stripe account. Gating on #institutionally_sponsored? means the only
+  # trees that share an account are the ones whose plan says the institution owns
+  # the money, and it is the same inheritance direction as that predicate and
+  # CardGrant::InheritablePolicy.
+  def payment_account
+    return @payment_account if defined?(@payment_account)
+
+    @payment_account =
+      stripe_connected_account ||
+      (institutionally_sponsored? ? nearest_ancestor_payment_account : nil)
+  end
+
+  # Is the account this venture is paid into someone else's — i.e. shared with
+  # sibling ventures under the same school?
+  #
+  # Load-bearing for money OUT, not just for bookkeeping. On a shared account
+  # Stripe's balance is the whole school's, so anything that reads a balance to
+  # decide what a single student may withdraw has to cap against that student's
+  # own ledger instead. Fuime::PayoutService is where that happens.
+  def shares_payment_account?
+    payment_account.present? && stripe_connected_account.blank?
+  end
+
   # Fuime: can this venture take a card payment right now?
   #
   # The single question the storefront, the checkout endpoint and the venture
@@ -699,7 +746,7 @@ class Event < ApplicationRecord
   # Stripe state, and false when no guardian has set payments up — which is the
   # correct answer for every venture until one has.
   def accepts_payments?
-    stripe_connected_account&.ready_for_payments? || false
+    payment_account&.ready_for_payments? || false
   end
 
   # Fuime: the adults legally responsible for this venture.
@@ -895,8 +942,32 @@ class Event < ApplicationRecord
     event_tags.where(name: EventTag::Tags::HACKATHON).exists?
   end
 
+  # Fuime: the tree-resolved answers each cost a recursive CTE, so they are
+  # memoized — and `reload` does NOT clear plain instance variables, only attributes
+  # and association caches. Without clearing them here, changing an event's plan and
+  # then re-asking on the same in-memory object returns the answer from before the
+  # change, which is exactly what the admin plan-change flow does.
+  #
+  # Found by spec/models/event_institutional_sponsorship_spec.rb the moment
+  # #revenue_fee started resolving through #billing_plan: that made
+  # #institutionally_sponsored? run during event setup rather than only from a
+  # policy, so the memo was already warm by the time the School plan was installed.
+  #
+  # `remove_instance_variable` rather than assigning nil, because all three memos
+  # guard on `defined?` — nil would read as a cached "no" forever.
+  MEMOIZED_TREE_ANSWERS = %i[
+    @institutionally_sponsored
+    @billing_plan
+    @payment_account
+  ].freeze
+
   def reload(**args)
     @total_fee_payments_v2_cents = nil
+
+    MEMOIZED_TREE_ANSWERS.each do |ivar|
+      remove_instance_variable(ivar) if instance_variable_defined?(ivar)
+    end
+
     super(**args)
   end
 
@@ -943,8 +1014,56 @@ class Event < ApplicationRecord
     !engaged?
   end
 
+  # Fuime: the plan that sets this venture's COMMERCIAL terms, which is not always
+  # its own.
+  #
+  # Inside a school programme the institution's plan governs. `Event::Plan::School`
+  # is FeeWaived for a stated reason — a school already pays per student per year,
+  # so taking a cut of each student's revenue charges one customer twice for one
+  # product — but the fee was read from `plan&.revenue_fee` with no inheritance,
+  # while `EventService::Create` defaults every new sub org to `Standard`. So a
+  # student venture created under a 0% school was charged 4%: precisely the
+  # double-charge the School plan exists to prevent.
+  #
+  # Fixed here rather than at sub-org creation on purpose. Creation-time defaulting
+  # would leave every already-seeded student venture wrong and would silently
+  # depend on nobody ever editing a plan afterwards; resolving at read time means
+  # the institution's terms cannot be contradicted from below, which is the same
+  # rule #institutionally_sponsored? and CardGrant::InheritablePolicy already
+  # enforce for responsibility and for spending.
+  #
+  # Only institutional trees inherit. An ordinary HCB-shaped sub-organization keeps
+  # reading its own plan, so no upstream billing behaviour changes.
+  def billing_plan
+    return @billing_plan if defined?(@billing_plan)
+
+    # #ancestors needs an id to walk from, and `revenue_fee` is reachable during
+    # validation on a new record where #institutionally_sponsored? would raise.
+    return @billing_plan = plan unless persisted?
+
+    @billing_plan =
+      if institutionally_sponsored?
+        ancestors.includes(:plan).find { |event| event.plan&.institutionally_sponsored? }&.plan || plan
+      elsif family_pro?
+        # The guardian's family subscription covers every venture they sign
+        # for. An unsaved Pro instance is deliberate: Pro-ness is a property of
+        # the FAMILY resolved at read time (like institutional sponsorship
+        # above), not a plan row to swap on webhooks and sweep on lapse.
+        Event::Plan::Pro.new(event: self)
+      else
+        plan
+      end
+  end
+
+  # Does a guardian overseeing this venture hold an active family subscription?
+  def family_pro?
+    return @family_pro if defined?(@family_pro)
+
+    @family_pro = overseeing_guardians.any?(&:fuime_pro?)
+  end
+
   def revenue_fee
-    configured = plan&.revenue_fee
+    configured = billing_plan&.revenue_fee
     return configured if configured.present?
 
     Rails.error.unexpected("#{id} is missing a plan!")
@@ -1089,6 +1208,21 @@ class Event < ApplicationRecord
 
   private
 
+  # Nearest ancestor that actually owns a Stripe account, or nil.
+  #
+  # Nearest rather than root, so a school network can put the account on one
+  # campus and have only that campus's students paid into it. `ancestors` is
+  # ordered self-first then nearest-first, so `drop(1)` is the strict ancestor
+  # chain in the order to try.
+  def nearest_ancestor_payment_account
+    ancestors.drop(1).each do |ancestor|
+      account = ancestor.stripe_connected_account
+      return account if account.present?
+    end
+
+    nil
+  end
+
   def point_of_contact_is_admin
     return unless point_of_contact_changed?
     return unless point_of_contact
@@ -1197,7 +1331,11 @@ class Event < ApplicationRecord
       end
     end
 
-    Event::Plan::Standard
+    # Fuime: new root ventures start on the Free plan (7%, no monthly) — the
+    # zero-friction end of the pricing ladder. Standard (4%) remains for
+    # ventures that already have it. Sub-orgs still inherit their parent's
+    # plan class above, which is what keeps a school's children on School.
+    Event::Plan::Free
   end
 
 end

@@ -494,6 +494,29 @@ namespace :fuime do
       end
     end
 
+    desc "9m. Monthly fee: real Stripe Billing checkout session for the guardian"
+    task subscribe: :environment do
+      sp_abort_unless_test!
+      sp_step("subscription checkout (SubscriptionService)") do
+        # The harness venture needs a billable plan; give it Standard if bare.
+        unless sp_venture.plan&.monthly_fee_cents.to_i.positive?
+          sp_venture.plan&.update!(aasm_state: :inactive)
+          Event::Plan::Standard.create!(event: sp_venture, aasm_state: :active)
+          sp_venture.reload
+        end
+
+        session = Fuime::SubscriptionService.new(guardian: sp_guardian).checkout_session(
+          success_url: "https://app.fuime.com/#{sp_venture.slug}?subscribed=1",
+          cancel_url: "https://app.fuime.com/#{sp_venture.slug}"
+        )
+        sub = Fuime::SubscriptionService.new(guardian: sp_guardian).record
+        puts "  ✓ customer #{sub.stripe_customer_id}, session #{session.id}"
+        puts "    $#{Event::Plan::Pro.new.monthly_fee_cents / 100.0}/mo family plan — pay with 4242 to start:"
+        puts "    #{session.url}"
+        puts "    completion fires customer.subscription.created at the platform endpoint."
+      end
+    end
+
     desc "Where things stand"
     task status: :environment do
       sp_abort_unless_test!
