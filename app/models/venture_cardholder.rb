@@ -96,7 +96,7 @@ class VentureCardholder < ApplicationRecord
   # must genuinely support cards (per Stripe, not per Fuime's intent), Stripe must
   # consider this cardholder usable, and the person must have accepted the terms.
   def issuable?
-    event.stripe_connected_account&.ready_for_cards? &&
+    event.payment_account&.ready_for_cards? &&
       status == "active" &&
       terms_accepted?
   end
@@ -105,7 +105,7 @@ class VentureCardholder < ApplicationRecord
   def issuance_blockers
     blockers = []
 
-    account = event.stripe_connected_account
+    account = event.payment_account
     if account.blank? || !account.cards_profile?
       blockers << "This venture's payment account wasn't set up to support cards. " \
                   "Stripe can't add them to an existing account, so it would need to be set up again."
@@ -130,9 +130,19 @@ class VentureCardholder < ApplicationRecord
 
   private
 
-  # The guardian, and only the guardian, carries the card liability. Enforced here
+  # The responsible adult, and only they, carry the card liability. Enforced here
   # as well as in the issuing service because a row asserting that a minor is the
   # Accountholder would misstate who is on the hook to anyone reading it later.
+  #
+  # Who that adult is depends on who took responsibility for the venture. For a
+  # family venture it is the guardian. For one inside a school programme there is
+  # no guardian by design, so requiring one here did not make schools safer — it
+  # made cards unissuable, which in turn made "leave the money in the account and
+  # reinvest it" unreachable for a school student, since spending the balance is
+  # what a card is for.
+  #
+  # The adult check itself never relaxes. #known_adult? still applies on both
+  # branches, so the substitution is only ever one adult for another.
   def accountholder_must_be_an_adult_guardian
     return unless accountholder?
     return if user.blank? || event.blank?
@@ -140,6 +150,14 @@ class VentureCardholder < ApplicationRecord
 
     unless user.known_adult?
       errors.add(:user, "must be a confirmed adult to be the accountholder")
+      return
+    end
+
+    if event.institutionally_sponsored?
+      unless OrganizerPosition.role_at_least?(user, event, :manager)
+        errors.add(:user, "must be a manager of the sponsoring school to be the accountholder")
+      end
+
       return
     end
 

@@ -54,10 +54,24 @@ class PayoutRequest < ApplicationRecord
   belongs_to :event
   # The teen who asked.
   belongs_to :requested_by, class_name: "User"
-  # The guardian who approved. Absent while pending, and forever on a rejection.
+  # The responsible adult who approved. Absent while pending, and forever on a
+  # rejection.
   belongs_to :approved_by, class_name: "User", optional: true
+  # Who confirmed a personal_transfer actually went out. See the migration.
+  belongs_to :settled_by, class_name: "User", optional: true
 
   MINIMUM_CENTS = 100
+
+  # Stripe sends it, to the bank the account owner attached. The only destination a
+  # family venture has, because there the account owner IS the person being paid.
+  ACCOUNT_OWNER_BANK = "account_owner_bank"
+
+  # The school pays the student directly and confirms it here. Fuime records the
+  # authorisation and the settlement and never touches the money — see the
+  # migration for why there is no third option where Fuime sends it.
+  PERSONAL_TRANSFER = "personal_transfer"
+
+  DESTINATIONS = [ACCOUNT_OWNER_BANK, PERSONAL_TRANSFER].freeze
 
   validates :amount_cents,
             numericality: {
@@ -66,11 +80,19 @@ class PayoutRequest < ApplicationRecord
               message: "must be at least $#{MINIMUM_CENTS / 100}"
             }
 
+  validates :destination, inclusion: { in: DESTINATIONS }
+
   validate :one_pending_request_per_venture, on: :create
-  validate :approver_must_be_an_overseeing_guardian
+  validate :approver_must_be_the_responsible_adult
+  validate :approver_must_not_be_the_requester
+  validate :destination_must_suit_the_account
 
   scope :awaiting_approval, -> { where(aasm_state: "pending") }
   scope :recent_first, -> { order(created_at: :desc) }
+  # Approved personal transfers the school has not yet confirmed paying. This is
+  # the business office's to-do list, and the reason `settled_at` is a column
+  # rather than an inference from aasm_state.
+  scope :awaiting_settlement, -> { where(aasm_state: "approved", destination: PERSONAL_TRANSFER) }
 
   aasm do
     state :pending, initial: true
@@ -105,8 +127,23 @@ class PayoutRequest < ApplicationRecord
     amount_cents / 100.0
   end
 
+  def account_owner_bank?
+    destination == ACCOUNT_OWNER_BANK
+  end
+
+  def personal_transfer?
+    destination == PERSONAL_TRANSFER
+  end
+
+  # Approved, but the school has not yet said it paid the student. Only ever true
+  # on the personal_transfer path — a Stripe payout has no equivalent waiting room,
+  # because Stripe acts the moment it is approved.
+  def awaiting_settlement?
+    approved? && personal_transfer?
+  end
+
   # Still waiting on a human. Distinct from `pending?` only in intent, but reads
-  # better at call sites deciding whether to show a parent a decision prompt.
+  # better at call sites deciding whether to show an adult a decision prompt.
   def awaiting_guardian?
     pending?
   end
@@ -135,17 +172,83 @@ class PayoutRequest < ApplicationRecord
 
   # Defence in depth behind the policy layer.
   #
-  # Authorization lives in PayoutRequestPolicy, but "the adult who approved this
-  # was actually a guardian overseeing this venture" is a claim the record itself
-  # makes to anyone reading it later, so the record enforces it. Admins are
+  # Authorization lives in EventPolicy#decide_payout?, but "the adult who approved
+  # this was actually the one responsible for this venture" is a claim the record
+  # itself makes to anyone reading it later, so the record enforces it. Admins are
   # allowed through because Fuime support genuinely does have to resolve stuck
   # payouts, and that is visible here rather than hidden in a controller.
-  def approver_must_be_an_overseeing_guardian
+  #
+  # Who the responsible adult is depends on the venture. A family venture has a
+  # guardian. One inside a school programme has no guardian by design, and the
+  # school's manager stands in its place — the same substitution EventPolicy makes,
+  # for the same reason. Before this branch existed a school venture's request
+  # could be approved by literally nobody except a Fuime admin.
+  def approver_must_be_the_responsible_adult
     return if approved_by.blank? || event.blank?
     return if approved_by.admin?
+
+    if event.institutionally_sponsored?
+      unless OrganizerPosition.role_at_least?(approved_by, event, :manager)
+        errors.add(:approved_by, "must be a manager of the sponsoring school")
+      end
+
+      return
+    end
+
     return if event.overseeing_guardians.exists?(id: approved_by.id)
 
     errors.add(:approved_by, "must be a guardian overseeing this venture")
+  end
+
+  # Nobody releases their own money request.
+  #
+  # On a family venture this is already true structurally: requesting needs
+  # `member?` and deciding needs `guardian_reader?`, and a guardian is read-only by
+  # construction. On a school venture it is not — a manager is >= member, so the
+  # same guide could file a request and approve it in two clicks. Segregation of
+  # duties is the entire content of an approval gate, so it is asserted here rather
+  # than left to the shape of the role hierarchy.
+  #
+  # No admin exemption: an admin approving a request an admin filed is precisely
+  # the self-approval this refuses.
+  def approver_must_not_be_the_requester
+    return if approved_by.blank?
+    return unless approved_by_id == requested_by_id
+
+    errors.add(:approved_by, "can't approve their own payout request")
+  end
+
+  # A request must ask for something the venture's account can actually do.
+  #
+  # On a shared (school-owned) account, `account_owner_bank` would send the pooled
+  # balance of every student in the programme to the school's bank on one student's
+  # request. That is a school treasury operation, not a student one, and it stays
+  # available on the school org itself — which owns its account and so does not
+  # reach this branch.
+  #
+  # Conversely `personal_transfer` on a family venture would be Fuime recording
+  # that a guardian owes their own child money out of an account the guardian
+  # already owns, which is not a thing Fuime has any business being the ledger for.
+  # The family path is a Stripe payout to the guardian's bank, full stop.
+  def destination_must_suit_the_account
+    return if event.blank?
+    # No account anywhere in the tree yet, so neither destination is reachable and
+    # neither message would be true. Fuime::PayoutService raises NotSetUp, which
+    # says the useful thing ("payment setup isn't finished").
+    return if event.payment_account.blank?
+
+    if personal_transfer? && !event.shares_payment_account?
+      errors.add(:destination,
+                 "isn't available on this venture — money goes to the bank account " \
+                 "attached to its own Stripe account.")
+    end
+
+    if account_owner_bank? && event.shares_payment_account?
+      errors.add(:destination,
+                 "isn't available on a venture inside a school programme, because the " \
+                 "balance is held in the school's account. Request a transfer to your " \
+                 "own account instead.")
+    end
   end
 
 end

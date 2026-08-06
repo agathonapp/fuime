@@ -60,7 +60,7 @@
     <% end %>
     <li class="mb-0">
       Fuime's platform fee is
-      <strong><%= number_to_percentage(@event.plan.revenue_fee * 100, precision: 1) %></strong>
+      <strong><%= number_to_percentage(@event.revenue_fee * 100, precision: 1) %></strong>
       of what the venture collects, charged on this account. Stripe's own card
       processing fee applies separately and goes to Stripe.
     </li>

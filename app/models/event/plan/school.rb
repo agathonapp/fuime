@@ -45,6 +45,15 @@ class Event
       def institutionally_sponsored?
         true
       end
+
+      # Schools pay a per-student subscription negotiated in the pilot
+      # agreement and billed by invoice — not by a card-on-file Stripe
+      # subscription, which no school business office would put through
+      # procurement. Zero here means "not billed through
+      # Fuime::SubscriptionService", not "free".
+      def monthly_fee_cents
+        0
+      end
     end
   end
 end

@@ -118,7 +118,7 @@ module EventsHelper
       symbol: :cards,
       available_proc: lambda { |event|
         policy(event).cards? && organizer_signed_in? &&
-          event.stripe_connected_account&.cards_profile?
+          event.payment_account&.cards_profile?
       }
     },
     # Fuime: Tax Tracker nav item

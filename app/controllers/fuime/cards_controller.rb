@@ -23,7 +23,7 @@ module Fuime
     def index
       authorize @event, :cards?
 
-      @connected_account = @event.stripe_connected_account
+      @connected_account = @event.payment_account
       @cardholders = @event.venture_cardholders.includes(:user, :venture_cards)
       @cards = @event.venture_cards.includes(venture_cardholder: :user)
 

@@ -89,6 +89,20 @@ module Fuime
       "fuime_payoutrev_#{payout_id}"
     end
 
+    # Money a school paid a student directly, out of the balance held in the school's
+    # own Stripe account.
+    #
+    # The only Fuime ledger key that is NOT derived from a Stripe object id, and the
+    # reason is structural rather than an oversight: on this path Stripe never moves
+    # anything, so there is no object to key on. The PayoutRequest is the authority
+    # for the fact and for the approval behind it, which makes its id the right key —
+    # and it keeps the same guarantee as every other key here, that one real-world
+    # movement produces at most one ledger line no matter how many times somebody
+    # clicks "mark as paid".
+    def self.personal_transfer_key(payout_request_id)
+      "fuime_schoolpaid_#{payout_request_id}"
+    end
+
     # A card purchase (or a refund of one). Keyed on the Stripe Issuing Transaction,
     # which is the settled object — authorizations are not posted, because an
     # authorization that never captures is not a transaction and would leave a

@@ -23,6 +23,15 @@
 class Event
   class Plan
     class Standard < Plan
+      # $9/month PLACEHOLDER until the founder sets a price — env-tunable so
+      # changing it is a config push, not a deploy. Individuals pay this plus
+      # the revenue fee below; Stripe's processing is passed through to the
+      # venture, itemised (Hack Club absorbs processing inside its 7%; a 4%
+      # for-profit fee cannot).
+      def monthly_fee_cents
+        ENV.fetch("FUIME_INDIVIDUAL_MONTHLY_CENTS", "900").to_i
+      end
+
       def revenue_fee
         Event::Plan::FALLBACK_REVENUE_FEE
       end

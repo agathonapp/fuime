@@ -58,9 +58,19 @@ module Fuime
     def show
       authorize @event, :payment_setup_status?
 
-      @connected_account = @event.stripe_connected_account
+      # The account this venture is actually paid into, which inside a school
+      # programme belongs to the school. Showing only its OWN account told a student
+      # at a fully onboarded school that setup had never been started.
+      @connected_account = @event.payment_account
+      @inherited_account = @event.shares_payment_account?
       @guardians = @event.overseeing_guardians
-      @can_set_up = policy(@event).setup_payments?
+
+      # Nothing to set up on a venture that already inherits an account, and this is
+      # a guard rather than a nicety: a guide with manager rights would otherwise be
+      # invited to onboard a SECOND Stripe account per student, each carrying the
+      # school's own entity details, when the school's existing account already
+      # serves the whole tree.
+      @can_set_up = policy(@event).setup_payments? && !@inherited_account
 
       # Whether this venture may still CHOOSE the cards profile. False once an account
       # exists, because `controller` is create-only at Stripe and the choice is therefore
@@ -75,6 +85,17 @@ module Fuime
     # are short-lived by design; there is nothing to cache and caching one would
     # produce an expired-session error for the guardian.
     def new
+      # Refused server-side, not just hidden in #show, because this is a URL anyone
+      # with manager rights can type. Creating an account here would give one student
+      # a second Stripe account inside a programme whose money is meant to be in one
+      # place — and Event#payment_account would then stop resolving to the school's,
+      # silently splitting the programme's balance in two.
+      if @event.shares_payment_account?
+        redirect_to fuime_payment_setup_path(event_slug: @event.slug),
+                    notice: "This venture is already set up through its school's payment account."
+        return
+      end
+
       @connected_account = service.mark_onboarding_started!
 
       # A `:cards_enabled` venture collects its requirements through Fuime, not through
