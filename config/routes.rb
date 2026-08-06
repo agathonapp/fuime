@@ -150,6 +150,12 @@ Rails.application.routes.draw do
     get "/", to: redirect("/"), as: :my
 
     get "settings", to: "users#edit", as: :my_settings
+
+    # Fuime: the family plan. Page, upgrade checkout, and Stripe's own billing
+    # portal for card changes and cancellation — Fuime never builds card forms.
+    get "billing", to: "fuime/billing#show", as: :my_billing
+    post "billing/subscribe", to: "fuime/billing#subscribe", as: :my_billing_subscribe
+    post "billing/portal", to: "fuime/billing#portal", as: :my_billing_portal
     get "settings/address", to: "users#edit_address"
     get "settings/payouts", to: "users#edit_payout"
     resources :payout_methods, only: [:create, :update], controller: "legal_entity/payout_methods", path: "settings/payouts/methods" do

@@ -204,6 +204,19 @@ class Event
 
     DISALLOWED_COUNTRIES = %w[IN NG RU CU IR KP SY BY VE SD SS MM AF YE SO PK CF CG ZW LY CM LB IQ].freeze
 
+    # Free tier: does the applicant have room for another venture?
+    #
+    # Pro (the family subscription) unlocks unlimited — theirs, or any
+    # overseeing guardian's. Ventures inside a school programme do not count
+    # against the free slot: a kid can run their class venture AND their first
+    # personal one for free.
+    def free_venture_slot_available?
+      return true if user.fuime_pro?
+      return true if user.guardians.any?(&:fuime_pro?)
+
+      user.events.not_hidden.reject(&:institutionally_sponsored?).empty?
+    end
+
     def rejection_messages
       generic = <<~MSG.strip
         Hi #{user.first_name},
@@ -392,6 +405,19 @@ class Event
         raise ArgumentError,
               "Cannot activate #{hashid}: #{user.email} is a minor with no active guardian. " \
               "Their parent or guardian must accept the guardianship invite first (L2)."
+      end
+
+      # The free tier includes ONE venture; the family plan (Pro) is unlimited.
+      # Enforced here at activation — the same seam as the guardian gate above —
+      # because this is where a venture comes into existence, and an admin
+      # reading the error knows exactly what unblocks it. School ventures never
+      # consume the slot and school students are never limited: the school's
+      # contract is per-student, not per-venture.
+      unless user.institutionally_vouched_for? || free_venture_slot_available?
+        raise ArgumentError,
+              "Cannot activate #{hashid}: the free plan includes one venture, and " \
+              "#{user.email} already has one. The family plan ($#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo) " \
+              "covers unlimited businesses."
       end
 
       self.with_lock do

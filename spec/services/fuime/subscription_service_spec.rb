@@ -84,6 +84,42 @@ RSpec.describe Fuime::SubscriptionService do
       .to be_a(Event::Plan::Free)
   end
 
+  describe "the free slot: one venture without Pro" do
+    def activate!(applicant, name)
+      application = create(:event_application, user: applicant, teen_led: true, name:)
+      application.update!(aasm_state: :approved)
+      admin = create(:user, :make_admin, birthday: 35.years.ago.to_date)
+      application.activate_event!(risk_level: 0, point_of_contact: admin)
+      application.reload.event
+    end
+
+    before { Guardianship.create!(guardian:, minor: teen, status: :active) }
+
+    it "activates the first venture free, refuses the second, allows it on Pro" do
+      first = activate!(teen, "Free Venture One")
+      expect(first).to be_present
+
+      expect { activate!(teen, "Free Venture Two") }
+        .to raise_error(ArgumentError, /free plan includes one venture/)
+
+      stub_billing!
+      described_class.new(guardian:).checkout_session(success_url: "s", cancel_url: "c")
+      Fuime::Subscription.family.find_by(billed_to: guardian).update!(status: "active")
+
+      second = activate!(User.find(teen.id), "Pro Venture Two")
+      expect(second).to be_present
+    end
+
+    it "a school venture does not consume the free slot" do
+      school = create(:event, plan_type: Event::Plan::School)
+      class_venture = create(:event, name: "Slot School Venture", parent: school)
+      OrganizerPositionInvite.create!(event: class_venture, user: teen, sender: teen, role: :member)
+
+      personal = activate!(User.find(teen.id), "First Personal Venture")
+      expect(personal).to be_present
+    end
+  end
+
   describe Fuime::SubscriptionWebhookHandler do
     it "resolves a family subscription by guardian metadata and mirrors state" do
       stub_billing!

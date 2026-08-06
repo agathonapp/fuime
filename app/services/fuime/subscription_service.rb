@@ -64,6 +64,19 @@ module Fuime
       )
     end
 
+    # Stripe's hosted billing portal — card updates, invoices, cancellation.
+    # Fuime never renders a card form of its own; the portal is the management
+    # half of the same boundary Checkout is the acquisition half of.
+    def portal_session(return_url:)
+      sub = record
+      raise NotBillable, "no billing relationship yet" if sub&.stripe_customer_id.blank?
+
+      Stripe::BillingPortal::Session.create(
+        { customer: sub.stripe_customer_id, return_url: },
+        request_options
+      )
+    end
+
     private
 
     def price_id(cents)

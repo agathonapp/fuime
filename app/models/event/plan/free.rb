@@ -49,8 +49,8 @@ class Event
       end
 
       def description
-        "Free to start — Fuime keeps #{revenue_fee_label} of what the venture collects. " \
-          "Upgrade to the family plan for #{Event::Plan::Pro.new.revenue_fee_label} and unlimited businesses."
+        "Free to start, one venture — Fuime keeps #{revenue_fee_label} of what it collects. " \
+          "The family plan is #{Event::Plan::Pro.new.revenue_fee_label} with unlimited businesses."
       end
     end
   end
