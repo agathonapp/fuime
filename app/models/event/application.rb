@@ -136,6 +136,24 @@ class Event
         after do
           update!(archived_at: nil)
 
+          # Fuime: the parent's invite goes out the moment the teen applies.
+          # The form already collected their email (cosigner_email), the
+          # guardian ask was deferred to activation (#44), and activation will
+          # refuse until a guardian accepts — so sending the invite here means
+          # the parent's clock starts at submission instead of at a page the
+          # teen has to remember to visit. Best-effort by design: a bad email
+          # must not block the submission, and the manual /guardian/new page
+          # remains for recovery.
+          if teen_led? && cosigner_email.present? &&
+             user.minor_or_unknown_age? && !user.has_active_guardian? &&
+             !user.institutionally_vouched_for?
+            begin
+              Fuime::GuardianInviteService.new(minor: user, guardian_email: cosigner_email).run!
+            rescue Fuime::GuardianInviteService::InvalidInvite => e
+              Rails.logger.warn("[Fuime] auto guardian invite skipped for application #{hashid}: #{e.message}")
+            end
+          end
+
           if teen_led? && send_contract.present?
             Event::ApplicationMailer.with(application: self).confirmation.deliver_later
           else
