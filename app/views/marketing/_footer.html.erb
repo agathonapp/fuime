@@ -6,31 +6,31 @@
     <% logo_env = Rails.env.local? ? "development" : Rails.env %>
     <div class="marketing-footer__brand">
       <%= image_tag "logo-#{logo_env}-dark.svg", alt: "Fuime", height: 32 %>
-      <p>The foundation for your nonprofit.</p>
+      <%# Was "The foundation for your nonprofit." — HCB's tagline, describing
+          a product Fuime does not offer (CLAUDE.md L8). %>
+      <p>The financial home for teen businesses.</p>
     </div>
 
+    <%# Every link in this nav used to point at hackclub.com, help.hcb.hackclub.com
+        or blog.hcb.hackclub.com — sending Fuime's own visitors to Hack Club's
+        fiscal-sponsorship product, and its Terms link to Hack Club's terms.
+        Fuime's own pages only (CLAUDE.md Rule 7, Prime Directive 4). %>
     <nav class="marketing-footer__cols" aria-label="Footer">
       <div>
         <h3>Product</h3>
-        <a href="https://hackclub.com/fiscal-sponsorship">Fiscal sponsorship</a>
+        <a href="<%= root_path %>">For teen founders</a>
         <a href="<%= funders_path %>">For funders</a>
-        <a href="https://hackclub.com/hcb/mobile/">Mobile app</a>
       </div>
       <div>
         <h3>Resources</h3>
-        <a href="https://help.hcb.hackclub.com">Docs &amp; help</a>
-        <a href="https://blog.hcb.hackclub.com">Blog</a>
-        <a href="https://hackclub.com/fiscal-sponsorship/directory">Organizations</a>
-        <a href="https://hackclub.com/fiscal-sponsorship/open-source">Open source</a>
-      </div>
-      <div>
-        <h3>About</h3>
-        <a href="https://hackclub.com">Hack Club</a>
+        <a href="<%= faq_path %>">FAQ</a>
         <a href="<%= branding_path %>">Branding</a>
       </div>
       <div>
         <h3>Legal</h3>
-        <a href="https://hackclub.com/privacy-and-terms/">Terms &amp; Privacy</a>
+        <a href="<%= terms_path %>">Terms</a>
+        <a href="<%= privacy_path %>">Privacy</a>
+        <a href="<%= guardian_agreement_path %>">Guardian agreement</a>
         <a href="<%= security_path %>">Security</a>
       </div>
     </nav>
