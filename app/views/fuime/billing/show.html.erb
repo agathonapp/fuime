@@ -28,8 +28,8 @@
     <h3 class="mt0">Free plan</h3>
     <p>
       One venture, with Fuime keeping
-      <strong><%= number_to_percentage(Event::Plan::Free::REVENUE_FEE * 100, precision: 1) %></strong> of what it collects —
-      the same rate Hack Club charges. The family plan is
+      <strong><%= number_to_percentage(Event::Plan::Free::REVENUE_FEE * 100, precision: 1) %></strong> of what it collects.
+      The family plan is
       <strong>$<%= @pro_plan.monthly_fee_cents / 100 %>/month</strong> for
       <strong>unlimited businesses</strong> at
       <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>.

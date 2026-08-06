@@ -2906,3 +2906,95 @@ known-failures.md.
 
 **Still not exercised against Stripe.** Nothing here changes that; the shared-account
 money-in path and `Stripe::Payout` on an owned account remain documentation-derived.
+
+---
+
+## The arch becomes the icon system; the last Hack Club trademarks leave the UI (2026-08-06)
+
+**Why:** an audit of "is HCB gone from every user-facing surface" found it was not. The
+*strings* had largely been swept in M3/M9; the **assets and machine-readable metadata**
+had not.
+
+**The mark now has a vector source.** There was none — only four 512x425 PNGs of the arch
+monogram. Traced `public/brand/fuime-logo-light.png` to a single path (potrace at 4096px
+with `-blur 0x3` before threshold; RMSE 0.0095 against the source, best of a 20-point
+parameter sweep — the blur both smooths the threshold wobble and *improves* fidelity).
+Every icon below is generated from that one path, so the set cannot drift again. The
+canonical vectors ship as `public/brand/fuime-mark.svg`, `fuime-mark-white.svg` and
+`fuime-icon.svg`; re-derive the rasters from those if the mark ever changes.
+
+**Icon system.** White arch knocked out of a `#2242FF` rounded tile — which is what
+`--primary`, `mask-icon` and `msapplication-TileColor` in `_head.html.erb` already
+declared, while the actual icons were Hack Club red. The arch is **optically scaled per
+size** (90% coverage at 16px down to 66% at app-icon sizes): it is a detail-heavy mark
+and at a uniform 62% its three inner counters collapse into a blob at 16px.
+
+Regenerated: `favicon.ico` (16/32/48/64 layers), `favicon-{16,32}`,
+`favicon-{development,staging}-{16,32}`, `apple-touch-icon`, `android-chrome-{192,512}`,
+all five `mstile-*`, `logo{,-sm,-512,-ios}.png`, `public/logo.svg`, `safari-pinned-tab.svg`,
+and the six `app/assets/images/logo*.svg` env tiles — which were a placeholder blue "F",
+not the mark, and appear in the header, marketing nav and donation share sheet.
+`favicon-production-*` are symlinks to `favicon-*` and were deliberately left as symlinks.
+Env tints preserved: prod blue, dev `#10B981`, staging `#A855F7`, matching the convention
+already in `app/assets/images`.
+
+**Two traps worth recording.** `favicon-production-32x32.png` is a *symlink*, so
+`git log` on it reports the 2021 commit that created the link rather than the M9 commit
+that replaced its target — production/dev favicons and `apple-touch-icon` were in fact
+already correct, and an earlier pass of this audit called them wrong. Everything else was
+not correct. Second: `magick`'s histogram/pixel probes silently returned empty for these
+files; the colour audit had to be done in Pillow.
+
+**Machine-readable identity — the serious one.** `marketing/funders{,_faq}.html.erb`
+published JSON-LD declaring Fuime's `legalName` as "The Hack Foundation", `taxID`/EIN
+81-2908499, `url` and `logo` on hcb.hackclub.com, and `sameAs` pointing at Hack Club's
+Wikipedia entry and ProPublica charity record. That told every crawler and AI engine that
+Fuime *is* Hack Club's 501(c)(3). Replaced with Fuime's own Organization node.
+
+**Also fixed:** `site.webmanifest` (was `"name": "HCB"`, Hack Club red theme, category
+"nonprofit", and six HCB product screenshots captioned "The foundation for your nonprofit"
+— screenshots deleted); `robots.txt` + `sitemap.xml` (pointed at hcb.hackclub.com);
+`llms.txt` (was HCB's full marketing document — FDIC, Column, EIN, 7% — rewritten to
+describe Fuime and carry the L5 "not a bank" disclosure); `/branding` (served Hack Club's
+logo files as "Our Logos" and told founders to write "fiscally sponsored by The Hack
+Foundation, EIN 81-2908499" — rewritten as Fuime's own guidelines, and it also had an
+unclosed `<section>`/`</div>`); marketing nav + footer (every link went to hackclub.com or
+help/blog.hcb.hackclub.com, and the tagline was HCB's "The foundation for your nonprofit");
+`fuime/billing/show.html.erb` ("the same rate Hack Club charges" on the paywall); and the
+letterhead on four downloadable PDFs, which rendered `hack_club_logo.png` — the arch is
+1.2257:1 where the HCB wordmark was 5.8:1, so the `width` had to change with the asset or
+it renders squashed.
+
+**Deleted:** the twelve `public/brand/hcb-*` logo files (AGPL covers the code, not the
+brand — Rule 7) and `public/pwa-screenshots/`. `app/assets/images/hack_club_logo.png` is
+now unreferenced but retained rather than deleted.
+
+**Deliberately kept:** the AGPL fork attribution in `application/_footer`,
+`layouts/mailer/_footer`, the `_head` console art, `/faq`, `/terms`, the storefront footer,
+and a new one at the foot of `/branding`. Rule 7 requires it. Internal `HcbCode`/`Event`
+names untouched (Rule 6).
+
+**NOT verified against the suite.** This machine has Ruby 4.0.6; the Gemfile pins 3.4.9 and
+no version manager is installed, so `bundle exec rspec` could not run. Each edited template
+was instead ERB-compile-checked against its own `origin/main` version, which separates real
+breakage from checker false positives — `branding.html.erb` and `billing/show.html.erb`
+fail the naive checker both before and after, so those are false positives. One genuine
+regression was caught this way and fixed: an ERB comment placed inside the Ruby hash
+literal in `funders_faq`, which is `<%= raw({...}.to_json) %>` and takes `#` comments only.
+**Run the suite before merging.**
+
+**Left deliberately — these need a product/legal decision, not a brand fix:**
+
+- `/for/funders` and `/for/funders/faq` still *sell* tax-deductible grants "backed by a
+  501(c)(3)", and their stat block still claims "501(c)(3) since <year>". This is a product
+  Fuime does not have (L8); the pages should probably be unrouted rather than reworded.
+- The same page hot-links three images from `cdn.hackclub.com` (lines ~333, ~578, ~852),
+  violating Prime Directive 4 in the very file whose own comment says Fuime must not open
+  connections to Hack Club infrastructure. Fixing needs replacement imagery.
+- `static_pages_controller#mobile` redirects to Hack Club's Play Store listing
+  (`com.hackclub.hcb`) and to `hackclub.com/hcb`. Fuime has no mobile app; the route needs
+  a destination or removal.
+- `documents/fiscal_sponsorship_letter.pdf.erb`, `documents/verification_letter.pdf.erb`
+  and both `transfer_confirmation_letter.pdf.erb` now carry Fuime letterhead, but their
+  *body copy* still certifies Hack Club's charity status and EIN. A fiscal-sponsorship
+  letter is an artifact Fuime cannot issue at all.

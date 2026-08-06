@@ -1,87 +1,112 @@
+<%# Fuime's brand guidelines.
+
+    This page previously served Hack Club's: it told founders to describe
+    themselves as "fiscally sponsored by The Hack Foundation (d.b.a. Hack Club),
+    EIN 81-2908499", offered Hack Club's logo files as "Our Logos", and called
+    Fuime "a fiscal sponsorship platform backed by Column". None of that is
+    Fuime — see CLAUDE.md Rule 7 (their trademarks leave our UI) and L5/L8
+    (never describe a product we do not have, never imply we are a bank). %>
 <% content_for :title, "Brand Guidelines" %>
 
 <div class="overview">
   <h2>Overview</h2>
   <p>
-    Hey folks! 👋 From logos to phrasing, we want to make sure you and your team feel confident sharing about Hack Club / Fuime on your site, fundraising platforms, grant apps, and other online spaces.
+    These are the rules for writing about Fuime and using the Fuime mark — on your
+    storefront, your socials, a school fair flyer, or anywhere else you tell people
+    what you're running your business on.
   </p>
   <p>
-    We know you’re eager to share about your nonprofit status through Fuime. 🤗 Following brand guidelines will not only help you display an accurate relationship with Hack Club but will also help create a unified appearance amongst all fiscally sponsored projects and legitimize your status.
+    Getting this right protects you as much as us. Describing the relationship
+    accurately is what keeps a customer, a parent, or a teacher from thinking your
+    business is something it isn't.
   </p>
-  <% fs_callout_title = capture do %>
-    Jump to <%= link_to "the fiscal sponsorship section", "#fiscal-sponsorship", style: "color: inherit;" %>
-    to see how you can accurately represent your 501(c)(3) status.
-  <% end %>
-  <%= render "application/callout", type: "info", title: fs_callout_title %>
 </div>
 
 <section class="mb-8">
   <h2>Our Name</h2>
   <p>When using our name, please make sure to:</p>
   <ul>
-    <li>Capitalize every letter of Fuime</li>
-    <li>Refrain from adding/removing additional characters and words (e.g. 'Hack Club Fuime')</li>
-    <li>Refrain from using our previous name, "Hack Club Bank".</li>
+    <li>Write it <strong>Fuime</strong> — capital F, lowercase the rest. Not FUIME, not fuime.</li>
+    <li>Refrain from adding or removing characters and words (e.g. "Fuime Bank", "Fuime Inc").</li>
+    <li>Never pair it with another company's name in a way that implies a partnership.</li>
   </ul>
-  <%= render "application/callout", type: "warning", title: "As a reminder, Fuime is not a bank!" do %>
+
+  <%= render "application/callout", type: "warning", title: "Fuime is not a bank — and neither is your venture" do %>
     <ul>
-      <li>We are a fiscal sponsorship platform backed by <%= link_to "Column", "https://column.com", target: "_blank" %>.</li>
-      <li>When you sign the Fuime agreement, a “restricted fund”—a privatized section of these bank accounts for your team only—is created for your organization through our platform.</li>
+      <li>Fuime is a financial technology company, not a bank.</li>
+      <li>
+        Never describe what you have as a bank account, checking, savings, deposits,
+        or as insured or FDIC-backed. It is a <strong>payment account</strong>, opened
+        and owned by your parent or guardian.
+      </li>
+      <li>
+        Payments are processed and funds are held by Stripe. Fuime never takes custody
+        of your money.
+      </li>
     </ul>
   <% end %>
-  <%= render "application/callout", type: "info", title: "When using Fuime in legal settings, use either;" do %>
+
+  <%= render "application/callout", type: "info", title: "In legal or formal settings, use:" do %>
     <ul>
-      <li>Fuime, a project by The Hack Foundation (d.b.a. Hack Club)"</li>
-      <li>The Hack Foundation (d.b.a. Hack Club).</li>
+      <li>"<%= @event_name %> uses Fuime for payments and bookkeeping."</li>
+      <li>
+        "<%= @event_name %>'s payment account is opened and owned by a parent or guardian
+        through Fuime."
+      </li>
     </ul>
   <% end %>
 </section>
 
-<section class="mb-8" id="fiscal-sponsorship">
-  <h2>Fiscal Sponsorship</h2>
+<section class="mb-8" id="describing-fuime">
+  <h2>Describing Fuime</h2>
   <p>
-    As an event or organization fiscally sponsored through Fuime, the following can be included on any correspondence, websites, marketing, etc.:
+    If you need a sentence for a website, a listing, or a school form, use this one:
   </p>
   <code>
-    <%= @event_name %> is fiscally sponsored by The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit (EIN: 81-2908499).
+    <%= @event_name %> runs on Fuime, a financial platform for teen-run businesses. The
+    account is opened and owned by a parent or guardian. Fuime is a financial technology
+    company, not a bank.
   </code>
-  <p>
-    If you'd like to modify the above statement, make sure it clearly shares that you're fiscally sponsored by Fuime. If you have questions or would like to run your phrasing by us, feel free to <%= link_to "contact the Fuime team", "mailto:support@fuime.com" %>.
-  </p>
-    <%= render "application/callout", type: "warning", title: "Fiscal sponsor ≠ sponsor or donor" do %>
-      <p class="m0">Unless you have received direct financial support from us, please do NOT use this reference as your organization’s relationship to Fuime.</p>
-    <% end %>
 
-    <%= render "application/callout", type: "warning", title: "Misrepresenting your relationship with Fuime or Hack Club could result in the termination of ythe Fuime agreement." %>
-</div>
+  <%= render "application/callout", type: "error", title: "Never say any of these" do %>
+    <ul>
+      <li><strong>"Fiscally sponsored by Fuime"</strong> — Fuime is not a fiscal sponsor.</li>
+      <li><strong>"A 501(c)(3)" / "tax-deductible"</strong> — Fuime is not a charity, and money sent to your business is not a deductible donation.</li>
+      <li><strong>"Fuime is my bank"</strong> — see above. This one can get us both in real trouble.</li>
+      <li><strong>"Backed by Hack Club"</strong> — Fuime is an independent product. See <%= link_to "attribution", "#attribution", style: "color: inherit;" %>.</li>
+    </ul>
+  <% end %>
+</section>
 
 <section class="mb-8">
-  <h2>Our Logos</h2>
-  <h3>
-    Icons
-  </h3>
+  <h2>Our Logo</h2>
+  <p>
+    The Fuime mark is an arch monogram. Use it as-is: don't recolour it, rotate it,
+    add effects, or rebuild it.
+  </p>
 
   <div class="grid grid--wide grid--spacious mt3 mb3 md-mb4">
-    <% @icons.each do |icon| %>
+    <% @marks.each do |mark| %>
       <div class="card w-100 pb0">
-        <div class="card__banner card__banner--top center bg-<%= icon[:background] %>" aria-label="<%= icon[:criteria] %>" style="transform-style: preserve-3d;" data-behavior="hover_tilt" data-tilt-scale="1.2">
-          <img src="/brand/hcb-icon-<%= icon[:name].parameterize %>.png" width="100" style="transform: translateZ(20px); cursor: pointer;" class="logo-confetti">
+        <div class="card__banner card__banner--top center bg-<%= mark[:background] %>" aria-label="<%= mark[:criteria] %>">
+          <img src="<%= mark[:svg] %>" height="80" alt="<%= mark[:name] %>" style="max-width: 100%;">
         </div>
-        <h3 class="mb0"><%= icon[:name] %></h3>
-        <p class="mt0 muted"><%= icon[:criteria] %></p>
+        <h3 class="mb0"><%= mark[:name] %></h3>
+        <p class="mt0 muted"><%= mark[:criteria] %></p>
         <div class="card__banner card__banner--bottom card__darker mb0">
-          <%= link_to "SVG", "/brand/hcb-icon-#{icon[:name].parameterize}.svg", class: "btn bg-info mr2 w-auto", target: :_blank, download: "" %>
-          <%= link_to "PNG", "/brand/hcb-icon-#{icon[:name].parameterize}.png", class: "btn bg-accent", target: :_blank, download: "" %>
+          <%= link_to "SVG", mark[:svg], class: "btn bg-info mr2 w-auto", target: :_blank, download: "" %>
+          <%= link_to "PNG", mark[:png], class: "btn bg-accent", target: :_blank, download: "" %>
         </div>
       </div>
     <% end %>
   </div>
+
   <% logo_usage_callout_title = capture do %>
-    By downloading or using any icon/logo or the Fuime brand, you agree to abide by the
+    By downloading or using the Fuime mark, you agree to abide by the
     <%= link_to "general usage rules", "#general-usage-rules", style: "color: inherit;" %>.
   <% end %>
   <%= render "application/callout", type: "info", title: logo_usage_callout_title %>
-</div>
+</section>
 
 <section class="mb-8" id="general-usage-rules">
   <h2>General Usage Rules</h2>
@@ -89,32 +114,42 @@
     <div class="card w-100 pb2 callout--success">
       <h2 class="mt-0"><span class="inline-block w-8">✅</span>Do</h2>
       <ul class="flex flex-col gap-2 pl-8">
-        <li>Use the Fuime logo to link to Fuime’s page (hackclub.com/hcb).</li>
-        <li>Use the Fuime logo to link to your organization’s Fuime page (hcb.hackclub.com/<%= @event_slug %>), provided that your organization has transparency mode enabled.</li>
-        <li>Use the Fuime logo to show that your organization is fiscally sponsored by Fuime.</li>
-        <li>Use the Fuime logo in blog posts, news articles, or social media posts about Hack Club or Fuime.</li>
-        <li>Use the Fuime name in correspondence/websites/marketing materials/etc. to state that your organization is fiscally sponsored, or, for donation and payment purposes, is a financial platform related to your fiscal sponsorship status (e.g. “donate to us using Fuime”).</li>
+        <li>Use the Fuime mark to link to Fuime's home page.</li>
+        <li>Use the Fuime mark to link to your own venture's storefront on Fuime.</li>
+        <li>Use the Fuime mark to show that your business takes payments through Fuime.</li>
+        <li>Use the Fuime name in blog posts, news articles, or social posts about Fuime.</li>
+        <li>Say "we use Fuime" or "powered by Fuime" on your storefront or socials.</li>
       </ul>
     </div>
     <div class="card w-100 pb2 callout--error">
-      <h2 class="mt-0"><span class="inline-block w-8">🚫</span>Don’t</h2>
+      <h2 class="mt-0"><span class="inline-block w-8">🚫</span>Don't</h2>
       <ul class="flex flex-col gap-2 pl-8">
-        <li>Use the Fuime or Hack Club logo/name in any way that implies endorsement of your organization beyond fiscal sponsorship, unless such usage has been approved by Fuime.</li>
-        <li>Use the Fuime logo as your organization’s logo.</li>
-        <li>Integrate the Fuime logo into your organization’s logo.</li>
-        <li>Sell any Fuime artwork without permission from Hack Club.</li>
-        <li>Modify the original aspect ratio of the Fuime logo (icon/badge) in any way, aside from resizing while maintaining the same aspect ratio.</li>
-        <li>Modify the name other than what is specified in these guidelines</li>
-        <li>Crowd the area around the Fuime logo. The margins around all sides of the logo should be at least 1/2 the height of the logo (e.g. 32px tall icon should have 16px of margins on all sides)</li>
-        <li>Display the Fuime logo smaller than 24px in height/width, OR; (PNG icon only) larger than 512px in height/width.</li>
-        <li>Display the Fuime logo smaller than 144px wide and 36px tall or the point where the text becomes illegible, whichever is larger, OR; (PNG badge only) larger than 768px wide and 192px tall.</li>
+        <li>Use the Fuime mark or name in a way that implies Fuime endorses, owns, or vouches for your business.</li>
+        <li>Use the Fuime mark as your own business's logo, or build it into one.</li>
+        <li>Sell Fuime artwork, or merchandise carrying the Fuime mark, without our written permission.</li>
+        <li>Change the mark's aspect ratio. Resize it proportionally or not at all.</li>
+        <li>Recolour the mark, outline it, add shadows or gradients, or place it on a busy photo.</li>
+        <li>Crowd it. Leave clear space on every side of at least half the mark's height.</li>
+        <li>Display the mark below 24px tall, where its inner detail stops resolving.</li>
+        <li>Imply Fuime is a bank, a charity, a fiscal sponsor, or your legal guardian.</li>
       </ul>
     </div>
   </div>
+
   <% help_callout_title = capture do %>
-    For more info regarding authorized uses of the Fuime brand or to request
-    permission to use the brand for purposes other than those described above,
-    please <%= link_to "contact the Fuime team", "mailto:support@fuime.com", style: "color: inherit;" %>.
+    For other uses of the Fuime brand, or to request permission for anything above,
+    <%= link_to "contact the Fuime team", "mailto:support@fuime.com", style: "color: inherit;" %>.
   <% end %>
   <%= render "application/callout", type: "info", title: help_callout_title %>
-</div>
+</section>
+
+<section class="mb-8" id="attribution">
+  <h2>Attribution</h2>
+  <p class="muted">
+    Fuime is a fork of
+    <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank" %>
+    by Hack Club, used under the AGPL-3.0. Fuime is an independent product: it is not
+    affiliated with, endorsed by, or operated by Hack Club or The Hack Foundation, and
+    it is not a fiscal sponsor or a 501(c)(3).
+  </p>
+</section>
