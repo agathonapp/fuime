@@ -30,10 +30,18 @@ comments carry the detail.
   on a 30-minute schedule settles pendings whose balance transaction Stripe reports
   "available", via RawCsvTransaction -> the engine's own imports -> upstream Settle.
   Reversal-keyed pendings are deliberately excluded until refunds are exercised.
-- **Webhooks end-to-end.** Everything here fed events to handlers directly. Live
-  delivery needs `FUIME_STRIPE_WEBHOOK_SECRET` / `FUIME_STRIPE_CONNECT_WEBHOOK_SECRET`
-  configured and a `stripe listen` (dev) or endpoint registration (prod). The
-  stale-mirror payout failure shows what breaks without `account.updated` flowing.
+- ~~Webhooks end-to-end~~ **Prod endpoints fixed and registered** (2026-08-05, by API):
+  the one existing platform endpoint pointed at `fuime.com` — the marketing site,
+  which 404s, and Stripe does not follow redirects — so every event ever sent had
+  died there. Repointed to `app.fuime.com/fuime/webhooks/stripe` (same signing
+  secret, so the Render var kept working). A Connect endpoint did not exist at
+  all; created `app.fuime.com/fuime/webhooks/stripe/connect` with the 11 events
+  the handlers cover, and installed `FUIME_STRIPE_CONNECT_WEBHOOK_SECRET` on
+  fuime-web and fuime-worker. One trap for the future: an endpoint's signing
+  secret is returned ONLY at creation — losing it means delete-and-recreate,
+  which is exactly what happened to the first attempt. Remaining verification:
+  a real delivery observed end-to-end in prod (the next embedded-ToS completion
+  fires `account.updated` and should sync the mirror unattended).
 
 ## Bugs found by running (all fixed)
 
