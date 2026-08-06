@@ -1,6 +1,6 @@
 # Fuime docs — what lives where
 
-Eight documents accumulated here across Phase 0, several overlapping. This index exists
+The documents here accumulated across Phase 0, several overlapping. This index exists
 so the next person does not read a stale blocker as a current one, which is the specific
 failure mode doc sprawl produces.
 
@@ -14,6 +14,7 @@ failure mode doc sprawl produces.
 | **PRODUCTION_READINESS.md** | A point-in-time audit from 2026-08-01 that found the original blockers. | **History, not status.** Its numbered findings (§1.1–§2.7) are still the clearest write-up of *why* each control exists. | ⚠️ Its STATUS block is superseded — see the note at its top. Do not read its "still open" list as current. |
 | **UPSTREAM_DIVERGENCE.md** | Append-only log of every divergence from upstream HCB, newest last. Required by CLAUDE.md Rule 8 so upstream ledger and security fixes can still be merged. | Understanding *why* a specific file differs from hackclub/hcb. | Current. Large (~190KB); read the last entry first, then search by filename. |
 | **SETUP_NOTES.md** | How to actually run the thing, plus a handoff note at the top from each session. | Getting a local environment up, and the gotchas that cost time. | Current. Handoff newest-first. |
+| **ADMIN_OPS_QUEUES.md** | Spec for the admin queues Fuime's own money model needs (failed payouts, connected-account status, stuck guardianships, past-due subscriptions). | **Deliberately unbuilt** — parked behind the `stripe listen` pass per CLAUDE.md. Build from it when engineering resumes. | Aug 2026. Current. |
 | **known-failures.md** | Recorded spec baselines, so a red suite can be attributed rather than guessed at (Prime Directive 1). | Deciding whether a failure is yours. | Current. Latest baseline: 573 examples, 1 known failure. |
 | **BRAND_STRINGS.md** | Every file touched during the HCB → Fuime surface rebrand. | Finding remaining Hack Club references. | Milestone 3 era. |
 | **DOCUSEAL_SETUP.md** | DocuSeal integration notes. | That integration only. | Unverified against current code. |
