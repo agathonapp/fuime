@@ -21,6 +21,17 @@
   <%= dock_item "Payouts",
                 use_my_path ? settings_payouts_path : payouts_user_path(local_assigns[:user] || current_user),
                 selected: local_assigns[:selected] == :settings_reimbursement_payouts && local_assigns[:open] %>
+  <%# Fuime: the family plan. Only when viewing YOUR OWN settings — an admin
+      browsing another user's settings has no business landing on a page whose
+      buttons would bill the admin's account (BillingController always acts on
+      current_user). Shipped a day after the page itself, because the page had
+      no door: it was found by someone asking "where is billing!" at a
+      screenshot of this menu. %>
+  <% if use_my_path %>
+    <%= dock_item "Family plan",
+                  my_billing_path,
+                  selected: local_assigns[:selected] == :settings_billing && local_assigns[:open] %>
+  <% end %>
   <%= dock_item "Security",
                 use_my_path ? settings_security_path : security_user_path(local_assigns[:user] || current_user),
                 selected: local_assigns[:selected] == :settings_security && local_assigns[:open] %>
