@@ -403,6 +403,17 @@ namespace :fuime do
       end
     end
 
+    desc "6s. Settle available pendings into the canonical pipeline (ConnectSettlementSweep)"
+    task settle: :environment do
+      sp_abort_unless_test!
+      sp_step("settlement sweep") do
+        before = sp_venture.balance_v2_cents
+        count = Fuime::ConnectSettlementSweep.new(event: sp_venture).sweep!
+        puts "  ✓ settled #{count} pending line(s)"
+        puts "    venture balance: $#{before / 100.0} -> $#{sp_venture.reload.balance_v2_cents / 100.0}"
+      end
+    end
+
     desc "Where things stand"
     task status: :environment do
       sp_abort_unless_test!

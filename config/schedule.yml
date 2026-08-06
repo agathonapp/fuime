@@ -269,3 +269,10 @@ refresh_disposable_domains:
 hide_onboarding_messages:
   cron: "0 0 * * *" # run every 1 day
   class: "Event::HideOnboardingMessagesJob"
+
+# Fuime: settle Connect ledger lines once Stripe reports the funds available on
+# the venture's own account. Every 30 minutes — availability is T+2 granularity,
+# so anything faster is wasted Stripe calls.
+fuime_connect_settlement_sweep_job:
+  cron: "*/30 * * * *"
+  class: "Fuime::ConnectSettlementSweepJob"
