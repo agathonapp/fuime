@@ -17,6 +17,8 @@ comments carry the detail.
 | Money out: `PayoutService` teen request -> guardian approve -> Stripe payout | `po_1U1EQ9JvQ1BSjJCo…` $10 |
 | Settlement: `ConnectSettlementSweep` pending -> settled -> balance | venture balance $0.00 -> $25.00 on the harness account |
 | Refunds: partial refund -> `charge.refunded` -> clamped reversal line -> settled | `re_3U1EHWJvQ1BSjJCo…` $5; balance held at $20 through settle, as the semantics require |
+| Storefront: `PaymentLinkService` -> real Checkout Session on the connected account | `cs_test_a1jgca…` created "open" with a payable URL; completion is a browser moment, and the succeeded event flows through the recorder already proven above |
+| Payout ledger: `payout.created`/`paid` -> `ConnectPayoutRecorder` -> books | the real `po_1U1EQ9…` events fed; `fuime_payout_…` line posted at -$10.00 |
 
 ## Not proven
 
