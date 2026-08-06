@@ -1,0 +1,55 @@
+<% title "Family plan" %>
+
+<h1 class="heading"><span class="flex-grow">Family plan</span></h1>
+
+<% if params[:subscribed].present? %>
+  <%= render "application/callout", type: "success", title: "Welcome to the family plan" do %>
+    <p class="mb-0">Once Stripe confirms the payment (usually seconds), every venture in your family drops to
+      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %>.</p>
+  <% end %>
+<% end %>
+
+<div class="card mt2">
+  <% if @subscription&.active? %>
+    <h3 class="mt0">You're on the family plan 🎉</h3>
+    <p>
+      Every venture your family runs, at
+      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong> —
+      unlimited businesses, one subscription.
+      <% if @subscription.current_period_end %>
+        Renews <%= @subscription.current_period_end.strftime("%B %-d, %Y") %><%= @subscription.cancel_at_period_end ? " (set to cancel)" : "" %>.
+      <% end %>
+    </p>
+    <% if @is_adult %>
+      <%= button_to "Manage billing", my_billing_portal_path, class: "btn btn--secondary" %>
+      <p class="muted text-sm mt-1">Card changes, invoices, and cancellation happen in Stripe's secure portal — Fuime never sees your card.</p>
+    <% end %>
+  <% else %>
+    <h3 class="mt0">Free plan</h3>
+    <p>
+      One venture, with Fuime keeping
+      <strong><%= number_to_percentage(Event::Plan::Free::REVENUE_FEE * 100, precision: 1) %></strong> of what it collects —
+      the same rate Hack Club charges. The family plan is
+      <strong>$<%= @pro_plan.monthly_fee_cents / 100 %>/month</strong> for
+      <strong>unlimited businesses</strong> at
+      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>.
+    </p>
+    <% if @is_adult %>
+      <%= button_to "Upgrade — $#{@pro_plan.monthly_fee_cents / 100}/mo", my_billing_subscribe_path, class: "btn bg-accent" %>
+      <p class="muted text-sm mt-1">Payment happens in Stripe's secure checkout — Fuime never sees your card.</p>
+    <% elsif @guardians.any? %>
+      <p class="mb-0">
+        The family plan is billed to a parent or guardian — ask
+        <strong><%= @guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>
+        to upgrade from their account.
+      </p>
+    <% else %>
+      <p class="mb-0">The family plan is billed to a parent or guardian, so it unlocks once yours has joined Fuime.</p>
+    <% end %>
+  <% end %>
+</div>
+
+<p class="muted text-sm mt-3 mb-0">
+  Fuime is a financial technology company, not a bank. The subscription covers Fuime's software;
+  payment processing on venture sales is provided by Stripe and itemised separately.
+</p>
