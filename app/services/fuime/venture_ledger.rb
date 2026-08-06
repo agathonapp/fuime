@@ -103,6 +103,20 @@ module Fuime
       "fuime_schoolpaid_#{payout_request_id}"
     end
 
+    # A school adding its own money to its own Stripe balance, so it has something to
+    # award. Keyed on the Stripe Topup id for the same reason payouts key on the payout:
+    # a top-up can be created from the Stripe Dashboard with no Fuime row behind it, and
+    # the balance moved either way.
+    #
+    # The memo deliberately contains neither "school award" nor "payout", so
+    # Fuime::TaxTrackerService's memo exclusions do not catch it — but see
+    # Fuime::ConnectFundingRecorder for why it must still be excluded from income. A
+    # school moving its own money between two of its own accounts has not earned
+    # anything.
+    def self.funding_key(topup_id)
+      "fuime_funding_#{topup_id}"
+    end
+
     # A card purchase (or a refund of one). Keyed on the Stripe Issuing Transaction,
     # which is the settled object — authorizations are not posted, because an
     # authorization that never captures is not a transaction and would leave a

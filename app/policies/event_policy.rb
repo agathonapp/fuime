@@ -498,6 +498,26 @@ class EventPolicy < ApplicationPolicy
     auditor_or_reader?
   end
 
+  # Adding the school's own money to the school's own Stripe balance.
+  #
+  # Manager-only and, unlike #school_awards?, NOT visible to students at all. A student
+  # has no business seeing the school's treasury operations, and the page shows the
+  # school's whole balance — which on a shared account is every sibling venture's
+  # revenue as well.
+  #
+  # Guarded on the venture owning its OWN account rather than merely being
+  # institutionally sponsored: a top-up funds `stripe_connected_account`, and a student
+  # sub org resolves its payment account up the tree, so offering this there would let
+  # someone fund the school from a page that looks like the student's.
+  def fund_school?
+    return false if user.blank?
+    return true if user.admin?
+    return false unless record.institutionally_sponsored?
+    return false if record.stripe_connected_account.blank?
+
+    manager?
+  end
+
   # The payouts screen itself: the team needs to see the balance and the state of
   # their request, the guardian needs to see what they are being asked to approve.
   def payouts?

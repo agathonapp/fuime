@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2572,6 +2572,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140000) do
   add_check_constraint "school_awards", "(voided_at IS NULL) = (voided_by_id IS NULL)", name: "school_awards_void_is_attributed", validate: false
   add_check_constraint "school_awards", "amount_cents > 0", name: "school_awards_amount_positive", validate: false
 
+  create_table "school_fundings", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.string "failure_code"
+    t.text "failure_message"
+    t.bigint "requested_by_id"
+    t.string "status", default: "pending", null: false
+    t.string "stripe_topup_id"
+    t.datetime "succeeded_at"
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "created_at"], name: "index_school_fundings_on_event_id_and_created_at"
+    t.index ["event_id"], name: "index_school_fundings_on_event_id"
+    t.index ["requested_by_id"], name: "index_school_fundings_on_requested_by_id"
+    t.index ["stripe_topup_id"], name: "index_school_fundings_on_stripe_topup_id", unique: true, where: "(stripe_topup_id IS NOT NULL)"
+  end
+
+  add_check_constraint "school_fundings", "amount_cents > 0", name: "school_fundings_amount_positive", validate: false
+  add_check_constraint "school_fundings", "status::text <> 'succeeded'::text OR stripe_topup_id IS NOT NULL AND succeeded_at IS NOT NULL", name: "school_fundings_succeeded_is_evidenced", validate: false
+  add_check_constraint "school_fundings", "status::text = ANY (ARRAY['pending'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])", name: "school_fundings_status_known", validate: false
+
   create_table "sponsors", force: :cascade do |t|
     t.text "address_city"
     t.text "address_country", default: "US"
@@ -3403,6 +3424,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_140000) do
   add_foreign_key "school_awards", "users", column: "awarded_by_id"
   add_foreign_key "school_awards", "users", column: "awarded_to_id"
   add_foreign_key "school_awards", "users", column: "voided_by_id"
+  add_foreign_key "school_fundings", "events"
+  add_foreign_key "school_fundings", "users", column: "requested_by_id"
   add_foreign_key "sponsors", "events"
   add_foreign_key "stripe_authorizations", "stripe_cards"
   add_foreign_key "stripe_card_personalization_designs", "events"

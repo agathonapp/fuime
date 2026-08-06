@@ -1,0 +1,104 @@
+<% title "Funding — #{@event.name}" %>
+
+<h1 class="heading">Add funds</h1>
+
+<%# Fuime: the school's treasury page.
+
+    The gap this closes: Fuime::SchoolAwardService can only REATTRIBUTE money that is
+    already in the school's balance, so a school starting at $0 could award nothing.
+    This is where the money comes from.
+
+    Manager-only and never shown to students (EventPolicy#fund_school?) — on a shared
+    account the balance below includes every sibling venture's sales revenue, which is
+    not a student's business to see.
+
+    Plain markup on purpose (Milestone 4: correctness over beauty). %>
+
+<p class="secondary">
+  Money you add here goes from <strong><%= @event.name %></strong>'s bank account into
+  its own Stripe balance. Fuime never holds it. Once it lands you can award it to
+  students on the awards page.
+</p>
+
+<h2 class="mt2">Balance</h2>
+<p class="secondary mt0">
+  <strong><%= number_to_currency(@balance_cents / 100.0) %></strong> available to award.
+  <% if @in_flight_cents.positive? %>
+    <br>
+    <%= number_to_currency(@in_flight_cents / 100.0) %> is still on its way and is not
+    counted above — it can't be awarded until it clears.
+  <% end %>
+  <% if @total_funded_cents.positive? %>
+    <br>
+    <span class="secondary">
+      <%= number_to_currency(@total_funded_cents / 100.0) %> added in total.
+    </span>
+  <% end %>
+</p>
+
+<h2 class="mt2">Add funds</h2>
+
+<%= form_with url: fuime_school_fundings_create_path(event_slug: @event.slug), method: :post do |f| %>
+  <div class="field">
+    <%= f.label :amount, "How much?", class: "bold" %>
+    <%= f.text_field :amount, placeholder: "1,000.00", required: true, inputmode: "decimal" %>
+    <p class="secondary mb0">
+      Debited from the bank account on this Stripe account. ACH usually takes a few
+      business days to clear.
+    </p>
+  </div>
+
+  <%= f.submit "Add funds", class: "btn" %>
+<% end %>
+
+<%# Named prominently rather than buried, because it may be the path that actually
+    works — see Fuime::SchoolFundingService on why API top-ups are unverified for
+    this account type. Fuime records Dashboard top-ups identically. %>
+<%= render "application/callout", type: "info", title: "You can also add funds from Stripe directly" do %>
+  <p class="m0">
+    If this form doesn't work for your account, a school administrator can add funds
+    from the Stripe Dashboard instead. Fuime records it either way — the balance above
+    updates when the money lands, whichever route it took.
+  </p>
+<% end %>
+
+<h2 class="mt2">History</h2>
+
+<% if @fundings.none? %>
+  <p class="secondary">No funds added yet.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Added by</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @fundings.each do |funding| %>
+        <tr>
+          <td><%= funding.created_at.to_date.strftime("%b %-d, %Y") %></td>
+          <td><%= number_to_currency(funding.amount) %></td>
+          <td>
+            <% if funding.succeeded? %>
+              Cleared
+            <% elsif funding.pending? %>
+              On its way
+            <% else %>
+              <%= funding.canceled? ? "Cancelled" : "Failed" %>
+              <% if funding.failure_message.present? %>
+                <br><span class="secondary"><%= funding.failure_message %></span>
+              <% end %>
+            <% end %>
+          </td>
+          <td>
+            <%# A top-up made in the Stripe Dashboard has no Fuime user behind it. %>
+            <%= funding.requested_by&.name.presence || "Added in Stripe" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

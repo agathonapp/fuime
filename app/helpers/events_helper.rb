@@ -123,6 +123,23 @@ module EventsHelper
         event.shares_payment_account? && policy(event).school_awards? && organizer_signed_in?
       }
     },
+    # Fuime: the school's own treasury page — the counterpart to School awards, and
+    # the answer to "the school has nothing to award".
+    #
+    # The mirror image of the entry above in every way: that one appears on the
+    # STUDENT venture (which shares an account upward), this one only on the school
+    # ITSELF (which owns the account a top-up funds), and this one is manager-only.
+    # A student never sees it — the balance it leads to is the whole programme's.
+    {
+      name: "Add funds",
+      path_proc: ->(event_id) { fuime_school_fundings_path(event_slug: event_id) },
+      tooltip: "Put money into your school's account so you can award it",
+      icon: "bank-account",
+      symbol: :funding,
+      available_proc: lambda { |event|
+        policy(event).fund_school? && organizer_signed_in?
+      }
+    },
     # Fuime: business cards.
     #
     # Only shown for ventures whose Stripe account was actually created with card

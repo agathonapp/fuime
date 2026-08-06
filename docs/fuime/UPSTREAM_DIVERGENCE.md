@@ -3205,3 +3205,62 @@ products"), so the footer rewording is pinned against L5 rather than trusted.
 fictitious-name registration is filed, and the Stripe platform account has to be
 registered to the entity with an 18+ representative. `LAUNCH_SPEC.md` §1.2 and §2.1 carry
 both.
+
+---
+
+## Money into a school's account: `SchoolFunding` (2026-08-06)
+
+**Why:** the open question the awards work shipped with, closed. `SchoolAward`
+reattributes money between subledgers and deliberately makes no Stripe call — so a
+school starting at $0 could award nothing, and the feature demoed but could not run.
+Nothing in the app put money into a school's account.
+
+**The mechanism, and the two that were rejected.** `Stripe::Topup` on the school's own
+connected account: an ACH pull from the school's bank into the school's Stripe balance,
+made with `stripe_account:` set, so Fuime is not a party to it. The alternatives were
+`Stripe::Transfer` from the platform balance — which requires Fuime to hold the money
+first, i.e. the custody problem this whole architecture exists to avoid (L1) — and a
+direct charge, where the school pays ~2.9% to move its own money.
+
+| Piece | Role |
+|---|---|
+| `SchoolFunding` | The join between the Stripe Topup and the ledger, and where a failure reason lives for a business office asking where its money went |
+| `Fuime::ConnectFundingRecorder` | Posts the ledger credit **on `topup.succeeded` only**, from the webhook |
+| `Fuime::SchoolFundingService` | Asks Stripe to start a top-up. Never marks its own work succeeded |
+| `EventPolicy#fund_school?` | Manager-only, and only on an event owning its OWN account |
+
+**Why the credit waits for `topup.succeeded`.** A top-up is ACH and takes days.
+`Fuime::SchoolAwardService` spends against `Event#balance_v2_cents`, and
+`Fuime::PayoutService` caps a student's withdrawal against the same figure — so
+crediting at `topup.created` would let a school award money still in transit, and a
+bounced top-up would mean one student had already withdrawn another student's sales
+revenue. There is no pending line either: `balance_v2_cents` excludes pending incoming
+money by design, so a pending credit would be invisible to the only question anyone
+asks of it. In-flight top-ups are shown from the `SchoolFunding` row instead.
+
+**The recorder is the feature; the button is convenience.** A business office can add
+funds from the Stripe Dashboard, and Stripe fires the same webhooks when they do — so
+the ledger write requires no local row and creates one. This matters more than the
+equivalent note on `Fuime::ConnectPayoutRecorder`, because **whether a Stripe-liability
+(`:payments_only`) connected account may create top-ups through the API at all is
+UNVERIFIED** and documentation-derived. If Stripe refuses, the Dashboard path still
+works and the ledger still agrees; the service raises with that fallback named in the
+message, and the page says so too.
+
+**Tax:** the memo is pinned to `"Funds added"` and added to
+`Fuime::TaxTrackerService::EXCLUDED_MEMO_PATTERNS`. A school moving its own money
+between two of its own accounts earned nothing, and a school whose `/taxes` page
+announced a $50,000 profit the first time it funded itself would be alarming and wrong.
+
+**A DB constraint caught a real bug during development.**
+`school_fundings_succeeded_is_evidenced` (succeeded ⇒ topup id AND `succeeded_at`)
+rejected the first version of the recorder, which set the status in one write and the
+timestamp in a follow-up. Eight specs went red on a `PG::CheckViolation` rather than on
+an assertion. That is the constraint doing exactly the job it was added for.
+
+**Verification:** 39 examples across the recorder, the service and the controller — 0
+failures, including an end-to-end example that funds a school and then grants an award
+against it, which is the whole point. 219 across the surrounding surfaces (awards, tax
+tracker, policies, institutional sponsorship), 0 failures. **Not exercised against
+Stripe** — `rake fuime:stripe_pass` has no `fund` task yet, and the API-top-up
+assumption above is exactly the class of thing that broke twice before.

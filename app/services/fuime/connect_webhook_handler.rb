@@ -45,6 +45,7 @@ module Fuime
       # mirror is metadata about it.
       return ConnectPaymentRecorder.new(event: @event).handle if payment_event?
       return ConnectPayoutRecorder.new(event: @event).handle if payout_event?
+      return ConnectFundingRecorder.new(event: @event).handle if funding_event?
       return ConnectCardRecorder.new(event: @event).handle if card_event?
 
       return unless HANDLED_TYPES.include?(@event.type)
@@ -65,6 +66,10 @@ module Fuime
 
     def payout_event?
       ConnectPayoutRecorder::HANDLED_TYPES.include?(@event.type)
+    end
+
+    def funding_event?
+      ConnectFundingRecorder::HANDLED_TYPES.include?(@event.type)
     end
 
     def card_event?

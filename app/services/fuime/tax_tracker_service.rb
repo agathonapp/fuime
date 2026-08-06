@@ -222,6 +222,15 @@ module Fuime
       # student's own return, not the venture's business income, and mixing the two
       # would produce a number wrong for both.
       "school award",
+      # A school topping up its own Stripe balance from its own bank account
+      # (SchoolFunding). The school moved money between two accounts it already owns
+      # and earned nothing doing it, so it is not income by any reading.
+      #
+      # Excluded even though a school's Schedule C estimate is not a thing anyone
+      # should be reading: the tax page renders for every event, and a school whose
+      # /taxes page announced a $50,000 "profit" the first time it funded its account
+      # would be alarming and wrong. Fuime::ConnectFundingRecorder pins this phrase.
+      "funds added",
       "adjustment",
     ].freeze
 

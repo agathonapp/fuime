@@ -132,6 +132,13 @@ Rails.application.routes.draw do
   # No request verb, deliberately — the school initiates and spends its own balance,
   # so unlike a payout there is nobody for it to ask. See
   # Fuime::SchoolAwardsController.
+  # Fuime: the school's treasury page — putting its own money into its own Stripe
+  # balance so there is something to award. Manager-only and not student-facing;
+  # awards can only reattribute money that is already here. See
+  # Fuime::SchoolFundingsController.
+  get "/:event_slug/funding", to: "fuime/school_fundings#index", as: :fuime_school_fundings
+  post "/:event_slug/funding", to: "fuime/school_fundings#create", as: :fuime_school_fundings_create
+
   get "/:event_slug/awards", to: "fuime/school_awards#index", as: :fuime_school_awards
   post "/:event_slug/awards", to: "fuime/school_awards#create", as: :fuime_school_awards_create
   post "/:event_slug/awards/:id/void", to: "fuime/school_awards#void", as: :fuime_school_award_void

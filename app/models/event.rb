@@ -515,6 +515,12 @@ class Event < ApplicationRecord
   # authorised moving money, so they outlive the venture on purpose.
   has_many :payout_requests, dependent: :restrict_with_error
 
+  # Fuime: top-ups this school made into its own Stripe balance. Restricted rather
+  # than dependent-destroy for the same reason as payout_requests — these are the
+  # record of real money movements a business office reconciles against, and they
+  # outlive the Fuime org on purpose.
+  has_many :school_fundings, dependent: :restrict_with_error
+
   # Fuime: money a school put into this venture ("$100 per A"). Restricted for the
   # same reason as payout_requests, plus one of its own: these rows are what a school
   # reconciles its 1099-MISC reporting against, and that obligation outlives the
