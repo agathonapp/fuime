@@ -8,16 +8,20 @@
 #  aasm_state       :string           default("pending"), not null
 #  amount_cents     :integer          not null
 #  approved_at      :datetime
+#  destination      :string           default("account_owner_bank"), not null
+#  destination_note :text
 #  failure_code     :string
 #  failure_message  :text
 #  paid_at          :datetime
 #  rejected_at      :datetime
 #  rejection_reason :text
+#  settled_at       :datetime
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
 #  approved_by_id   :bigint
 #  event_id         :bigint           not null
 #  requested_by_id  :bigint           not null
+#  settled_by_id    :bigint
 #  stripe_payout_id :text
 #
 # Indexes
@@ -25,6 +29,7 @@
 #  index_payout_requests_on_approved_by_id    (approved_by_id)
 #  index_payout_requests_on_event_id          (event_id)
 #  index_payout_requests_on_requested_by_id   (requested_by_id)
+#  index_payout_requests_on_settled_by_id     (settled_by_id)
 #  index_payout_requests_on_stripe_payout_id  (stripe_payout_id) UNIQUE WHERE (stripe_payout_id IS NOT NULL)
 #  index_pending_payout_requests_on_event     (event_id,created_at) WHERE ((aasm_state)::text = 'pending'::text)
 #
@@ -33,6 +38,11 @@
 #  fk_rails_...  (approved_by_id => users.id)
 #  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (requested_by_id => users.id)
+#  fk_rails_...  (settled_by_id => users.id)
+#
+# Check Constraints
+#
+#  payout_requests_destination_known  (destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying]::text[]))
 #
 # Fuime: a teen's request to move money out of the venture, and the guardian's
 # decision on it.

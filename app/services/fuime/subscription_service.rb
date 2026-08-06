@@ -16,28 +16,34 @@ module Fuime
   class SubscriptionService
     class NotBillable < StandardError; end
 
-    def initialize(event:)
+    # event: nil (the default) is the FAMILY subscription — the Pro plan,
+    # billed to the guardian, covering all their ventures. Passing an event
+    # bills that venture's own plan instead (the per-venture path).
+    def initialize(guardian:, event: nil)
+      @guardian = guardian
       @event = event
     end
 
     def record
-      Fuime::Subscription.find_by(event: @event)
+      @event ? Fuime::Subscription.find_by(event: @event) : Fuime::Subscription.family.find_by(billed_to: @guardian)
     end
 
     # A Stripe Checkout session (mode: subscription) for the guardian to enter
     # their card. Returns the session; the caller redirects to session.url.
-    def checkout_session(guardian:, success_url:, cancel_url:)
-      cents = @event.plan&.monthly_fee_cents.to_i
-      raise NotBillable, "#{@event.name}'s plan has no monthly fee" unless cents.positive?
+    def checkout_session(success_url:, cancel_url:)
+      cents = (@event ? @event.plan&.monthly_fee_cents : Event::Plan::Pro.new.monthly_fee_cents).to_i
+      raise NotBillable, "nothing to bill monthly here" unless cents.positive?
 
-      sub = Fuime::Subscription.find_or_create_by!(event: @event) do |s|
-        s.billed_to = guardian
-      end
+      sub = if @event
+              Fuime::Subscription.find_or_create_by!(event: @event) { |s| s.billed_to = @guardian }
+            else
+              Fuime::Subscription.family.find_or_create_by!(billed_to: @guardian)
+            end
 
       if sub.stripe_customer_id.blank?
         customer = Stripe::Customer.create(
-          { email: guardian.email, name: guardian.name,
-            metadata: { fuime_user_id: guardian.id } },
+          { email: @guardian.email, name: @guardian.name,
+            metadata: { fuime_user_id: @guardian.id } },
           request_options
         )
         sub.update!(stripe_customer_id: customer.id)
@@ -51,7 +57,7 @@ module Fuime
           # The join back: the webhook handler maps subscription events to the
           # venture through this metadata, on the SUBSCRIPTION object itself so
           # every later event carries it.
-          subscription_data: { metadata: { fuime_event_id: @event.id } },
+          subscription_data: { metadata: @event ? { fuime_event_id: @event.id } : { fuime_guardian_user_id: @guardian.id } },
           success_url:, cancel_url:
         },
         request_options

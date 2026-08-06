@@ -21,8 +21,13 @@ module Fuime
       event_id = subscription.metadata.try(:[], "fuime_event_id") ||
                  subscription.metadata.try(:[], :fuime_event_id)
 
+      guardian_id = subscription.metadata.try(:[], "fuime_guardian_user_id") ||
+                    subscription.metadata.try(:[], :fuime_guardian_user_id)
+
       record = if event_id.present?
                  Fuime::Subscription.find_by(event_id:)
+               elsif guardian_id.present?
+                 Fuime::Subscription.family.find_by(billed_to_id: guardian_id)
                else
                  Fuime::Subscription.find_by(stripe_subscription_id: subscription.id)
                end

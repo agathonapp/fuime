@@ -505,14 +505,13 @@ namespace :fuime do
           sp_venture.reload
         end
 
-        session = Fuime::SubscriptionService.new(event: sp_venture).checkout_session(
-          guardian: sp_guardian,
+        session = Fuime::SubscriptionService.new(guardian: sp_guardian).checkout_session(
           success_url: "https://app.fuime.com/#{sp_venture.slug}?subscribed=1",
           cancel_url: "https://app.fuime.com/#{sp_venture.slug}"
         )
-        sub = Fuime::SubscriptionService.new(event: sp_venture).record
+        sub = Fuime::SubscriptionService.new(guardian: sp_guardian).record
         puts "  ✓ customer #{sub.stripe_customer_id}, session #{session.id}"
-        puts "    $#{sp_venture.plan.monthly_fee_cents / 100.0}/mo — pay with 4242 to start the subscription:"
+        puts "    $#{Event::Plan::Pro.new.monthly_fee_cents / 100.0}/mo family plan — pay with 4242 to start:"
         puts "    #{session.url}"
         puts "    completion fires customer.subscription.created at the platform endpoint."
       end

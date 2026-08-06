@@ -1275,13 +1275,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
     t.boolean "cancel_at_period_end", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "current_period_end"
-    t.bigint "event_id", null: false
+    t.bigint "event_id"
     t.string "status", default: "incomplete", null: false
     t.string "stripe_customer_id"
     t.string "stripe_subscription_id"
     t.datetime "updated_at", null: false
+    t.index ["billed_to_id"], name: "index_fuime_subscriptions_family_per_guardian", unique: true, where: "(event_id IS NULL)"
     t.index ["billed_to_id"], name: "index_fuime_subscriptions_on_billed_to_id"
-    t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true
+    t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true, where: "(event_id IS NOT NULL)"
     t.index ["stripe_subscription_id"], name: "index_fuime_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
   end
 
@@ -2105,7 +2106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
     t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
-    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying::text, 'personal_transfer'::character varying::text])", name: "payout_requests_destination_known"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying]::text[])", name: "payout_requests_destination_known"
   end
 
   create_table "paypal_transfers", force: :cascade do |t|

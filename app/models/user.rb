@@ -558,6 +558,18 @@ class User < ApplicationRecord
       events.not_hidden.any? { |event| event.institutionally_sponsored? }
   end
 
+  # Fuime: does this user hold an active family (Pro) subscription?
+  #
+  # A family subscription is a Fuime::Subscription with no event — it belongs
+  # to the guardian and covers every venture they sign for. Read by
+  # Event#family_pro?, which is what turns it into the 4% rate.
+  def fuime_pro?
+    return @fuime_pro if defined?(@fuime_pro)
+
+    @fuime_pro = Fuime::Subscription.where(event_id: nil, billed_to: self,
+                                           status: Fuime::Subscription::ACTIVE_STATUSES).exists?
+  end
+
   # Fuime: is this user the signing guardian for someone else?
   #
   # Deliberately scoped to ACTIVE guardianships, which is what keeps this from

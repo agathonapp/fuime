@@ -942,8 +942,32 @@ class Event < ApplicationRecord
     event_tags.where(name: EventTag::Tags::HACKATHON).exists?
   end
 
+  # Fuime: the tree-resolved answers each cost a recursive CTE, so they are
+  # memoized — and `reload` does NOT clear plain instance variables, only attributes
+  # and association caches. Without clearing them here, changing an event's plan and
+  # then re-asking on the same in-memory object returns the answer from before the
+  # change, which is exactly what the admin plan-change flow does.
+  #
+  # Found by spec/models/event_institutional_sponsorship_spec.rb the moment
+  # #revenue_fee started resolving through #billing_plan: that made
+  # #institutionally_sponsored? run during event setup rather than only from a
+  # policy, so the memo was already warm by the time the School plan was installed.
+  #
+  # `remove_instance_variable` rather than assigning nil, because all three memos
+  # guard on `defined?` — nil would read as a cached "no" forever.
+  MEMOIZED_TREE_ANSWERS = %i[
+    @institutionally_sponsored
+    @billing_plan
+    @payment_account
+  ].freeze
+
   def reload(**args)
     @total_fee_payments_v2_cents = nil
+
+    MEMOIZED_TREE_ANSWERS.each do |ivar|
+      remove_instance_variable(ivar) if instance_variable_defined?(ivar)
+    end
+
     super(**args)
   end
 
@@ -1020,9 +1044,22 @@ class Event < ApplicationRecord
     @billing_plan =
       if institutionally_sponsored?
         ancestors.includes(:plan).find { |event| event.plan&.institutionally_sponsored? }&.plan || plan
+      elsif family_pro?
+        # The guardian's family subscription covers every venture they sign
+        # for. An unsaved Pro instance is deliberate: Pro-ness is a property of
+        # the FAMILY resolved at read time (like institutional sponsorship
+        # above), not a plan row to swap on webhooks and sweep on lapse.
+        Event::Plan::Pro.new(event: self)
       else
         plan
       end
+  end
+
+  # Does a guardian overseeing this venture hold an active family subscription?
+  def family_pro?
+    return @family_pro if defined?(@family_pro)
+
+    @family_pro = overseeing_guardians.any?(&:fuime_pro?)
   end
 
   def revenue_fee
@@ -1294,7 +1331,11 @@ class Event < ApplicationRecord
       end
     end
 
-    Event::Plan::Standard
+    # Fuime: new root ventures start on the Free plan (7%, no monthly) — the
+    # zero-friction end of the pricing ladder. Standard (4%) remains for
+    # ventures that already have it. Sub-orgs still inherit their parent's
+    # plan class above, which is what keeps a school's children on School.
+    Event::Plan::Free
   end
 
 end

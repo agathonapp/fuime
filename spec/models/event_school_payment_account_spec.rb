@@ -130,10 +130,44 @@ RSpec.describe "a school programme's money in", type: :model do
       expect(child.revenue_fee).to eq(Event::Plan::Standard.new.revenue_fee)
     end
 
-    # `billing_plan` walks ancestors, which needs an id. `revenue_fee` is reachable
-    # during validation on a new record, so it must not raise there.
-    it "does not blow up on an unsaved event" do
-      expect { Event.new(name: "Unsaved").revenue_fee }.not_to raise_error
+    # `billing_plan` walks ancestors, and #ancestor_ids interpolates the id straight
+    # into SQL — so on an unsaved record it would raise a PG syntax error rather than
+    # anything legible. `revenue_fee` is reachable during validation on a new record
+    # (Event builds its plan in a before_validation callback), so the guard matters.
+    #
+    # A plan-less event still raises "is missing a plan", exactly as before this
+    # change: that is the pre-existing contract and not what the guard is for.
+    # Each tree-resolved answer costs a recursive CTE and so is memoized, and
+    # `reload` does not clear plain instance variables. Before Event#reload cleared
+    # them, installing the School plan on an event whose memo was already warm left
+    # it billing at 4% until the process restarted — and the admin plan-change flow
+    # does exactly that sequence.
+    it "stops billing on the old plan once the plan changes and the event reloads" do
+      venture = create(:event, plan_type: Event::Plan::Standard)
+      expect(venture.revenue_fee).to be > 0
+
+      venture.plan.update!(aasm_state: :inactive)
+      Event::Plan::School.create!(event: venture, aasm_state: :active)
+
+      expect(venture.reload.revenue_fee).to eq(0.00)
+      expect(venture.institutionally_sponsored?).to be true
+    end
+
+    it "picks up a newly attached school account after a reload" do
+      school, _cohort, venture = build_school_tree
+      expect(venture.payment_account).to be_nil
+
+      account = create(:stripe_connected_account, :ready, event: school)
+
+      expect(venture.reload.payment_account).to eq(account)
+    end
+
+    it "resolves on an unsaved event without walking the tree" do
+      event = Event.new(name: "Unsaved")
+      event.build_plan(type: Event::Plan::Standard.to_s)
+
+      expect(event).not_to receive(:ancestors)
+      expect(event.revenue_fee).to eq(Event::Plan::Standard.new.revenue_fee)
     end
   end
 end
