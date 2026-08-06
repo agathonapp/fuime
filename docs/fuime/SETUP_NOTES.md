@@ -2,6 +2,25 @@
 
 ## Handoff (most recent first)
 
+**2026-08-06 (later) — CI had never run, and a school can now be funded.** Two things.
+
+**(1) No test had ever executed in CI on this fork.** `ci.yml` — sharded RSpec,
+Rubocop, ERB lint, ESLint, Prettier — was committed and dormant, because GitHub
+disables *inherited* workflows on a fork until someone clicks through the Actions
+banner. `gh workflow list` showed only CodeQL. That is the root cause of PR #55
+shipping `current_user.staff?` to `main` with no such method: nothing ran. Now enabled;
+expect the first runs to surface the 8 pre-existing failures in known-failures.md plus
+whatever CI-specific asset problems §4.10 predicted. **If CI ever goes quiet again,
+check that banner first.**
+
+**(2) `SchoolFunding` closes the awards feature's open question** — money can now get
+INTO a school's Stripe balance (`Stripe::Topup` on its own account), which awards then
+reattribute. The one thing to know before touching it: **whether a `:payments_only`
+(Stripe-liability) connected account may create top-ups through the API is unverified.**
+The webhook recorder is built so it does not matter — a top-up made in the Stripe
+Dashboard produces the same `topup.succeeded` and the same ledger credit. Verify with a
+`stripe_pass` run before telling a school the in-app button works.
+
 **2026-08-06 — A merged PR is not the same as merged work. It happened twice.** PR #52
 was opened at `67f9c1597`; two further commits were made on `fuime/paywall-signage`
 afterwards and never pushed, so ~1,400 lines of school awards — migration, model,
