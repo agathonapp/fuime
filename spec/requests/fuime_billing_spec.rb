@@ -55,6 +55,31 @@ RSpec.describe "billing page", type: :request do
     expect(Fuime::Subscription.count).to eq(0)
   end
 
+  # Staff have no birthday on file, and the age check is fail-closed, so before
+  # User#staff? every Fuime admin was shown "ask your parent" on their own
+  # subscription page and could not buy the plan they sell.
+  it "lets staff buy the plan on their own account, birthday or not" do
+    admin = create(:user, :make_admin, :unknown_age, verified: true)
+
+    allow(Stripe::Customer).to receive(:create)
+      .and_return(Stripe::Customer.construct_from(id: "cus_bill_admin"))
+    allow(Stripe::Price).to receive(:list)
+      .and_return(Stripe::ListObject.construct_from(data: []))
+    allow(Stripe::Price).to receive(:create)
+      .and_return(Stripe::Price.construct_from(id: "price_bill_admin"))
+    allow(Stripe::Checkout::Session).to receive(:create)
+      .and_return(Stripe::Checkout::Session.construct_from(id: "cs_bill_admin", url: "https://checkout.stripe.com/admin"))
+
+    login_as!(admin)
+
+    get my_billing_path
+    expect(response.body).to include("Upgrade —")
+    expect(response.body).to include(admin.email) # whose card this is
+
+    post my_billing_subscribe_path
+    expect(response).to redirect_to("https://checkout.stripe.com/admin")
+  end
+
   it "sends a subscribed adult to Stripe's portal for management" do
     Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_port_1")
     allow(Stripe::BillingPortal::Session).to receive(:create)

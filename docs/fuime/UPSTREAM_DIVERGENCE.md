@@ -3102,6 +3102,60 @@ nothing.
 
 ---
 
+## Staff are not parentless minors: `User#staff?` (2026-08-06)
+
+**The report:** "as an admin I can't see what parents would see, and I can't upgrade my
+own account." Both halves have the same cause, and it is a Fuime bug, not an upstream one.
+
+Fuime's age check is fail-closed on purpose — `User#minor_or_unknown_age?` reads a missing
+birthday as "minor", because the alternative is an opt-out legal control (see the comment
+at `app/models/user.rb`). No staff account has a birthday on file. So every Fuime admin
+resolves to *a minor with no guardian*, and every gate written on that predicate refuses
+them on their own account. Two places had already noticed and each grew its own escape
+hatch — `EventPolicy#permitted_to_operate_business?` (`return true if user.admin?`) and
+`Fuime::GuardianshipEnforcement` (`admin? || auditor?`, added after the filter locked
+admins out of the admin console). Everything written since missed it.
+
+**What changed**
+
+- `User#staff?` (`app/models/user.rb`) — the exemption named once: `admin? || auditor?`.
+  Pretend-aware deliberately, so an admin with `pretend_is_not_admin` still hits every
+  gate; that toggle is the only honest way to preview what a teen actually experiences.
+- `Fuime::BillingController#adult?` — now `known_adult? || staff?`. This was the reported
+  symptom: the family-plan page showed its own operators "the family plan is billed to a
+  parent or guardian — ask them to upgrade", with no parent to ask, and `subscribe`/
+  `portal` refused outright. Fuime staff could not buy, or demo, the plan Fuime sells.
+- `fuime/billing/show.html.erb` — staff without a confirmed birthday get a line naming
+  whose card this is. `BillingController` always acts on `current_user`, and a staff
+  account arriving here has usually just been looking at somebody else's.
+- `event/applications/_family_plan_banner` — same fix, same reason: an admin was told to
+  ask their parent instead of being shown the upgrade button.
+- `Event::Application#activate_event!` — the guardian gate now exempts a **staff
+  applicant**. Note the subject: this tests `user` (whose venture it is), not whoever is
+  clicking activate, so an admin activating a teen's application is still held to the
+  requirement. That is the case the gate was written for and it is unchanged.
+- `application/_user_menu` — the "Guardian" link, previously shown only to users with a
+  guardianship in either direction, is now always shown to staff. This is the "see what
+  parents see" half. It is safe rather than a leak: `GuardianshipPolicy#index?` already
+  admits any signed-in user, and the page lists only the viewer's own guardianships, so an
+  admin with none gets the empty state — not somebody else's family.
+
+**What did NOT change, and why.** Impersonation already answers "see what everyone sees"
+properly — `/admin/users` → Impersonate, or the spy icon beside an organizer position, with
+an exit banner in `application/_banner_container`. It swaps `current_user`, so the admin
+gets the real parent/teen experience rather than an approximation. Nothing was built to
+duplicate it. Worth knowing: while impersonating, the billing buttons act on the
+impersonated user's Stripe customer, not the admin's.
+
+**Verification:** `spec/models/user_guardianship_spec.rb`, `spec/requests/fuime_billing_spec.rb`
+(new: staff buys the plan with no birthday on file, and the pretend-not-admin case),
+`spec/models/d2c_golden_path_spec.rb`, `spec/requests/family_signup_flow_spec.rb`,
+`spec/controllers/event/applications_controller_spec.rb`, `spec/services/fuime/`,
+`spec/models/guardianship_spec.rb`, `spec/models/user_guardian_exemption_spec.rb` — 297
+examples, 0 failures. Full suite not re-run.
+
+---
+
 ## The legal surface names a legal entity (2026-08-06)
 
 **Why:** every legal document in the app wrote "Fuime" where a contracting party

@@ -2,12 +2,22 @@
 
 ## Handoff (most recent first)
 
-**2026-08-06 — A merged PR is not the same as merged work.** PR #52 was opened at
-`67f9c1597`; two further commits were made on `fuime/paywall-signage` afterwards and
-never pushed, so ~1,400 lines of school awards — migration, model, service, controller,
-view, three spec files — merged nowhere while `main` looked healthy. Nothing failed
-loudly. The only symptom was a dirty `db/schema.rb` describing a table with no migration
-behind it. Recovered on `fuime/school-awards-rescue` (PR #56).
+**2026-08-06 — A merged PR is not the same as merged work. It happened twice.** PR #52
+was opened at `67f9c1597`; two further commits were made on `fuime/paywall-signage`
+afterwards and never pushed, so ~1,400 lines of school awards — migration, model,
+service, controller, view, three spec files — merged nowhere while `main` looked healthy.
+The only symptom was a dirty `db/schema.rb` describing a table with no migration behind
+it.
+
+**The second one shipped a red `main`.** PR #55 merged the *callers* of `User#staff?`
+(`Fuime::BillingController`, `fuime/billing/show`) while the method's definition, its
+three other call sites and both spec files stayed uncommitted in the working tree. So
+`/my/billing` raised `NoMethodError` for every user on `main` — found only because a
+regression run on an unrelated branch went red. Both halves are recovered in PR #56.
+
+**One PR merging half a feature is not rare here, it is the house failure mode.** Both
+came from committing on a branch after its PR was already open, in a checkout shared with
+another session.
 
 **Two habits this argues for.** (1) After a PR merges, check
 `git log --oneline origin/<branch>..<branch>` before deleting the local branch — GitHub
@@ -20,6 +30,18 @@ how this happened. An isolated `git worktree` plus `docker compose -p fuime run 
 from inside it reuses the running `fuime-db-1`/`fuime-redis-1` while mounting the
 worktree — but `.env.development` is gitignored and `app/assets/builds` is empty in a
 fresh worktree, so copy both in first or every view-rendering spec fails misleadingly.
+
+**2026-08-06 — Every Fuime admin was a parentless minor.** The age check is
+fail-closed (`minor_or_unknown_age?`: no birthday ⇒ minor) and no staff account
+has a birthday, so admins hit the teen branch of every gate written on it — the
+family-plan page told its own operators to "ask your parent" and refused to sell
+them the plan. `User#staff?` names the exemption that EventPolicy and
+GuardianshipEnforcement had each already invented privately; billing, the paywall
+banner, the activation gate (applicant only — activating someone else's
+application is unchanged) and the Guardian menu link now use it. For seeing what
+a user sees, use impersonation, not a preview mode — it already exists at
+/admin/users and swaps `current_user` for real. 297 examples green; full suite
+not re-run.
 
 **2026-08-05 — The admin console is Fuime's now.** HCB's ops desk (ACH, checks,
 wires, Wise, disbursements, payroll, donations, Column/Plaid/Intrafi, G Suite,
