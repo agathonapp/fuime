@@ -47,8 +47,16 @@ module Fuime
     end
 
     # The school whose account holds this venture's money, or nil.
+    #
+    # Guarded on #shares_payment_account?, not just on the account existing. A family
+    # venture owns its own account, so `payment_account.event` there is the venture
+    # ITSELF — which would make "the school funding this venture" the venture, and the
+    # awards page would cheerfully offer to fund a business out of its own balance
+    # instead of saying there is no school. nil is the honest answer.
     def school
-      @school ||= @venture.payment_account&.event
+      return @school if defined?(@school)
+
+      @school = @venture.shares_payment_account? ? @venture.payment_account&.event : nil
     end
 
     # What the school has left to award, in cents.

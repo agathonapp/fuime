@@ -3034,3 +3034,68 @@ literal in `funders_faq`, which is `<%= raw({...}.to_json) %>` and takes `#` com
   and both `transfer_confirmation_letter.pdf.erb` now carry Fuime letterhead, but their
   *body copy* still certifies Hack Club's charity status and EIN. A fiscal-sponsorship
   letter is an artifact Fuime cannot issue at all.
+
+---
+
+## School awards: "$100 per A" as a ledger reattribution (2026-08-06)
+
+**Why:** Alpha School pays each student $100 per A. The obvious implementations are all
+wrong — Fuime sending the money would be custody (L1), and posting a credit without
+backing it would be inventing money.
+
+**The insight.** A school and every venture beneath it share one Stripe account
+(`Event#payment_account`), so moving $100 from school to student **does not move money
+at Stripe at all** — it changes which subledger owns it. Two settled ledger lines that
+cancel; no Stripe call; Fuime is not in the flow of funds because no funds flow. This is
+structurally HCB's `Disbursement`, which stays disabled: its state machine models bank
+transit that does not exist here, and `mark_approved` sets `fronted: true`, which
+`VentureLedger` forbids outright (Fuime has no reserves).
+
+**The rule that makes it safe.** The school must actually hold the money, and
+`Fuime::SchoolAwardService` refuses the award otherwise. This is not fastidiousness:
+`Fuime::PayoutService` caps a withdrawal at the venture's own ledger balance, so an
+unfunded award would be **immediately withdrawable out of other students' sales
+revenue**, discoverable only afterwards. Conservation across the tree is what keeps the
+pool backing the sum of its parts, and it is asserted directly in the specs.
+
+**`Fuime::VentureLedger#post_settled!` (new).** `#post!` writes PENDING, which is right
+for a Stripe charge awaiting release. An award has no such phase — the money is already
+available — and `Event#balance_v2_cents` deliberately excludes pending *incoming* money,
+so a pending credit would leave an awarded student unable to see or spend $100 and
+invisible in the exact figure the payout cap reads. Settled lines go in through the same
+entry point the settlement sweep's final step uses; Rule 3 holds, the pipeline is only
+fed.
+
+**No grades, anywhere — the load-bearing decision.** "$100 per A" is grade data, and
+grades are education records under FERPA (20 U.S.C. § 1232g). Alpha is the covered
+entity; a vendor holding them is a "school official" under 34 CFR 99.31(a)(1)(i)(B) only
+with a written agreement, direct institutional control, and the exception named in the
+school's annual notification — for data Fuime has no use for. Fuime needs "$100, this
+student, this date, school ref ABC-123"; it does not need to know it was an A in Algebra
+II. `reference` is an opaque school-side string, there is no subject/grade/GPA/term
+column, and `spec/models/school_award_spec.rb` **fails the suite if a grade-shaped
+column is ever added**. Same principle as never storing ID images (L4) and never storing
+bank details on a payout request.
+
+**Awards do not touch the tax tracker, on either side.** Only sales are revenue. To the
+venture an award is a capital contribution, which never reaches Schedule C; counting it
+would inflate the profit a family is told to pay self-employment tax on, and the
+school's own debit did not buy the school anything. The student's personal exposure is
+real and deliberately kept out of this calculation: cash for grades is a taxable prize
+under IRC § 74, **not** a qualified scholarship under § 117, and at six A's the school
+crosses the $600 1099-MISC threshold. That is the school's filing obligation against
+the student's own return — the awards page surfaces the per-student total, Fuime files
+and withholds nothing, and the venture's Schedule C estimate ignores it entirely.
+
+**Void, not destroy.** An award granted in error posts a reversing pair. If the student
+already spent it the venture goes negative, which is the truth and the same shape as a
+late chargeback; erasing the original lines would misstate what a balance was and when.
+
+**Verification:** 33 new examples, all green; 621 across the touched surfaces, no
+regressions. **Not exercised against Stripe — and uniquely, it never needs to be:** this
+is the first Fuime money path with no Stripe call in it at all.
+
+**Open, and it gates a real launch:** how the school gets money into its Stripe account
+in the first place. Awards can only redistribute what is already there, and nothing in
+the app funds a connected account. A school with $0 of its own balance can award
+nothing.
