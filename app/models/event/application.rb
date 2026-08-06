@@ -522,7 +522,15 @@ class Event
     def required_submission_fields
       fields = ["name", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
 
-      fields.push("cosigner_email") if user.is_minor?
+      # A parent's email is required only while the guardian question is OPEN.
+      # A second application from the same teen has nothing to ask — their
+      # guardianship is per-person and already active — and a school student
+      # must never be asked for a parent at all (#37: the school vouches).
+      # Requiring it unconditionally forced both to invent an answer for a
+      # field the system would then ignore.
+      if user.is_minor? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+        fields.push("cosigner_email")
+      end
 
       unless teen_led?
         fields += ["planning_duration", "team_size", "annual_budget_cents", "committed_amount_cents"]
