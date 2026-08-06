@@ -34,7 +34,12 @@ gem "local_time" # client-side timestamp converter for cache-safe rendering
 gem "countries"
 gem "country_select", "~> 8.0"
 
-gem "faraday" # web requests
+# Pinned to the patched v1 line, not floated to v2. GHSA advisories against
+# 1.10.4 (SSRF via protocol-relative URL, NestedParamsEncoder recursion DoS) are
+# fixed in 1.10.5/1.10.6; Faraday 2 additionally changes the middleware and
+# adapter API that Contract's DocuSeal client was written against, and a
+# security bump must not smuggle in a breaking upgrade. Take v2 deliberately.
+gem "faraday", "~> 1.10", ">= 1.10.6" # web requests
 
 # Fuime: upgraded from upstream's 11.7.0 (a deliberate divergence from hackclub/hcb,
 # logged in docs/fuime/UPSTREAM_DIVERGENCE.md).
