@@ -403,6 +403,47 @@ namespace :fuime do
       end
     end
 
+    desc "5r. Refund part of the charge; feed charge.refunded to the recorder"
+    task refund: :environment do
+      sp_abort_unless_test!
+      refund = nil
+      intent_id = nil
+      sp_step("create a $5 partial refund") do
+        # The most recent recorded payment for this venture, from the ledger key —
+        # the same lookup the recorder itself uses, so this task cannot drift onto
+        # a payment the ledger never saw.
+        raw = ::RawPendingDonationTransaction
+              .where("donation_transaction_id LIKE 'fuime\_pi\_%'")
+              .order(:id).last
+        abort "  no recorded payment to refund — run charge first" if raw.nil?
+        intent_id = raw.donation_transaction_id.delete_prefix("fuime_")
+
+        refund = Stripe::Refund.create(
+          { payment_intent: intent_id, amount: 5_00 },
+          sp_opts.merge(stripe_account: sp_acct_id)
+        )
+        puts "  ✓ #{refund.id} $#{refund.amount / 100.0} of #{intent_id} (#{refund.status})"
+      end
+
+      sp_step("charge.refunded -> ConnectPaymentRecorder") do
+        stripe_event = Stripe::Event.list(
+          { type: "charge.refunded", limit: 10 },
+          sp_opts.merge(stripe_account: sp_acct_id)
+        ).data.find { |ev| ev.data.object.payment_intent == intent_id }
+        abort "  charge.refunded not emitted yet — re-run in a few seconds" if stripe_event.nil?
+
+        if stripe_event.try(:account).blank?
+          stripe_event = Stripe::Event.construct_from(stripe_event.to_hash.merge(account: sp_acct_id))
+        end
+        Fuime::ConnectPaymentRecorder.new(event: stripe_event).handle
+
+        prefix = Fuime::VentureLedger.reversal_key_prefix(intent_id)
+        rows = ::RawPendingDonationTransaction.where("donation_transaction_id LIKE ?", "#{prefix}%")
+        abort "  recorder ran but wrote no reversal line" if rows.none?
+        rows.each { |r| puts "  ✓ reversal line #{r.donation_transaction_id}: $#{r.amount_cents / 100.0}" }
+      end
+    end
+
     desc "6s. Settle available pendings into the canonical pipeline (ConnectSettlementSweep)"
     task settle: :environment do
       sp_abort_unless_test!

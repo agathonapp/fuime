@@ -72,14 +72,30 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     expect(venture.reload.balance_v2_cents).to eq(5_00)
   end
 
-  it "never touches reversal-keyed pendings" do
+  it "settles a refund reversal once its balance transactions are available" do
     Fuime::VentureLedger.new(event: venture).post!(
-      key: Fuime::VentureLedger.reversal_key(intent_id: "pi_rev1", kind: "refund",
-                                             object_id: "re_1", amount_cents: -3_00),
-      amount_cents: -3_00, memo: "Refund", date: Time.current
+      key: Fuime::VentureLedger.reversal_key(intent_id: "pi_ref1", kind: "refund",
+                                             object_id: "ch_1", amount_cents: 500),
+      amount_cents: -5_00, memo: "Refunded payment", date: Time.current
     )
-    # No Stripe stub on purpose: matching a reversal key would raise on the
-    # unstubbed retrieve, so a clean pass proves the key filter excluded it.
+    allow(Stripe::Refund).to receive(:list)
+      .with(hash_including(payment_intent: "pi_ref1"), anything)
+      .and_return(Stripe::ListObject.construct_from(
+                    data: [{ id: "re_1", balance_transaction: { id: "txn_r1", status: "available" } }]
+                  ))
+
+    expect(described_class.new(event: venture).sweep!).to eq(1)
+    expect(venture.reload.balance_v2_cents).to eq(-5_00)
+  end
+
+  it "never touches dispute-keyed pendings" do
+    Fuime::VentureLedger.new(event: venture).post!(
+      key: Fuime::VentureLedger.reversal_key(intent_id: "pi_disp1", kind: "dispute",
+                                             object_id: "dp_1", amount_cents: 300),
+      amount_cents: -3_00, memo: "Disputed payment (chargeback)", date: Time.current
+    )
+    # No Stripe stub on purpose: matching a dispute key would raise on the
+    # unstubbed call, so a clean pass proves the key filter excluded it.
     expect(described_class.new(event: venture).sweep!).to eq(0)
   end
 end

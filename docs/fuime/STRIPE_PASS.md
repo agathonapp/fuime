@@ -16,6 +16,7 @@ comments carry the detail.
 | Ledger: Stripe event -> `ConnectPaymentRecorder#handle` -> canonical pipeline | `cpt#3` $25 mapped via `CanonicalPendingEventMapping` |
 | Money out: `PayoutService` teen request -> guardian approve -> Stripe payout | `po_1U1EQ9JvQ1BSjJCo…` $10 |
 | Settlement: `ConnectSettlementSweep` pending -> settled -> balance | venture balance $0.00 -> $25.00 on the harness account |
+| Refunds: partial refund -> `charge.refunded` -> clamped reversal line -> settled | `re_3U1EHWJvQ1BSjJCo…` $5; balance held at $20 through settle, as the semantics require |
 
 ## Not proven
 
@@ -29,7 +30,9 @@ comments carry the detail.
 - ~~Settlement~~ **Built and proven** (2026-08-05, same day): `Fuime::ConnectSettlementSweep`
   on a 30-minute schedule settles pendings whose balance transaction Stripe reports
   "available", via RawCsvTransaction -> the engine's own imports -> upstream Settle.
-  Reversal-keyed pendings are deliberately excluded until refunds are exercised.
+  Refund reversals settle when every refund balance transaction on the intent is
+  available (exercised live the same day); dispute-kind reversals stay excluded
+  until a dispute has been exercised for real.
 - ~~Webhooks end-to-end~~ **Prod endpoints fixed and registered** (2026-08-05, by API):
   the one existing platform endpoint pointed at `fuime.com` — the marketing site,
   which 404s, and Stripe does not follow redirects — so every event ever sent had

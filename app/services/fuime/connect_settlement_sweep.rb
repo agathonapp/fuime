@@ -34,18 +34,24 @@
 # refuses to create a second raw row with the same memo — so a crash between
 # "raw created" and "settled mapping created" resumes instead of duplicating.
 #
-# Scope, deliberately: the three payment-group keys (payment, Fuime fee, Stripe
-# processing fee). Reversal lines are their own settled facts with their own
-# timing and are NOT swept here — refunds have not been exercised against
-# Stripe at all yet, and settling them by construction rather than observation
-# would be guessing.
+# Scope: the three payment-group keys (payment, Fuime fee, Stripe processing
+# fee), and refund reversal lines — added after refunds were exercised for real
+# (re_3U1EHWJvQ1BSjJCo…, docs/fuime/STRIPE_PASS.md). A refund line settles when
+# every refund balance transaction on its PaymentIntent reports "available";
+# per-refund mapping is deliberately not attempted because the recorder clamps
+# cumulative amounts, so one ledger line does not correspond 1:1 to one refund
+# object. Dispute-kind reversals remain excluded — disputes have never been
+# exercised, and settling them by construction would be guessing.
 module Fuime
   class ConnectSettlementSweep
     UNIQUE_BANK_IDENTIFIER = "FUIMECONNECT"
 
     # Payment-group keys: fuime_{pi}, fuime_fee_{pi}, fuime_stripefee_{pi}.
-    # Reversal keys carry "refund"/"dispute" kinds and never match.
     PAYMENT_GROUP_KEY = /\Afuime_(?:fee_|stripefee_)?(pi_\w+)\z/
+
+    # Refund reversal keys: fuime_rev_{pi}_refund_{object}_{amount}. The kind is
+    # matched literally so dispute-kind keys fall through to "not swept".
+    REFUND_REVERSAL_KEY = /\Afuime_rev_(pi_\w+)_refund_/
 
     def self.sweep_all
       StripeConnectedAccount.where.not(stripe_id: nil).find_each do |account|
@@ -64,8 +70,19 @@ module Fuime
     def sweep!
       settled = 0
 
-      unsettled_by_intent.each do |intent_id, pendings|
+      groups = unsettled_groups
+
+      groups[:payments].each do |intent_id, pendings|
         next unless available?(intent_id)
+
+        pendings.each do |cpt|
+          settle_one!(cpt)
+          settled += 1
+        end
+      end
+
+      groups[:refunds].each do |intent_id, pendings|
+        next unless refunds_available?(intent_id)
 
         pendings.each do |cpt|
           settle_one!(cpt)
@@ -85,7 +102,7 @@ module Fuime
     # This venture's Fuime-keyed pendings that have no settled twin yet, grouped
     # by the PaymentIntent they came from so one Stripe lookup covers the whole
     # group (payment + both fee lines settle together — they are one charge).
-    def unsettled_by_intent
+    def unsettled_groups
       cpts = ::CanonicalPendingTransaction
              .joins(:canonical_pending_event_mapping)
              .joins(:raw_pending_donation_transaction)
@@ -93,11 +110,24 @@ module Fuime
              .where("raw_pending_donation_transactions.donation_transaction_id LIKE 'fuime\\_%'")
              .where.missing(:canonical_pending_settled_mapping)
 
-      cpts.each_with_object(Hash.new { |h, k| h[k] = [] }) do |cpt, groups|
+      groups = { payments: Hash.new { |h, k| h[k] = [] }, refunds: Hash.new { |h, k| h[k] = [] } }
+      cpts.each do |cpt|
         key = cpt.raw_pending_donation_transaction.donation_transaction_id
-        match = PAYMENT_GROUP_KEY.match(key)
-        groups[match[1]] << cpt if match
+        if (match = PAYMENT_GROUP_KEY.match(key))
+          groups[:payments][match[1]] << cpt
+        elsif (match = REFUND_REVERSAL_KEY.match(key))
+          groups[:refunds][match[1]] << cpt
+        end
       end
+      groups
+    end
+
+    def refunds_available?(intent_id)
+      refunds = Stripe::Refund.list(
+        { payment_intent: intent_id, expand: ["data.balance_transaction"] },
+        { api_key: StripeService.secret_key, stripe_account: account.stripe_id }
+      ).data
+      refunds.any? && refunds.all? { |r| r.balance_transaction&.status == "available" }
     end
 
     def available?(intent_id)
