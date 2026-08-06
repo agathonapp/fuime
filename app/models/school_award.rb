@@ -13,6 +13,46 @@
 # This model owns the STATE and the rules that hold regardless of caller.
 # Fuime::SchoolAwardService owns the two-sided ledger posting, because that has to
 # be one transaction and a validation cannot span one.
+# == Schema Information
+#
+# Table name: school_awards
+#
+#  id              :bigint           not null, primary key
+#  amount_cents    :integer          not null
+#  awarded_on      :date             not null
+#  reference       :string
+#  void_reason     :text
+#  voided_at       :datetime
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  awarded_by_id   :bigint           not null
+#  awarded_to_id   :bigint           not null
+#  event_id        :bigint           not null
+#  school_event_id :bigint           not null
+#  voided_by_id    :bigint
+#
+# Indexes
+#
+#  index_school_awards_on_awarded_by_id                 (awarded_by_id)
+#  index_school_awards_on_awarded_to_id                 (awarded_to_id)
+#  index_school_awards_on_awarded_to_id_and_awarded_on  (awarded_to_id,awarded_on)
+#  index_school_awards_on_event_id                      (event_id)
+#  index_school_awards_on_school_event_id               (school_event_id)
+#  index_school_awards_on_voided_by_id                  (voided_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (awarded_by_id => users.id)
+#  fk_rails_...  (awarded_to_id => users.id)
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (school_event_id => events.id)
+#  fk_rails_...  (voided_by_id => users.id)
+#
+# Check Constraints
+#
+#  school_awards_amount_positive     (amount_cents > 0) NOT VALID
+#  school_awards_void_is_attributed  ((voided_at IS NULL) = (voided_by_id IS NULL)) NOT VALID
+#
 class SchoolAward < ApplicationRecord
   include Hashid::Rails
   has_paper_trail

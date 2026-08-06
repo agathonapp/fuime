@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2548,6 +2548,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
     t.index ["user_id"], name: "index_reimbursement_reports_on_user_id"
   end
 
+  create_table "school_awards", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.bigint "awarded_by_id", null: false
+    t.date "awarded_on", null: false
+    t.bigint "awarded_to_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.string "reference"
+    t.bigint "school_event_id", null: false
+    t.datetime "updated_at", null: false
+    t.text "void_reason"
+    t.datetime "voided_at"
+    t.bigint "voided_by_id"
+    t.index ["awarded_by_id"], name: "index_school_awards_on_awarded_by_id"
+    t.index ["awarded_to_id", "awarded_on"], name: "index_school_awards_on_awarded_to_id_and_awarded_on"
+    t.index ["awarded_to_id"], name: "index_school_awards_on_awarded_to_id"
+    t.index ["event_id"], name: "index_school_awards_on_event_id"
+    t.index ["school_event_id"], name: "index_school_awards_on_school_event_id"
+    t.index ["voided_by_id"], name: "index_school_awards_on_voided_by_id"
+  end
+
+  add_check_constraint "school_awards", "(voided_at IS NULL) = (voided_by_id IS NULL)", name: "school_awards_void_is_attributed", validate: false
+  add_check_constraint "school_awards", "amount_cents > 0", name: "school_awards_amount_positive", validate: false
+
   create_table "sponsors", force: :cascade do |t|
     t.text "address_city"
     t.text "address_country", default: "US"
@@ -3374,6 +3398,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_120100) do
   add_foreign_key "reimbursement_reports", "legal_entity_payout_methods", on_delete: :nullify
   add_foreign_key "reimbursement_reports", "users"
   add_foreign_key "reimbursement_reports", "users", column: "invited_by_id"
+  add_foreign_key "school_awards", "events"
+  add_foreign_key "school_awards", "events", column: "school_event_id"
+  add_foreign_key "school_awards", "users", column: "awarded_by_id"
+  add_foreign_key "school_awards", "users", column: "awarded_to_id"
+  add_foreign_key "school_awards", "users", column: "voided_by_id"
   add_foreign_key "sponsors", "events"
   add_foreign_key "stripe_authorizations", "stripe_cards"
   add_foreign_key "stripe_card_personalization_designs", "events"
