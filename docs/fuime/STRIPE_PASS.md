@@ -15,6 +15,7 @@ comments carry the detail.
 | Money in: direct charge on the connected account | `pi_3U1EHWJvQ1BSjJCo…` $25 succeeded |
 | Ledger: Stripe event -> `ConnectPaymentRecorder#handle` -> canonical pipeline | `cpt#3` $25 mapped via `CanonicalPendingEventMapping` |
 | Money out: `PayoutService` teen request -> guardian approve -> Stripe payout | `po_1U1EQ9JvQ1BSjJCo…` $10 |
+| Settlement: `ConnectSettlementSweep` pending -> settled -> balance | venture balance $0.00 -> $25.00 on the harness account |
 
 ## Not proven
 
@@ -25,8 +26,10 @@ comments carry the detail.
 - **ToS on Stripe-collected profiles.** Only the account holder can accept, in the
   embedded component at `/:slug/payments/setup` (the platform API call is refused).
   The embedded page rendered for the first time today, against prod, for a school org.
-- **Settlement.** The recorder posts the *pending* ledger line. The settled side is a
-  separate webhook path, unexercised — venture balances stay $0 until it runs.
+- ~~Settlement~~ **Built and proven** (2026-08-05, same day): `Fuime::ConnectSettlementSweep`
+  on a 30-minute schedule settles pendings whose balance transaction Stripe reports
+  "available", via RawCsvTransaction -> the engine's own imports -> upstream Settle.
+  Reversal-keyed pendings are deliberately excluded until refunds are exercised.
 - **Webhooks end-to-end.** Everything here fed events to handlers directly. Live
   delivery needs `FUIME_STRIPE_WEBHOOK_SECRET` / `FUIME_STRIPE_CONNECT_WEBHOOK_SECRET`
   configured and a `stripe listen` (dev) or endpoint registration (prod). The
