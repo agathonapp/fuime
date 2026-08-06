@@ -438,8 +438,11 @@ class UsersController < ApplicationController
       if @user.full_name_before_last_save.blank?
         flash[:success] = "Profile created!"
 
-        # Fuime: Redirect minors who need a guardian to the guardian invite page
-        if @user.needs_guardian?
+        # Fuime: Redirect minors who need a guardian to the guardian invite page.
+        # School students are exempt — their school vouches for them
+        # (User#institutionally_vouched_for?), and sending them here would ask
+        # for a parent the flow neither needs nor can use.
+        if @user.needs_guardian? && !@user.institutionally_vouched_for?
           flash[:info] = "One more step! Invite your parent or guardian to activate your account."
           redirect_to new_guardianship_path
         else

@@ -15,9 +15,15 @@
 <% if account.blank? || account.status == :not_started %>
   <%= render "application/callout", type: "warning", title: "This venture can't be paid yet" do %>
     <p>
-      Before <%= @event.name %> can accept money, a parent or guardian needs to set
-      up a payment account with Stripe. They will own that account; money settles
-      to their bank, not to Fuime.
+      <% if @event.institutionally_sponsored? %>
+        Before <%= @event.name %> can accept money, the school needs to set up a
+        payment account with Stripe. The school will own that account; money
+        settles to the school's bank, not to Fuime.
+      <% else %>
+        Before <%= @event.name %> can accept money, a parent or guardian needs to set
+        up a payment account with Stripe. They will own that account; money settles
+        to their bank, not to Fuime.
+      <% end %>
     </p>
     <% if @can_set_up %>
       <%# When cards are available to this venture the choice has to be made HERE, before
@@ -59,7 +65,13 @@
       <%# The teen's view. Naming who has to act beats a generic "contact your
           guardian", and the guardian may not be listed yet if none is active. %>
       <p class="mb-0">
-        <% if @guardians.any? %>
+        <% if @event.institutionally_sponsored? %>
+          <%# A school venture must never tell a student to invite a parent — the
+              school is the responsible party. The people who can act are managers
+              of the school org (the business office). %>
+          A school administrator needs to do this — ask your guide or the
+          business office.
+        <% elsif @guardians.any? %>
           Waiting on <strong><%= @guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>.
           They can do this from their guardian overview.
         <% else %>
@@ -133,5 +145,6 @@
 <p class="muted text-sm mt-4">
   Fuime is a financial technology company, not a bank. Fuime does not hold
   deposits and does not offer FDIC-insured products. Payments are processed by
-  Stripe into an account owned by a parent or legal guardian.
+  Stripe into an account owned by
+  <%= @event.institutionally_sponsored? ? "the sponsoring school" : "a parent or legal guardian" %>.
 </p>

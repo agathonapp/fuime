@@ -43,6 +43,15 @@ export default class extends Controller {
           if (!response.ok) throw new Error('Could not refresh Stripe session')
           const body = await response.json()
           return body.client_secret
+        },
+        // Without an appearance, the component renders Stripe's white-card
+        // defaults inside Fuime's dark UI — the first person to walk the school
+        // flow described it as "not our app", which for an identity form is the
+        // worst possible moment to look foreign. Values are read from the
+        // rendered page so the component follows the active theme instead of
+        // hardcoding one.
+        appearance: {
+          variables: this.appearanceVariables()
         }
       })
 
@@ -66,6 +75,28 @@ export default class extends Controller {
       this.showFallback(
         "Stripe's setup form couldn't load. Check that your browser isn't blocking scripts from Stripe, then reload this page."
       )
+    }
+  }
+
+  // Theme variables for the embedded component, read from the live page so the
+  // form inherits whatever theme the user is actually in (HCB ships dark and
+  // light) rather than a palette hardcoded here that drifts the next time the
+  // CSS changes. Falls back to sensible values when a computed color is
+  // transparent, which is what getComputedStyle reports for unset backgrounds.
+  appearanceVariables () {
+    const styles = getComputedStyle(document.body)
+    const rootStyles = getComputedStyle(document.documentElement)
+    const bodyBackground = styles.backgroundColor
+    const transparent = /rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/
+
+    return {
+      colorBackground: transparent.test(bodyBackground) ? '#ffffff' : bodyBackground,
+      colorText: styles.color,
+      // --primary is $fuime-blue from _variables.scss; the fallback is the same
+      // value so a missing custom property degrades to the identical color.
+      colorPrimary: rootStyles.getPropertyValue('--primary').trim() || '#2242FF',
+      borderRadius: '8px',
+      fontFamily: styles.fontFamily
     }
   }
 
