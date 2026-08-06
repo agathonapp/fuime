@@ -148,3 +148,36 @@ RSpec.describe Fuime::SubscriptionService do
     end
   end
 end
+
+# Fuime: the paywall's signage — the banner in the application flow that tells
+# a slotless family about the plan BEFORE an admin's activation error would.
+RSpec.describe "family plan banner", type: :request do
+  def login_as!(user)
+    post logins_path, params: { email: user.email, login: { purpose: "" } }
+    login = Login.order(:id).last
+    post email_login_path(login)
+    code = LoginCode.active.where(user:).order(:id).last
+    post complete_login_path(login), params: { method: "email", login_code: code.code }
+  end
+
+  let(:guardian) { create(:user, birthday: 40.years.ago.to_date, verified: true) }
+  let(:teen) { create(:user, birthday: 15.years.ago.to_date, verified: true) }
+
+  before { Guardianship.create!(guardian:, minor: teen, status: :active) }
+
+  it "appears for a slotless teen, naming the guardian; absent with a free slot" do
+    login_as!(teen)
+
+    get new_application_path
+    expect(response.body).not_to include("needs the family plan")
+
+    create(:event, name: "Slot Taken", organizers: [teen])
+    get new_application_path
+    expect(response.body).to include("needs the family plan")
+    expect(response.body).to include(ERB::Util.html_escape(guardian.name.presence || guardian.email))
+
+    Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_ban_1")
+    get new_application_path
+    expect(response.body).not_to include("needs the family plan")
+  end
+end

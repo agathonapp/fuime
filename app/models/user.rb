@@ -570,6 +570,20 @@ class User < ApplicationRecord
                                            status: Fuime::Subscription::ACTIVE_STATUSES).exists?
   end
 
+  # Fuime: free tier = one venture. Room for another?
+  #
+  # Pro (the family subscription) unlocks unlimited — theirs, or any
+  # guardian's. Ventures inside a school programme never consume the slot.
+  # Single source of truth: Event::Application's activation gate and the
+  # in-flow paywall banner both read this, so the wall and its signage can
+  # never disagree.
+  def venture_slot_available?
+    return true if fuime_pro?
+    return true if guardians.any?(&:fuime_pro?)
+
+    events.not_hidden.reject(&:institutionally_sponsored?).empty?
+  end
+
   # Fuime: is this user the signing guardian for someone else?
   #
   # Deliberately scoped to ACTIVE guardianships, which is what keeps this from
