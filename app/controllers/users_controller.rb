@@ -438,16 +438,19 @@ class UsersController < ApplicationController
       if @user.full_name_before_last_save.blank?
         flash[:success] = "Profile created!"
 
-        # Fuime: Redirect minors who need a guardian to the guardian invite page.
-        # School students are exempt — their school vouches for them
-        # (User#institutionally_vouched_for?), and sending them here would ask
-        # for a parent the flow neither needs nor can use.
+        # Fuime: minors are NOT bounced to the guardian invite here anymore.
+        # The wall used to land at profile completion — before the teen had
+        # seen anything — which made onboarding feel like paperwork. The
+        # guardian is legally required before OPERATING a business (L2), not
+        # before looking around: the enforcement filter already limits a
+        # guardianless minor to browsing and applying, and
+        # Event::Application#activate_event! now refuses to create the venture
+        # until a guardian has accepted. Deferring the ask to that moment keeps
+        # signup short without loosening a single control.
         if @user.needs_guardian? && !@user.institutionally_vouched_for?
-          flash[:info] = "One more step! Invite your parent or guardian to activate your account."
-          redirect_to new_guardianship_path
-        else
-          redirect_to(return_to || root_path)
+          flash[:info] = "You're in! You'll invite a parent or guardian when your business is ready to launch."
         end
+        redirect_to(return_to || root_path)
       else
         if @payout_method&.saved_changes? && @user == current_user
           flash[:success] = "Your payout details have been updated. We'll use this information for all payouts going forward."

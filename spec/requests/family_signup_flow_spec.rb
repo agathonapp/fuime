@@ -43,13 +43,14 @@ RSpec.describe "a family signs up and activates", type: :request do
     # ── The teen ──────────────────────────────────────────────────────────
     teen = login_as!("maya-family@example.com")
 
-    # Completing their profile with a minor's birthday must park them at the
-    # guardian step — the real redirect, not an assumption.
+    # Deferred onboarding: completing a profile with a minor's birthday no
+    # longer walls them behind the guardian invite — they land in the product
+    # with a heads-up, and the hard requirement waits at activation.
     patch user_path(teen), params: {
       user: { full_name: "Maya Family", birthday: 15.years.ago.to_date.to_s }
     }
-    expect(response).to redirect_to(new_guardianship_path)
-    expect(flash[:info]).to include("Invite your parent or guardian")
+    expect(response).to redirect_to(root_path)
+    expect(flash[:info]).to include("invite a parent or guardian when your business is ready")
 
     # The invite form, as the UI submits it.
     post guardianships_path, params: { guardianship: { guardian_email: "pat-family@example.com" } }
@@ -58,8 +59,16 @@ RSpec.describe "a family signs up and activates", type: :request do
     expect(guardianship).to be_pending
     expect(guardianship.invite_token).to be_present
 
-    # The teen can look, but not operate — parked, not stranded.
+    # The teen can look, but not operate — and activation is where the
+    # deferred guardian requirement actually bites: an admin cannot create the
+    # venture while the applicant has no guardian.
     expect(teen.needs_guardian?).to be(true)
+    premature = create(:event_application, user: teen.reload, teen_led: true, name: "Too Early LLC-less")
+    premature.update!(aasm_state: :approved)
+    early_admin = create(:user, :make_admin, birthday: 35.years.ago.to_date)
+    expect {
+      premature.activate_event!(risk_level: 0, point_of_contact: early_admin)
+    }.to raise_error(ArgumentError, /minor with no active guardian/)
 
     logout!
 
