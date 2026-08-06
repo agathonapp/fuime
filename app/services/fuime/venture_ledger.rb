@@ -148,8 +148,96 @@ module Fuime
       ::CanonicalPendingEventMapping.find_by(canonical_pending_transaction_id: cpt.id)&.event
     end
 
+    # Money a school moved from its own subledger to a student's, or back.
+    #
+    # Two keys per award, because the award IS two ledger lines — the school's balance
+    # falls and the student's rises by the same amount — and each needs its own
+    # idempotency key. Reattribution inside one Stripe account is only safe while those
+    # two are inseparable, which is why they share a prefix and post in one transaction.
+    def self.award_key(award_id, side)
+      "fuime_award_#{award_id}_#{side}"
+    end
+
+    # A voided award, reversing both sides. Keyed separately rather than by deleting the
+    # original lines: the money did move, a school then took it back, and a ledger that
+    # erased the first half would misstate what a student's balance did and when.
+    def self.award_void_key(award_id, side)
+      "fuime_awardvoid_#{award_id}_#{side}"
+    end
+
+    # ── Settled lines, for money that was never in transit ──────────────────
+    #
+    # `#post!` writes a PENDING line, which is right for a Stripe charge: the money
+    # exists but Stripe has not released it, and Fuime::ConnectSettlementSweep promotes
+    # it days later when Stripe says "available".
+    #
+    # A school award has no such phase. The money is already in the school's available
+    # balance — the award only changes which subledger it belongs to, and no Stripe call
+    # happens at all. Posting it pending would mean a student awarded $100 could not
+    # spend it until a sweep with nothing to wait for ran, and `Event#balance_v2_cents`
+    # deliberately excludes pending INCOMING money, so the award would be invisible in
+    # exactly the figure Fuime::PayoutService's cap reads.
+    #
+    # So this writes the settled line directly, through the same entry point the sweep's
+    # final step uses. Rule 3 holds: the pipeline's internals are untouched and it is
+    # only being fed.
+    #
+    # Idempotency works as the sweep's does — the key is embedded in the memo and a
+    # matching raw row is reused rather than duplicated — so a crash between an award's
+    # two sides resumes instead of double-posting one of them.
+    UNIQUE_BANK_IDENTIFIER = "FUIMEINTERNAL"
+
+    def self.settled_memo(key, memo)
+      "#{memo} [#{key}]"
+    end
+
+    def self.find_settled_row(key, memo)
+      ::RawCsvTransaction.find_by(
+        unique_bank_identifier: UNIQUE_BANK_IDENTIFIER,
+        memo: settled_memo(key, memo)
+      )
+    end
+
     def initialize(event:)
       @event = event
+    end
+
+    # Post one settled line for this event, or return the transaction already there.
+    #
+    # Returns the CanonicalTransaction. Not wrapped in its own DB transaction, for the
+    # same reason as #post!: an award's two sides must commit or roll back together, so
+    # the boundary belongs to the caller.
+    def post_settled!(key:, amount_cents:, memo:, date:)
+      full_memo = self.class.settled_memo(key, memo)
+
+      raw = self.class.find_settled_row(key, memo) ||
+            ::RawCsvTransactionService::Create.new(
+              unique_bank_identifier: UNIQUE_BANK_IDENTIFIER,
+              date: date.to_time.iso8601(3),
+              memo: full_memo,
+              # RawCsvTransaction monetizes :amount_cents, so `amount` is DOLLARS.
+              # Passing cents posts every line at 100x — the bug the settlement sweep's
+              # comment records paying for once already. BigDecimal so odd cents stay
+              # exact, and negatives are legitimate here (the school's side is a debit).
+              amount: amount_cents.to_d / 100
+            ).run
+
+      ::TransactionEngine::HashedTransactionService::RawCsvTransaction::Import.new.run
+      ::TransactionEngine::CanonicalTransactionService::Import::All.new.run
+
+      hashed = ::HashedTransaction.find_by!(raw_csv_transaction_id: raw.id)
+      ct = ::CanonicalTransaction
+           .joins(:canonical_hashed_mappings)
+           .find_by!(canonical_hashed_mappings: { hashed_transaction_id: hashed.id })
+
+      ::CanonicalEventMapping.find_or_create_by!(canonical_transaction: ct, event: @event)
+
+      Rails.logger.info(
+        "[Fuime] settled ledger #{key} for #{@event.name}: " \
+        "#{format('%+.2f', ct.amount_cents / 100.0)} (ct=#{ct.id})"
+      )
+
+      ct
     end
 
     # Post exactly one ledger line, or return the line that already exists.

@@ -205,6 +205,23 @@ module Fuime
       # payout as an expense would understate a teenager's taxable income, which
       # is the direction of error that gets a family in trouble.
       "payout",
+      # Money a school moved into a student's venture — Alpha School's "$100 per A",
+      # and the reversal of one. Excluded on BOTH sides, which is why every award memo
+      # contains this phrase (see Fuime::SchoolAwardService).
+      #
+      # Only sales belong in this figure. An award is not revenue the business earned:
+      # to the venture it is a capital contribution, which never appears on Schedule C
+      # at all, and counting it would inflate the profit a family is told to pay
+      # self-employment tax on. The school's own debit is excluded for the mirror
+      # reason — it did not buy the school anything.
+      #
+      # The student's PERSONAL exposure is real but belongs nowhere near this
+      # calculation: cash for grades is a taxable prize under IRC § 74, not a
+      # qualified scholarship under § 117, and at six A's the school crosses the $600
+      # 1099-MISC threshold. That is the school's filing obligation against the
+      # student's own return, not the venture's business income, and mixing the two
+      # would produce a number wrong for both.
+      "school award",
       "adjustment",
     ].freeze
 
