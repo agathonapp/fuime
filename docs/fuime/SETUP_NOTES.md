@@ -2,6 +2,17 @@
 
 ## Handoff (most recent first)
 
+**2026-08-05 — The admin console is Fuime's now.** HCB's ops desk (ACH, checks,
+wires, Wise, disbursements, payroll, donations, Column/Plaid/Intrafi, G Suite,
+Emburse, the hack.af knowledgebase link) is out of the nav and admin_tools —
+FUIME-DISABLED comments, routes untouched, capability unchanged since M5. Also
+gone: the last live-capable call to identity.hackclub.com in admin_controller.
+What the trim exposed: Fuime's own money model has NO ops surface — a failed
+family payout, a charges-disabled connected account, a stuck guardianship, a
+past_due Pro subscription are all invisible. Spec'd in ADMIN_OPS_QUEUES.md,
+deliberately unbuilt: the stripe listen pass still outranks it. Nav spec 5/5,
+rubocop clean; full suite not re-run (no logic changed).
+
 **2026-08-06 — Schools can earn, and cash out has a second shape.** The school
 programme was half-built: only three of five surfaces got the guardian->school
 substitution, and money-in was never wired. A student sub org under a fully onboarded
