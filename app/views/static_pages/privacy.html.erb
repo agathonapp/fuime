@@ -16,9 +16,13 @@
 <h2>Who we are</h2>
 <p>
   Fuime is a financial record-keeping platform for businesses run by teenagers
-  aged 13 to 17, with a parent or legal guardian on the account. When this
-  policy says &ldquo;we&rdquo; it means Fuime; &ldquo;you&rdquo; means anyone
-  with a Fuime account, whether a teen or a guardian.
+  aged 13 to 17, with a parent or legal guardian on the account. It is a product
+  of <strong><%= Rails.configuration.constants.legal_entity_name %></strong>,
+  which is the company responsible for the information described here and the
+  one to contact about it. When this policy says &ldquo;we&rdquo; it means
+  <%= Rails.configuration.constants.legal_entity_name %>;
+  &ldquo;you&rdquo; means anyone with a Fuime account, whether a teen or a
+  guardian.
 </p>
 
 <h2>Fuime is 13+</h2>
@@ -145,7 +149,9 @@
 
 <h2>Contact</h2>
 <p>
-  Questions about this policy: <%= mail_to "support@fuime.com" %>.
+  Questions about this policy, or any request above, go to
+  <%= Rails.configuration.constants.legal_entity_name %> at
+  <%= mail_to "support@fuime.com" %>.
 </p>
 
 <hr>

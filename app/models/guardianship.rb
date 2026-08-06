@@ -36,7 +36,16 @@
 class Guardianship < ApplicationRecord
   # Bump when the guardian agreement text changes materially. Stored per
   # signature so we can prove which version a given guardian actually agreed to.
-  CURRENT_AGREEMENT_VERSION = "2026-08-01-v1"
+  #
+  # Bumping is additive and never destructive: add the new partial, change this,
+  # and leave the old partial in place. `agreement_partial_for` resolves each
+  # stored version to its own file, so a guardian who signed an earlier version
+  # keeps seeing the text they actually signed.
+  #
+  # v2 (2026-08-06) names Ninth Street Labs, LLC as the counterparty. v1 was
+  # "between Fuime and you", and Fuime is a product rather than a legal person,
+  # so v1 recorded consent to an agreement with nobody.
+  CURRENT_AGREEMENT_VERSION = "2026-08-06-v2"
 
   # Invite links are bearer tokens granting authority over a minor's account.
   # They expire so a forwarded or leaked email doesn't stay usable forever.

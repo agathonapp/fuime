@@ -146,9 +146,21 @@ who can legally contract — is the one Stripe has verified.
 is on hold until it exists, because the answer rewrites the money code.
 
 ### 1.2 Entity, EIN, banking
-- [ ] Entity formed (Delaware C-corp or LLC — ask counsel)
-- [ ] EIN from the IRS (free, ~15 min online)
-- [ ] Business bank account (Mercury/Brex are the usual startup picks)
+
+**The entity is Ninth Street Labs, LLC** (decided 2026-08-06). Fuime is its product, and
+as of the same date every legal surface in the app says so — terms, privacy, guardian
+agreement v2, and the standing footer disclosure all name it, from
+`Rails.configuration.constants.legal_entity_name`. Before that they named no contracting
+party at all, which is the defect described in `UPSTREAM_DIVERGENCE.md`.
+
+- [x] Entity formed — Ninth Street Labs, LLC
+- [ ] **Fictitious-name ("d/b/a Fuime") registration filed.** The app already renders the
+      d/b/a form; until this is filed that string is ahead of the paperwork, which is the
+      §1.8 failure mode in miniature
+- [ ] EIN from the IRS (free, ~15 min online) — needed exactly as it appears on the
+      IRS letter, because Stripe matches on it
+- [ ] Business bank account in the entity's name (Mercury/Brex are the usual startup
+      picks). This is where Connect application fees land
 - [ ] Registered agent
 - [ ] State registrations wherever you have nexus
 
@@ -209,6 +221,28 @@ the account holder is the parent, which is precisely why that model is the safe 
 
 Ask them explicitly about: the connected-account structure, KYC on guardians, payout
 timing, chargeback liability, and their Restricted Businesses list.
+
+**The platform account must be the entity, not a person** (§1.2 — Ninth Street Labs,
+LLC). Under direct charges the platform account never holds venture money; it receives
+the application fee and the subscription revenue, so it is the account that needs the
+legal name exactly as it appears on the EIN letter, the entity's own bank account, and a
+**representative who is 18 or over** with ≥25% ownership or control. Stripe will ask that
+person for DOB, home address and SSN last-4. If nobody at the company is 18, an adult
+member or manager has to hold that role and the operating agreement should authorise it.
+
+Two traps worth naming before the form is started:
+
+- **Connected accounts cannot be moved between platforms.** If the current test-mode
+  platform account is registered to an individual, switching to the entity means creating
+  a new platform and re-onboarding every connected account. Pre-launch, with only test
+  accounts, is the cheapest moment this will ever be.
+- **Use a dedicated Stripe account for Fuime** rather than an existing entity account
+  carrying other products. Connect and Issuing underwriting, MCC, and chargeback history
+  are all evaluated per account.
+
+Also note this is the same conversation as the three open questions in
+`LEGAL_RESEARCH.md` and the Issuing sales gate in `STRIPE_PASS.md` — one email, not
+three.
 
 ### 2.2 Identity verification vendor
 Required by §4.2. **Stripe Identity** (~$1.50/verification) composes best if you are

@@ -30,8 +30,13 @@
       When a partner bank exists, this becomes the "banking services provided by
       [Bank], Member FDIC" form — until then, naming a bank here would itself be
       the false claim. %>
+  <%# The entity is named here and not only in the terms because this is the
+      disclosure a reader sees without clicking anything, and "Fuime is a
+      financial technology company" invited the reading that Fuime IS the
+      company. It is a product; the company is the one that would answer for it. %>
   <p class="text-xs text-center mx-auto" style="max-width: 44rem;">
-    Fuime is a financial technology company, not a bank. Fuime does not hold
+    Fuime is a product of <%= Rails.configuration.constants.legal_entity_name %>,
+    a financial technology company, not a bank. Fuime does not hold
     deposits and does not offer FDIC-insured products. Payments are processed by
     Stripe. Venture accounts are opened and owned by a parent or legal guardian;
     young founders operate them with guardian oversight.

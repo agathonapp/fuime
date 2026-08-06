@@ -23,3 +23,20 @@ shared:
   # Until that exists this is deliberately the support address that is already
   # live across every mailer, rather than an address nobody reads.
   security_reporting_email: support@fuime.com
+  # Fuime: the legal entity behind the product.
+  #
+  # "Fuime" is a product name, not a company. Every legal surface previously wrote
+  # "Fuime" where a contracting party belongs, which left the agreements with no
+  # counterparty at all — L2 makes the guardian the principal obligor, and an
+  # obligor needs someone to be obligated TO. The same entity is the Stripe Connect
+  # platform account holder and the recipient of the application fee, so it is the
+  # party a chargeback, an indemnity claim, or a regulator would actually reach.
+  #
+  # Kept here rather than inlined because it appears across the terms, the privacy
+  # policy, the guardian agreement and the standing footer disclosure, and those
+  # four disagreeing with each other is the failure worth engineering against.
+  #
+  # NOTE: the d/b/a is only true once the fictitious-name registration is filed;
+  # LAUNCH_SPEC §1.2 tracks that alongside the EIN and the business bank account.
+  legal_entity_name: Ninth Street Labs, LLC
+  legal_entity_dba: Ninth Street Labs, LLC (d/b/a Fuime)

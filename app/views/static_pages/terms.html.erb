@@ -13,7 +13,21 @@
   </p>
 <% end %>
 
-<h2>1. What Fuime is</h2>
+<h2>1. Who you are agreeing with</h2>
+<p>
+  Fuime is a product of
+  <strong><%= Rails.configuration.constants.legal_entity_name %></strong>. These
+  terms are an agreement between you and that company. Where this page says
+  &ldquo;Fuime&rdquo;, &ldquo;we&rdquo;, or &ldquo;us&rdquo;, it means
+  <%= Rails.configuration.constants.legal_entity_name %>.
+</p>
+<p>
+  If the account belongs to someone under 18, the person agreeing to these terms
+  is their parent or legal guardian, under the
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>.
+</p>
+
+<h2>2. What Fuime is</h2>
 <p>
   Fuime is software for keeping the books of a small business run by someone
   aged 13 to 17, with a parent or legal guardian on the account. It records
@@ -21,7 +35,7 @@
   time.
 </p>
 
-<h2>2. What Fuime is not</h2>
+<h2>3. What Fuime is not</h2>
 <p>This matters more than anything else on this page.</p>
 <ul>
   <li>
@@ -46,7 +60,7 @@
   </li>
 </ul>
 
-<h2>3. Who may use Fuime</h2>
+<h2>4. Who may use Fuime</h2>
 <ul>
   <li>You must be at least 13 years old. There are no exceptions.</li>
   <li>
@@ -64,7 +78,7 @@
   </li>
 </ul>
 
-<h2>4. Your account</h2>
+<h2>5. Your account</h2>
 <p>
   Keep your sign-in details to yourself. You are responsible for what happens
   under your account. Tell us at <%= mail_to "support@fuime.com" %> if you
@@ -72,7 +86,7 @@
   authentication.
 </p>
 
-<h2>5. Your business and your records</h2>
+<h2>6. Your business and your records</h2>
 <p>
   Your business is yours. Fuime does not own it, does not take a stake in it,
   and does not control it. The records you put into Fuime are yours too, and
@@ -84,7 +98,7 @@
   licences your local authority requires.
 </p>
 
-<h2>6. Fees</h2>
+<h2>7. Fees</h2>
 <p>
   When Fuime processes a payment for a business, it keeps
   <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of that payment
@@ -93,7 +107,7 @@
   fee, we will tell you before it applies to you.
 </p>
 
-<h2>7. What you may not do</h2>
+<h2>8. What you may not do</h2>
 <ul>
   <li>Break the law, or use Fuime to help someone else break the law.</li>
   <li>
@@ -112,42 +126,42 @@
   </li>
 </ul>
 
-<h2>8. A guardian can end this at any time</h2>
+<h2>9. A guardian can end this at any time</h2>
 <p>
   A parent or guardian may withdraw consent whenever they choose. When they do,
   the teen can no longer operate a business on Fuime. Records are kept
   according to our <%= link_to "Privacy Policy", privacy_path %>.
 </p>
 
-<h2>9. We can end it too</h2>
+<h2>10. We can end it too</h2>
 <p>
   We may suspend or close an account that breaks these terms, or where we
   believe someone is at risk. Where we can, we will tell you why and give you a
   chance to get your records out first.
 </p>
 
-<h2>10. No warranty</h2>
+<h2>11. No warranty</h2>
 <p>
   Fuime is provided &ldquo;as is&rdquo;. This is beta software. It may have
   bugs, it may be unavailable, and it may get something wrong. We do not
   promise it is error-free or that it will always be running.
 </p>
 
-<h2>11. Limit of liability</h2>
+<h2>12. Limit of liability</h2>
 <p>
   To the extent the law allows, Fuime is not liable for indirect or
   consequential losses, or for lost profits. Nothing here limits liability that
   cannot legally be limited.
 </p>
 
-<h2>12. Changes to these terms</h2>
+<h2>13. Changes to these terms</h2>
 <p>
   We will update the date at the top when these change. For a material change
   we will email you, and where the law requires it we will ask you to accept
   the new terms.
 </p>
 
-<h2>13. Open source</h2>
+<h2>14. Open source</h2>
 <p>
   Fuime is a fork of <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank" %>
   by Hack Club, and is licensed under the AGPL-3.0. The source code of the
@@ -155,8 +169,11 @@
   <%= link_to Rails.configuration.constants.github_url, Rails.configuration.constants.github_url, target: "_blank" %>.
 </p>
 
-<h2>14. Contact</h2>
-<p><%= mail_to "support@fuime.com" %></p>
+<h2>15. Contact</h2>
+<p>
+  <%= Rails.configuration.constants.legal_entity_name %> —
+  <%= mail_to "support@fuime.com" %>
+</p>
 
 <hr>
 

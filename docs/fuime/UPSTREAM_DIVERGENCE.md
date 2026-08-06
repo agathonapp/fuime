@@ -3099,3 +3099,55 @@ is the first Fuime money path with no Stripe call in it at all.
 in the first place. Awards can only redistribute what is already there, and nothing in
 the app funds a connected account. A school with $0 of its own balance can award
 nothing.
+
+---
+
+## The legal surface names a legal entity (2026-08-06)
+
+**Why:** every legal document in the app wrote "Fuime" where a contracting party
+belongs — "This agreement is between Fuime and you", "when this policy says *we* it
+means Fuime", "Fuime is a financial technology company". Fuime is a product name. It is
+not a legal person, cannot hold an obligation, and cannot be sued or sue. So the guardian
+agreement recorded consent to an agreement with nobody.
+
+That is not a copy problem. **L2 makes the guardian the principal obligor** — the whole
+architecture rests on an adult being bound where a minor's clickwrap would be voidable
+(*Doe v. Epic Games*) — and an obligor has to be obligated *to* someone. The same entity
+is the Stripe Connect platform account holder, the recipient of the application fee, and
+the party a chargeback, an indemnity claim, or a regulator actually reaches.
+
+The entity is **Ninth Street Labs, LLC**; Fuime is its product.
+
+| Change | Why | Files |
+|---|---|---|
+| `legal_entity_name` / `legal_entity_dba` in `constants.yml` | Four surfaces state the counterparty; four surfaces disagreeing is the failure worth engineering against. Same home as `github_url`, which exists for the same reason | `config/constants.yml` |
+| Guardian agreement **v2** — new versioned partial, names the entity, and states plainly that the guardian and not the minor is bound | The substance of L2, not just a naming fix | `app/views/guardianships/agreements/_2026_08_06_v2.html.erb`, `app/models/guardianship.rb` |
+| Terms: new §1 "Who you are agreeing with"; §§2–15 renumbered | A reader should learn who they are contracting with before what the product does | `app/views/static_pages/terms.html.erb` |
+| Privacy: "we" defined as the entity; contact names it | It is the party responsible for the data and the one a deletion request must reach | `app/views/static_pages/privacy.html.erb` |
+| Footer disclosure: "Fuime is a product of …, a financial technology company, not a bank" | The disclosure a reader sees without clicking. The old wording invited exactly the reading that Fuime *is* the company | `app/views/application/_footer.html.erb` |
+
+**Bumping the agreement version is additive, and now provably so.** `agreement_partial_for`
+resolves each stored version to its own file, so v1 signatures keep rendering v1's text.
+A new example asserts every superseded version still resolves — it fails the moment
+someone deletes or renames a retired partial.
+
+**One bug found while doing it.** v1's footer rendered
+`Guardianship::CURRENT_AGREEMENT_VERSION` rather than a literal. Harmless while only one
+version existed; the moment this commit bumped the constant, every historical v1 record
+would have displayed **v1's terms under v2's number** — the signature record and the text
+it points at silently disagreeing, which is precisely what that partial's own header
+comment warns against, arriving through the version line instead of the terms. Fixed to a
+literal, and guarded by a spec that reads the partials off disk and fails if any of them
+interpolates the constant or omits the version in its own filename. That guard holds for
+versions not yet written.
+
+**Verification:** 63 examples across `legal_pages`, `status_disclosure`,
+`guardianship_agreement`, `guardianship`, `guardianships_render`, `onboarding_terms` and
+`family_signup_flow` — 0 failures. The `status_disclosure` examples matter most here:
+they match on the load-bearing clauses ("not a bank", "does not offer FDIC-insured
+products"), so the footer rewording is pinned against L5 rather than trusted.
+
+**Not done, and deliberately outside the code:** the d/b/a is only true once the
+fictitious-name registration is filed, and the Stripe platform account has to be
+registered to the entity with an 18+ representative. `LAUNCH_SPEC.md` §1.2 and §2.1 carry
+both.
