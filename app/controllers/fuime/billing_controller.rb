@@ -12,9 +12,13 @@ module Fuime
     skip_after_action :verify_authorized
 
     def show
+      # The settings sidebar (users/_nav) is written against the Users
+      # controllers and reads @user to decide whose settings it is showing.
+      @user = current_user
       @pro_plan = Event::Plan::Pro.new
       @subscription = service.record
       @is_adult = adult?
+      @is_staff = current_user.staff?
       # A teen's upgrade path is their guardian; name them.
       @guardians = current_user.guardians.to_a
     end
@@ -46,8 +50,13 @@ module Fuime
       Fuime::SubscriptionService.new(guardian: current_user)
     end
 
+    # Staff are not teen founders (User#staff?). Without the exemption every
+    # Fuime admin reads as a minor here — no staff account has a birthday on
+    # file, and #minor_or_unknown_age? is fail-closed — so the console's own
+    # operators were shown "ask your parent" on their own subscription and
+    # could not buy, or even preview, the plan they sell.
     def adult?
-      !current_user.minor_or_unknown_age?
+      current_user.known_adult? || current_user.staff?
     end
 
     def refuse_minor
