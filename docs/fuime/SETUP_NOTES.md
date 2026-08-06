@@ -2,6 +2,25 @@
 
 ## Handoff (most recent first)
 
+**2026-08-06 — A merged PR is not the same as merged work.** PR #52 was opened at
+`67f9c1597`; two further commits were made on `fuime/paywall-signage` afterwards and
+never pushed, so ~1,400 lines of school awards — migration, model, service, controller,
+view, three spec files — merged nowhere while `main` looked healthy. Nothing failed
+loudly. The only symptom was a dirty `db/schema.rb` describing a table with no migration
+behind it. Recovered on `fuime/school-awards-rescue` (PR #56).
+
+**Two habits this argues for.** (1) After a PR merges, check
+`git log --oneline origin/<branch>..<branch>` before deleting the local branch — GitHub
+deletes the remote on merge and a later prune sends unpushed commits to reflog-only.
+(2) A dirty `db/schema.rb` is a *symptom*, never a thing to just commit; ask which
+migration produces it and confirm that migration is tracked at `HEAD`.
+
+**Also worth knowing:** running two sessions against one checkout and one dev Postgres is
+how this happened. An isolated `git worktree` plus `docker compose -p fuime run --rm web`
+from inside it reuses the running `fuime-db-1`/`fuime-redis-1` while mounting the
+worktree — but `.env.development` is gitignored and `app/assets/builds` is empty in a
+fresh worktree, so copy both in first or every view-rendering spec fails misleadingly.
+
 **2026-08-05 — The admin console is Fuime's now.** HCB's ops desk (ACH, checks,
 wires, Wise, disbursements, payroll, donations, Column/Plaid/Intrafi, G Suite,
 Emburse, the hack.af knowledgebase link) is out of the nav and admin_tools —
