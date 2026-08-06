@@ -229,18 +229,22 @@ class Event
         The Fuime Team
       MSG
 
+      # FUIME-DIVERGENCE: upstream's "adult" rejection was Hack Club's own
+      # letter — "considering us to be your fiscal sponsor", "our parent
+      # nonprofit, Hack Club" — none of which describes Fuime, and all of which
+      # would have gone out under Fuime's name to a real applicant. Rewritten
+      # for what Fuime actually is: a platform for young founders with a
+      # parent, guardian, or school as the responsible party.
       adult = <<~MSG.strip
         Hi #{user.first_name},
 
-        Thank you so much for considering us to be your fiscal sponsor for [#{name}](#{Rails.application.routes.url_helpers.application_url(self)})!
+        Thank you for applying to run [#{name}](#{Rails.application.routes.url_helpers.application_url(self)}) on Fuime!
 
-        Although your nonprofit's mission sounds incredible, we are refocusing our fiscal sponsorship platform to solely work with teen-led (high school specifically) initiatives within our Hack Club community. Our parent nonprofit, Hack Club, was founded to create a technical community for high schoolers, and Fuime is migrating toward a similar mission in order to realign with our parent organization.
+        Fuime is built specifically for young founders — students running real businesses with a parent, guardian, or school standing behind them. Ventures led by adults are outside what our platform is designed and priced for, so we're unable to take this one on.
 
-        While we tried to be a lifeline for groups outside of our normal mission, doing so caused us to drift away from our core focus of supporting teen-run orgs and to take on additional risk in areas we were less familiar with (teen-led STEM orgs are very different in nature from many others). Because of this, we've pulled back the reins and are working to refocus.
+        If a young founder is actually at the center of this business, reply and tell us about them — that changes the picture entirely.
 
-        Unfortunately, this means that unless a group is run by teens and is part of our Hack Club community, we don't have the capacity to take them on. If it would be helpful for us to send over some other fiscal sponsors, we'd be more than happy to do so, but at this time we are unable to sponsor your organization.
-
-        Sorry again for the bad news, and please let us know if there is anything else we can do to help. You can reach us at [support@fuime.com](mailto:support@fuime.com) or simply reply to this email.
+        You can reach us any time at [support@fuime.com](mailto:support@fuime.com) or by replying to this email.
 
         Best,
         The Fuime Team

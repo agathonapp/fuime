@@ -2820,3 +2820,89 @@ FUIME-DISABLED to match `fuime/disabled_modules_spec`; and an unreachable premis
 **Not ours:** `receipt_bin_mailbox_spec` (4) fails only on Apple Silicon — the
 `wkhtmltopdf-binary` gem ships no arm64 Debian 13 build. Deliberately NOT tagged disabled,
 since that would hide a feature that works everywhere else. See known-failures.md.
+
+---
+
+## Schools: students can earn, and money out has a second shape (2026-08-06)
+
+**Why:** the school programme was half-built. `Event::Plan::School` and the
+`institutionally_sponsored?` inheritance landed on 2026-08-05, but only three surfaces
+got the guardian->school substitution (the operate gate, `setup_payments?`,
+`acting_guardian`). The two money-out surfaces never did, and money-IN was never wired
+at all. Found while answering "what are we doing about payouts for schools, and can
+they make money?" — the honest answer was no to both.
+
+**`app/policies/event_policy.rb`, `app/models/payout_request.rb` — the wedge.**
+`decide_payout?` resolved through `guardian_reader?`, and a school venture has no
+Guardianship row by design. That was not a locked door but a trap: `request_payout?`
+resolves through `member?`, which `permitted_to_operate_business?` lets a school's
+students through, so a student could file a request nobody but a Fuime admin could
+decide — and `one_pending_request_per_venture` then stopped them filing another.
+**Every school venture was one click from being permanently wedged.** Both layers now
+substitute a manager, matching `setup_payments?`. `approver_must_not_be_the_requester`
+is new and universal: a manager is >= member, so without it one guide could file and
+self-approve in two clicks.
+
+**`app/models/event.rb` — `#payment_account`, and the fee.** `stripe_connected_account`
+is per-event with a UNIQUE index and no fallback, so a student sub org under a fully
+onboarded school resolved no account and took **exactly $0** while the storefront
+rendered a working payment form. `#payment_account` walks to the nearest ancestor
+holding one, gated on `institutionally_sponsored?` so an ordinary HCB parent/child pair
+never silently routes a child's money into the parent's account. Separately,
+`#revenue_fee` now reads `#billing_plan` (nearest institutional ancestor's plan):
+School inherits FeeWaived for a stated reason — a school already pays per student per
+year — but `EventService::Create` defaults sub orgs to Standard, so **students under a
+0% school were charged 4%**, the exact double-charge the plan exists to prevent.
+
+**`app/services/fuime/connect_payment_recorder.rb` — attribution.** With one account
+per tree, the account identifies the tree and metadata identifies which venture earned
+the money. `fuime_event_id` is a NARROWING step, never a lookup: the claimed venture
+must independently resolve `payment_account` to this same account record, so a forged
+id cannot reach an unrelated venture, a sibling school, or outside the tree. Absent
+metadata still falls back to the account holder, which is why every pre-existing
+payment and the whole family path are unaffected.
+
+**`app/services/fuime/payout_service.rb` — the safety property.** On a shared account
+Stripe's available balance is the WHOLE PROGRAMME's, and every balance check compared a
+student's request against it. **One student could have withdrawn another student's
+revenue**, visible only afterwards in the ledger. Available is now
+`min(stripe_available, max(venture.balance_v2_cents, 0))` when the account is shared.
+
+**`PayoutRequest#destination` (new column) — cash out.** Stripe pays out only to
+external accounts belonging to the account holder, so it **cannot** send a student's
+share from the school's account to the student's own bank; attaching it would breach
+Stripe's terms and would be Fuime directing a third party's funds (L1). So
+`personal_transfer` records the authorisation and the settlement while the school pays
+the student through its own AP, and the ledger debit waits for `#settle!` — somebody
+asserting the money went — rather than firing at approval, which would have let a
+venture spend against a balance already queued to be paid out. Same principle as
+`ConnectPayoutRecorder` writing from `payout.created`. **No bank details are stored
+anywhere:** `destination_note` is free text, deliberately, because the school already
+holds what it needs and a minor's account number is precisely the data L4 says not to
+keep.
+
+**`app/models/venture_cardholder.rb` — reinvesting.** The Accountholder had to be an
+overseeing guardian, so a school venture could not issue a card, so "leave it in and
+spend it on the business" was not actually one of the options. A school manager may now
+be Accountholder; `known_adult?` still applies on both branches, so it is only ever one
+adult substituted for another.
+
+**`app/models/event.rb#reload` — a real bug this work exposed.** The three tree-resolved
+answers are memoized and `reload` does not clear plain instance variables. Once
+`revenue_fee` started resolving through `billing_plan`,
+`institutionally_sponsored?` began running during event setup rather than only from a
+policy — so installing a plan on an object whose memo was warm left it billing on the
+old plan until the process restarted, which is exactly what the admin plan-change flow
+does. Caught by `event_institutional_sponsorship_spec`.
+
+**Specs:** `spec/support/school_tree.rb` (three-level fixture — two levels cannot tell
+"walks up" from "reads its parent") plus five new files, 72 examples. Every school
+assertion is paired with a family-path assertion, so none of this can become a route
+for a parent-backed venture to bypass its guardian.
+
+**Verification:** full suite **2656 examples, 8 failures, 17 pending** — all 8
+pre-existing and individually attributed, none in the changed surfaces. See
+known-failures.md.
+
+**Still not exercised against Stripe.** Nothing here changes that; the shared-account
+money-in path and `Stripe::Payout` on an owned account remain documentation-derived.
