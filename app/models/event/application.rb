@@ -362,6 +362,20 @@ class Event
         raise "Contract must be signed before activation" unless contract.signed?
       end
 
+      # Fuime: THE guardian gate for the deferred-onboarding flow. Signup and
+      # application no longer demand a parent up front — this is where the
+      # requirement lands instead, because activation is the moment a venture
+      # (and a manager seat on it) comes into existence. Without this, an admin
+      # could activate a guardianless minor's application and produce a venture
+      # its owner cannot act on; with it, the L2 control is exactly as strong as
+      # before, just later in the funnel. Institutionally sponsored applicants
+      # (school students) pass — the school is their responsible adult.
+      if user.minor_or_unknown_age? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+        raise ArgumentError,
+              "Cannot activate #{hashid}: #{user.email} is a minor with no active guardian. " \
+              "Their parent or guardian must accept the guardianship invite first (L2)."
+      end
+
       self.with_lock do
         raise ArgumentError.new("Event was already created") if event.present?
 
