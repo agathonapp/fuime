@@ -2,6 +2,35 @@
 
 ## Handoff (most recent first)
 
+**2026-08-06 — Schools can earn, and cash out has a second shape.** The school
+programme was half-built: only three of five surfaces got the guardian->school
+substitution, and money-in was never wired. A student sub org under a fully onboarded
+school took **$0** (`stripe_connected_account` is per-event with no fallback) and was
+billed **4%** while its school was 0%. Worse, `decide_payout?` needed a guardian that a
+school venture never has, while `request_payout?` let the student ask — so one click
+wedged the venture permanently. `Event#payment_account` / `#billing_plan` now resolve up
+the tree, gated on `institutionally_sponsored?` so upstream HCB sub-orgs are untouched.
+
+**Three things worth knowing before touching this.** (1) On a shared account Stripe's
+balance is the WHOLE programme's — anything reading a balance to decide what one student
+may take must cap against `balance_v2_cents`, or student A withdraws student B's
+revenue. (2) Stripe pays out only to the account holder's own bank, so it *cannot* send
+a student's share to a student's account; `personal_transfer` records the authorisation
+and the school pays through its own AP, and the ledger debit waits for `#settle!`, not
+approval. (3) `Event#reload` does NOT clear plain ivars — three tree-resolved answers
+are memoized, and a plan change on a warm object silently billed on the old plan until
+`reload` was taught to clear them.
+
+**Toolchain:** the Docker image was stale against `Gemfile.lock` (faraday bumped in
+`df797ba3e`) and rspec would not boot — `command not found: rspec`, then
+`Could not find faraday-1.10.6`. `docker compose build web` fixes it; the `gems` volume
+in docker-compose.yml is commented out, so gems live in the image and a lock bump means
+a rebuild. Baseline caveat now in known-failures.md: a fresh worktree has no
+`app/assets/builds`, so copy it in before baselining anything that renders a view.
+
+**Full suite: 2656 examples, 8 failures, 17 pending** — all eight pre-existing and
+individually attributed in known-failures.md. **Still nothing has run against Stripe.**
+
 **2026-08-04 (evening) — Cards and guardian verification.** Same branch. Three layers
 went in after the payouts work: (1) **account profiles** — `controller` is create-only at
 Stripe, so `:payments_only` (default, Stripe-liable) vs `:cards_enabled` (Fuime absorbs

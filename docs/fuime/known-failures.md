@@ -442,3 +442,23 @@ The `wkhtmltopdf-binary` gem ships no arm64 Debian 13 build. These pass on any s
 platform, so they are a local-toolchain gap and must not be marked FUIME-DISABLED — doing so
 would hide a working feature. Anyone triaging on an M-series Mac should expect exactly these
 four.
+
+### `2d806dadc` — full suite, measured 2026-08-06
+
+First full-suite measurement recorded in this file. **2656 examples, 8 failures, 17
+pending.** All eight attributed individually; none are in the school-money surfaces
+changed by that commit.
+
+| Spec | Verdict | How attributed |
+|---|---|---|
+| `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment | Apple Silicon — `wkhtmltopdf-binary` ships no `debian_13_arm64` build. Documented above. |
+| `event/plan_spec.rb:32` | Pre-existing | `selectable_plans` asserts a six-plan lineup; `Event::Plan::School` (committed 2026-08-05 with `selectable? == true`) makes seven. Two committed specs contradict each other — `event_institutional_sponsorship_spec` asserts School IS selectable. Reproduced at `HEAD` before the school-money commit. |
+| `stripe_connected_account_spec.rb:134` | Pre-existing | `mirrors livemode` expects true, gets false. Reproduced at `HEAD` before the school-money commit. |
+| `guardianships_controller_index_spec.rb:91` | Pre-existing | Reproduced at `b115d34dc` (with `app/assets/builds` copied in, so not the asset artifact) — 6 examples, same 1 failure. Introduced by `e6691c7ac` "Auto-send the guardian invite". |
+| `requirement_collections_controller_spec.rb:156` | Run-order pollution | **Passes in isolation.** Fails only in a full run, so it is leakage from an earlier example rather than a defect in the code under test. Worth fixing; not a regression. |
+
+**Method note.** A fresh `git worktree` has no `app/assets/builds`, and every
+view-rendering spec fails without it (see the asset section above), which makes a naive
+worktree baseline useless for controller specs — it showed 13 failures where the working
+tree showed 2. Copy `app/assets/builds/.` into the worktree before comparing anything
+that renders a view.

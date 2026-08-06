@@ -109,17 +109,22 @@ Rails.application.routes.draw do
   get "/:event_slug/payments/verify", to: "fuime/requirement_collections#show", as: :fuime_requirement_collection
   post "/:event_slug/payments/verify", to: "fuime/requirement_collections#create", as: :fuime_requirement_collection_submit
 
-  # Fuime: moving money out to the family's bank. The teen asks (#create), the
-  # guardian decides (#approve / #reject) — see Fuime::PayoutsController for why
-  # those are separate authorizations rather than one "can manage payouts".
+  # Fuime: moving money out. The teen asks (#create), the responsible adult decides
+  # (#approve / #reject) — see Fuime::PayoutsController for why those are separate
+  # authorizations rather than one "can manage payouts".
   #
-  # Approve and reject are POSTs on a member route rather than a PATCH on the
-  # request, because each is a distinct decision being recorded, not an edit to a
-  # field.
+  # #settle exists only for the school path, where approving a transfer and having
+  # actually paid it are separate events performed by different people. On a family
+  # venture Stripe's own webhook is what says the money landed and there is nothing
+  # for a human to confirm.
+  #
+  # All four are POSTs on a member route rather than a PATCH on the request, because
+  # each is a distinct decision being recorded, not an edit to a field.
   get "/:event_slug/payouts", to: "fuime/payouts#index", as: :fuime_payouts
   post "/:event_slug/payouts", to: "fuime/payouts#create", as: :fuime_payouts_create
   post "/:event_slug/payouts/:id/approve", to: "fuime/payouts#approve", as: :fuime_payout_approve
   post "/:event_slug/payouts/:id/reject", to: "fuime/payouts#reject", as: :fuime_payout_reject
+  post "/:event_slug/payouts/:id/settle", to: "fuime/payouts#settle", as: :fuime_payout_settle
 
   # Fuime: the venture's business cards. Note the verbs are split by WHO may do them,
   # not by REST tidiness — freeze is available to the teen (a lost card must be stoppable
