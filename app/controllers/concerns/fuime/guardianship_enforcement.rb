@@ -75,6 +75,13 @@ module Fuime
       # no birthday on file. That locked admins out of the admin console itself.
       return if current_user.admin? || current_user.auditor?
       return if current_user.permitted_to_operate_business?
+      # A school student has no guardianship and never will — the school is the
+      # responsible adult (Event::Plan::School). Without this, every student at
+      # a school is redirected to "invite your parent" on every page. Their
+      # ability to ACT is still enforced per record: EventPolicy allows them on
+      # school ventures and continues to block a personal venture until a real
+      # guardian accepts.
+      return if current_user.institutionally_vouched_for?
       return if allowed_while_awaiting_guardian?
 
       # Don't fight the onboarding redirect — a user who hasn't set a name yet

@@ -85,6 +85,19 @@ RSpec.describe "institutional sponsorship", type: :model do
       expect(EventPolicy.new(teen, venture).send(:permitted_to_operate_business?)).to be true
     end
 
+    it "does not let school vouching leak to a student's personal venture" do
+      # The filter exemption (User#institutionally_vouched_for?) must not loosen
+      # per-record enforcement: a school vouches for a student inside its
+      # programme, not for a side business their family never agreed to.
+      _school, venture = school_tree
+      OrganizerPositionInvite.create!(event: venture, user: teen, sender: teen, role: :member)
+
+      teen.reload
+      expect(teen.institutionally_vouched_for?).to be true
+      personal = create(:event)
+      expect(EventPolicy.new(teen, personal).send(:permitted_to_operate_business?)).to be false
+    end
+
     it "still refuses a guardian-less minor on their own personal venture" do
       # Scoped to the record, not the user: the school vouches for the student
       # inside its programme and nowhere else.

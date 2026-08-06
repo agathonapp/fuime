@@ -538,6 +538,26 @@ class User < ApplicationRecord
     guardianships_as_minor.active.exists?
   end
 
+  # Fuime: does an institution vouch for this user's presence on the platform?
+  #
+  # True when they hold a position in any institutionally sponsored org — a
+  # school venture, where the school stands in loco parentis. Used by the
+  # guardianship enforcement filter so a school student is not bounced to
+  # "invite your parent" on every page (found when the first school student
+  # spec returned a 302 to /guardian/new instead of a page).
+  #
+  # Deliberately NOT folded into #needs_guardian?: that predicate also gates
+  # operating a PERSONAL venture, and a school vouches for a student inside its
+  # programme, not for a side business their family never agreed to. The
+  # record-scoped branch in EventPolicy#permitted_to_operate_business? handles
+  # the school side; this only stops the global filter from stranding them.
+  def institutionally_vouched_for?
+    return @institutionally_vouched_for if defined?(@institutionally_vouched_for)
+
+    @institutionally_vouched_for =
+      events.not_hidden.any? { |event| event.institutionally_sponsored? }
+  end
+
   # Fuime: is this user the signing guardian for someone else?
   #
   # Deliberately scoped to ACTIVE guardianships, which is what keeps this from

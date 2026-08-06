@@ -20,21 +20,44 @@
        imposing them. Saying it here, in the consent moment, is both the honest
        and the defensible place. %>
 
+<%# Two audiences read this consent moment, and they are legally different
+    parties. A guardian is an individual backing the account with their own
+    identity; a school administrator is a representative completing it for the
+    institution, whose EIN — not the administrator's own finances — anchors the
+    account (business_type "company", see ConnectOnboardingService). Telling a
+    business-office employee "you will own this payment account" was both wrong
+    and alarming, which the first prod render of this page demonstrated. %>
 <%= render "application/callout", type: "info", title: "What to expect" do %>
   <ul class="list-disc pl-5 mb-2">
     <li class="mb-1">
       Stripe — Fuime's payments partner — will ask you to confirm your identity in
       a secure Stripe window. That step is Stripe's, not Fuime's.
     </li>
-    <li class="mb-1">
-      You'll be asked for your name, date of birth, address and the last four
-      digits of your Social Security number. <strong>Fuime never sees or stores
-      any of it</strong> — it goes directly to Stripe.
-    </li>
-    <li class="mb-1">
-      You will own this payment account. Money your young founder collects settles
-      to the bank account you connect, not to Fuime.
-    </li>
+    <% if @event.institutionally_sponsored? %>
+      <li class="mb-1">
+        You'll enter your school's legal details — name, EIN and address — and
+        yourself as the contact completing the form. Stripe also asks for the
+        contact's name, date of birth, address and last four digits of their
+        Social Security number; that identifies you as the representative, not as
+        the account's owner. <strong>Fuime never sees or stores any of it</strong>
+        — it goes directly to Stripe.
+      </li>
+      <li class="mb-1">
+        <strong>Your school owns this payment account.</strong> Money students'
+        ventures collect settles to the school's bank account, not to Fuime — and
+        never to any employee personally.
+      </li>
+    <% else %>
+      <li class="mb-1">
+        You'll be asked for your name, date of birth, address and the last four
+        digits of your Social Security number. <strong>Fuime never sees or stores
+        any of it</strong> — it goes directly to Stripe.
+      </li>
+      <li class="mb-1">
+        You will own this payment account. Money your young founder collects settles
+        to the bank account you connect, not to Fuime.
+      </li>
+    <% end %>
     <li class="mb-0">
       Fuime's platform fee is
       <strong><%= number_to_percentage(@event.plan.revenue_fee * 100, precision: 1) %></strong>
