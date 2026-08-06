@@ -34,6 +34,31 @@ RSpec.describe Fuime::GuardianInviteService do
     }.to raise_error(described_class::InvalidInvite, /own guardian/)
   end
 
+  describe "when cosigner_email is required at all" do
+    # required_submission_fields is private; send is the spec-honest way in.
+    def required?(application) = application.send(:required_submission_fields).include?("cosigner_email")
+
+    it "is required for a minor's first application" do
+      expect(required?(create(:event_application, user: teen, teen_led: true))).to be true
+    end
+
+    it "is NOT required for a second application once a guardian is active" do
+      guardian = create(:user, birthday: 40.years.ago.to_date)
+      Guardianship.create!(guardian:, minor: teen, status: :active)
+
+      second = create(:event_application, user: teen.reload, teen_led: true, name: "Business Two")
+      expect(required?(second)).to be false
+    end
+
+    it "is NOT required for a school student, who must never be asked for a parent" do
+      school = create(:event, plan_type: Event::Plan::School)
+      venture = create(:event, name: "Cosigner School Venture", parent: school)
+      OrganizerPositionInvite.create!(event: venture, user: teen, sender: teen, role: :member)
+
+      expect(required?(create(:event_application, user: teen.reload, teen_led: true))).to be false
+    end
+  end
+
   describe "on application submission" do
     it "sends the invite from cosigner_email automatically" do
       application = create(:event_application, user: teen, teen_led: true,
