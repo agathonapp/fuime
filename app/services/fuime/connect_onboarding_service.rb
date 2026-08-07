@@ -341,8 +341,79 @@ module Fuime
              else
                { fuime_guardian_user_id: @guardian.id }
              end)
-        }
+        },
+        **individual_prefill
       }
+    end
+
+    # Fuime: hand Stripe everything we already know about the guardian, so they are
+    # not asked to retype it.
+    #
+    # ── Why this is worth a method ──────────────────────────────────────────
+    #
+    # Every venture needs its guardian through Stripe's identity flow, and that flow
+    # is the single biggest drop-off in the funnel. At a school rolling out to
+    # thousands of families, the difference between a parent confirming prefilled
+    # details and a parent typing their name, date of birth and phone number into a
+    # form on a phone is measured in hundreds of students who never get to trade.
+    #
+    # `docs/fuime/STRIPE_PASS.md` records that API prefill was exercised against real
+    # Stripe and accepted — "everything accepted except `tos_acceptance`" — so this is
+    # a proven capability that was simply never wired up. Only `email` and the
+    # business name were being sent.
+    #
+    # ── What this does NOT change ───────────────────────────────────────────
+    #
+    # The privacy position is untouched. `requirement_collection` stays "stripe" on
+    # the default profile, so Stripe still collects and holds identity documents and
+    # Fuime still stores none. These are fields Fuime already has (a guardian gives a
+    # birthday at signup) and that Stripe requires regardless; sending them earlier
+    # does not create a new copy anywhere.
+    #
+    # ── Why every field is optional and individually guarded ────────────────
+    #
+    # A malformed prefill is worse than no prefill: Stripe validates on create, so one
+    # bad value fails the whole account and the family cannot onboard at all. That is
+    # a strictly worse outcome than a parent typing their own phone number. So each
+    # field is omitted unless it is present and well-formed, and nothing here can
+    # raise — `first_name`/`last_name` already use safe navigation internally, and a
+    # user with no birthday simply contributes no `dob`.
+    def individual_prefill
+      # Institutional accounts are `business_type: "company"` — the account holder is
+      # the school, and its representative fields are a different shape entirely
+      # (company name, EIN, a named representative). Prefilling an `individual` block
+      # onto a company account is not a smaller version of this; it is wrong.
+      return {} if institutional?
+
+      individual = {
+        email: @guardian.email,
+        first_name: @guardian.first_name(legal: true),
+        last_name: @guardian.last_name(legal: true),
+        phone: e164_phone,
+        dob: dob_for(@guardian)
+      }.compact_blank
+
+      individual.present? ? { individual: } : {}
+    end
+
+    def dob_for(user)
+      return nil if user.birthday.blank?
+
+      { day: user.birthday.day, month: user.birthday.month, year: user.birthday.year }
+    end
+
+    # Stripe wants E.164. Fuime's `phone_number` is free text a user typed, and is
+    # only meaningful once verified — an unverified number is a claim, not a fact.
+    #
+    # Deliberately strict rather than clever: a normaliser that guesses at country
+    # codes would eventually guess wrong and fail an account create. Anything that is
+    # not already unambiguous E.164 is left for the parent to enter themselves, which
+    # costs one field and cannot break onboarding.
+    def e164_phone
+      return nil unless @guardian.phone_number_verified?
+
+      phone = @guardian.phone_number.to_s.strip
+      phone.match?(/\A\+[1-9]\d{7,14}\z/) ? phone : nil
     end
 
     # See the class comment: never rely on the global Stripe.api_key here.
