@@ -259,19 +259,17 @@ const server = createServer(async (req, res) => {
 // signups once. Say it loudly at boot so a deploy cannot make that mistake
 // quietly again. api/waitlist.js itself is untouched (docs/BRIEF.md).
 function warnOnStorageConfig() {
-  const haveStore = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  )
+  const haveStore = Boolean(process.env.WAITLIST_REDIS_URL)
   const haveMail = Boolean(
     process.env.RESEND_API_KEY && process.env.WAITLIST_NOTIFY_TO
   )
 
   if (haveStore) {
-    console.log('waitlist: durable store configured (Upstash)')
+    console.log('waitlist: durable store configured (Render Key Value)')
   } else if (haveMail) {
     console.warn(
-      'waitlist: WARNING — no durable store. UPSTASH_REDIS_REST_URL/_TOKEN are ' +
-        'unset, so signups are emailed and NOT stored. There is no roster, ' +
+      'waitlist: WARNING — no durable store. WAITLIST_REDIS_URL is unset, so ' +
+        'signups are emailed and NOT stored. There is no roster, ' +
         '/admin/waitlist has nothing to read, and signups taken in this state ' +
         'cannot be recovered from anywhere but the notification inbox.'
     )

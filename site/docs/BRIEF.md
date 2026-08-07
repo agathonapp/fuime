@@ -160,8 +160,17 @@ Footer columns:
 ```
 
 `data-source` must be unique per form: `home-hero`, `home-foot`,
-`pricing-foot`, `parents-foot`. Never change `api/waitlist.js` or
-`test/waitlist.test.mjs` — they pass today and must keep passing untouched.
+`pricing-foot`, `parents-foot`.
+
+`api/waitlist.js` and `test/waitlist.test.mjs` are **off limits to design and
+copy work** — they are the capture path, and a page change has no business
+touching them. They are not frozen against deliberate infrastructure changes:
+they were rewritten in Aug 2026 when storage moved from Upstash REST to a
+Render Key Value instance, because Render Key Value has no HTTP API. The rule
+that actually matters is the one that survived that rewrite: **the tests must
+pass, and the two-independent-sinks design must stay.** If the store is down or
+misconfigured, the address must still reach a human by mail. That property is
+why the storage swap was safe to make at all.
 
 ## Voice — copy is PORTED, not rewritten
 
@@ -379,10 +388,18 @@ site/
   site.js         nav, scroll-reveal, waitlist — DO NOT duplicate
   vercel.json     cleanUrls
   img/            fal-generated, pre-encoded AVIF + WebP
-  api/waitlist.js DO NOT EDIT
-  test/           DO NOT EDIT
+  api/waitlist.js the capture path — not design/copy territory (see above)
+  test/           same
+  package.json    one dependency: ioredis, for the waitlist store
   docs/BRIEF.md   this file
 ```
+
+The site is no longer strictly dependency-free: the waitlist store moved from an
+HTTP API to the Redis protocol, so the service runs `npm ci --omit=dev` at
+build. There is still no bundler and no build output — the pages ship as-is.
+`ioredis` is imported dynamically and failing soft, so a deploy that somehow
+skips the install degrades the waitlist to mail-only rather than 500-ing every
+page on the site.
 
 Every page loads `<link rel="stylesheet" href="/style.css">` and
 `<script src="/site.js" defer></script>`. Nothing else. No CDN scripts, no

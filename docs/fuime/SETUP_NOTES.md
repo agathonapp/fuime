@@ -2,6 +2,28 @@
 
 ## Handoff (most recent first)
 
+**2026-08-07 — The waitlist runs on Render only; Upstash is gone.** Storage moved
+from Upstash REST to a Render Key Value instance, so the site now speaks the
+Redis protocol (`ioredis`, `npm ci --omit=dev` at build) and Rails reads through
+the `redis` gem. Key layout unchanged, so nothing had to be migrated. Set
+`WAITLIST_REDIS_URL` explicitly on both services — **there is no fallback to
+`REDIS_URL` on purpose**: falling back would let a forgotten variable look like
+an empty waitlist rather than a missing one. Locally, put it on its own database
+(`redis://localhost:6379/2`); the specs use DB 15 and flush it.
+
+**Requires a Render dashboard action:** `fuime-redis` must go **free → starter
+with journal-snapshot** (`render.yaml` says so, but a blueprint sync has to
+apply it). Free Key Value has no persistence — it was also silently dropping
+Sidekiq jobs on every restart. Watch the tripwire: `noeviction` means a Rails
+cache big enough to fill the instance starts *rejecting* waitlist writes; split
+the roster onto its own instance when cache memory becomes non-trivial.
+
+`fuime-web` was already failing before any of this (deploy ~20:06 UTC Aug 6,
+before both merges) — **still undiagnosed, needs the Render deploy log.** The
+production Docker build reproduces locally through bundle and yarn install, so
+it is more likely boot or the `/up` health check than the build. 27 Rails
+examples + 35 site tests green; rubocop and erb_lint clean.
+
 **2026-08-06 — The waitlist is readable, and the lost signups are recoverable.**
 `/admin/waitlist`, reachable from both the Misc nav dropdown and the admin_tools
 card desk: count against the 1,000 goal, 30-day daily bars, source breakdown,

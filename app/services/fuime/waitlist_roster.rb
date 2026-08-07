@@ -17,9 +17,9 @@
 # `fuime-redis`: that one is the Sidekiq queue, ActionCable and the Rails cache,
 # it runs `maxmemoryPolicy: noeviction`, and a cache large enough to fill memory
 # would start failing writes — including waitlist writes. Durable business data
-# does not share a memory budget with a cache. WAITLIST_REDIS_URL points at its
-# own instance; it falls back to REDIS_URL so a dev machine with one Redis works
-# without extra setup.
+# should not share a memory budget with a cache forever, so WAITLIST_REDIS_URL
+# is its own variable: splitting the roster onto a dedicated instance later is
+# one new service and one changed value, not a code change.
 #
 # Read-only by construction: the only commands issued are SCARD, SMEMBERS and
 # HGETALL. The rake import task is the one thing in Fuime that writes here.
@@ -50,8 +50,15 @@ module Fuime
 
     Signup = Struct.new(:email, :signed_up_at, :source, :ip, keyword_init: true)
 
+    # WAITLIST_REDIS_URL only, with deliberately NO fallback to REDIS_URL.
+    # The fallback is tempting for dev convenience and is a trap in production:
+    # REDIS_URL is always set on fuime-web, so a service that simply forgot this
+    # variable would quietly read the Sidekiq/cache instance, find no roster
+    # there, and render a confident zero. Silently reporting an empty waitlist
+    # is the precise failure this page exists to end. Unset must mean "I have
+    # nothing to read", loudly, so set it explicitly in development too.
     def self.url
-      Credentials.fetch(:WAITLIST_REDIS_URL).presence || Credentials.fetch(:REDIS_URL).presence
+      Credentials.fetch(:WAITLIST_REDIS_URL).presence
     end
 
     def self.configured?

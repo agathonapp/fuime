@@ -19,8 +19,6 @@
 // Keeping Resend as the second sink is what makes the store swappable at all:
 // if the store is down or misconfigured, the address still reaches a human.
 
-import Redis from 'ioredis'
-
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const LIST_KEY = 'fuime:waitlist'
 
@@ -78,12 +76,42 @@ function markNewMemory(email, now) {
 // request forever while a visitor waits on the form, hence the timeouts and
 // the retry ceiling.
 let client = null
+let clientResolved = false
 
-export function getRedis() {
-  if (client) return client
+// ioredis is loaded dynamically, and that is deliberate rather than stylistic.
+// A top-level `import` of a missing dependency is a module-load crash, which on
+// this service means the ENTIRE marketing site 500s — pages, pricing, /parents,
+// everything — because one optional sink is unavailable. The dependency arrived
+// with the move off Upstash, so any deploy whose build step predates that (a
+// dashboard buildCommand that was never blueprint-synced, a rollback, a cached
+// build) would take fuime.com down. Failing soft to mail-only is the same
+// degradation the handler already models everywhere else.
+async function loadRedisClass() {
+  try {
+    return (await import('ioredis')).default
+  } catch (e) {
+    console.error(
+      'waitlist: ioredis is not installed — falling back to mail-only. ' +
+        'Run `npm ci` on this service. (' + (e?.message ?? e) + ')'
+    )
+    return null
+  }
+}
+
+export async function getRedis() {
+  if (clientResolved) return client
 
   const url = process.env.WAITLIST_REDIS_URL
-  if (!url) return null
+  if (!url) {
+    clientResolved = true
+    return null
+  }
+
+  const Redis = await loadRedisClass()
+  if (!Redis) {
+    clientResolved = true
+    return null
+  }
 
   client = new Redis(url, {
     lazyConnect: false,
@@ -101,12 +129,15 @@ export function getRedis() {
   // the whole site down — the marketing pages must outlive a store outage.
   client.on('error', e => console.error('waitlist redis:', e?.message ?? e))
 
+  clientResolved = true
   return client
 }
 
-// Test seam: swap in a fake client, or reset between cases.
+// Test seam: swap in a fake client, or pass null to reset so the next call
+// re-reads the environment.
 export function setRedis(c) {
   client = c
+  clientResolved = c !== null && c !== undefined
 }
 
 // Fails OPEN: if the limiter itself errors we take the signup rather than
@@ -205,7 +236,7 @@ export default async function handler(req, res) {
       .slice(0, 45),
   }
 
-  const redis = getRedis()
+  const redis = await getRedis()
   const resendKey = process.env.RESEND_API_KEY
   const notifyTo = process.env.WAITLIST_NOTIFY_TO
 
