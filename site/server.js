@@ -97,9 +97,21 @@ function isPublic(rel) {
 // Vercel's cleanUrls: /pricing serves pricing.html, and /pricing.html
 // redirects to /pricing so only one URL is canonical.
 async function resolveFile(pathname) {
+  // decodeURIComponent throws URIError on a malformed escape — `/%` is enough.
+  // Uncaught, that propagates out of the request handler and kills the process,
+  // so any scanner hitting a stray percent sign restarts the whole marketing
+  // site. Seen repeatedly in production logs. A path we cannot decode is simply
+  // not a path we serve: treat it as a 404.
+  let decoded
+  try {
+    decoded = decodeURIComponent(pathname)
+  } catch {
+    return null
+  }
+
   // normalize() collapses ../ before we join, so a crafted path cannot climb
   // out of ROOT.
-  const rel = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '')
+  const rel = normalize(decoded).replace(/^(\.\.[/\\])+/, '')
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 

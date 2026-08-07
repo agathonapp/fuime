@@ -4,11 +4,14 @@
   <div class="card mb-4">
     <strong>No stored list.</strong>
     <p class="mt-1 mb0">
-      <code>UPSTASH_REDIS_REST_URL</code> and <code>UPSTASH_REDIS_REST_TOKEN</code> are not
-      set for this app, so there is nothing here to read. Note that the marketing site's
-      <code>/api/waitlist</code> also accepts a Resend-only configuration — if that is how it
-      is deployed, signups exist as email in the <code>WAITLIST_NOTIFY_TO</code> inbox and
-      nowhere else, and wiring Upstash now will not backfill them.
+      <code>WAITLIST_REDIS_URL</code> is not set for this app, so there is nothing here to
+      read. It should point at the same Render Key Value instance the marketing site writes
+      to. There is deliberately no fallback to <code>REDIS_URL</code> — that one is the
+      Sidekiq and cache instance, and reading it would show an empty waitlist rather than a
+      missing one. Note also that the site's <code>/api/waitlist</code> accepts a
+      Resend-only configuration: if that is how it is deployed, signups exist as email in
+      the <code>WAITLIST_NOTIFY_TO</code> inbox and nowhere else, and wiring the store now
+      will not backfill them.
     </p>
   </div>
 <% elsif @error.present? %>

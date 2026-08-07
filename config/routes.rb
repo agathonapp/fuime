@@ -464,7 +464,7 @@ Rails.application.routes.draw do
       post "reject", on: :member
     end
     resources :payments, only: [:index]
-    # FUIME: read-only view of the marketing site's waitlist (Upstash).
+    # FUIME: read-only view of the marketing site's waitlist (Render Key Value).
     resources :waitlist, only: [:index]
     resources :payroll_positions, only: [:index] do
       post "reject", on: :member

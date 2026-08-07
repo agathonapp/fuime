@@ -3,10 +3,10 @@
 # One-off backfill for waitlist signups that were never stored.
 #
 # Why this exists: `site/api/waitlist.js` accepts a Resend-only configuration —
-# it runs happily with no Upstash at all, emailing each signup and storing
+# it runs happily with no store at all, emailing each signup and storing
 # nothing. That is how fuime-site was actually deployed, so the earliest
-# signups exist only as mail in the WAITLIST_NOTIFY_TO inbox. Wiring Upstash
-# stores everything from that moment on but does not reach backwards. This
+# signups exist only as mail in the WAITLIST_NOTIFY_TO inbox. Wiring the store
+# saves everything from that moment on but does not reach backwards. This
 # task reaches backwards.
 #
 #   rake fuime:waitlist:import[tmp/waitlist-backfill.csv]
@@ -31,7 +31,7 @@
 # app reads, so run it against the environment whose list you mean to change.
 namespace :fuime do
   namespace :waitlist do
-    desc "Backfill waitlist signups from a CSV/text file into Upstash"
+    desc "Backfill waitlist signups from a CSV/text file into the waitlist store"
     task :import, [:path, :mode] => :environment do |_t, args|
       path = args[:path].presence or abort "usage: rake fuime:waitlist:import[path/to/file.csv]"
       dry = args[:mode].to_s.downcase.start_with?("dry")
