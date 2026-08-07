@@ -63,5 +63,6 @@ module Fuime
         current_period_end: subscription.try(:current_period_end).present? ? Time.at(subscription.current_period_end) : nil
       )
     end
+
   end
 end

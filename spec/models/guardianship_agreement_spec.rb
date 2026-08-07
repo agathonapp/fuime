@@ -43,7 +43,7 @@ RSpec.describe Guardianship, type: :model do
         "..%2f..%2fsecrets",
         "2026-08-01-v1/../../../config/database",
         "foo bar",
-        "Foo-V1",          # uppercase is outside the allowlist
+        "Foo-V1", # uppercase is outside the allowlist
         "2026;rm -rf /",
       ].each do |unsafe|
         expect(described_class.agreement_partial_for(unsafe)).to be_nil,

@@ -16,10 +16,10 @@ export default class extends Controller {
     publishableKey: String,
     clientSecret: String,
     returnUrl: String,
-    refreshUrl: String
+    refreshUrl: String,
   }
 
-  async connect () {
+  async connect() {
     if (!this.publishableKeyValue || !this.clientSecretValue) {
       this.showFallback("Payment setup isn't available right now.")
       return
@@ -38,7 +38,7 @@ export default class extends Controller {
           }
 
           const response = await fetch(this.refreshUrlValue, {
-            headers: { Accept: 'application/json' }
+            headers: { Accept: 'application/json' },
           })
           if (!response.ok) throw new Error('Could not refresh Stripe session')
           const body = await response.json()
@@ -51,8 +51,8 @@ export default class extends Controller {
         // rendered page so the component follows the active theme instead of
         // hardcoding one.
         appearance: {
-          variables: this.appearanceVariables()
-        }
+          variables: this.appearanceVariables(),
+        },
       })
 
       const onboarding = instance.create('account-onboarding')
@@ -83,28 +83,31 @@ export default class extends Controller {
   // light) rather than a palette hardcoded here that drifts the next time the
   // CSS changes. Falls back to sensible values when a computed color is
   // transparent, which is what getComputedStyle reports for unset backgrounds.
-  appearanceVariables () {
+  appearanceVariables() {
     const styles = getComputedStyle(document.body)
     const rootStyles = getComputedStyle(document.documentElement)
     const bodyBackground = styles.backgroundColor
     const transparent = /rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/
 
     return {
-      colorBackground: transparent.test(bodyBackground) ? '#ffffff' : bodyBackground,
+      colorBackground: transparent.test(bodyBackground)
+        ? '#ffffff'
+        : bodyBackground,
       colorText: styles.color,
       // --primary is $fuime-blue from _variables.scss; the fallback is the same
       // value so a missing custom property degrades to the identical color.
-      colorPrimary: rootStyles.getPropertyValue('--primary').trim() || '#2242FF',
+      colorPrimary:
+        rootStyles.getPropertyValue('--primary').trim() || '#2242FF',
       borderRadius: '8px',
-      fontFamily: styles.fontFamily
+      fontFamily: styles.fontFamily,
     }
   }
 
-  hideFallback () {
+  hideFallback() {
     if (this.hasFallbackTarget) this.fallbackTarget.hidden = true
   }
 
-  showFallback (message) {
+  showFallback(message) {
     if (!this.hasFallbackTarget) return
     this.fallbackTarget.hidden = false
     this.fallbackTarget.textContent = message

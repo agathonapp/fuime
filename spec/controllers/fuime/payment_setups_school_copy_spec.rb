@@ -50,7 +50,7 @@ RSpec.describe Fuime::PaymentSetupsController do
       venture = school_venture
       manager = create(:user)
       OrganizerPositionInvite.create!(event: venture.parent, user: manager, sender: manager, role: :manager)
-                               # self-invites auto-accept in after_create_commit (user == sender)
+      # self-invites auto-accept in after_create_commit (user == sender)
       create_session(manager, verified: true)
 
       get(:new, params: { event_slug: venture.slug })
@@ -87,7 +87,7 @@ RSpec.describe Fuime::PaymentSetupsController do
       # anywhere near the actual cause.
       student = create(:user, :minor, verified: true)
       OrganizerPositionInvite.create!(event: venture, user: student, sender: student, role: :member)
-                               # self-invites auto-accept in after_create_commit (user == sender)
+      # self-invites auto-accept in after_create_commit (user == sender)
       create_session(student, verified: true)
 
       get(:show, params: { event_slug: venture.slug })

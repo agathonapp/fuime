@@ -168,7 +168,7 @@ module Fuime
 
     def destination_note_param
       params[:destination_note].to_s.gsub(/[[:cntrl:]]/, "").strip
-            .truncate(MAX_DESTINATION_NOTE_LENGTH).presence
+                               .truncate(MAX_DESTINATION_NOTE_LENGTH).presence
     end
 
     # The two paths end differently, so they cannot share one sentence. Telling a

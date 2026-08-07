@@ -30,18 +30,20 @@ RSpec.describe GuardianVerification, type: :model do
   # this fails rather than shipping — which is the only way a rule like this survives
   # contact with a deadline.
   describe "the table itself cannot hold personal data" do
-    FORBIDDEN_COLUMN_FRAGMENTS = %w[
-      ssn social_security tax_id tin ein
-      first_name last_name full_name legal_name
-      dob date_of_birth birthday
-      address line1 line2 postal city state zip
-      id_number document_number passport license
-      image photo selfie scan front back file_data attachment
-    ].freeze
+    let(:forbidden_column_fragments) do
+      %w[
+        ssn social_security tax_id tin ein
+        first_name last_name full_name legal_name
+        dob date_of_birth birthday
+        address line1 line2 postal city state zip
+        id_number document_number passport license
+        image photo selfie scan front back file_data attachment
+      ].freeze
+    end
 
     it "has no column whose name suggests it holds identity data" do
       offending = described_class.column_names.select do |column|
-        FORBIDDEN_COLUMN_FRAGMENTS.any? { |fragment| column.include?(fragment) }
+        forbidden_column_fragments.any? { |fragment| column.include?(fragment) }
       end
 
       expect(offending).to be_empty,

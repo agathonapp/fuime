@@ -109,7 +109,7 @@ class StripeConnectedAccount < ApplicationRecord
   # evidence of agreement.
   def controller_matches_requested_profile?
     expected = ::Fuime::ConnectOnboardingService::PROFILES
-                 .dig(controller_profile.to_sym, :controller)
+               .dig(controller_profile.to_sym, :controller)
     return false if expected.blank? || controller.blank?
 
     controller.dig("losses", "payments") == expected[:losses][:payments] &&
@@ -282,4 +282,5 @@ class StripeConnectedAccount < ApplicationRecord
 
     ::Fuime::StripeHash.deep(value).deep_stringify_keys
   end
+
 end

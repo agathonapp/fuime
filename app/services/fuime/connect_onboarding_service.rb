@@ -336,8 +336,11 @@ module Fuime
           # On a school venture this is the manager who completed onboarding, not
           # a guardian. Recorded under a distinct key so reconciliation can never
           # mistake a business-office employee for a student's parent.
-          **(institutional? ? { fuime_onboarded_by_user_id: @guardian.id, fuime_sponsorship: "institution" }
-                            : { fuime_guardian_user_id: @guardian.id })
+          **(if institutional?
+               { fuime_onboarded_by_user_id: @guardian.id, fuime_sponsorship: "institution" }
+             else
+               { fuime_guardian_user_id: @guardian.id }
+             end)
         }
       }
     end

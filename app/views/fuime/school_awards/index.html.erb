@@ -109,10 +109,11 @@
                   <%= form_with url: fuime_school_award_void_path(event_slug: @event.slug, id: award.id),
                                 method: :post, class: "flex items-start", style: "gap: 0.5rem;" do |f| %>
                     <%= f.text_field :void_reason, placeholder: "Reason (optional)",
-                                     aria: { label: "Reason for reversing" } %>
+                                                   aria: { label: "Reason for reversing" } %>
                     <%= f.submit "Reverse", class: "btn bg-error",
-                                 data: { turbo_confirm: "Take back #{number_to_currency(award.amount)}? " \
-                                                        "If it's already been spent the venture will go negative." } %>
+                                            data: { turbo_confirm: "Take back #{number_to_currency(award.amount)}? " \
+                                                        "If it's already been spent the venture will go negative."
+} %>
                   <% end %>
                 <% end %>
               </td>
