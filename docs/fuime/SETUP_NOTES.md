@@ -2,16 +2,24 @@
 
 ## Handoff (most recent first)
 
-**2026-08-06 — The waitlist is readable.** `/admin/waitlist` (Misc in the admin
-nav): count against the 1,000 goal, 30-day daily bars, source breakdown, roster,
-CSV. It reads the Upstash keys the marketing site writes — `Fuime::WaitlistRoster`,
-read-only commands, unset credentials render a notice instead of raising. It lives
+**2026-08-06 — The waitlist is readable, and the lost signups are recoverable.**
+`/admin/waitlist`, reachable from both the Misc nav dropdown and the admin_tools
+card desk: count against the 1,000 goal, 30-day daily bars, source breakdown,
+roster, CSV. `Fuime::WaitlistRoster` reads the Upstash keys the marketing site
+writes, read-only, and renders a notice rather than raising when unset. It lives
 in Rails, not on the site, so access is the console's existing `signed_in_admin`
-rather than a shared token to hand out. **Before trusting the number:** confirm
-`UPSTASH_REDIS_REST_URL`/`_TOKEN` are set on the `fuime-site` Render service.
-`api/waitlist.js` runs happily Resend-only, in which case nothing was ever stored
-and Upstash will not backfill. Then set the same two on `fuime-web` (read-only
-token). 26 examples green, rubocop clean; full suite not re-run.
+instead of a shared token to hand out.
+
+`fuime-site` was in fact deployed Resend-only, so the first ~10–15 signups exist
+only as mail in `rushil@fuime.com` and Upstash cannot backfill them. Recovery:
+put one address per line (optionally `email,source,iso8601`) in a file, then
+`rake fuime:waitlist:import[file]` — dry-run with `[file,dry]` first. It needs
+`UPSTASH_REDIS_REST_WRITE_TOKEN` (everything else Fuime does with this list is
+read-only); set it for the run and remove it after. Idempotent, so re-running is
+safe and it never overwrites a real capture. **Still to do by hand:** set
+`UPSTASH_REDIS_REST_URL`/`_TOKEN` on `fuime-site` or new signups keep vanishing,
+and the same two (read-only) on `fuime-web`. 27 examples green, rubocop and
+erb_lint clean; full suite not re-run.
 
 **2026-08-06 (later) — CI had never run, and a school can now be funded.** Two things.
 

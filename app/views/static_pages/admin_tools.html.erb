@@ -62,6 +62,10 @@
         <%= card_to "Organizations", events_admin_index_path, badge: Event.approved.where.not(id: EventMappingEngine::EventIds.constants.map { |c| EventMappingEngine::EventIds.const_get(c) }).count, subtle_badge: true %>
         <%= card_to "Applications (Fuime)", applications_admin_index_path, badge: Event::Application.under_review.count %>
         <%= card_to "Users", users_admin_index_path %>
+        <%# Fuime: the marketing site's waitlist — the funnel step before Users.
+            A nil badge (Upstash unset or unreachable) renders as no badge at all,
+            which is the honest display; the page itself explains why. %>
+        <%= card_to "Waitlist", admin_waitlist_index_path, badge: Fuime::WaitlistRoster.cached_total, subtle_badge: true %>
         <%# FUIME-DISABLED (HCB nonprofit money-in; Fuime money-in is direct charges + invoices):
             card_to "Donations", donations_admin_index_path
             card_to "Sponsors", sponsors_admin_index_path %>
