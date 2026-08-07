@@ -101,6 +101,19 @@ RSpec.describe "admin waitlist", type: :request do
     expect(response.body).to include("Could not read the waitlist")
   end
 
+  # There are two admin surfaces and it is easy to add to one and forget the
+  # other: the nav dropdown (Admin::Nav) and the /admin_tools card desk. This
+  # is the regression guard — the first version of this feature shipped in the
+  # nav only, and the desk is where people actually go looking.
+  it "is reachable from both admin surfaces, not just the nav" do
+    login_as!(admin)
+
+    get admin_tools_path
+
+    expect(response.body).to include(admin_waitlist_index_path)
+    expect(response.body).to include("Waitlist")
+  end
+
   describe "CSV export" do
     it "serves the roster as a download" do
       configure_upstash!
