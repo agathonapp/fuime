@@ -252,6 +252,37 @@ const server = createServer(async (req, res) => {
   }
 })
 
+// api/waitlist.js accepts a Resend-only configuration: it returns 200, mails the
+// notification, and stores nothing. That is a legitimate mode, but it is also a
+// silent one — it is how the earliest signups came to exist only as mail in an
+// inbox, with no roster to read and nothing to backfill from. It cost real
+// signups once. Say it loudly at boot so a deploy cannot make that mistake
+// quietly again. api/waitlist.js itself is untouched (docs/BRIEF.md).
+function warnOnStorageConfig() {
+  const haveStore = Boolean(
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  )
+  const haveMail = Boolean(
+    process.env.RESEND_API_KEY && process.env.WAITLIST_NOTIFY_TO
+  )
+
+  if (haveStore) {
+    console.log('waitlist: durable store configured (Upstash)')
+  } else if (haveMail) {
+    console.warn(
+      'waitlist: WARNING — no durable store. UPSTASH_REDIS_REST_URL/_TOKEN are ' +
+        'unset, so signups are emailed and NOT stored. There is no roster, ' +
+        '/admin/waitlist has nothing to read, and signups taken in this state ' +
+        'cannot be recovered from anywhere but the notification inbox.'
+    )
+  } else {
+    console.error(
+      'waitlist: no sink configured at all — /api/waitlist will answer 503'
+    )
+  }
+}
+
 server.listen(PORT, () => {
   console.log(`fuime site listening on :${PORT} (app origin ${APP_ORIGIN})`)
+  warnOnStorageConfig()
 })

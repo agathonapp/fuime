@@ -3357,20 +3357,40 @@ matching the rest of the console). Nothing new to hand out.
 - `render.yaml` — `UPSTASH_REDIS_REST_URL` / `_TOKEN` added to `fuime-web`. Same instance
   `fuime-site` writes to; **give Rails a read-only token**, it has no reason to hold a key
   that can drop the list.
+- `static_pages/admin_tools` — a **Waitlist** card in the Info grid, beside Users. There
+  are two admin surfaces and the first version of this shipped in the nav only, which is
+  the *less* discoverable of the two: the card desk is where people actually go looking.
+  A nil badge renders as no badge, which is the honest display when Upstash is unset.
 - `.env.development.example` — the same two vars plus `WAITLIST_GOAL`.
+- `lib/tasks/fuime_waitlist.rake` — `rake fuime:waitlist:import[file]`, the backfill (see
+  below). The only thing in Fuime that WRITES this list, which is why it reads
+  `UPSTASH_REDIS_REST_WRITE_TOKEN` first and only falls back to the read token: the
+  read-only posture stays the default and the write capability is opt-in for one run.
+  Idempotent — an address already in the set is never re-added and never has its metadata
+  overwritten, so a reconstructed row cannot clobber a real capture.
+- `site/server.js` — a boot-time warning when no durable store is configured. `api/waitlist.js`
+  is **not** touched (docs/BRIEF.md freezes it); the warning lives in the server that
+  imports it.
 
 **Not upstream code.** HCB has no waitlist; nothing here modifies an upstream file except
-the one nav item, so this does not complicate merging upstream fixes.
+the one nav item and the admin_tools card, so this does not complicate merging upstream
+fixes.
 
-**The caveat worth carrying.** `api/waitlist.js` accepts a Resend-only configuration —
-it will happily run with no Upstash at all, notifying by email and storing nothing. If
-that is how `fuime-site` is actually deployed, then there is no roster to read, every
-signup to date exists only in the `WAITLIST_NOTIFY_TO` inbox, and wiring Upstash now will
-**not** backfill. Verify the Render env before trusting any number. The admin page detects
-this case and says so rather than rendering a confident zero.
+**The caveat turned out to be the actual history.** `api/waitlist.js` accepts a
+Resend-only configuration — it runs with no Upstash at all, notifying by email and storing
+nothing. That *is* how `fuime-site` was deployed: the earliest ~10–15 signups exist only
+as mail in the `WAITLIST_NOTIFY_TO` inbox, and wiring Upstash does not reach backwards.
+Hence two additions above. The rake task reconstructs those rows from a pasted list, and
+the boot warning makes the silent mode audible so the next deploy cannot repeat it. A
+backfilled row carries `source: "imported"` rather than a guessed capture point — putting
+an invented `home-hero` into the source breakdown would make that breakdown wrong.
 
 **Verification:** `spec/services/fuime/waitlist_roster_spec.rb` (new, 13),
-`spec/requests/fuime_waitlist_admin_spec.rb` (new, 8 — signed-out and ordinary users are
-refused HTML *and* CSV, an admin sees the roster, Upstash-down renders, formula injection
-neutralised), `spec/models/admin/nav_spec.rb` (5). 26 examples, 0 failures; rubocop clean.
-The site's own suite (31) still passes untouched. Full Rails suite not re-run.
+`spec/requests/fuime_waitlist_admin_spec.rb` (new, 9 — signed-out and ordinary users are
+refused HTML *and* CSV, an admin sees the roster, both admin surfaces link to it,
+Upstash-down renders, formula injection neutralised), `spec/models/admin/nav_spec.rb` (5).
+27 examples, 0 failures; rubocop and erb_lint clean. The import task was exercised
+end-to-end against a mock Upstash: header/comment/malformed lines skipped, addresses
+lowercased, missing source defaulted, an already-stored address left alone, and a second
+run adding nothing. The site's own suite (31) still passes untouched. Full Rails suite
+not re-run.
