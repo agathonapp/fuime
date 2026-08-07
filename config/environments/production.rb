@@ -79,7 +79,17 @@ Rails.application.configure do
   config.force_ssl = true
 
   # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  #
+  # Fuime: uncommented, because leaving it commented is what "Failed deploy"
+  # looks like on Render. `healthCheckPath: /up` (render.yaml) is called by
+  # Render's health checker over plain HTTP on the internal network, with no
+  # `X-Forwarded-Proto: https`. With force_ssl on and no exclusion, Rails
+  # answers that check with a 301 to https, Render reads a redirect as
+  # unhealthy, and the deploy fails — while the app itself is perfectly fine.
+  #
+  # Reproduced against the real production image: `/up` returns 200 when the
+  # forwarded-proto header is present and 301 when it is not.
+  config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 
   # Use default logging formatter so that PID and timestamp are not suppressed.
   # This is an old Rails 7.0 default, but leaving it in because we depend on it below

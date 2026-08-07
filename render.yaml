@@ -59,6 +59,14 @@ services:
           property: connectionString
       - key: RAILS_ENV
         value: production
+      # Render terminates TLS at its proxy and forwards over plain HTTP, so
+      # without this Rails sees an insecure request for every real visitor and
+      # force_ssl redirects in a loop-adjacent way. Paired with the /up
+      # exclusion in production.rb: that one keeps the health check itself from
+      # being answered with a 301, this one makes the app read the proxy
+      # correctly for everything else.
+      - key: RAILS_ASSUME_SSL
+        value: "true"
       - key: RACK_ENV
         value: production
       - key: NODE_ENV
@@ -282,6 +290,14 @@ services:
           property: connectionString
       - key: RAILS_ENV
         value: production
+      # Render terminates TLS at its proxy and forwards over plain HTTP, so
+      # without this Rails sees an insecure request for every real visitor and
+      # force_ssl redirects in a loop-adjacent way. Paired with the /up
+      # exclusion in production.rb: that one keeps the health check itself from
+      # being answered with a 301, this one makes the app read the proxy
+      # correctly for everything else.
+      - key: RAILS_ASSUME_SSL
+        value: "true"
       - key: RACK_ENV
         value: production
       - key: RAILS_MAX_THREADS
