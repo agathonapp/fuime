@@ -6,10 +6,30 @@ databases:
     ipAllowList: []
 
 services:
+  # Sidekiq queue, ActionCable, the Rails cache, and the waitlist roster.
+  #
+  # `plan: free` was wrong for all four: free Key Value instances have NO
+  # persistence, so every restart emptied it. For Sidekiq that silently dropped
+  # queued jobs; for the waitlist it would have re-created the exact data loss
+  # the roster was built to end. `starter` + journal-snapshot is the smallest
+  # plan that survives a restart.
+  #
+  # `noeviction` is deliberate and is the tripwire to watch: when memory fills,
+  # writes FAIL rather than silently discarding keys. That is correct for a
+  # queue and for signups, but it means a Rails cache big enough to fill the
+  # instance would start rejecting waitlist writes. The seam for fixing that is
+  # already in place — WAITLIST_REDIS_URL is a separate variable, so splitting
+  # the roster onto its own instance is one new service and one changed value,
+  # not a code change. Do it when cache memory becomes non-trivial.
+  #
+  # `type: redis` is the deprecated alias for `keyvalue`; it is what the rest of
+  # this file's fromService references already use and what is deployed today,
+  # so it stays until there is a reason to migrate all of them at once.
   - type: redis
     name: fuime-redis
-    plan: free
+    plan: starter
     maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
     ipAllowList: []
 
   - type: web
@@ -85,15 +105,15 @@ services:
       # own signing secret; verifying them against the secret above fails.
       - key: FUIME_STRIPE_CONNECT_WEBHOOK_SECRET
         sync: false
-      # Read side of the marketing site's waitlist, for /admin/waitlist. Same
-      # Upstash instance fuime-site writes to, so the URL matches that service's
-      # value — but give this one a READ-ONLY token. Rails only ever issues
-      # SCARD/SMEMBERS/HGETALL and has no business holding a key that can drop
-      # the list. Unset is safe: the admin page says it has nothing to read.
-      - key: UPSTASH_REDIS_REST_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
+      # Read side of the marketing site's waitlist, for /admin/waitlist. The
+      # same instance fuime-site writes to. Rails only ever issues
+      # SCARD/SMEMBERS/HGETALL against it; the one writer is the rake backfill.
+      # Unset is safe: the admin page says it has nothing to read.
+      - key: WAITLIST_REDIS_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
       - key: SECRET_KEY_BASE
         generateValue: true
       - key: RAILS_MASTER_KEY
@@ -198,27 +218,36 @@ services:
         value: production
 
   # The marketing site on fuime.com. Separate from fuime-web because it shares
-  # nothing with it: no database, no Redis, no Rails. A node service rather
-  # than a Render static site because /api/waitlist needs a process, and
-  # serving it from the same origin as the pages avoids CORS entirely.
+  # almost nothing with it: no database, no Rails. A node service rather than a
+  # Render static site because /api/waitlist needs a process, and serving it
+  # from the same origin as the pages avoids CORS entirely.
+  #
+  # It does now share fuime-redis, and only for the waitlist. That is a
+  # deliberate, narrow coupling: the alternative was a second vendor holding the
+  # one durable record of who wants this product.
   - type: web
     name: fuime-site
     runtime: node
     plan: starter
     rootDir: site
-    buildCommand: "" # No dependencies and no build step. The files ship as-is.
+    # One dependency (ioredis) since the waitlist moved off HTTP onto the Redis
+    # protocol. Still no bundler and no build output — the pages ship as-is.
+    buildCommand: npm ci --omit=dev
     startCommand: node server.js
     healthCheckPath: /robots.txt
     envVars:
       # Where /login sends people. The Rails app.
       - key: APP_ORIGIN
         value: https://app.fuime.com
-      # Waitlist sinks. At least one group must be set or /api/waitlist
-      # answers 503 rather than showing a green check over a dropped address.
-      - key: UPSTASH_REDIS_REST_URL
-        sync: false
-      - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
+      # Waitlist sinks. At least one must be set or /api/waitlist answers 503
+      # rather than showing a green check over a dropped address. The store is
+      # the same instance fuime-web reads from; this service is the only writer
+      # on the request path.
+      - key: WAITLIST_REDIS_URL
+        fromService:
+          name: fuime-redis
+          type: redis
+          property: connectionString
       - key: RESEND_API_KEY
         sync: false
       - key: WAITLIST_NOTIFY_TO

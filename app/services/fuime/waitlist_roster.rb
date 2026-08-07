@@ -2,9 +2,9 @@
 
 # Fuime: the read side of the marketing-site waitlist.
 #
-# The WRITE side lives in the other deploy — site/api/waitlist.js on the Render
-# static service — and is not Rails' business. It stores every signup in Upstash
-# under two keys:
+# The WRITE side lives in the other deploy — site/api/waitlist.js on the
+# fuime-site service — and is not Rails' business. It stores every signup under
+# two keys:
 #
 #   SADD  fuime:waitlist               <email>
 #   HSET  fuime:waitlist:meta:<email>  at / source / ip
@@ -12,13 +12,21 @@
 # The set is the roster, so a count of it is unique addresses rather than form
 # submissions. The hashes carry the detail. This joins them for /admin/waitlist.
 #
-# Read-only by construction: the only commands issued are SCARD, SMEMBERS and
-# HGETALL. Give Rails a READ-ONLY Upstash token — it has no reason to hold one
-# that can delete the list.
+# Storage is a Render Key Value instance, reached over the normal Redis
+# protocol on the private network. It is deliberately NOT the same instance as
+# `fuime-redis`: that one is the Sidekiq queue, ActionCable and the Rails cache,
+# it runs `maxmemoryPolicy: noeviction`, and a cache large enough to fill memory
+# would start failing writes — including waitlist writes. Durable business data
+# does not share a memory budget with a cache. WAITLIST_REDIS_URL points at its
+# own instance; it falls back to REDIS_URL so a dev machine with one Redis works
+# without extra setup.
 #
-# Absent credentials are a normal state, not an error (Milestone 2: every
-# external service must be safely unset). `configured?` is false, the page says
-# so, and nothing raises.
+# Read-only by construction: the only commands issued are SCARD, SMEMBERS and
+# HGETALL. The rake import task is the one thing in Fuime that writes here.
+#
+# An absent URL is a normal state, not an error (Milestone 2: every external
+# service must be safely unset). `configured?` is false, the page says so, and
+# nothing raises.
 module Fuime
   class WaitlistRoster
     class ReadFailed < StandardError; end
@@ -26,10 +34,13 @@ module Fuime
     LIST_KEY = "fuime:waitlist"
     META_PREFIX = "fuime:waitlist:meta:"
 
-    # HGETALL for 1,000 addresses is 1,000 commands. Upstash accepts them in one
-    # pipeline, but an unbounded request body against any REST API is a bad
-    # habit, so they go in chunks.
+    # HGETALL for 1,000 addresses is 1,000 round trips unless they are
+    # pipelined. Pipelined in chunks rather than all at once so the reply buffer
+    # stays bounded no matter how long the list gets.
     CHUNK = 250
+
+    CONNECT_TIMEOUT = 2
+    READ_TIMEOUT = 5
 
     # The number Alpha School put on the table. Overridable so it isn't a lie
     # once it's met.
@@ -39,11 +50,19 @@ module Fuime
 
     Signup = Struct.new(:email, :signed_up_at, :source, :ip, keyword_init: true)
 
-    # For the admin nav, which renders on every admin page. Two properties
-    # matter more than freshness: it must not make an HTTP call per page load,
-    # and it must never be the reason the admin console 500s. So: cached, and
-    # every failure degrades to nil (the nav then shows no number rather than a
-    # confident zero, which would read as "no signups").
+    def self.url
+      Credentials.fetch(:WAITLIST_REDIS_URL).presence || Credentials.fetch(:REDIS_URL).presence
+    end
+
+    def self.configured?
+      url.present?
+    end
+
+    # For the admin nav and the admin_tools card, both of which render on pages
+    # that have nothing to do with the waitlist. Two properties matter more than
+    # freshness: no round trip per page load, and never the reason the admin
+    # console 500s. So: cached, and every failure degrades to nil — the badge
+    # then shows nothing rather than a confident zero.
     NAV_CACHE_KEY = "fuime:waitlist:total"
     NAV_CACHE_TTL = 5.minutes
 
@@ -58,32 +77,22 @@ module Fuime
       nil
     end
 
-    def self.configured?
-      base_url.present? && token.present?
-    end
-
-    def self.base_url
-      Credentials.fetch(:UPSTASH_REDIS_REST_URL).presence
-    end
-
-    def self.token
-      Credentials.fetch(:UPSTASH_REDIS_REST_TOKEN).presence
-    end
-
     delegate :configured?, to: :class
 
     # => { total:, signups: [Signup, ...] }, newest first.
     def fetch
       return { total: 0, signups: [] } unless configured?
 
-      card, members = pipeline([["SCARD", LIST_KEY], ["SMEMBERS", LIST_KEY]])
-      emails = members["result"].is_a?(Array) ? members["result"] : []
+      total = redis.scard(LIST_KEY)
+      emails = redis.smembers(LIST_KEY)
 
       signups = emails.each_slice(CHUNK).flat_map do |slice|
-        results = pipeline(slice.map { |email| ["HGETALL", "#{META_PREFIX}#{email}"] })
+        metas = redis.pipelined do |pipe|
+          slice.each { |email| pipe.hgetall("#{META_PREFIX}#{email}") }
+        end
 
         slice.each_with_index.map do |email, i|
-          meta = hash_result(results[i]&.dig("result"))
+          meta = metas[i] || {}
 
           Signup.new(
             email:,
@@ -102,7 +111,9 @@ module Fuime
           [a.signed_up_at ? 1 : 0, a.signed_up_at || Time.at(0)]
       end
 
-      { total: card["result"].to_i.nonzero? || emails.size, signups: }
+      { total: total.to_i.nonzero? || emails.size, signups: }
+    rescue Redis::BaseError, SocketError, IOError => e
+      raise ReadFailed, e.message
     end
 
     # Signups per UTC day over the trailing window, oldest first, with empty
@@ -116,42 +127,23 @@ module Fuime
       signups.group_by(&:source).transform_values(&:size).sort_by { |_, n| -n }
     end
 
+    # Render terminates TLS on its external Key Value hostname with a
+    # certificate the default store does not chain to, the same reason the
+    # production cache_store passes this. Internal `redis://` URLs ignore it.
+    def self.connection_options(url)
+      {
+        url:,
+        connect_timeout: CONNECT_TIMEOUT,
+        read_timeout: READ_TIMEOUT,
+        write_timeout: READ_TIMEOUT,
+        ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }
+      }
+    end
+
     private
 
-    def pipeline(commands)
-      response = connection.post("/pipeline", commands.to_json)
-
-      unless response.success?
-        raise ReadFailed, "Upstash returned #{response.status}"
-      end
-
-      body = JSON.parse(response.body)
-      raise ReadFailed, "unexpected Upstash response" unless body.is_a?(Array)
-
-      body
-    rescue Faraday::Error => e
-      raise ReadFailed, e.message
-    rescue JSON::ParserError
-      raise ReadFailed, "unparseable Upstash response"
-    end
-
-    def connection
-      @connection ||= Faraday.new(url: self.class.base_url) do |f|
-        f.headers["Authorization"] = "Bearer #{self.class.token}"
-        f.headers["Content-Type"] = "application/json"
-        f.options.timeout = 10
-        f.options.open_timeout = 5
-      end
-    end
-
-    # HGETALL comes back as a flat [k, v, k, v] array over the REST API, but a
-    # plain object is a shape Upstash has also served. Accept either.
-    def hash_result(result)
-      case result
-      when Array then Hash[*result] rescue {}
-      when Hash  then result
-      else {}
-      end
+    def redis
+      @redis ||= Redis.new(**self.class.connection_options(self.class.url))
     end
 
     def parse_time(value)

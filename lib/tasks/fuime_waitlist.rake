@@ -26,10 +26,9 @@
 # a partial failure is safe, and running it against a live list cannot damage
 # a real capture with a reconstructed one.
 #
-# WRITES, unlike everything else Fuime does with this list. Rails' normal
-# credential is meant to be read-only (see render.yaml), so this task looks for
-# UPSTASH_REDIS_REST_WRITE_TOKEN first and only falls back to the read token if
-# that is unset. Set the write token for the run, then remove it.
+# WRITES, unlike everything else Fuime does with this list — the roster reader
+# issues only SCARD/SMEMBERS/HGETALL. Points at the same WAITLIST_REDIS_URL the
+# app reads, so run it against the environment whose list you mean to change.
 namespace :fuime do
   namespace :waitlist do
     desc "Backfill waitlist signups from a CSV/text file into Upstash"
@@ -39,23 +38,19 @@ namespace :fuime do
 
       abort "no such file: #{path}" unless File.exist?(path)
 
-      base = Fuime::WaitlistRoster.base_url
-      token = ENV["UPSTASH_REDIS_REST_WRITE_TOKEN"].presence || Fuime::WaitlistRoster.token
-      abort "UPSTASH_REDIS_REST_URL is not set" if base.blank?
-      abort "no Upstash token (set UPSTASH_REDIS_REST_WRITE_TOKEN)" if token.blank?
+      url = Fuime::WaitlistRoster.url
+      abort "WAITLIST_REDIS_URL (or REDIS_URL) is not set" if url.blank?
 
       rows = parse_waitlist_file(path)
       abort "nothing to import from #{path}" if rows.empty?
 
       puts "#{rows.size} row(s) parsed from #{path}"
-      puts "target: #{base}#{dry ? '  (DRY RUN — nothing will be written)' : ''}"
+      # Host only — a Render Key Value URL carries its password inline and this
+      # output belongs in a terminal scrollback and probably a screenshot.
+      puts "target: #{URI.parse(url).host}#{dry ? '  (DRY RUN — nothing will be written)' : ''}"
       puts
 
-      conn = Faraday.new(url: base) do |f|
-        f.headers["Authorization"] = "Bearer #{token}"
-        f.headers["Content-Type"] = "application/json"
-        f.options.timeout = 10
-      end
+      conn = Redis.new(**Fuime::WaitlistRoster.connection_options(url))
 
       existing = fetch_waitlist_members(conn)
       puts "#{existing.size} address(es) already stored"
@@ -71,16 +66,20 @@ namespace :fuime do
           next
         end
 
-        cmds = [["SADD", Fuime::WaitlistRoster::LIST_KEY, row[:email]]]
         meta = { "source" => row[:source] }
         meta["at"] = row[:at] if row[:at].present?
-        cmds << ["HSET", "#{Fuime::WaitlistRoster::META_PREFIX}#{row[:email]}", *meta.to_a.flatten]
 
         if dry
           puts "  would  #{row[:email]}  source=#{row[:source]}  at=#{row[:at] || '—'}"
         else
-          res = conn.post("/pipeline", cmds.to_json)
-          abort "  FAIL  #{row[:email]}: upstash #{res.status} #{res.body.to_s[0, 200]}" unless res.success?
+          begin
+            conn.multi do |tx|
+              tx.sadd(Fuime::WaitlistRoster::LIST_KEY, row[:email])
+              tx.hset("#{Fuime::WaitlistRoster::META_PREFIX}#{row[:email]}", meta)
+            end
+          rescue Redis::BaseError => e
+            abort "  FAIL  #{row[:email]}: #{e.message}"
+          end
           puts "  added  #{row[:email]}  source=#{row[:source]}  at=#{row[:at] || '—'}"
         end
 
@@ -131,9 +130,7 @@ rescue ArgumentError
 end
 
 def fetch_waitlist_members(conn)
-  res = conn.post("/pipeline", [["SMEMBERS", Fuime::WaitlistRoster::LIST_KEY]].to_json)
-  abort "could not read the current list: upstash #{res.status}" unless res.success?
-
-  result = JSON.parse(res.body).first["result"]
-  Set.new(result.is_a?(Array) ? result : [])
+  Set.new(conn.smembers(Fuime::WaitlistRoster::LIST_KEY))
+rescue Redis::BaseError, SocketError => e
+  abort "could not read the current list: #{e.message}"
 end
