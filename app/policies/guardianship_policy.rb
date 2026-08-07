@@ -60,4 +60,5 @@ class GuardianshipPolicy < ApplicationPolicy
 
     user.admin? || record.guardian == user || record.minor == user
   end
+
 end

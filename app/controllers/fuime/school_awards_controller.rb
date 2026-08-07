@@ -117,7 +117,7 @@ module Fuime
 
     def reference_param
       params[:reference].to_s.gsub(/[[:cntrl:]]/, "").strip
-            .truncate(MAX_REFERENCE_LENGTH).presence
+                        .truncate(MAX_REFERENCE_LENGTH).presence
     end
 
     def humanized_amount(cents)

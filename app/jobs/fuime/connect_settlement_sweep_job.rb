@@ -10,5 +10,6 @@ module Fuime
     def perform
       Fuime::ConnectSettlementSweep.sweep_all
     end
+
   end
 end

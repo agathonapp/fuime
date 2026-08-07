@@ -57,6 +57,9 @@ class Event
         "The family plan: every business your kids run, #{revenue_fee_label} on revenue, " \
           "one monthly subscription billed to the parent."
       end
+
     end
+
   end
+
 end

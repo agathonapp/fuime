@@ -43,7 +43,8 @@ module Fuime
       if sub.stripe_customer_id.blank?
         customer = Stripe::Customer.create(
           { email: @guardian.email, name: @guardian.name,
-            metadata: { fuime_user_id: @guardian.id } },
+            metadata: { fuime_user_id: @guardian.id }
+},
           request_options
         )
         sub.update!(stripe_customer_id: customer.id)

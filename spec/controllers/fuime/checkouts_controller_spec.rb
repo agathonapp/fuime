@@ -135,7 +135,7 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
         post :create, params: { slug: event.slug, amount: "25", description: "x" * 500 }
 
         expect(Fuime::PaymentLinkService).to have_received(:new).with(
-          hash_including(description: "x" * 117 + "...")
+          hash_including(description: "#{'x' * 117}...")
         )
       end
 

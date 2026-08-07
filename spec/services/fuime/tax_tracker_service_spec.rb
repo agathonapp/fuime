@@ -9,7 +9,11 @@ RSpec.describe Fuime::TaxTrackerService do
   let(:event) { create(:event) }
 
   # Post a canonical transaction on the event's ledger for the current year.
-  def post(amount_cents, memo: "Customer payment", date: Date.current)
+  #
+  # Named `post_line` rather than `post`: Rubocop's Rails/HttpPositionalArguments cop
+  # treats a bare `post` as an HTTP request helper and autocorrects keyword arguments
+  # into `params: {...}`, which silently breaks every example here.
+  def post_line(amount_cents, memo: "Customer payment", date: Date.current)
     ct = create(:canonical_transaction, amount_cents:, memo:, date:)
     create(:canonical_event_mapping, canonical_transaction: ct, event:)
     ct
@@ -19,9 +23,9 @@ RSpec.describe Fuime::TaxTrackerService do
 
   describe "income and expenses" do
     it "sums positive lines as income and negative lines as expenses" do
-      post(50_000)
-      post(20_000)
-      post(-15_000, memo: "Supplies")
+      post_line(50_000)
+      post_line(20_000)
+      post_line(-15_000, memo: "Supplies")
 
       expect(tracker.income_cents).to eq(70_000)
       expect(tracker.expenses_cents).to eq(15_000)
@@ -29,9 +33,9 @@ RSpec.describe Fuime::TaxTrackerService do
     end
 
     it "excludes transfers and other non-revenue movements from income" do
-      post(50_000, memo: "Customer payment")
-      post(30_000, memo: "Transfer from savings")
-      post(10_000, memo: "Owner deposit")
+      post_line(50_000, memo: "Customer payment")
+      post_line(30_000, memo: "Transfer from savings")
+      post_line(10_000, memo: "Owner deposit")
 
       expect(tracker.income_cents).to eq(50_000)
     end
@@ -39,16 +43,16 @@ RSpec.describe Fuime::TaxTrackerService do
     # A refund posts a reversing line; counting the original as income while
     # ignoring the reversal permanently overstates a teen's taxable income.
     it "excludes refund and dispute reversals" do
-      post(50_000, memo: "Customer payment")
-      post(-50_000, memo: "Refunded payment")
+      post_line(50_000, memo: "Customer payment")
+      post_line(-50_000, memo: "Refunded payment")
 
       expect(tracker.income_cents).to eq(50_000)
       expect(tracker.expenses_cents).to eq(0)
     end
 
     it "ignores transactions from other years" do
-      post(50_000, date: Date.current)
-      post(99_000, date: Date.current.prev_year)
+      post_line(50_000, date: Date.current)
+      post_line(99_000, date: Date.current.prev_year)
 
       expect(tracker.income_cents).to eq(50_000)
     end
@@ -58,14 +62,14 @@ RSpec.describe Fuime::TaxTrackerService do
     # IRS: SE tax applies once NET EARNINGS (net profit x 92.35%) reach $400,
     # so the profit at which it bites is 400 / 0.9235 ≈ $433.14 — not $400.
     it "computes net earnings as 92.35% of net profit" do
-      post(1_000_00)
+      post_line(1_000_00)
 
       expect(tracker.net_income_cents).to eq(100_000)
       expect(tracker.net_earnings_cents).to eq(92_350)
     end
 
     it "is NOT over the threshold at exactly $400 of net profit" do
-      post(400_00)
+      post_line(400_00)
 
       expect(tracker.net_income_cents).to eq(40_000)
       expect(tracker.net_earnings_cents).to eq(36_940)
@@ -73,14 +77,14 @@ RSpec.describe Fuime::TaxTrackerService do
     end
 
     it "is over the threshold once net earnings reach $400" do
-      post(434_00)
+      post_line(434_00)
 
       expect(tracker.net_earnings_cents).to be >= 400_00
       expect(tracker).to be_over_threshold
     end
 
     it "reports the remaining profit needed to reach the threshold" do
-      post(400_00)
+      post_line(400_00)
 
       # ~$433.14 - $400.00
       expect(tracker.cents_until_threshold).to eq(
@@ -89,8 +93,8 @@ RSpec.describe Fuime::TaxTrackerService do
     end
 
     it "treats a net loss as zero net earnings and not over the threshold" do
-      post(10_000)
-      post(-30_000, memo: "Supplies")
+      post_line(10_000)
+      post_line(-30_000, memo: "Supplies")
 
       expect(tracker.net_income_cents).to be_negative
       expect(tracker.net_earnings_cents).to eq(0)
@@ -101,21 +105,21 @@ RSpec.describe Fuime::TaxTrackerService do
 
   describe "presentation" do
     it "hedges rather than stating a tax obligation as fact" do
-      post(1_000_00)
+      post_line(1_000_00)
 
       expect(tracker.status_message).to match(/likely/i)
       expect(tracker.disclaimer).to match(/not tax advice/i)
     end
 
     it "warns about quarterly estimates only when over the threshold" do
-      post(1_000_00)
+      post_line(1_000_00)
       expect(tracker.quarterly_estimates_warning).to match(/quarterly/i)
 
       expect(described_class.new(event: create(:event)).quarterly_estimates_warning).to be_nil
     end
 
     it "caps the progress bar at 100%" do
-      post(10_000_00)
+      post_line(10_000_00)
 
       expect(tracker.threshold_percentage).to eq(100)
     end
@@ -123,7 +127,7 @@ RSpec.describe Fuime::TaxTrackerService do
 
   describe "#year_end_packet" do
     it "labels itself an estimate and carries the disclaimer" do
-      post(1_000_00)
+      post_line(1_000_00)
       packet = tracker.year_end_packet
 
       expect(packet[:estimate_only]).to be true
@@ -137,8 +141,8 @@ RSpec.describe Fuime::TaxTrackerService do
   # is a money-advice question, not a cosmetic one.
   describe "the Fuime platform fee" do
     it "deducts the fee as a business expense" do
-      post(100_00, memo: "Customer payment")
-      post(-4_00, memo: "Fuime platform fee (4%)")
+      post_line(100_00, memo: "Customer payment")
+      post_line(-4_00, memo: "Fuime platform fee (4%)")
 
       expect(tracker.income_cents).to eq(100_00)
       expect(tracker.expenses_cents).to eq(4_00)
@@ -148,10 +152,10 @@ RSpec.describe Fuime::TaxTrackerService do
     # The rebate reverses an expense; treating it as revenue would inflate the
     # taxable income reported to a teen's family.
     it "does not count a refunded fee as income" do
-      post(100_00, memo: "Customer payment")
-      post(-4_00, memo: "Fuime platform fee (4%)")
-      post(-100_00, memo: "Refunded payment")
-      post(4_00, memo: "Fuime platform fee refunded")
+      post_line(100_00, memo: "Customer payment")
+      post_line(-4_00, memo: "Fuime platform fee (4%)")
+      post_line(-100_00, memo: "Refunded payment")
+      post_line(4_00, memo: "Fuime platform fee refunded")
 
       # The rebate must not appear in income at all.
       expect(tracker.income_cents).to eq(100_00)

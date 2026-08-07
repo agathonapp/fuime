@@ -110,7 +110,8 @@ RSpec.describe Fuime::SchoolAwardsController do
       create_session(guide, verified: true)
 
       post :create, params: { event_slug: venture.slug, amount: "$100.00",
-                              awarded_to_id: student.id, reference: "gradebook-4417" }
+                              awarded_to_id: student.id, reference: "gradebook-4417"
+}
 
       expect(SchoolAward.count).to eq(1)
       expect(venture.reload.balance_v2_cents).to eq(10_000)
@@ -121,7 +122,8 @@ RSpec.describe Fuime::SchoolAwardsController do
       create_session(student, verified: true)
 
       post :create, params: { event_slug: venture.slug, amount: "100",
-                              awarded_to_id: student.id }
+                              awarded_to_id: student.id
+}
 
       expect(SchoolAward.count).to eq(0)
     end
@@ -131,7 +133,8 @@ RSpec.describe Fuime::SchoolAwardsController do
       create_session(create_school_manager(other_school), verified: true)
 
       post :create, params: { event_slug: venture.slug, amount: "100",
-                              awarded_to_id: student.id }
+                              awarded_to_id: student.id
+}
 
       expect(SchoolAward.count).to eq(0)
     end
@@ -140,7 +143,8 @@ RSpec.describe Fuime::SchoolAwardsController do
       create_session(guide, verified: true)
 
       post :create, params: { event_slug: venture.slug, amount: "5000",
-                              awarded_to_id: student.id }
+                              awarded_to_id: student.id
+}
 
       expect(flash[:alert]).to match(/available to award/)
       expect(SchoolAward.count).to eq(0)

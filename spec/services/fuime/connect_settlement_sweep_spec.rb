@@ -53,7 +53,7 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     stub_intent("pi_pending1", status: "pending")
 
     expect { described_class.new(event: venture).sweep! }
-      .not_to change { CanonicalPendingSettledMapping.count }
+      .not_to(change { CanonicalPendingSettledMapping.count })
   end
 
   it "is idempotent across a crash between raw row and settle" do

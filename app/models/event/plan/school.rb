@@ -74,6 +74,9 @@ class Event
       def monthly_fee_cents
         0
       end
+
     end
+
   end
+
 end

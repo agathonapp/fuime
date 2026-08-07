@@ -23,4 +23,5 @@ class GuardianshipMailer < ApplicationMailer
       subject: "#{@guardian.name || 'Your guardian'} accepted your Fuime invitation!"
     )
   end
+
 end

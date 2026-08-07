@@ -25,13 +25,18 @@ require "rails_helper"
 # footer copy genuinely does not reach it; the disclosure is duplicated into the
 # view. A future refactor that unifies the layouts should delete the duplicate
 # and leave both these examples passing.
+# Matching on the load-bearing clauses rather than the full paragraph. The wording
+# will be edited; what must not disappear is the denial of bank status, the denial of
+# insurance, and who owns the account.
+#
+# Defined at file scope rather than inside the example group: Ruby constants assigned
+# in a block leak to the top level anyway, and doing it explicitly is what
+# Lint/ConstantDefinitionInBlock asks for.
+NOT_A_BANK = "not a bank"
+NO_FDIC = "does not offer FDIC-insured products"
+GUARDIAN_OWNED = /owned by a parent or legal guardian/i
+
 RSpec.describe "Status disclosure", type: :request do
-  # Matching on the load-bearing clauses rather than the full paragraph. The
-  # wording will be edited; what must not disappear is the denial of bank
-  # status, the denial of insurance, and who owns the account.
-  NOT_A_BANK = "not a bank"
-  NO_FDIC = "does not offer FDIC-insured products"
-  GUARDIAN_OWNED = /owned by a parent or legal guardian/i
 
   describe "on public legal pages" do
     # Signed out on purpose: a parent reading the terms before accepting an

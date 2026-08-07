@@ -13,6 +13,14 @@ require "rails_helper"
 # These examples are the contract for that promise. The last two are the ones
 # that matter most, and are the reason the access derives from the guardianship
 # rather than from a membership row the minor could delete.
+# Defined at file scope rather than inside the example group — a constant assigned in
+# a block leaks to the top level regardless, so this states what actually happens.
+PolicyProbe = Struct.new(:policy) do
+  def reader? = policy.send(:reader?)
+  def member? = policy.send(:member?)
+  def manager? = policy.send(:manager?)
+end
+
 RSpec.describe EventPolicy, type: :policy do
   let(:event) { create(:event) }
   let(:minor) { create(:user, :minor) }
@@ -31,12 +39,6 @@ RSpec.describe EventPolicy, type: :policy do
   # `member?`/`manager?` staying false. So the probe reaches past the visibility in
   # one place, deliberately and visibly, instead of eight examples each doing it or
   # the policy being made public to suit the test.
-  PolicyProbe = Struct.new(:policy) do
-    def reader? = policy.send(:reader?)
-    def member? = policy.send(:member?)
-    def manager? = policy.send(:manager?)
-  end
-
   def policy_for(user)
     PolicyProbe.new(described_class.new(user, event))
   end

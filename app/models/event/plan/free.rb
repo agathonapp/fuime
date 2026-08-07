@@ -52,6 +52,9 @@ class Event
         "Free to start, one venture — Fuime keeps #{revenue_fee_label} of what it collects. " \
           "The family plan is #{Event::Plan::Pro.new.revenue_fee_label} with unlimited businesses."
       end
+
     end
+
   end
+
 end

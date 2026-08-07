@@ -28,7 +28,7 @@
       </div>
       <div class="p-4 bg-snow rounded-lg">
         <p class="muted m-0 mb-1 text-sm">Net Income</p>
-        <p class="m-0 text-2xl font-bold <%= @tax_tracker.net_income_cents >= 0 ? 'text-success' : 'text-error' %>">
+        <p class="m-0 text-2xl font-bold <%= @tax_tracker.net_income_cents >= 0 ? "text-success" : "text-error" %>">
           $<%= render_money_amount(@tax_tracker.net_income_cents.abs) %>
           <%= @tax_tracker.net_income_cents < 0 ? "(loss)" : "" %>
         </p>
@@ -44,12 +44,12 @@
         <p class="m-0 muted">$<%= render_money_amount(@tax_tracker.net_earnings_cents) %> / $400.00</p>
       </div>
       <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-        <div class="h-4 rounded-full transition-all duration-500 <%= @tax_tracker.over_threshold? ? 'bg-error' : 'bg-primary' %>"
+        <div class="h-4 rounded-full transition-all duration-500 <%= @tax_tracker.over_threshold? ? "bg-error" : "bg-primary" %>"
              style="width: <%= @tax_tracker.threshold_percentage %>%"></div>
       </div>
     </div>
 
-    <div class="p-4 rounded-lg <%= @tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
+    <div class="p-4 rounded-lg <%= @tax_tracker.over_threshold? ? "bg-error-bg" : "bg-success-bg" %>">
       <div class="flex items-start gap-3">
         <% if @tax_tracker.over_threshold? %>
           <%= inline_icon "warning", size: 20, class: "text-error flex-shrink-0 mt-0.5" %>

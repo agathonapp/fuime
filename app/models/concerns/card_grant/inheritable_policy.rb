@@ -117,4 +117,5 @@ class CardGrant
       inherited.find(&:present?)
     end
   end
+
 end

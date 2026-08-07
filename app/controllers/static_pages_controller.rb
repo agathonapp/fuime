@@ -79,11 +79,14 @@ class StaticPagesController < ApplicationController
     # (CLAUDE.md Rule 7: their trademarks come out of our UI).
     @marks = [
       { name: "Mark", criteria: "The arch monogram. For light backgrounds.",
-        background: "smoke", svg: "/brand/fuime-mark.svg", png: "/brand/fuime-logo-light.png" },
+        background: "smoke", svg: "/brand/fuime-mark.svg", png: "/brand/fuime-logo-light.png"
+},
       { name: "Mark, white", criteria: "The arch monogram for dark backgrounds.",
-        background: "black", svg: "/brand/fuime-mark-white.svg", png: "/brand/fuime-logo-dark.png" },
+        background: "black", svg: "/brand/fuime-mark-white.svg", png: "/brand/fuime-logo-dark.png"
+},
       { name: "App icon", criteria: "The mark on its blue tile. For avatars and app listings.",
-        background: "smoke", svg: "/brand/fuime-icon.svg", png: "/android-chrome-512x512.png" }
+        background: "smoke", svg: "/brand/fuime-icon.svg", png: "/android-chrome-512x512.png"
+}
     ]
     @event_name = signed_in? && current_user.events.first&.name || "Ada's Print Shop"
     @event_slug = signed_in? && current_user.events.first&.slug || "adas-print-shop"

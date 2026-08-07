@@ -109,7 +109,7 @@
           <div class="field w-full" style="max-width: 20rem;">
             <%= form.label :description, "What's this for?", class: "text-left block" %>
             <%= form.text_field :description, placeholder: "Custom print",
-                                class: "w-full" %>
+                                              class: "w-full" %>
           </div>
           <%= form.submit stripe_live ? "Pay #{@event.name}" : "Try a test payment",
                           class: "btn btn--lg #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
