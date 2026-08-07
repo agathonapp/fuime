@@ -147,7 +147,7 @@ RSpec.describe Fuime::PayoutService, "inside a school programme" do
     # let the venture spend against a balance already queued to be paid out in cash.
     it "posts no ledger line yet, because the money has not moved" do
       expect { service.approve!(request:, approver: guide) }
-        .not_to change { CanonicalPendingEventMapping.where(event_id: venture.id).count }
+        .not_to(change { CanonicalPendingEventMapping.where(event_id: venture.id).count })
     end
 
     it "refuses an approver who is not a manager of the school" do

@@ -55,4 +55,5 @@ class CanonicalHost
   def exempt?(path)
     EXEMPT_PATHS.any? { |p| path == p || path.start_with?("#{p}/") }
   end
+
 end

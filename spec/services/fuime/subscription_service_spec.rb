@@ -124,13 +124,15 @@ RSpec.describe Fuime::SubscriptionService do
     it "resolves a family subscription by guardian metadata and mirrors state" do
       stub_billing!
       described_class.module_parent::SubscriptionService.new(guardian:)
-                     .checkout_session(success_url: "s", cancel_url: "c")
+                                                        .checkout_session(success_url: "s", cancel_url: "c")
 
       event = Stripe::Event.construct_from(
         type: "customer.subscription.created",
         data: { object: { id: "sub_fam_1", status: "active", cancel_at_period_end: false,
                           current_period_end: 30.days.from_now.to_i,
-                          metadata: { fuime_guardian_user_id: guardian.id.to_s } } }
+                          metadata: { fuime_guardian_user_id: guardian.id.to_s }
+}
+}
       )
       described_class.new(event:).handle
 

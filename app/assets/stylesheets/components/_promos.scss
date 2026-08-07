@@ -109,9 +109,7 @@
   border: 2px solid $red;
 
   .card__banner--top {
-    background-image:
-      linear-gradient(to right, $dark 10%, transparent),
-      none;
+    background-image: linear-gradient(to right, $dark 10%, transparent), none;
     background-size: cover;
     background-position: left center;
   }

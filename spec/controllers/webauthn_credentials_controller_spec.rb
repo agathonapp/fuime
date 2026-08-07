@@ -88,7 +88,7 @@ RSpec.describe WebauthnCredentialsController, type: :controller do
         post :create, params: {
           user_id: victim.slug, credential: raw.to_json, name: "Attacker key", type: "cross-platform"
         }
-      }.not_to change { victim.webauthn_credentials.count }
+      }.not_to(change { victim.webauthn_credentials.count })
     end
   end
 

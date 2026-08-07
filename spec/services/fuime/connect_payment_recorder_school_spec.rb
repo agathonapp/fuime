@@ -85,8 +85,8 @@ RSpec.describe Fuime::ConnectPaymentRecorder, "attribution inside a school progr
   # ever name a venture already paid into this exact account.
   describe "what a bad fuime_event_id cannot do" do
     it "cannot move money to a venture in a different school" do
-      _other_school, _cohort, other_venture = build_school_tree(school_name: "Beta School")
-      create(:stripe_connected_account, :ready, event: _other_school)
+      other_school, _cohort, other_venture = build_school_tree(school_name: "Beta School")
+      create(:stripe_connected_account, :ready, event: other_school)
 
       handle(payment_intent(event_id: other_venture.id))
 

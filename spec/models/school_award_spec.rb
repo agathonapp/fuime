@@ -150,14 +150,16 @@ RSpec.describe SchoolAward, type: :model do
   # adds a column that would change that, which is cheaper than discovering it during
   # a district security review.
   describe "stores no academic records" do
-    FORBIDDEN_COLUMN_FRAGMENTS = %w[
-      grade gpa score subject course class_name term semester quarter
-      transcript assignment exam test_ mark_ percentile rank
-    ].freeze
+    let(:forbidden_column_fragments) do
+      %w[
+        grade gpa score subject course class_name term semester quarter
+        transcript assignment exam test_ mark_ percentile rank
+      ].freeze
+    end
 
     it "has no column that could hold an education record" do
       offending = described_class.column_names.select do |column|
-        FORBIDDEN_COLUMN_FRAGMENTS.any? { |fragment| column.downcase.include?(fragment) }
+        forbidden_column_fragments.any? { |fragment| column.downcase.include?(fragment) }
       end
 
       expect(offending).to be_empty,

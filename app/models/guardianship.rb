@@ -268,4 +268,5 @@ class Guardianship < ApplicationRecord
       errors.add(:guardian, "cannot be the same as minor")
     end
   end
+
 end

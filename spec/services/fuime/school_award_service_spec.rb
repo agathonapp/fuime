@@ -90,7 +90,7 @@ RSpec.describe Fuime::SchoolAwardService do
         rescue described_class::SchoolUnderfunded
           nil
         end
-      }.not_to change { CanonicalEventMapping.where(event_id: venture.id).count }
+      }.not_to(change { CanonicalEventMapping.where(event_id: venture.id).count })
     end
 
     it "refuses on a venture outside a school programme" do

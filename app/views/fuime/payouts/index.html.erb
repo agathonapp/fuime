@@ -80,7 +80,7 @@
 
 <% if @pending_request.present? %>
   <%= render "application/callout", type: "info",
-             title: "#{number_to_currency(@pending_request.amount)} waiting for approval" do %>
+                                    title: "#{number_to_currency(@pending_request.amount)} waiting for approval" do %>
     <p>
       Requested by <strong><%= @pending_request.requested_by.name.presence || @pending_request.requested_by.email %></strong>
       on <%= @pending_request.created_at.strftime("%B %-d, %Y") %>.
@@ -103,7 +103,8 @@
                         class: "btn bg-success",
                         data: { turbo_confirm: "Approve paying #{number_to_currency(@pending_request.amount)} " \
                                                "to #{@pending_request.requested_by.first_name}? " \
-                                               "You'll mark it as paid once the school has sent it." } %>
+                                               "You'll mark it as paid once the school has sent it."
+} %>
         <% else %>
           <%= button_to "Approve and send",
                         fuime_payout_approve_path(event_slug: @event.slug, id: @pending_request.id),
@@ -232,7 +233,8 @@
                             data: { turbo_confirm: "Confirm the school has sent " \
                                                    "#{number_to_currency(request.amount)} to " \
                                                    "#{request.requested_by.first_name}? " \
-                                                   "This takes it off the venture's balance." } %>
+                                                   "This takes it off the venture's balance."
+} %>
             </td>
           <% end %>
         </tr>

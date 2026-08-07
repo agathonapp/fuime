@@ -15,7 +15,7 @@
 
   <div class="mb-3">
     <p class="muted m-0 mb-1 text-sm">Net Income (<%= Date.current.year %>)</p>
-    <p class="m-0 text-2xl font-bold <%= tax_tracker.net_income_cents >= 0 ? 'text-success' : 'text-error' %>">
+    <p class="m-0 text-2xl font-bold <%= tax_tracker.net_income_cents >= 0 ? "text-success" : "text-error" %>">
       $<%= render_money_amount(tax_tracker.net_income_cents.abs) %>
       <%= tax_tracker.net_income_cents < 0 ? "(loss)" : "" %>
     </p>
@@ -27,12 +27,12 @@
       <p class="m-0 text-sm muted"><%= tax_tracker.threshold_percentage %>%</p>
     </div>
     <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-      <div class="h-2 rounded-full transition-all duration-500 <%= tax_tracker.over_threshold? ? 'bg-error' : 'bg-primary' %>"
+      <div class="h-2 rounded-full transition-all duration-500 <%= tax_tracker.over_threshold? ? "bg-error" : "bg-primary" %>"
            style="width: <%= tax_tracker.threshold_percentage %>%"></div>
     </div>
   </div>
 
-  <div class="p-3 rounded-lg text-sm <%= tax_tracker.over_threshold? ? 'bg-error-bg' : 'bg-success-bg' %>">
+  <div class="p-3 rounded-lg text-sm <%= tax_tracker.over_threshold? ? "bg-error-bg" : "bg-success-bg" %>">
     <% if tax_tracker.over_threshold? %>
       <span class="flex items-center gap-2">
         <%= inline_icon "warning", size: 16, class: "text-error" %>

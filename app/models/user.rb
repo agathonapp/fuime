@@ -125,8 +125,8 @@ class User < ApplicationRecord
   # Fuime guardianship relationships
   has_many :guardianships_as_guardian, class_name: "Guardianship", foreign_key: :guardian_id, inverse_of: :guardian
   has_many :guardianships_as_minor, class_name: "Guardianship", foreign_key: :minor_id, inverse_of: :minor
-  has_many :wards, through: :guardianships_as_guardian, source: :minor  # teens this user is guardian for
-  has_many :guardians, through: :guardianships_as_minor, source: :guardian  # guardians of this teen
+  has_many :wards, through: :guardianships_as_guardian, source: :minor # teens this user is guardian for
+  has_many :guardians, through: :guardianships_as_minor, source: :guardian # guardians of this teen
 
   has_many :events, through: :organizer_positions
   has_many :reader_events, through: :reader_organizer_positions, class_name: "Event", source: :event

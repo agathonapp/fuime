@@ -43,7 +43,7 @@ Rails.application.config.after_initialize do
     stored_receipts =
       begin
         ActiveStorage::Blob.count
-      rescue StandardError
+      rescue
         0 # table may not exist yet during an initial migrate
       end
 
@@ -122,7 +122,7 @@ Rails.application.config.after_initialize do
     host =
       begin
         # A bare host has no scheme; give the parser one so it populates #host.
-        candidate = raw.match?(%r{\A[a-zA-Z][a-zA-Z0-9+.-]*://}) ? raw : "//#{raw}"
+        candidate = raw.match?(/\A[a-zA-Z][a-zA-Z0-9+.-]*:\/\//) ? raw : "//#{raw}"
         URI.parse(candidate).host
       rescue URI::InvalidURIError
         nil
@@ -153,13 +153,15 @@ Rails.application.config.after_initialize do
   warnings.each { |w| Rails.logger.warn("[Fuime safety] #{w}") }
 
   if errors.any?
-    message = "\n\n" + ("=" * 72) + "\n" \
-              "FUIME SAFETY CHECK FAILED — refusing to boot\n" +
-              ("=" * 72) + "\n\n" +
-              errors.map.with_index(1) { |e, i| "#{i}. #{e}" }.join("\n\n") +
-              "\n\n" + ("=" * 72) + "\n" \
-              "Set FUIME_SKIP_SAFETY_CHECK=true to bypass (recovery work only).\n" +
-              ("=" * 72) + "\n\n"
+    rule = "=" * 72
+    numbered = errors.map.with_index(1) { |e, i| "#{i}. #{e}" }.join("\n\n")
+    message = "\n\n#{rule}\n" \
+              "FUIME SAFETY CHECK FAILED — refusing to boot\n" \
+              "#{rule}\n\n" \
+              "#{numbered}\n\n" \
+              "#{rule}\n" \
+              "Set FUIME_SKIP_SAFETY_CHECK=true to bypass (recovery work only).\n" \
+              "#{rule}\n\n"
 
     Rails.logger.fatal(message)
     raise message

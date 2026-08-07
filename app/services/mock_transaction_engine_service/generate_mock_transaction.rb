@@ -55,35 +55,35 @@ module MockTransactionEngineService
       hcb_code = mock_hcb_code(trans)
 
       OpenStruct.new(
-          amount: Money.new(trans[:amount].round(2) * 100),
-          amount_cents: (trans[:amount].round(2) * 100).to_i,
-          fee_payment?: trans[:desc].include?("Fuime platform fee"),
-          date: trans[:date],
-          local_hcb_code: hcb_code
-        )
+        amount: Money.new(trans[:amount].round(2) * 100),
+        amount_cents: (trans[:amount].round(2) * 100).to_i,
+        fee_payment?: trans[:desc].include?("Fuime platform fee"),
+        date: trans[:date],
+        local_hcb_code: hcb_code
+      )
     end
 
     def mock_hcb_code(trans)
       OpenStruct.new(
-            receipts: if trans[:amount] > 0 || trans[:desc].include?("Fuime platform fee")
-                        []
-                      else
-                        Array.new(rand(100) < 90 ? 1 : 0)
-                      end, # 90% chance of 1 receipt, 10% chance of no receipts
-            comments: Array.new(rand(9) > 1 || trans[:desc].include?("Fuime platform fee") ? 0 : rand(1..2)), # 1/3 chance of no comments, 2/3 chance of 1 or 2 comments
-            # `donation?`/`donation` stay: the transaction partial calls them on
-            # every row, so these are interface, not copy.
-            donation?: trans[:amount].positive?,
-            donation: trans[:amount].positive? ? OpenStruct.new(recurring?: trans[:monthly]) : nil,
-            tags: [],
-            reimbursement_expense_payout?: false,
-            # `custom_memo` non-nil on purpose. hcb_codes/memo/_memo caches the
-            # rendered memo under "#{event}/#{hcb_code.hcb_code}/cached_memo"
-            # when it is nil — and a mock row has no hcb_code, so every row
-            # collided on one key and the whole ledger rendered the same memo
-            # (cached for ten minutes, across requests). Setting it takes the
-            # uncached branch, which is what mock data wants anyway.
-            custom_memo: trans[:desc]
+        receipts: if trans[:amount] > 0 || trans[:desc].include?("Fuime platform fee")
+                    []
+                  else
+                    Array.new(rand(100) < 90 ? 1 : 0)
+                  end, # 90% chance of 1 receipt, 10% chance of no receipts
+        comments: Array.new(rand(9) > 1 || trans[:desc].include?("Fuime platform fee") ? 0 : rand(1..2)), # 1/3 chance of no comments, 2/3 chance of 1 or 2 comments
+        # `donation?`/`donation` stay: the transaction partial calls them on
+        # every row, so these are interface, not copy.
+        donation?: trans[:amount].positive?,
+        donation: trans[:amount].positive? ? OpenStruct.new(recurring?: trans[:monthly]) : nil,
+        tags: [],
+        reimbursement_expense_payout?: false,
+        # `custom_memo` non-nil on purpose. hcb_codes/memo/_memo caches the
+        # rendered memo under "#{event}/#{hcb_code.hcb_code}/cached_memo"
+        # when it is nil — and a mock row has no hcb_code, so every row
+        # collided on one key and the whole ledger rendered the same memo
+        # (cached for ten minutes, across requests). Setting it takes the
+        # uncached branch, which is what mock data wants anyway.
+        custom_memo: trans[:desc]
       ).tap do |hcb_code|
         # Singleton methods, not fields, wherever the views pass arguments: an
         # OpenStruct field is arity 0 and raises ArgumentError on a call with

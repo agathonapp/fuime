@@ -3267,6 +3267,59 @@ assumption above is exactly the class of thing that broke twice before.
 
 ---
 
+## Guardian prefill on Connect onboarding (2026-08-06)
+
+**Why:** Stripe's identity flow is the largest drop-off in Fuime's funnel, and it is
+per family. At a school onboarding thousands of students, the gap between a parent
+confirming prefilled details and typing their name, date of birth and phone number on
+a phone is measured in hundreds of students who never get to trade — and for a school
+with a gross-profit guarantee, students who cannot transact are refund exposure.
+
+`Fuime::ConnectOnboardingService#account_params` was sending Stripe only the guardian's
+**email** and the venture name, while Fuime already held `full_name`, `birthday` and
+`phone_number`. `STRIPE_PASS.md` records that API prefill was exercised against real
+Stripe and accepted — "everything accepted except `tos_acceptance`" — so this was a
+**proven capability that was never wired up**, not a new risk.
+
+**What changed:** a new `individual_prefill` sends `first_name`, `last_name`, `email`,
+`dob` and (conditionally) `phone`.
+
+**The privacy position is unchanged.** `requirement_collection` stays `"stripe"` on the
+default profile, so Stripe still collects and holds identity documents and Fuime still
+stores none. These are fields Fuime already has and Stripe requires regardless; sending
+them earlier creates no new copy.
+
+**Every field is individually guarded, and that is the design.** A malformed prefill is
+*worse* than none: Stripe validates on create, so one bad value fails the whole account
+and the family cannot onboard at all. No prefill costs a parent some typing; a rejected
+create costs them the venture. So:
+
+- `phone` is sent only when `phone_number_verified?` **and** the stored value is already
+  unambiguous E.164 (`/\A\+[1-9]\d{7,14}\z/`). A normaliser that guessed at country
+  codes would eventually guess wrong and fail a create. An unverified number is a claim,
+  not a fact.
+- `dob` is omitted entirely when the guardian has no birthday — the normal state for a
+  guardian invited by email who has not finished signup.
+- Institutional accounts get **no `individual` block at all**: they are
+  `business_type: "company"`, where the account holder is the school and the
+  representative fields are a different shape. An individual block there is not a
+  smaller version of this, it is wrong.
+
+**Two model behaviours worth knowing, both found by specs:**
+`User#on_phone_number_update` clears `phone_number_verified` on any change to the
+number, so verifying a phone takes two writes — setting both in one `update!` silently
+leaves it unverified. And the `phone` validation is libphonenumber-backed, so 555
+numbers are invalid and cannot be used in fixtures.
+
+**Verification:** 9 new examples, 0 failures. 316 across `spec/services/fuime`,
+`stripe_connected_account` and the family signup flow — 1 failure, `mirrors livemode`,
+already recorded in known-failures.md as pre-existing. Rubocop clean (the one offense it
+reports in this file predates the change and is unrelated). **Not re-exercised against
+Stripe** — the prefill shapes are the ones STRIPE_PASS already proved accepted, but this
+particular combination has not been sent.
+
+---
+
 ## 2026-08-06 — The waitlist gets a door, and it is the admin console's
 
 **The problem.** The waitlist has been live and readable by nobody. The write side —
