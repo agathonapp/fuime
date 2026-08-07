@@ -118,7 +118,14 @@ export async function getRedis() {
     connectTimeout: 3000,
     commandTimeout: 3000,
     maxRetriesPerRequest: 2,
-    enableOfflineQueue: false,
+    // Offline queueing stays ON, and that is a correction. It was disabled to
+    // stop commands piling up behind a dead server while a visitor waits on the
+    // form — but with it off, any command issued before the connection finishes
+    // fails instantly with "Stream isn't writeable". Measured against the live
+    // site: the FIRST signup after every deploy was dropped from the store that
+    // way, and only survived because Resend is a second sink. commandTimeout
+    // already bounds the wait, which is the protection that was actually wanted.
+    enableOfflineQueue: true,
     // Render's external Key Value hostname serves a certificate the default
     // store does not chain to. Internal redis:// URLs never reach this.
     ...(url.startsWith('rediss://')

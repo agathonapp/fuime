@@ -63,7 +63,8 @@
         <%= card_to "Applications (Fuime)", applications_admin_index_path, badge: Event::Application.under_review.count %>
         <%= card_to "Users", users_admin_index_path %>
         <%# Fuime: the marketing site's waitlist — the funnel step before Users.
-            A nil badge (Upstash unset or unreachable) renders as no badge at all,
+            A nil badge (WAITLIST_REDIS_URL unset, or the store unreachable) renders
+            as no badge at all,
             which is the honest display; the page itself explains why. %>
         <%= card_to "Waitlist", admin_waitlist_index_path, badge: Fuime::WaitlistRoster.cached_total, subtle_badge: true %>
         <%# FUIME-DISABLED (HCB nonprofit money-in; Fuime money-in is direct charges + invoices):

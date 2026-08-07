@@ -19,9 +19,8 @@ const child = spawn(process.execPath, [SERVER], {
     PORT: String(PORT),
     APP_ORIGIN: 'https://app.example.test',
     // No sinks: /api/waitlist should answer 503, which is a fine signal that
-    // the route is wired without needing Upstash or Resend in CI.
-    UPSTASH_REDIS_REST_URL: '',
-    UPSTASH_REDIS_REST_TOKEN: '',
+    // the route is wired without needing a store or Resend in CI.
+    WAITLIST_REDIS_URL: '',
     RESEND_API_KEY: '',
     WAITLIST_NOTIFY_TO: '',
   },
@@ -166,6 +165,17 @@ try {
   await run('404s a missing page', async () => {
     const r = await get('/definitely-not-here')
     assert.equal(r.status, 404)
+  })
+
+  await run('survives a malformed percent-escape instead of crashing', async () => {
+    // decodeURIComponent throws URIError on `/%`. Uncaught, that propagated out
+    // of the request handler and killed the process — one scanner was enough to
+    // restart the whole marketing site. Seen repeatedly in production logs.
+    const r = await get('/%')
+    assert.equal(r.status, 404)
+    // And the server is still alive to answer the next request.
+    const after = await get('/robots.txt')
+    assert.equal(after.status, 200, 'server died on a malformed path')
   })
 
   await run('refuses path traversal', async () => {
