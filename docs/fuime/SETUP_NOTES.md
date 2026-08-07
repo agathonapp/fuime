@@ -2,6 +2,17 @@
 
 ## Handoff (most recent first)
 
+**2026-08-06 — The waitlist is readable.** `/admin/waitlist` (Misc in the admin
+nav): count against the 1,000 goal, 30-day daily bars, source breakdown, roster,
+CSV. It reads the Upstash keys the marketing site writes — `Fuime::WaitlistRoster`,
+read-only commands, unset credentials render a notice instead of raising. It lives
+in Rails, not on the site, so access is the console's existing `signed_in_admin`
+rather than a shared token to hand out. **Before trusting the number:** confirm
+`UPSTASH_REDIS_REST_URL`/`_TOKEN` are set on the `fuime-site` Render service.
+`api/waitlist.js` runs happily Resend-only, in which case nothing was ever stored
+and Upstash will not backfill. Then set the same two on `fuime-web` (read-only
+token). 26 examples green, rubocop clean; full suite not re-run.
+
 **2026-08-06 (later) — CI had never run, and a school can now be funded.** Two things.
 
 **(1) No test had ever executed in CI on this fork.** `ci.yml` — sharded RSpec,

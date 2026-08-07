@@ -85,6 +85,15 @@ services:
       # own signing secret; verifying them against the secret above fails.
       - key: FUIME_STRIPE_CONNECT_WEBHOOK_SECRET
         sync: false
+      # Read side of the marketing site's waitlist, for /admin/waitlist. Same
+      # Upstash instance fuime-site writes to, so the URL matches that service's
+      # value — but give this one a READ-ONLY token. Rails only ever issues
+      # SCARD/SMEMBERS/HGETALL and has no business holding a key that can drop
+      # the list. Unset is safe: the admin page says it has nothing to read.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
       - key: SECRET_KEY_BASE
         generateValue: true
       - key: RAILS_MASTER_KEY

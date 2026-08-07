@@ -1,0 +1,117 @@
+<% title "Waitlist" %>
+
+<% if !@configured %>
+  <div class="card mb-4">
+    <strong>No stored list.</strong>
+    <p class="mt-1 mb0">
+      <code>UPSTASH_REDIS_REST_URL</code> and <code>UPSTASH_REDIS_REST_TOKEN</code> are not
+      set for this app, so there is nothing here to read. Note that the marketing site's
+      <code>/api/waitlist</code> also accepts a Resend-only configuration — if that is how it
+      is deployed, signups exist as email in the <code>WAITLIST_NOTIFY_TO</code> inbox and
+      nowhere else, and wiring Upstash now will not backfill them.
+    </p>
+  </div>
+<% elsif @error.present? %>
+  <div class="card mb-4">
+    <strong>Could not read the waitlist.</strong>
+    <p class="mt-1 mb0"><code><%= @error %></code></p>
+  </div>
+<% end %>
+
+<% remaining = [@goal - @total, 0].max %>
+<% last_7 = Fuime::WaitlistRoster.by_day(@signups, days: 7).sum(&:last) %>
+
+<div class="card mb-4">
+  <span class="text-xl font-bold"><%= number_with_delimiter @total %></span>
+  <span class="opacity-60">of</span>
+  <span class="font-bold"><%= number_with_delimiter @goal %></span>
+  <span class="opacity-60">
+    &middot;
+    <% if remaining.zero? %>
+      goal reached
+    <% else %>
+      <%= number_with_delimiter remaining %> to go, <%= last_7 %> in the last 7 days
+    <% end %>
+    &middot; unique email addresses
+  </span>
+
+  <div class="h-3 bg-gray-200 dark:bg-neutral-700 rounded mt-2 overflow-hidden">
+    <div class="h-full bg-primary rounded"
+         style="width: <%= @goal.positive? ? [(@total.to_f / @goal) * 100, 100].min : 0 %>%;"></div>
+  </div>
+
+  <% days = Fuime::WaitlistRoster.by_day(@signups, days: 30) %>
+  <% peak = [days.map(&:last).max || 0, 1].max %>
+  <div class="flex items-end gap-px mt-4" style="height: 44px;">
+    <% days.each do |day, count| %>
+      <div class="flex-grow bg-primary rounded-t opacity-60"
+           style="height: <%= [(count.to_f / peak) * 100, 2].max %>%;"
+           title="<%= day.to_fs(:long) %>: <%= count %>"></div>
+    <% end %>
+  </div>
+  <p class="muted h5 mt-1 mb0">Signups per day, last 30 days (UTC)</p>
+</div>
+
+<div class="card mb-4">
+  <h2 class="h4 mt0">By source</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Source</th>
+        <th class="w-32">Signups</th>
+        <th class="w-32">Share</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% Fuime::WaitlistRoster.by_source(@signups).each do |source, count| %>
+        <tr>
+          <td><%= source %></td>
+          <td><%= number_with_delimiter count %></td>
+          <td class="muted"><%= @total.positive? ? "#{((count.to_f / @total) * 100).round(1)}%" : "0%" %></td>
+        </tr>
+      <% end %>
+      <% if @signups.empty? %>
+        <tr><td colspan="3" class="muted">Nothing yet.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<div class="flex items-center mb2 flex-col sm:flex-row">
+  <div class="flex-grow">
+    <%= pluralize number_with_delimiter(@signups.size), "signup" %>
+  </div>
+  <%= link_to "Download CSV", admin_waitlist_index_path(format: :csv), class: "btn bg-info" %>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Email</th>
+      <th class="w-32">Source</th>
+      <th class="w-48">Signed up</th>
+      <th class="w-32">IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @signups.each do |signup| %>
+      <tr>
+        <td><%= mail_to signup.email %></td>
+        <td><%= signup.source %></td>
+        <td class="muted">
+          <%= signup.signed_up_at ? signup.signed_up_at.strftime("%Y-%m-%d %H:%M UTC") : "—" %>
+        </td>
+        <td class="muted h5"><%= signup.ip.presence %></td>
+      </tr>
+    <% end %>
+    <% if @signups.empty? %>
+      <tr><td colspan="4" class="muted">No signups stored yet.</td></tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p class="muted h5 mt-4">
+  Signups may be from minors. This list exists to operate the waitlist — under the
+  minor-privacy rules in <code>docs/fuime/LEGAL_RESEARCH.md</code> (L7) it must never feed
+  targeted advertising or profiling.
+</p>

@@ -346,6 +346,18 @@ module Admin
       Section.new(
         name: "Misc",
         items: [
+          # FUIME: the marketing site's waitlist. Unlike every other count here
+          # this one is not a DB query but a read of another service over HTTP,
+          # so it goes through a 5-minute cache that swallows its own failures
+          # — the nav renders on every admin page and must not be able to take
+          # the console down or add a round trip to each request. `to_i` because
+          # Section#counter_sum adds these up and cannot take a nil.
+          make_item(
+            name: "Waitlist",
+            path: admin_waitlist_index_path,
+            count: ->{ Fuime::WaitlistRoster.cached_total.to_i },
+            count_type: :records
+          ),
           make_item(
             name: "Blazer",
             path: blazer_path,

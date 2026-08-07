@@ -3264,3 +3264,60 @@ against it, which is the whole point. 219 across the surrounding surfaces (award
 tracker, policies, institutional sponsorship), 0 failures. **Not exercised against
 Stripe** — `rake fuime:stripe_pass` has no `fund` task yet, and the API-top-up
 assumption above is exactly the class of thing that broke twice before.
+
+---
+
+## 2026-08-06 — The waitlist gets a door, and it is the admin console's
+
+**The problem.** The waitlist has been live and readable by nobody. The write side —
+`site/api/waitlist.js` on the `fuime-site` Render service — has always stored signups
+durably in Upstash (`SADD fuime:waitlist` plus a `fuime:waitlist:meta:<email>` hash) and
+notified by email through Resend. But there was no read surface anywhere: the count that
+Alpha School has attached an introduction to existed only as a pile of notification mail.
+
+**Where it lives, and why that was a decision.** A token-guarded page on the marketing
+site was the shorter path — the site already holds the Upstash credentials. It was
+rejected: a shared secret is something you distribute by hand, revoke by hand, and cannot
+attribute. Fuime already answers "who may see admin things" in one place, so the page is
+a normal `Admin::BaseController` action behind `signed_in_admin` (admins **and** auditors,
+matching the rest of the console). Nothing new to hand out.
+
+**What changed**
+
+- `app/services/fuime/waitlist_roster.rb` (new) — read side of the Upstash keys. Issues
+  only `SCARD`, `SMEMBERS`, `HGETALL`, chunked 250 at a time, and raises `ReadFailed`
+  rather than leaking a Faraday error upward. Absent credentials are a supported state
+  (M2 rule: every external service must be safely unset) — `configured?` is false and
+  `fetch` returns empty instead of raising.
+- `app/controllers/admin/waitlist_controller.rb` (new) — HTML and CSV. A read failure
+  renders the page with the message rather than 500ing, because a waitlist you cannot
+  read is worth saying out loud. CSV cells opening `=`/`+`/`-`/`@` are quote-prefixed:
+  every field came from an anonymous public form and Excel executes those.
+- `app/views/admin/waitlist/index.html.erb` (new) — count against the goal, progress bar,
+  30-day daily bars, source breakdown, roster, CSV link. Carries the L7 line: these
+  addresses may belong to minors and must never feed targeted advertising or profiling.
+- `app/models/admin/nav.rb` — a **Waitlist** item under Misc. Unlike every other count in
+  this file it is not a DB query but another service over HTTP, so it goes through
+  `WaitlistRoster.cached_total` (5-minute cache, swallows its own failures). The nav
+  renders on every admin page and must not be able to add a round trip to each request or
+  take the console down.
+- `render.yaml` — `UPSTASH_REDIS_REST_URL` / `_TOKEN` added to `fuime-web`. Same instance
+  `fuime-site` writes to; **give Rails a read-only token**, it has no reason to hold a key
+  that can drop the list.
+- `.env.development.example` — the same two vars plus `WAITLIST_GOAL`.
+
+**Not upstream code.** HCB has no waitlist; nothing here modifies an upstream file except
+the one nav item, so this does not complicate merging upstream fixes.
+
+**The caveat worth carrying.** `api/waitlist.js` accepts a Resend-only configuration —
+it will happily run with no Upstash at all, notifying by email and storing nothing. If
+that is how `fuime-site` is actually deployed, then there is no roster to read, every
+signup to date exists only in the `WAITLIST_NOTIFY_TO` inbox, and wiring Upstash now will
+**not** backfill. Verify the Render env before trusting any number. The admin page detects
+this case and says so rather than rendering a confident zero.
+
+**Verification:** `spec/services/fuime/waitlist_roster_spec.rb` (new, 13),
+`spec/requests/fuime_waitlist_admin_spec.rb` (new, 8 — signed-out and ordinary users are
+refused HTML *and* CSV, an admin sees the roster, Upstash-down renders, formula injection
+neutralised), `spec/models/admin/nav_spec.rb` (5). 26 examples, 0 failures; rubocop clean.
+The site's own suite (31) still passes untouched. Full Rails suite not re-run.
