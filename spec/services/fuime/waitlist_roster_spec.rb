@@ -4,71 +4,72 @@ require "rails_helper"
 
 # Fuime: the read side of the marketing site's waitlist. The site writes the
 # keys; this only ever reads them.
+#
+# Runs against a REAL Redis rather than a stub. Both CI and docker-compose
+# provide one, and the whole point of this class is the shape of what Redis
+# gives back — a stubbed client would be asserting my own assumptions about
+# HGETALL's return type, which is exactly the class of bug that a fake hides.
+# DB 15 keeps it clear of the dev cache and the Sidekiq queue.
 RSpec.describe Fuime::WaitlistRoster do
-  let(:url) { "https://kv.example.com" }
-
-  def configure!
-    ENV["UPSTASH_REDIS_REST_URL"] = url
-    ENV["UPSTASH_REDIS_REST_TOKEN"] = "kv-token"
+  def redis_url
+    uri = URI.parse(ENV["REDIS_URL"].presence || "redis://localhost:6379")
+    uri.path = "/15"
+    uri.to_s
   end
 
-  # One stub for both pipeline calls: the roster list, then the per-email
-  # hashes. WebMock replays them in order.
-  def stub_pipeline(*responses)
-    stub_request(:post, "#{url}/pipeline")
-      .to_return(*responses.map { |r| { status: 200, body: r.to_json } })
+  let(:redis) { Redis.new(url: redis_url) }
+
+  def store(email, at: nil, source: nil, ip: nil)
+    redis.sadd(described_class::LIST_KEY, email)
+    meta = {}
+    meta["at"] = at if at
+    meta["source"] = source if source
+    meta["ip"] = ip if ip
+    redis.hset("#{described_class::META_PREFIX}#{email}", meta) if meta.any?
   end
 
   before do
-    ENV.delete("UPSTASH_REDIS_REST_URL")
-    ENV.delete("UPSTASH_REDIS_REST_TOKEN")
+    ENV["WAITLIST_REDIS_URL"] = redis_url
     ENV.delete("WAITLIST_GOAL")
+    redis.flushdb
     Rails.cache.delete(described_class::NAV_CACHE_KEY)
   end
 
   after do
-    ENV.delete("UPSTASH_REDIS_REST_URL")
-    ENV.delete("UPSTASH_REDIS_REST_TOKEN")
+    redis.flushdb
+    ENV.delete("WAITLIST_REDIS_URL")
     ENV.delete("WAITLIST_GOAL")
   end
 
-  describe "without credentials" do
+  describe "without a configured url" do
+    before { ENV.delete("WAITLIST_REDIS_URL") }
+
     it "is not configured, and reads as empty rather than raising" do
+      # Deliberately does NOT fall back to REDIS_URL, which is always set on
+      # fuime-web: falling back would make a forgotten variable look like an
+      # empty waitlist instead of a missing one.
+      expect(ENV["REDIS_URL"]).to be_present
       expect(described_class).not_to be_configured
       expect(described_class.new.fetch).to eq(total: 0, signups: [])
-    end
-
-    it "never reaches out for the nav count" do
       expect(described_class.cached_total).to be_nil
-      expect(a_request(:post, "#{url}/pipeline")).not_to have_been_made
     end
   end
 
   describe "#fetch" do
-    before { configure! }
-
     it "joins the roster set with the meta hashes, newest first" do
-      stub_pipeline(
-        [{ "result" => 3 }, { "result" => ["b@example.com", "a@example.com", "c@example.com"] }],
-        [
-          { "result" => ["at", "2026-08-06T09:00:00Z", "source", "pricing-foot", "ip", "2.2.2.2"] },
-          { "result" => ["at", "2026-08-05T10:00:00Z", "source", "home-hero", "ip", "1.1.1.1"] },
-          { "result" => [] }
-        ]
-      )
+      store("b@example.com", at: "2026-08-06T09:00:00Z", source: "pricing-foot", ip: "2.2.2.2")
+      store("a@example.com", at: "2026-08-05T10:00:00Z", source: "home-hero", ip: "1.1.1.1")
 
       result = described_class.new.fetch
 
-      expect(result[:total]).to eq 3
-      expect(result[:signups].map(&:email)).to eq ["b@example.com", "a@example.com", "c@example.com"]
+      expect(result[:total]).to eq 2
+      expect(result[:signups].map(&:email)).to eq ["b@example.com", "a@example.com"]
       expect(result[:signups].first.source).to eq "pricing-foot"
+      expect(result[:signups].first.ip).to eq "2.2.2.2"
     end
 
     it "still lists an address whose meta hash never landed" do
-      stub_pipeline(
-        [{ "result" => 1 }, { "result" => ["orphan@example.com"] }],
-        [{ "result" => [] }]
-      )
+      store("orphan@example.com")
 
       orphan = described_class.new.fetch[:signups].first
 
@@ -77,47 +78,45 @@ RSpec.describe Fuime::WaitlistRoster do
       expect(orphan.source).to eq "unknown"
     end
 
-    it "accepts an object-shaped HGETALL as well as a flat array" do
-      stub_pipeline(
-        [{ "result" => 1 }, { "result" => ["x@example.com"] }],
-        [{ "result" => { "at" => "2026-08-06T09:00:00Z", "source" => "home-foot", "ip" => "" } }]
-      )
+    it "sorts undated rows last rather than letting them poison the order" do
+      store("dated@example.com", at: "2026-08-05T10:00:00Z", source: "home-hero")
+      store("undated@example.com", source: "imported")
 
-      expect(described_class.new.fetch[:signups].first.source).to eq "home-foot"
+      expect(described_class.new.fetch[:signups].map(&:email))
+        .to eq ["dated@example.com", "undated@example.com"]
     end
 
-    it "raises ReadFailed — not a bare HTTP error — when Upstash is unhappy" do
-      stub_request(:post, "#{url}/pipeline").to_return(status: 500, body: "boom")
+    it "ignores an unparseable timestamp instead of raising" do
+      store("bad@example.com", at: "not a date", source: "home-hero")
 
-      expect { described_class.new.fetch }.to raise_error(described_class::ReadFailed, /500/)
+      expect(described_class.new.fetch[:signups].first.signed_up_at).to be_nil
     end
 
-    it "raises ReadFailed when the connection dies" do
-      stub_request(:post, "#{url}/pipeline").to_timeout
+    it "reads a roster larger than one pipeline chunk" do
+      600.times { |i| redis.sadd(described_class::LIST_KEY, "f#{i}@example.com") }
+
+      result = described_class.new.fetch
+
+      expect(result[:total]).to eq 600
+      expect(result[:signups].size).to eq 600
+    end
+
+    it "raises ReadFailed — not a bare connection error — when Redis is unreachable" do
+      ENV["WAITLIST_REDIS_URL"] = "redis://127.0.0.1:6390/0" # nothing listening
 
       expect { described_class.new.fetch }.to raise_error(described_class::ReadFailed)
-    end
-
-    it "pages HGETALL rather than sending one unbounded request" do
-      emails = (1..600).map { |i| "f#{i}@example.com" }
-      stub_pipeline(
-        [{ "result" => emails.size }, { "result" => emails }],
-        emails.first(250).map { { "result" => [] } },
-        emails[250, 250].map { { "result" => [] } },
-        emails[500..].map { { "result" => [] } }
-      )
-
-      expect(described_class.new.fetch[:signups].size).to eq 600
-      # 1 roster call + 3 chunks of 250.
-      expect(a_request(:post, "#{url}/pipeline")).to have_been_made.times(4)
     end
   end
 
   describe ".cached_total" do
-    before { configure! }
+    it "returns the roster size" do
+      store("a@example.com")
+
+      expect(described_class.cached_total).to eq 1
+    end
 
     it "degrades to nil instead of taking the admin nav down with it" do
-      stub_request(:post, "#{url}/pipeline").to_return(status: 500, body: "boom")
+      ENV["WAITLIST_REDIS_URL"] = "redis://127.0.0.1:6390/0"
 
       expect(described_class.cached_total).to be_nil
     end

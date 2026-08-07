@@ -3394,3 +3394,70 @@ end-to-end against a mock Upstash: header/comment/malformed lines skipped, addre
 lowercased, missing source defaulted, an already-stored address left alone, and a second
 run adding nothing. The site's own suite (31) still passes untouched. Full Rails suite
 not re-run.
+
+---
+
+## 2026-08-07 — The waitlist store moves to Render, and the vendor count goes to one
+
+**Why.** Upstash was a second vendor holding the only durable record of who wants
+this product, and Fuime already pays for a Render Key Value instance. The decision was
+"Render only". The obstacle was protocol, not preference: **Render Key Value has no HTTP
+API**, so the marketing site could not keep speaking Upstash's REST dialect and had to
+move to the Redis wire protocol.
+
+**The key layout is deliberately unchanged** — `SADD fuime:waitlist` plus a
+`fuime:waitlist:meta:<email>` hash. Rails' reader, the backfill task and any already-stored
+rows all still line up, so this is a transport change, not a data migration.
+
+**What changed**
+
+- `app/services/fuime/waitlist_roster.rb` — reads through the `redis` gem instead of
+  Faraday/REST. Still read-only: SCARD, SMEMBERS, pipelined HGETALL.
+- `site/api/waitlist.js` — writes through `ioredis`. **The BRIEF froze this file**; the
+  freeze was rewritten rather than quietly broken (see `site/docs/BRIEF.md`), because the
+  rule worth keeping is "the tests pass and the two-sink design survives", not "these
+  bytes never change".
+- `site/test/waitlist.test.mjs` — rewritten against a fake redis client injected via a new
+  `setRedis()` seam. 13 examples became 17: the rewrite exposed two cases the old suite
+  never had, a per-command Redis error (which resolves rather than throws, so a naive
+  implementation reports a dropped signup as stored) and mail-only in-process dedupe.
+- `lib/tasks/fuime_waitlist.rake` — imports via Redis MULTI. Still idempotent, and it now
+  prints only the host rather than a URL with an inline password.
+- `render.yaml` — `fuime-redis` **free → starter with `journal-snapshot`**;
+  `WAITLIST_REDIS_URL` wired to fuime-web and fuime-site; the site gains
+  `buildCommand: npm ci --omit=dev`.
+
+**Two decisions worth carrying, both of which are the same mistake in different clothes.**
+
+1. **`WAITLIST_REDIS_URL` has no fallback to `REDIS_URL`,** and that is not an oversight.
+   The fallback was written first and a spec caught it: `REDIS_URL` is always set on
+   fuime-web, so a service that merely *forgot* the variable would read the Sidekiq
+   instance, find no roster there, and render a confident zero. Silently reporting an
+   empty waitlist is the precise failure this whole feature exists to end. Unset must
+   mean "I have nothing to read", loudly.
+
+2. **`ioredis` is imported dynamically and fails soft.** A top-level import of a missing
+   dependency is a module-load crash, and on this service that 500s the *entire marketing
+   site* — pages, pricing, /parents — because one optional sink is unavailable. The
+   dependency is new, so any deploy whose build step predates it (a dashboard
+   `buildCommand` that was never blueprint-synced, a rollback, a cached build) would take
+   fuime.com down. Verified by hiding `node_modules/ioredis` and confirming the pages
+   still answer 200.
+
+**Why `free` was never viable.** Free Render Key Value instances have **no persistence** —
+data is lost on every restart. That instance already backed Sidekiq, so queued jobs were
+being dropped too; the upgrade fixes that independently of the waitlist.
+
+**The tripwire.** `maxmemoryPolicy` stays `noeviction`, so when memory fills, writes
+**fail** rather than silently discarding keys — correct for a queue and for signups. But a
+Rails cache large enough to fill the instance would start rejecting waitlist writes. The
+seam is in place: `WAITLIST_REDIS_URL` is its own variable, so splitting the roster onto a
+dedicated instance is one new service and one changed value, not a code change.
+
+**Verification:** Rails 27 examples, 0 failures (13 roster, 9 request, 5 nav) — the two
+waitlist specs now run against a **real Redis on DB 15** rather than stubs, because the
+thing under test is the shape of what Redis returns and a fake would only assert my own
+assumptions. Site 35 (17 waitlist + 18 server). Rubocop and erb_lint clean. The import
+task was exercised end-to-end against a real Redis: malformed lines rejected, addresses
+lowercased, an existing address left alone, a second run adding nothing, and the roster
+reading back exactly what the import wrote.

@@ -10,5 +10,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node test/waitlist.test.mjs && node test/server.test.mjs"
+  },
+  "dependencies": {
+    "ioredis": "^6.0.0"
   }
 }

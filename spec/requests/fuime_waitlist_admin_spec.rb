@@ -20,29 +20,37 @@ RSpec.describe "admin waitlist", type: :request do
   let(:admin) { create(:user, :make_admin, birthday: 40.years.ago.to_date, verified: true) }
   let(:normal_user) { create(:user, birthday: 40.years.ago.to_date, verified: true) }
 
-  let(:url) { "https://kv.example.com" }
+  # A real Redis on DB 15, same reasoning as waitlist_roster_spec: the value of
+  # these examples is that the page renders what the store actually returns.
+  def redis_url
+    uri = URI.parse(ENV["REDIS_URL"].presence || "redis://localhost:6379")
+    uri.path = "/15"
+    uri.to_s
+  end
 
-  def configure_upstash!
-    ENV["UPSTASH_REDIS_REST_URL"] = url
-    ENV["UPSTASH_REDIS_REST_TOKEN"] = "kv-token"
+  let(:redis) { Redis.new(url: redis_url) }
+
+  def configure_store!
+    ENV["WAITLIST_REDIS_URL"] = redis_url
   end
 
   def stub_roster(emails:, metas:)
-    stub_request(:post, "#{url}/pipeline").to_return(
-      { status: 200, body: [{ "result" => emails.size }, { "result" => emails }].to_json },
-      { status: 200, body: emails.map { |e| { "result" => metas.fetch(e, []) } }.to_json }
-    )
+    emails.each do |email|
+      redis.sadd(Fuime::WaitlistRoster::LIST_KEY, email)
+      meta = metas[email]
+      redis.hset("#{Fuime::WaitlistRoster::META_PREFIX}#{email}", meta) if meta.present?
+    end
   end
 
   before do
-    ENV.delete("UPSTASH_REDIS_REST_URL")
-    ENV.delete("UPSTASH_REDIS_REST_TOKEN")
+    ENV.delete("WAITLIST_REDIS_URL")
+    redis.flushdb
     Rails.cache.delete(Fuime::WaitlistRoster::NAV_CACHE_KEY)
   end
 
   after do
-    ENV.delete("UPSTASH_REDIS_REST_URL")
-    ENV.delete("UPSTASH_REDIS_REST_TOKEN")
+    redis.flushdb
+    ENV.delete("WAITLIST_REDIS_URL")
   end
 
   it "is not reachable by a signed-out visitor" do
@@ -61,12 +69,12 @@ RSpec.describe "admin waitlist", type: :request do
   end
 
   it "shows any admin the roster and the count against the goal" do
-    configure_upstash!
+    configure_store!
     stub_roster(
       emails: ["b@example.com", "a@example.com"],
       metas: {
-        "b@example.com" => ["at", "2026-08-06T09:00:00Z", "source", "pricing-foot", "ip", "2.2.2.2"],
-        "a@example.com" => ["at", "2026-08-05T10:00:00Z", "source", "home-hero", "ip", "1.1.1.1"]
+        "b@example.com" => { "at" => "2026-08-06T09:00:00Z", "source" => "pricing-foot", "ip" => "2.2.2.2" },
+        "a@example.com" => { "at" => "2026-08-05T10:00:00Z", "source" => "home-hero", "ip" => "1.1.1.1" }
       }
     )
     login_as!(admin)
@@ -90,9 +98,8 @@ RSpec.describe "admin waitlist", type: :request do
     expect(response.body).to include("No stored list")
   end
 
-  it "renders the page — not a 500 — when Upstash is down" do
-    configure_upstash!
-    stub_request(:post, "#{url}/pipeline").to_return(status: 500, body: "boom")
+  it "renders the page — not a 500 — when the store is unreachable" do
+    ENV["WAITLIST_REDIS_URL"] = "redis://127.0.0.1:6390/0" # nothing listening
     login_as!(admin)
 
     get admin_waitlist_index_path
@@ -116,10 +123,10 @@ RSpec.describe "admin waitlist", type: :request do
 
   describe "CSV export" do
     it "serves the roster as a download" do
-      configure_upstash!
+      configure_store!
       stub_roster(
         emails: ["a@example.com"],
-        metas: { "a@example.com" => ["at", "2026-08-05T10:00:00Z", "source", "home-hero", "ip", "1.1.1.1"] }
+        metas: { "a@example.com" => { "at" => "2026-08-05T10:00:00Z", "source" => "home-hero", "ip" => "1.1.1.1" } }
       )
       login_as!(admin)
 
@@ -132,10 +139,10 @@ RSpec.describe "admin waitlist", type: :request do
     end
 
     it "neutralises a spreadsheet formula smuggled in through the form" do
-      configure_upstash!
+      configure_store!
       stub_roster(
         emails: ["=cmd|'/c calc'!A1@example.com"],
-        metas: { "=cmd|'/c calc'!A1@example.com" => ["at", "2026-08-05T10:00:00Z", "source", "=HYPERLINK(\"x\")", "ip", ""] }
+        metas: { "=cmd|'/c calc'!A1@example.com" => { "at" => "2026-08-05T10:00:00Z", "source" => "=HYPERLINK(\"x\")" } }
       )
       login_as!(admin)
 

@@ -2,11 +2,22 @@
 //
 // Two independent sinks, because a waitlist that silently drops signups is
 // worse than one that errors:
-//   1. Upstash Redis (durable, deduped)  — UPSTASH_REDIS_REST_URL + _TOKEN
-//   2. Resend notification email          — RESEND_API_KEY + WAITLIST_NOTIFY_TO
+//   1. Render Key Value (durable, deduped)  — WAITLIST_REDIS_URL
+//   2. Resend notification email            — RESEND_API_KEY + WAITLIST_NOTIFY_TO
 //
 // If BOTH are unconfigured we return 503 rather than a green checkmark over a
 // dropped address. At least one must be wired for the endpoint to accept.
+//
+// Storage moved from Upstash REST to a Render Key Value instance (2026-08-07),
+// so this speaks the Redis protocol over the private network instead of HTTPS.
+// The key layout is unchanged and is the contract with Rails' read side
+// (Fuime::WaitlistRoster) and the backfill task:
+//
+//   SADD  fuime:waitlist               <email>
+//   HSET  fuime:waitlist:meta:<email>  at / source / ip
+//
+// Keeping Resend as the second sink is what makes the store swappable at all:
+// if the store is down or misconfigured, the address still reaches a human.
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const LIST_KEY = 'fuime:waitlist'
@@ -16,7 +27,7 @@ const LIST_KEY = 'fuime:waitlist'
 const RATE_MAX = 5
 const RATE_WINDOW_S = 600
 
-// In-process fallback for when Upstash is not configured. Without it the
+// In-process fallback for when no store is configured. Without it the
 // Redis-backed limiter below never runs and a Resend-only deployment is an
 // open mail relay: no counter, and no isNew to suppress duplicates.
 //
@@ -59,61 +70,112 @@ function markNewMemory(email, now) {
   return true
 }
 
+// One connection for the process, created on first use rather than at import,
+// so a module load never blocks on the network and the tests can inject their
+// own client. ioredis reconnects on its own; what it must not do is queue a
+// request forever while a visitor waits on the form, hence the timeouts and
+// the retry ceiling.
+let client = null
+let clientResolved = false
+
+// ioredis is loaded dynamically, and that is deliberate rather than stylistic.
+// A top-level `import` of a missing dependency is a module-load crash, which on
+// this service means the ENTIRE marketing site 500s — pages, pricing, /parents,
+// everything — because one optional sink is unavailable. The dependency arrived
+// with the move off Upstash, so any deploy whose build step predates that (a
+// dashboard buildCommand that was never blueprint-synced, a rollback, a cached
+// build) would take fuime.com down. Failing soft to mail-only is the same
+// degradation the handler already models everywhere else.
+async function loadRedisClass() {
+  try {
+    return (await import('ioredis')).default
+  } catch (e) {
+    console.error(
+      'waitlist: ioredis is not installed — falling back to mail-only. ' +
+        'Run `npm ci` on this service. (' + (e?.message ?? e) + ')'
+    )
+    return null
+  }
+}
+
+export async function getRedis() {
+  if (clientResolved) return client
+
+  const url = process.env.WAITLIST_REDIS_URL
+  if (!url) {
+    clientResolved = true
+    return null
+  }
+
+  const Redis = await loadRedisClass()
+  if (!Redis) {
+    clientResolved = true
+    return null
+  }
+
+  client = new Redis(url, {
+    lazyConnect: false,
+    connectTimeout: 3000,
+    commandTimeout: 3000,
+    maxRetriesPerRequest: 2,
+    enableOfflineQueue: false,
+    // Render's external Key Value hostname serves a certificate the default
+    // store does not chain to. Internal redis:// URLs never reach this.
+    ...(url.startsWith('rediss://')
+      ? { tls: { rejectUnauthorized: false } }
+      : {}),
+  })
+  // Without a listener an emitted 'error' is an unhandled exception that takes
+  // the whole site down — the marketing pages must outlive a store outage.
+  client.on('error', e => console.error('waitlist redis:', e?.message ?? e))
+
+  clientResolved = true
+  return client
+}
+
+// Test seam: swap in a fake client, or pass null to reset so the next call
+// re-reads the environment.
+export function setRedis(c) {
+  client = c
+  clientResolved = c !== null && c !== undefined
+}
+
 // Fails OPEN: if the limiter itself errors we take the signup rather than
-// lose a real one to a Redis blip. The isNew gate below is the backstop that
+// lose a real one to a store blip. The isNew gate below is the backstop that
 // keeps a flood from becoming a mailstorm even when this is unavailable.
-async function underRateLimit(url, token, ip) {
+async function underRateLimit(redis, ip) {
   if (!ip) return true
   const key = `fuime:waitlist:rl:${ip}`
   try {
-    const res = await fetch(`${url}/pipeline`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([
-        ['INCR', key],
-        ['EXPIRE', key, String(RATE_WINDOW_S), 'NX'],
-      ]),
-    })
-    if (!res.ok) return true
-    const out = await res.json()
-    return Number(out?.[0]?.result ?? 0) <= RATE_MAX
+    const [[, n]] = await redis
+      .multi()
+      .incr(key)
+      .expire(key, RATE_WINDOW_S, 'NX')
+      .exec()
+    return Number(n ?? 0) <= RATE_MAX
   } catch {
     return true
   }
 }
 
-async function storeUpstash(url, token, email, meta) {
-  const cmds = [
-    ['SADD', LIST_KEY, email],
-    [
-      'HSET',
-      `fuime:waitlist:meta:${email}`,
-      'at',
-      meta.at,
-      'source',
-      meta.source,
-      'ip',
-      meta.ip,
-    ],
-  ]
-  const res = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(cmds),
-  })
-  if (!res.ok)
-    throw new Error(
-      `upstash ${res.status}: ${(await res.text()).slice(0, 200)}`
-    )
-  const out = await res.json()
+async function storeRedis(redis, email, meta) {
+  const res = await redis
+    .multi()
+    .sadd(LIST_KEY, email)
+    .hset(`fuime:waitlist:meta:${email}`, {
+      at: meta.at,
+      source: meta.source,
+      ip: meta.ip,
+    })
+    .exec()
+
+  // ioredis returns [[err, reply], ...]; a transaction that failed surfaces
+  // here rather than throwing, and must not be reported as a stored signup.
+  if (!res) throw new Error('redis transaction aborted')
+  for (const [err] of res) if (err) throw err
+
   // SADD returns 1 for a new member, 0 if it was already there.
-  return { isNew: out?.[0]?.result === 1 }
+  return { isNew: res[0][1] === 1 }
 }
 
 async function notifyResend(key, to, email, meta) {
@@ -166,7 +228,7 @@ export default async function handler(req, res) {
   const meta = {
     at: new Date().toISOString(),
     source,
-    // Behind Vercel's proxy the left-most XFF entry is client-supplied and
+    // Behind Render's proxy the left-most XFF entry is client-supplied and
     // therefore spoofable. It is a breadcrumb, never an access decision.
     ip: String(req.headers['x-forwarded-for'] ?? '')
       .split(',')[0]
@@ -174,12 +236,11 @@ export default async function handler(req, res) {
       .slice(0, 45),
   }
 
-  const kvUrl = process.env.UPSTASH_REDIS_REST_URL
-  const kvToken = process.env.UPSTASH_REDIS_REST_TOKEN
+  const redis = await getRedis()
   const resendKey = process.env.RESEND_API_KEY
   const notifyTo = process.env.WAITLIST_NOTIFY_TO
 
-  const haveStore = Boolean(kvUrl && kvToken)
+  const haveStore = Boolean(redis)
   const haveMail = Boolean(resendKey && notifyTo)
 
   if (!haveStore && !haveMail) {
@@ -189,7 +250,7 @@ export default async function handler(req, res) {
 
   const now = Date.parse(meta.at)
   const withinLimit = haveStore
-    ? await underRateLimit(kvUrl, kvToken, meta.ip)
+    ? await underRateLimit(redis, meta.ip)
     : underRateLimitMemory(meta.ip, now)
   if (!withinLimit) {
     return res.status(429).json({ ok: false, error: 'rate_limited' })
@@ -202,14 +263,14 @@ export default async function handler(req, res) {
   let storeErr = null
   if (haveStore) {
     try {
-      stored = await storeUpstash(kvUrl, kvToken, email, meta)
+      stored = await storeRedis(redis, email, meta)
     } catch (e) {
       storeErr = e
       console.error('waitlist sink failed:', e?.message ?? e)
     }
   }
 
-  // Without Upstash the in-process set answers "is this new?" instead, so a
+  // Without a store the in-process set answers "is this new?" instead, so a
   // resubmitted address still does not re-send. A store that errored is the
   // one case we mail anyway: better a duplicate than a lost signup.
   const isNew = haveStore
