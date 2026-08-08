@@ -2520,6 +2520,131 @@ section[id] {
   }
 }
 
+/* ── the lede ──────────────────────────────────────────────────────────────
+   What the product is, on the first screen, in words.
+
+   / serves start.html, so this is the front door. A dark room and the word
+   SCROLL is a good second impression and a bad first one: the reader has to
+   decide whether to invest four screens of scroll before anything has told
+   them what they would be scrolling toward.
+
+   Same construction as the cue directly below — a child of the track, sitting
+   in its first viewport, gated on the dive being armed. It scrolls away with
+   the document, which is why nothing here animates: the page moving is the
+   animation, and a fade tied to scroll position would be a second scroll
+   listener for an effect the browser already performs.
+
+   Sized in viewport units rather than the type tokens because it is over a
+   photograph, not on a band, and it wants to hold roughly the same share of
+   the frame at every width. */
+.dive__lede {
+  display: none;
+}
+[data-fx-dive-on] .dive__lede {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  width: 100%;
+  /* One viewport, matching the cue, so the two divide the same screen between
+     them — this one from the top, the cue from the bottom — and neither has to
+     know the other's height. */
+  height: 100vh;
+  height: 100svh;
+  padding: clamp(28px, 7svh, 74px) var(--gut) 0;
+  text-align: center;
+  /* The room underneath still has to be reachable; only the link is a target. */
+  pointer-events: none;
+}
+/* The plate is a night interior with a lit city in the middle of it, and the
+   middle is where a phone's crop lands. Type over that is legible in the
+   render and not on a screen in daylight, so the text carries its own ground:
+   a short wash from the top edge that is opaque where the words are and gone
+   before the window is. Behind the text and above the canvas. */
+[data-fx-dive-on] .dive__lede::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 82%;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 20, 32, 0.94) 0%,
+    rgba(20, 20, 32, 0.9) 46%,
+    rgba(20, 20, 32, 0.55) 74%,
+    rgba(20, 20, 32, 0) 100%
+  );
+}
+.lede__kicker {
+  margin-bottom: clamp(10px, 1.6svh, 18px);
+  font-size: var(--t-small);
+  font-weight: var(--w-ui);
+  letter-spacing: 2.4px;
+  text-transform: lowercase;
+  color: var(--accent-lit);
+}
+.lede__h {
+  max-width: 17ch;
+  font-size: clamp(1.75rem, 1.1rem + 2.5vw, 3.125rem);
+  font-weight: var(--w-display);
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  color: var(--on-dark);
+  text-wrap: balance;
+}
+.lede__sub {
+  max-width: 46ch;
+  margin-top: clamp(12px, 2svh, 22px);
+  font-size: clamp(0.9375rem, 0.86rem + 0.35vw, 1.125rem);
+  line-height: 1.55;
+  /* Brighter than --on-dark-mu, which is calibrated for support copy on a flat
+     band. This sits on a photograph of a lit city, and the wash above only
+     takes the ground so far. */
+  color: rgba(237, 237, 243, 0.8);
+  text-wrap: pretty;
+}
+/* Phone only. A wheel crosses the dive in two flicks; a thumb does not, and
+   the reader who has read the four lines above and simply wants the form had
+   no way to get to it. On a laptop the same link would be an apology for an
+   animation that is not costing anyone anything. */
+.lede__skip {
+  display: none;
+}
+@media (max-width: 820px) {
+  .lede__skip {
+    display: inline-block;
+    margin-top: clamp(16px, 2.6svh, 26px);
+    padding: 11px 20px;
+    border-radius: var(--r-pill);
+    box-shadow: inset 0 0 0 1px var(--on-dark-faint);
+    background: rgba(237, 237, 243, 0.06);
+    font-size: var(--t-small);
+    font-weight: var(--w-ui);
+    letter-spacing: 0.3px;
+    color: var(--on-dark);
+    text-decoration: none;
+    pointer-events: auto;
+  }
+}
+
+/* The end of the flight, as a coordinate — see the note in start.html. Zero
+   sized and pushed one viewport up from the foot of the track, which is the
+   scroll offset at which the stage stops being pinned and the panel is at
+   rest. Only meaningful while the dive is armed; when it is not, the track is
+   auto-height, the panel is in normal flow, and the anchor is an empty span
+   sitting harmlessly above it. */
+.dive__anchor {
+  position: absolute;
+  left: 0;
+  bottom: 100vh;
+  bottom: 100svh;
+  width: 1px;
+  height: 1px;
+}
+
 /* ── the scroll cue ────────────────────────────────────────────────────────
    A child of the track rather than the pinned stage, so it leaves on the first
    screen of scroll instead of riding the stage all the way down. It answers
@@ -2575,6 +2700,33 @@ section[id] {
   .dive__cue span {
     animation: none;
   }
+}
+
+/* ── /start: the second exit ───────────────────────────────────────────────
+   The sign-up on the glass is four screens behind anyone who has read to the
+   bottom of this page, and a reader at the end of a page will leave rather
+   than scroll back up to a form. Centred rather than left-set like the home
+   page's portal, because it is the last thing on the page and has no image
+   beside it to balance against. */
+.st-join {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+.st-join .h2 {
+  max-width: 20ch;
+}
+.st-join .lead {
+  max-width: 44ch;
+}
+.st-join .capture {
+  width: 100%;
+  max-width: 540px;
+}
+/* The confirmation is a flex row inside a centred grid cell, and a flex row
+   ignores the text-align above it. */
+.st-join .capture__done {
+  justify-content: center;
 }
 
 /* ── responsive ────────────────────────────────────────────────────────── */

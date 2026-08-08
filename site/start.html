@@ -3,20 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Get early access · fuime</title>
+    <title>fuime — invoicing and books for founders aged 13 to 17</title>
     <meta
       name="description"
-      content="Scroll into the laptop on the desk and land on the sign-up. One email when it is your turn, nothing after that."
+      content="fuime is the financial platform for teen-run businesses. Send real invoices, get paid into a Stripe account your parent owns and you run, keep clean books, and know what you owe at tax time. A parent co-signs once; after that the business is yours to run."
     />
     <link rel="canonical" href="https://fuime.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="fuime" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/" />
-    <meta property="og:title" content="Get in line." />
+    <meta
+      property="og:title"
+      content="Invoicing and books for founders aged 13 to 17."
+    />
     <meta
       property="og:description"
-      content="A scroll that flies into the laptop on the desk and lands on the sign-up. One email when it's your turn."
+      content="Send a real invoice, get paid into a Stripe account your parent owns and you run, and know what you owe at tax time. A parent co-signs once. After that it's yours."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -27,10 +30,13 @@
       content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Get in line." />
+    <meta
+      name="twitter:title"
+      content="Invoicing and books for founders aged 13 to 17."
+    />
     <meta
       name="twitter:description"
-      content="A scroll that flies into the laptop on the desk and lands on the sign-up. One email when it's your turn."
+      content="Send a real invoice, get paid into a Stripe account your parent owns and you run, and know what you owe at tax time. A parent co-signs once. After that it's yours."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -262,10 +268,294 @@
             </div>
           </div>
 
+          <!-- ── the lede ────────────────────────────────────────────────
+               What this is, in words, on the screen the reader lands on.
+
+               / serves this file, so the first thing anyone sees of fuime is a
+               dark bedroom and the word SCROLL. That is a mood, not an answer,
+               and a visitor who cannot tell inside two seconds what the product
+               is does not scroll to find out — they leave. The dive still gets
+               to be the experience; it just no longer has to carry the
+               explaining on its own.
+
+               Sibling of the cue and outside the pinned stage for the same
+               reason: it belongs to the first screen of the track and should
+               scroll away with it, not ride the stage down the whole dive. No
+               JS — the document moving is the animation.
+
+               Both this and the cue are gated on [data-fx-dive-on] in the
+               stylesheet. With scripts off or motion reduced the panel below is
+               in normal flow directly under the still, headline and all, and
+               this block would be the same page saying the same thing twice
+               before the reader reaches either. -->
+          <div class="dive__lede">
+            <p class="lede__kicker">fuime</p>
+            <!-- Not an h1. The sign-up panel's headline is this page's h1 in
+                 every state including the ones where this block never renders,
+                 and a second h1 that exists only when a script ran is a heading
+                 outline that changes shape depending on the visit. -->
+            <p class="lede__h">
+              Invoicing, books and a business account for founders aged 13 to
+              17.
+            </p>
+            <!-- The wall, not the mechanics. The panel at the end of the dive
+                 explains how it works and has to keep explaining it, because in
+                 every state where this block is absent that panel is the only
+                 copy on the page. So this one sets up the problem and lets the
+                 landing deliver the answer, rather than the reader flying four
+                 screens to read the sentence they just read. -->
+            <p class="lede__sub">
+              Under 18 there is no business account to open and no contract you
+              can sign. A parent co-signs once — after that the business is
+              yours to run.
+            </p>
+            <!-- Phone only — see the stylesheet. Desktop scrolls the dive in a
+                 couple of flicks; a thumb does not, and the one thing a reader
+                 in a hurry cannot currently do is skip to the form. -->
+            <a class="lede__skip" href="#signup">Skip to the sign-up</a>
+          </div>
+
           <!-- Outside the pinned stage on purpose: it belongs to the first
                screen of the track, so it leaves on the first screen of scroll
                instead of riding the stage down the whole dive. -->
           <p class="dive__cue" aria-hidden="true"><span></span>Scroll</p>
+
+          <!-- The end of the flight, as an address.
+               The stage is pinned until the track's bottom reaches the bottom of
+               the viewport, so the scroll offset where the panel comes to rest
+               is exactly (track bottom − one viewport). This sits at that mark,
+               which is what makes an ordinary #signup jump land on the composed
+               sign-up rather than past it. It has no size and no content; it is
+               a coordinate. -->
+          <span class="dive__anchor" id="signup" aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <!-- ── what it actually is ──────────────────────────────────────────
+           Everything below here is new ground under a page that used to end at
+           the sign-up. The dive answers "is this real"; it does not answer
+           "what is it", and the reader who wants the second answer before
+           handing over an email had nowhere to go but away.
+
+           Deliberately after the form and not before it. The person who is
+           already sold signs up on the panel and never sees this; the person
+           who is not keeps scrolling, which is the direction they were already
+           going. Both are served without either being made to wait. -->
+      <section class="band band--cream" id="what">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What fuime is</p>
+            <h2 class="h2">A real business, run by someone who isn't 18 yet.</h2>
+            <p class="lead">
+              Not an allowance app and not a debit card with a parent app
+              bolted on. The invoicing, books and payment rails a working
+              business needs, arranged so a 15-year-old can legally operate
+              one.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M5 2.5h9l3.5 3.5v13H5z" />
+                <path d="M13.5 2.5V6h3.5" />
+                <path d="M8 11h6M8 14.5h4" />
+              </svg>
+              <h3 class="h4">Invoices a client can pay</h3>
+              <p>
+                Numbered, itemised, with your business name on it — paid by card
+                or bank transfer, with every deduction shown before you send it.
+                Not a Venmo request from a group chat.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3 4.5h16M3 9h16M3 13.5h16M3 18h10" />
+              </svg>
+              <h3 class="h4">Books, not a notes app</h3>
+              <p>
+                Every payment, fee and expense on one running balance, with
+                receipts and comments attached to the line they belong to. A
+                real ledger, not a total you keep in your head.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3 8.5 4.5 4h13L19 8.5" />
+                <path d="M3 8.5h16v10H3z" />
+                <path d="M8.5 8.5a2.5 2.5 0 0 0 5 0" />
+              </svg>
+              <h3 class="h4">A page clients can buy from</h3>
+              <p>
+                A public storefront for your venture — what you do, what it
+                costs, a link that takes payment. Somewhere to send a client
+                that is not your Instagram.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="8" cy="6.75" r="3" />
+                <path d="M2.5 18.5V17a4 4 0 0 1 4-4h3" />
+                <path d="M12.5 15.5l2.25 2.25L19.5 13" />
+              </svg>
+              <h3 class="h4">A guardian who signs, not one who runs it</h3>
+              <p>
+                Your parent owns the account and approves money leaving it.
+                Day to day it is yours: you send the invoices, you keep the
+                books, you decide what the business does.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 2.5v17" />
+                <path d="M15 6.5a3.2 3.2 0 0 0-3.2-2H10a2.75 2.75 0 0 0 0 5.5h2a2.75 2.75 0 0 1 0 5.5h-1.8A3.2 3.2 0 0 1 7 13.5" />
+              </svg>
+              <h3 class="h4">Tax time, counted as you go</h3>
+              <p>
+                Income, expenses and net for the year, with the IRS $400
+                self-employment threshold flagged before it becomes a surprise
+                in April.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 2.5 3.5 5.5v5.25c0 4.25 3.1 7.75 7.5 8.75 4.4-1 7.5-4.5 7.5-8.75V5.5z" />
+                <path d="M8 11l2.25 2.25L14.5 9" />
+              </svg>
+              <h3 class="h4">Money that never touches us</h3>
+              <p>
+                Payments go from your client into a Stripe account your parent
+                owns, and payouts go to your family's own bank. fuime is not a
+                bank, holds no balance, and is never in the flow of funds.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/home#how"
+              >See the whole thing, step by step<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the straight answers ─────────────────────────────────────────
+           A teenager handing an email address to a finance product that
+           appeared this year is right to want the awkward questions answered
+           before the form, not after it. These are the four that get asked. -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Before you sign up</p>
+            <h2 class="h2">The questions people ask us first.</h2>
+            <p class="lead">
+              Answered here rather than in a help centre you would have to go
+              looking for.
+            </p>
+          </div>
+
+          <div class="grid grid--2 mt-8">
+            <article class="card">
+              <h3 class="h4">Where it is today</h3>
+              <p>
+                Private beta, running in Stripe test mode — the flows are real
+                and no real money moves yet. Early access goes out in order, and
+                we will tell you which stage you are in.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">Who holds the money</h3>
+              <p>
+                Stripe does, in an account your parent or guardian owns. fuime
+                is not a bank, holds no balance, and never sits in the middle of
+                a payment. Payouts go to your family's own bank.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">What it costs</h3>
+              <p>
+                A percentage of what you actually collect, on top of Stripe's
+                processing fee, with both shown on the invoice before you send
+                it. Nothing to start, and no monthly fee on the plan you start
+                on.
+              </p>
+            </article>
+            <article class="card">
+              <h3 class="h4">How much your parent sees</h3>
+              <p>
+                Every invoice and every payment, in a read-only view, and they
+                approve money leaving the account. They cannot spend it, and
+                their own cards stay out of it.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/pricing"
+              >See what it costs, in full<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the second exit ──────────────────────────────────────────────
+           The panel's form is four screens back by the time anyone reaches the
+           bottom of this page. Asking them to scroll back up to it is asking
+           them to leave. -->
+      <section class="band band--night" id="join" style="padding-top: 0">
+        <div class="wrap st-join rise">
+          <p class="eyebrow">Early access</p>
+          <h2 class="h2">We're onboarding the first businesses now.</h2>
+          <p class="lead mt-5">One email when it's your turn. Nothing after that.</p>
+          <form class="capture mt-7" data-source="start-foot" novalidate>
+            <div class="capture__row">
+              <input
+                type="email"
+                name="email"
+                placeholder="you@school.edu"
+                autocomplete="email"
+                aria-label="Email address"
+                required
+              />
+              <button type="submit" class="btn btn--accent">
+                Get early access
+              </button>
+            </div>
+            <p class="capture__msg" role="status" aria-live="polite"></p>
+            <p class="capture__done">
+              <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
+              <span>You're on the list. We'll email you once.</span>
+            </p>
+          </form>
         </div>
       </section>
     </main>
@@ -276,10 +566,39 @@
          where the join panel is 420x880 with overflow hidden. A disclosure
          that can be cropped is not a disclosure, so it sits here on the same
          night ground the dive lands on, in the footer component the other
-         three pages already use for exactly this paragraph. -->
+         three pages already use for exactly this paragraph.
+
+         It carries the nav now too. This page had no way out but the form, on
+         the theory that the form was the only thing on it; that stopped being
+         true above. -->
     <footer class="foot">
       <div class="wrap">
-        <p class="foot__legal" style="padding-top: 0">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/home#how">How it works</a>
+              <a href="/pricing">What it costs</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <div class="lrow foot__status">
+          <span>Status</span>
+          <span class="lrow__lead" aria-hidden="true"></span>
+          <span class="lrow__val">Private beta · test mode</span>
+        </div>
+        <p class="foot__legal">
           fuime is a financial technology company, not a bank. fuime does not
           hold deposits and does not offer FDIC-insured products. Payments are
           processed by Stripe. Venture accounts are opened and owned by a parent

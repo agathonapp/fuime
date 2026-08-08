@@ -3461,3 +3461,63 @@ assumptions. Site 35 (17 waitlist + 18 server). Rubocop and erb_lint clean. The 
 task was exercised end-to-end against a real Redis: malformed lines rejected, addresses
 lowercased, an existing address left alone, a second run adding nothing, and the roster
 reading back exactly what the import wrote.
+
+---
+
+## 2026-08-07 — The front door says what the product is, and costs half the scroll
+
+**What.** `/` serves `site/start.html`, so the first thing anyone sees of fuime was a dark
+bedroom, a laptop too far away to read, and the word SCROLL. Handsome, and it names no
+product. Two separate costs, fixed together.
+
+**Files.**
+
+- `site/fx/dive.js` — new `phone` block in `DEFAULTS` (`pxPerFrame` 22 → 10, `handoffVh`
+  1.15 → 0.75, `holdVh` 0.5 → 0.25), applied in `measure()` for viewports at or under the
+  existing `phoneUpTo`. Overrides only; anything absent falls through. Measured on a
+  390×844 viewport the dive went from **5.8 screens of scroll to 3.45**, and it applies to
+  `/home`'s dive too, which had the same problem for the same reason.
+- `site/start.html` — a `.dive__lede` block in the first screen of the track (kicker,
+  what-this-is line, the wall it exists to get around, and a phone-only skip link); a
+  zero-sized `#signup` anchor one viewport up from the foot of the track, which is exactly
+  where the panel comes to rest; three new sections below the dive — what the product is
+  (six ruled rows), the four questions people ask before handing over an address (status,
+  who holds the money, cost, what a parent sees), and a second sign-up; footer promoted to
+  the four-page standard with nav and status row. Title, description and both social cards
+  rewritten from "Get in line" to what fuime actually is.
+- `site/style.css` — `.dive__lede` and children, `.dive__anchor`, `.st-join`.
+- `site/test/server.test.mjs` — one new assertion, "the front door says what the product
+  is": the lede is present, it names the age range, and the skip link points at an anchor
+  that exists.
+
+**Two decisions.**
+
+1. **The lede is gated on `[data-fx-dive-on]`, like the scroll cue.** With scripts off or
+   motion reduced, `dive.js` leaves the sign-up panel in normal flow directly under the
+   still — headline, lead and form — and the lede would be the same page introducing
+   itself twice before the reader reached either copy. The panel therefore keeps the full
+   explanation and the lede sets up the problem rather than restating the answer; the
+   fallback path is the one that has to survive alone.
+2. **`pxPerFrame` and not a frame-skip.** The complaint is scroll distance, not frame
+   count, and dropping frames on the ladder that already has the tighter crop would make
+   the dolly judder on the device least able to hide it.
+3. **The site still does not name HCB, and that is deliberate.** A first draft of the
+   section below the rows was the fork attribution, on the theory that a ledger with years
+   of real money behind it is the strongest credibility claim available. It was cut on
+   review. Rule 7's attribution obligation is discharged by `LICENSE`, the README block and
+   the source itself — AGPL-3.0 requires notices in the *work*, not in marketing copy — and
+   no page on fuime.com has ever named HCB. The replacement section answers the questions a
+   reader actually arrives with instead.
+
+**Known, pre-existing, not touched.** The baked plate `img/dive-end.webp` and the frames
+under `dive/` carry an older version of the panel copy than the DOM panel does ("Send a
+real invoice, get paid into an account you run day to day…" against the live "Invoicing
+and books for founders aged 13 to 17…"). The cross-fade substitutes one for the other at
+the seam, so the wording changes under the reader. Fixing it means regenerating 122 frames
+through `gen/dive/`, which is a separate job.
+
+**Verification:** site 20/20 server + 17/17 waitlist. No console errors on `/` or `/home`.
+Checked at 390×844 and 1440×900, armed and disarmed: skip link lands on the composed
+sign-up at scroll 2063 with the track bottom at 845 on an 844px viewport, and with
+`data-fx-dive-on` removed the lede and cue both compute to `display: none` and the still
+plus in-flow panel take over.
