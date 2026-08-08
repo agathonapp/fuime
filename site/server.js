@@ -61,14 +61,44 @@ const REDIRECTS = new Map([
   ['/signup', `${APP_ORIGIN}/users/auth`],
 ])
 
-// The dive moved to / and the old marketing home moved to /home, so the two
-// filenames no longer sit where the generic .html rule below would put them.
-// Both old URLs still work; they just land on the one canonical address.
+// The dive moved to /, so start.html no longer sits where the generic .html
+// rule below would put it. The old URLs still work; they just land on the one
+// canonical address.
 const INTERNAL_REDIRECTS = new Map([
   ['/start', '/'],
   ['/start.html', '/'],
-  ['/index.html', '/home'],
-  ['/index', '/home'],
+])
+
+// The marketing site is not open yet. The front door is the only public page,
+// and until that changes every other page bounces to it.
+//
+// Three properties this has to have:
+//
+//   307, not 308. These pages are coming back. A permanent redirect is a
+//   permanent entry in somebody's browser cache, and re-opening the site would
+//   not reach the people who had already visited it — the same reasoning the
+//   REDIRECTS map above is written against.
+//
+//   A redirect, not a 404. All three are in Google's index and have been linked
+//   from the app and from mail. A 404 on a URL that used to work reads as a
+//   broken site; a bounce to the front door reads as a site that has not opened
+//   yet, which is the true thing.
+//
+//   Crawlable. They are out of sitemap.xml but deliberately NOT disallowed in
+//   robots.txt: a crawler that is blocked from fetching them never sees the
+//   redirect, and the URL can sit in the index as a bare link forever. Letting
+//   it follow the 307 is what consolidates them onto /.
+//
+// Re-opening the site is emptying this set. resolveFile() still knows how to
+// serve all three, and nothing else in this file depends on them being closed.
+const CLOSED = new Set([
+  '/home',
+  '/index',
+  '/index.html',
+  '/pricing',
+  '/pricing.html',
+  '/parents',
+  '/parents.html',
 ])
 
 // Everything the public may fetch. The site root doubles as the deploy root on
@@ -115,8 +145,9 @@ async function resolveFile(pathname) {
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 
-  // The dive is the front door. The older marketing home is still served, at
-  // /home, because pricing and parents link back to it.
+  // The dive is the front door, and while CLOSED is non-empty it is the only
+  // page anyone reaches — the /home branch below is shadowed by that check and
+  // is kept, unreached, so re-opening the site is one edit in one place.
   if (pathname === '/') {
     return { path: join(ROOT, 'start.html'), ext: '.html' }
   }
@@ -219,6 +250,15 @@ const server = createServer(async (req, res) => {
     }
     // The handler parses a string body itself and answers 400 on bad JSON.
     return waitlist({ method: req.method, headers: req.headers, body }, shim(res))
+  }
+
+  // Before the moved-page map and before the .html canonicaliser, so that a
+  // closed page reaches / in one hop from whichever of its spellings was asked
+  // for rather than bouncing through the pretty URL on the way.
+  if (CLOSED.has(pathname)) {
+    res.statusCode = 307
+    res.setHeader('Location', '/')
+    return res.end()
   }
 
   // Moved pages first, so /start.html reaches / in one hop rather than

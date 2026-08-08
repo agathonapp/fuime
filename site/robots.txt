@@ -1,5 +1,8 @@
 # fuime — invoicing for people who aren't 18 yet
-# Three pages, all of them meant to be found.
+# One page while the marketing site is closed: / is the front door and the rest
+# 307 to it. Deliberately no Disallow on /home, /pricing or /parents — a
+# crawler that cannot fetch them never sees the redirect, and the URL sits in
+# the index as a bare link instead of consolidating onto /.
 
 User-agent: *
 Allow: /
