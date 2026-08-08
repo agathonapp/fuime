@@ -63,6 +63,15 @@ const DEFAULTS = {
   handoffVh: 1.15, // viewport heights spent growing the panel out of the screen
   holdVh: 0.5, // and holding the composed app before the section releases
   pad: 0.05, // margin around the composed panel, as a fraction of min(vw,vh)
+  /* Same shot, less document to spend it over. "~2.7 viewport heights" above is
+     a laptop's viewport; a phone's is a third of the area and about half the
+     height, so the identical numbers buy roughly five and a half screens of
+     thumb before the sign-up is reachable — past the point where people decide
+     the page is stuck and leave. These put it near two and a half, which still
+     reads as travel because travel is measured in seconds of motion, not in
+     pixels of scroll. Overrides only; anything absent falls through to the
+     values above. Keyed off the same phoneUpTo the panel layout switches at. */
+  phone: { pxPerFrame: 10, handoffVh: 0.75, holdVh: 0.25 },
   /* Below this width the panel is a phone layout, which cannot be warped into a
      landscape screen without looking crushed. There the swap is a centred
      dissolve instead of a corner match — see startQuad(). */
@@ -495,9 +504,14 @@ function measure(inst) {
     loadLadder(inst)
   }
   inst.phone = vw <= cfg.phoneUpTo
-  inst.scrubPx = inst.track.frames * cfg.pxPerFrame
-  inst.handoffPx = vh * cfg.handoffVh
-  inst.travel = inst.scrubPx + inst.handoffPx + vh * cfg.holdVh
+  // Pacing only. Everything else on cfg — pad, phoneUpTo — is read from cfg
+  // directly, so this object exists for exactly the three numbers below and is
+  // rebuilt per measure() rather than cached: measure runs on resize, not on
+  // scroll, and a cached copy is one more thing a ladder swap could staleen.
+  const pace = inst.phone && cfg.phone ? Object.assign({}, cfg, cfg.phone) : cfg
+  inst.scrubPx = inst.track.frames * pace.pxPerFrame
+  inst.handoffPx = vh * pace.handoffVh
+  inst.travel = inst.scrubPx + inst.handoffPx + vh * pace.holdVh
   // The dive is paid for in document height: the travel it needs, plus the one
   // viewport the pinned stage occupies while it is spent.
   inst.trackEl.style.setProperty(

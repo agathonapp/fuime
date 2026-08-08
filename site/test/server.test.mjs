@@ -141,6 +141,19 @@ try {
     }
   })
 
+  await run('the front door says what the product is', async () => {
+    // / is a scroll-driven film, and a film is easy to keep polishing until the
+    // first screen is a mood with no nouns on it. That is the state this
+    // assertion exists to catch: a visitor who cannot tell what fuime is
+    // without scrolling does not scroll.
+    const body = await (await get('/')).text()
+    assert.match(body, /class="dive__lede"/, 'no lede on the first screen')
+    assert.match(body, /13 to 17/, 'the lede never says who this is for')
+    // And a way past the flight for a thumb, landing on the composed sign-up.
+    assert.match(body, /class="lede__skip" href="#signup"/, 'no skip link')
+    assert.match(body, /id="signup"/, 'skip link points at nothing')
+  })
+
   await run('security headers on every response', async () => {
     for (const p of ['/', '/nope', '/style.css']) {
       const r = await get(p)
