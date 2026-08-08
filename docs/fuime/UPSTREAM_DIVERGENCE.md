@@ -3521,3 +3521,48 @@ Checked at 390×844 and 1440×900, armed and disarmed: skip link lands on the co
 sign-up at scroll 2063 with the track bottom at 845 on an 844px viewport, and with
 `data-fx-dive-on` removed the lede and cue both compute to `display: none` and the still
 plus in-flow panel take over.
+
+---
+
+## 2026-08-07 — The marketing site closes; `/` is the only public page
+
+**What.** The front-door work above put three exits on `/` — two section links and a
+footer nav — and `/home`, `/pricing` and `/parents` were live URLs listed in
+`sitemap.xml` besides. The marketing site is not meant to be seen yet. All of it is now
+behind one switch.
+
+**Files.**
+
+- `site/start.html` — the two `.tlink` section links removed, footer Product column
+  removed. What is left that a reader can click: the sign-up (twice), the skip link, the
+  wordmark (which points at this page), and a mailto. Nothing navigates off `/`.
+- `site/server.js` — new `CLOSED` set, checked before both the moved-page map and the
+  `.html` canonicaliser so every spelling reaches `/` in one hop.
+  `/index.html` and `/index` moved out of `INTERNAL_REDIRECTS` (they pointed at `/home`)
+  and into it. `resolveFile()`'s `/home` branch is left in place, shadowed and commented.
+- `site/sitemap.xml` — down to `/`.
+- `site/robots.txt` — comment rewritten. **No `Disallow` added, deliberately.**
+- `site/test/server.test.mjs` — three replaced or added: the closed pages bounce in one
+  hop with the right status; nothing on the front door leads off it; the sitemap lists
+  only what is served. The paper-plane test now reads the three closed pages off disk
+  instead of dropping them.
+
+**Three decisions.**
+
+1. **307, not 308.** These pages are coming back. A permanent redirect is a permanent
+   entry in every browser cache that saw it, and re-opening would not reach the people who
+   had already visited. Same reasoning the `REDIRECTS` map was already written against.
+2. **A redirect, not a 404.** All three are in Google's index and have been linked from
+   mail. A 404 on a URL that used to work reads as a broken site; a bounce to the front
+   door reads as one that has not opened yet, which is the true thing.
+3. **Crawlable on purpose.** Out of the sitemap but not disallowed in robots: a crawler
+   blocked from fetching them never sees the 307, and the URL can sit in the index as a
+   bare link indefinitely. Following the redirect is what consolidates them onto `/`.
+
+**Re-opening is emptying `CLOSED`,** restoring the three `<loc>` entries, and putting the
+links back on `/`. The pages themselves were not touched and `resolveFile()` still knows
+how to serve all three.
+
+**Verification:** site 21/21 server + 17/17 waitlist. Confirmed live against a running
+server: `/` 200; `/home`, `/pricing`, `/parents`, `/index.html`, `/pricing.html` all 307
+to `/`. No console errors, checked at 390×844 and 1440×900.

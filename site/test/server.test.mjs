@@ -7,6 +7,7 @@
 // have caught it in a second.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const PORT = 8791
@@ -67,27 +68,51 @@ try {
     assert.match(body, /class="capture"/, 'root should carry the sign-up')
   })
 
-  await run('serves the old marketing home at /home', async () => {
-    const r = await get('/home')
-    assert.equal(r.status, 200)
-    const body = await r.text()
-    assert.match(body, /id="how"/, '/home should be index.html')
+  await run('the closed marketing pages bounce to the front door', async () => {
+    // The site is not open yet, so / is the only page anyone reaches. Every
+    // spelling of the other three goes there in ONE hop — /pricing.html must
+    // not bounce through /pricing on the way, which is why the CLOSED check
+    // sits above both the moved-page map and the .html canonicaliser.
+    for (const p of [
+      '/home',
+      '/index',
+      '/index.html',
+      '/pricing',
+      '/pricing.html',
+      '/parents',
+      '/parents.html',
+    ]) {
+      const r = await get(p)
+      // 307 and not 308: these pages are coming back, and a permanent redirect
+      // would outlive the decision in every browser cache that saw it.
+      assert.equal(r.status, 307, `${p} status`)
+      assert.equal(r.headers.get('location'), '/', `${p} -> /`)
+    }
   })
 
-  await run('serves every top-level page extensionless', async () => {
-    for (const p of ['/pricing', '/parents', '/home']) {
-      const r = await get(p)
-      assert.equal(r.status, 200, `${p} should be 200, got ${r.status}`)
-      assert.match(r.headers.get('content-type'), /text\/html/, p)
-    }
+  await run('nothing on the front door leads off it', async () => {
+    // The whole point of the closure is undone by one stale href, and a link to
+    // a page that 307s back is a worse experience than no link at all.
+    const body = await (await get('/')).text()
+    // <a> only. The head is full of hrefs that are not navigation — the
+    // canonical, the preconnects, the icons — and none of them are a way out.
+    const hrefs = [...body.matchAll(/<a\s[^>]*href="([^"]+)"/g)].map(m => m[1])
+    const out = hrefs.filter(
+      h => /^\/(home|pricing|parents|index)\b/.test(h) || /^https?:/.test(h)
+    )
+    assert.deepEqual(out, [], `front door links out: ${out.join(', ')}`)
+  })
+
+  await run('the sitemap lists only what is served', async () => {
+    const body = await (await get('/sitemap.xml')).text()
+    const locs = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1])
+    assert.deepEqual(locs, ['https://fuime.com/'])
   })
 
   await run('moved pages redirect in a single hop', async () => {
     for (const [from, to] of [
       ['/start', '/'],
       ['/start.html', '/'],
-      ['/index.html', '/home'],
-      ['/index', '/home'],
     ]) {
       const r = await get(from)
       assert.equal(r.status, 308, `${from} status`)
@@ -119,9 +144,13 @@ try {
   })
 
   await run('canonicalises .html and trailing slashes', async () => {
-    const html = await get('/pricing.html')
+    // Every real page's .html spelling is currently shadowed by CLOSED, which
+    // sends it to / in one hop instead — asserted above. This exercises the
+    // generic rule underneath on a path that reaches it, so the canonicaliser
+    // does not quietly rot while the site is closed.
+    const html = await get('/nope.html')
     assert.equal(html.status, 308)
-    assert.equal(html.headers.get('location'), '/pricing')
+    assert.equal(html.headers.get('location'), '/nope')
 
     const slash = await get('/parents/')
     assert.equal(slash.status, 308)
@@ -132,8 +161,19 @@ try {
     // The confirmation animates the address away. If the markup drifts out of
     // one page the CSS silently does nothing there, which is invisible in
     // review and obvious to a user.
-    for (const p of ['/', '/home', '/pricing', '/parents']) {
-      const body = await (await get(p)).text()
+    //
+    // Only / is served while the marketing site is closed, and the other three
+    // are read off disk rather than dropped: they are coming back, and a
+    // closure that quietly halves this file's coverage is how they come back
+    // broken. Swap these for fetches when CLOSED empties.
+    const pages = [
+      ['/', await (await get('/')).text()],
+      ...['index', 'pricing', 'parents'].map(n => [
+        `${n}.html`,
+        readFileSync(fileURLToPath(new URL(`../${n}.html`, import.meta.url)), 'utf8'),
+      ]),
+    ]
+    for (const [p, body] of pages) {
       const dones = (body.match(/class="capture__done"/g) || []).length
       const planes = (body.match(/class="capture__plane"/g) || []).length
       assert.ok(dones > 0, `${p} has no confirmation block`)
