@@ -102,6 +102,19 @@ Rails.application.routes.draw do
   get "/:event_slug/payments/return", to: "fuime/payment_setups#return", as: :fuime_payment_setup_return
   get "/:event_slug/payments/refresh", to: "fuime/payment_setups#refresh", as: :fuime_payment_setup_refresh
 
+  # Fuime: the embedded replacement for the Stripe Dashboard.
+  #
+  # Accounts are created with `stripe_dashboard.type = none`, so a guardian has
+  # nowhere else to change a bank account, clear a document Stripe has flagged, or
+  # download a 1099. `/manage` mounts Stripe's own components for all of that
+  # inside Fuime; `/session` is the JSON endpoint their `fetchClientSecret`
+  # callback calls, which is why it is a separate path rather than a value
+  # rendered into the page — an Account Session expires while a management page
+  # sits open, and refetching is the difference between a self-healing page and a
+  # stale-secret error.
+  get "/:event_slug/payments/manage", to: "fuime/payment_setups#manage", as: :fuime_payment_setup_manage
+  get "/:event_slug/payments/session", to: "fuime/payment_setups#manage_session", as: :fuime_payment_setup_session
+
   # Fuime: the guardian supplying their own identity details, for `:cards_enabled`
   # ventures where `requirement_collection = application` makes that Fuime's job.
   # Payments-only ventures never reach here — Stripe collects from them directly via the

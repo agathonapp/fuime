@@ -3566,3 +3566,75 @@ how to serve all three.
 **Verification:** site 21/21 server + 17/17 waitlist. Confirmed live against a running
 server: `/` 200; `/home`, `/pricing`, `/parents`, `/index.html`, `/pricing.html` all 307
 to `/`. No console errors, checked at 390×844 and 1440×900.
+
+---
+
+## 2026-08-11 — Fully embedded Connect: the guardian never opens stripe.com
+
+**Why.** Accounts are created with `stripe_dashboard.type = none`, so a guardian has no
+Stripe login *by design*. That was only half-built: onboarding was embedded, but nothing
+else was. A parent who needed to change a bank account, clear a document Stripe had
+flagged, or find a 1099 had nowhere to go — the "no dashboard" decision was a dead end
+rather than a feature. This closes it.
+
+**Files.**
+
+- `app/services/fuime/connect_onboarding_service.rb` — split the component list into
+  `ONBOARDING_COMPONENTS` and `MANAGEMENT_COMPONENTS`; added
+  `#management_session_client_secret` (deliberately does NOT create an account — see
+  below); added `external_account_collection` to onboarding; added an idempotency key to
+  `Stripe::Account.create`.
+- `app/controllers/fuime/payment_setups_controller.rb` — `#manage` and `#manage_session`,
+  both gated on `setup_payments?`; `#show` now mounts Stripe's notification banner for the
+  guardian.
+- `config/routes.rb` — `GET /:slug/payments/manage`, `GET /:slug/payments/session`.
+- `app/views/fuime/payment_setups/manage.html.erb` — new. `show.html.erb` — banner, and
+  "Manage payment account" replaces "Update payment details" once onboarding is submitted.
+- `app/javascript/controllers/stripe_connect_component_controller.js` — new, general-case
+  mounter. `common/stripeConnectAppearance.js` — new, the single shared theme; the
+  onboarding controller now uses it instead of its own copy.
+- `app/jobs/fuime/provision_connect_account_job.rb` — new. `app/models/guardianship.rb` —
+  `#accept!` enqueues it.
+- `app/services/fuime/payment_webhook_handler.rb` — refuses `livemode: true` events.
+- `README.md` — the "how the money works" section; removed Stripe Issuing from the list of
+  infrastructure Fuime inherits from HCB.
+- `docs/fuime/EMBEDDED_CONNECT.md` — new, and the place to start.
+- Three new specs: management components, the provisioning job, the simulator guard.
+
+**Five decisions worth arguing with later.**
+
+1. **The `payouts` component is read-only.** `standard_payouts`, `instant_payouts` and
+   `edit_payout_schedule` are all `false`. The guardian owns the account, so Stripe would
+   happily give them a "Pay out now" button — but it would route money around
+   `PayoutRequest`, and an editable schedule would let them switch to automatic daily,
+   draining the balance on a timer while every screen in Fuime kept describing an approval
+   gate that no longer existed. The gate is only real if Fuime's flow is the only door.
+2. **`#management_session_client_secret` refuses to create an account,** unlike its
+   onboarding sibling. Otherwise a stray GET on a management URL brings a real Stripe
+   account into being for a venture nobody onboarded.
+3. **Management is `setup_payments?`, not `member?`.** These components show the account
+   holder's identity details and bank account. A teen holding a manager position on the
+   venture must not see them.
+4. **Provisioning declines more often than it acts.** School ventures, ventures inheriting
+   a school's account, and any venture without exactly one overseeing guardian are all
+   skipped. `controller` is create-only, so a wrongly-owned account cannot be repaired.
+   The idempotency key exists because this job can now race a guardian clicking "Set up
+   payments" — the unique index stops the second row, but nothing stopped the second
+   *Stripe account*.
+5. **The pooled guard keys on the event's `livemode`, not `StripeService.mode`.** The
+   event is the authoritative statement about money that actually moved; consulting our
+   own config would agree with the misconfiguration. Absent `livemode` still records, since
+   absence means "not a real Stripe event".
+
+**Legal architecture unchanged.** Direct charges on the guardian-owned account,
+`application_fee_amount` to Fuime, payouts to the family's bank, Fuime never in the flow
+of funds. Nothing here touches the ledger pipeline, `requirement_collection` stays
+`stripe` on the default profile (so no identity documents reach Fuime), and Issuing stays
+behind its default-off flag.
+
+**Verification: NOT RUN.** Ruby 3.4.9 is not installed on this machine and the Docker
+daemon was down, so `bundle exec rspec` could not be run — a Prime Directive 1 gap that the
+next session must close before trusting any of this. Ruby and ERB syntax check clean on
+every touched file. The `stripe listen` walkthrough is §7 of EMBEDDED_CONNECT.md and
+remains the real gate: every parameter shape in `MANAGEMENT_COMPONENTS` is
+documentation-derived and has never been sent to Stripe.

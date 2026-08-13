@@ -1,13 +1,26 @@
 # frozen_string_literal: true
 
-# Fuime: the guardian's flow for setting up payments on a venture.
+# Fuime: the guardian's flow for setting up AND running payments on a venture.
 #
-# Four surfaces, one per thing that can happen:
+# Six surfaces, one per thing that can happen:
 #
-#   #show     the status page — who needs to do what, readable by the whole team
-#   #new      the embedded Stripe onboarding form, guardian only
-#   #return   where Stripe sends the guardian when they exit the flow
-#   #refresh  re-ask Stripe for the current state
+#   #show            the status page — who needs to do what, readable by the whole team
+#   #new             the embedded Stripe onboarding form, guardian only
+#   #return          where Stripe sends the guardian when they exit the flow
+#   #refresh         re-ask Stripe for the current state
+#   #manage          the embedded Dashboard replacement, guardian only
+#   #manage_session  a fresh Account Session for the components on #manage
+#
+# ── Why #manage exists ────────────────────────────────────────────────────────
+#
+# Accounts are created with `stripe_dashboard.type = none`, so the guardian has
+# no Stripe Dashboard to go to — by design (see Fuime::ConnectOnboardingService).
+# That is only a feature and not a trap if everything a Dashboard would be needed
+# for is reachable here: changing the bank account, fixing an expired document,
+# reading Stripe's own notifications, downloading tax documents. #manage is that
+# page, and the components it mounts are listed in
+# Fuime::ConnectOnboardingService::MANAGEMENT_COMPONENTS with a note on each
+# feature flag that is deliberately off.
 #
 # ── The authorization shape, which is the subtle part ─────────────────────────
 #
@@ -50,7 +63,14 @@ module Fuime
     # development and test — so every request to the payment-setup flow raised locally.
     # Production defaults that check off, which is why it went unnoticed: the bug was
     # invisible exactly where anyone would have hit it least.
-    before_action :authorize_setup, only: [:new, :return, :refresh]
+    # `#manage` and `#manage_session` are guarded by the same predicate as setup, and
+    # that is the important half of this line rather than an incidental reuse: the
+    # management components expose the account holder's own identity details and bank
+    # account. A teen holding a manager position on the venture must never see them,
+    # and `setup_payments?` is already the predicate that means "the responsible adult
+    # here", resolving to the guardian on a family venture and to the business office
+    # on a school one.
+    before_action :authorize_setup, only: [:new, :return, :refresh, :manage, :manage_session]
 
     # Status of payment setup for this venture. Deliberately readable by the team
     # as well as the guardian: a teen needs to know whether they can be paid and
@@ -77,6 +97,22 @@ module Fuime
       # already made and unchangeable — offering it again would promise something only a
       # full re-onboarding could deliver.
       @can_choose_cards = @connected_account.blank? && cards_available?
+
+      # Whether to mount Stripe's notification banner on this page.
+      #
+      # The status page is where a guardian actually lands, so it is where Stripe's
+      # "we need a new document from you" belongs — waiting for them to think to
+      # visit /manage is how a venture goes dark with the explanation one click
+      # away. Guardian-only (`@can_set_up`) because the banner is addressed to the
+      # account holder and offers them account-holder actions.
+      #
+      # Not shown on an inherited account: the notification is the school's to act
+      # on, and rendering it on a student's page would ask a teenager to fix their
+      # school's paperwork.
+      @embedded_banner = @can_set_up &&
+                         !@inherited_account &&
+                         @connected_account&.stripe_id.present?
+      @publishable_key = StripeService.publishable_key if @embedded_banner
     end
 
     # The embedded onboarding form.
@@ -166,6 +202,72 @@ module Fuime
                       alert: "Stripe couldn't start payment setup just now. Please try again in a moment."
         end
       end
+    end
+
+    # The embedded replacement for the Stripe Dashboard.
+    #
+    # Renders only the frame; the components fetch their own client secret from
+    # #manage_session, so an expiring session refreshes itself rather than
+    # stranding a guardian who left the tab open.
+    def manage
+      # A student venture inside a school programme is paid into the SCHOOL's
+      # account. Managing it from here would let a guide edit the school's bank
+      # details from a student's page — the same conflation #new refuses, and the
+      # reason Event#payment_account exists at all.
+      if @event.shares_payment_account?
+        redirect_to fuime_payment_setup_manage_path(event_slug: @event.payment_account.event.slug)
+        return
+      end
+
+      @connected_account = @event.stripe_connected_account
+
+      # Nothing to manage before an account exists, and pointing the components at
+      # a null account would render four broken boxes rather than one clear next
+      # step.
+      if @connected_account.blank? || @connected_account.stripe_id.blank?
+        redirect_to fuime_payment_setup_path(event_slug: @event.slug),
+                    notice: "Payment setup hasn't been started for #{@event.name} yet."
+        return
+      end
+
+      @publishable_key = StripeService.publishable_key
+    end
+
+    # A fresh Account Session for the components on #manage.
+    #
+    # JSON only: this is called by `fetchClientSecret` in
+    # stripe_connect_component_controller.js, never navigated to. A browser that
+    # lands here is a bug or a stale bookmark, so it is sent to the page that
+    # actually renders something.
+    def manage_session
+      # The same refusal #manage makes, repeated here because this is a URL, not a
+      # link. Without it a guide with manager rights on ONE student's venture could
+      # request a session against the SCHOOL's account — `Event#payment_account`
+      # resolves upward — and edit the institution's bank details from a student's
+      # page. `setup_payments?` cannot catch this: it resolves through the event
+      # tree and correctly says "yes, a responsible adult", about the wrong account.
+      if @event.shares_payment_account?
+        render json: { error: "This venture is managed through its school's payment account" },
+               status: :forbidden
+        return
+      end
+
+      respond_to do |format|
+        format.json do
+          render json: { client_secret: service.management_session_client_secret }
+        end
+        format.any { redirect_to fuime_payment_setup_manage_path(event_slug: @event.slug) }
+      end
+    rescue Fuime::ConnectOnboardingService::AccountNotProvisioned => e
+      # Not an error worth reporting: it means someone reached the management URL
+      # for a venture that never onboarded, which #manage already redirects away
+      # from. Distinguished from a Stripe outage so the two are not debugged as
+      # one problem.
+      Rails.logger.info("[Fuime] management session requested with no account: #{e.message}")
+      render json: { error: "This venture has no payment account yet" }, status: :not_found
+    rescue Stripe::StripeError => e
+      Rails.error.report(e, handled: true, context: { event_id: @event.id })
+      render json: { error: "Could not start a Stripe session" }, status: :service_unavailable
     end
 
     private

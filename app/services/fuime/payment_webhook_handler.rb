@@ -1,10 +1,16 @@
 # frozen_string_literal: true
 
-# Fuime: Handle Stripe webhook events for incoming payments.
+# Fuime: the POOLED-ACCOUNT SIMULATOR. Test mode only — see #simulator_mode?.
 #
 # Payments are taken on one pooled Fuime platform Stripe account; the paying
 # business is identified by `fuime_event_id` in the Checkout/PaymentIntent
-# metadata. This handler feeds those payments into HCB's EXISTING ledger
+# metadata. That model is retired for production (CLAUDE.md L1): real payments
+# are direct charges on a guardian-owned connected account and are recorded by
+# Fuime::ConnectPaymentRecorder, which arrives on a different endpoint. This
+# class survives because it exercises the ledger pipeline end to end without a
+# connected account, which is useful in development and nowhere else.
+#
+# This handler feeds those payments into HCB's EXISTING ledger
 # pipeline rather than reimplementing any of it (CLAUDE.md Rule 3):
 #
 #   RawPendingDonationTransaction   <- narrowest legitimate "money in" source
@@ -19,12 +25,17 @@
 module Fuime
   class PaymentWebhookHandler
     class MissingEventError < StandardError; end
+    # Raised only to carry a stack trace into error reporting — never to callers.
+    # See #simulator_mode?.
+    class LivePooledPaymentRefused < StandardError; end
 
     def initialize(event:)
       @stripe_event = event
     end
 
     def handle
+      return nil unless simulator_mode?
+
       case @stripe_event.type
       # A Checkout payment fires BOTH checkout.session.completed and
       # payment_intent.succeeded, with different object ids. Keying idempotency
@@ -67,6 +78,48 @@ module Fuime
     end
 
     private
+
+    # Fuime: this handler is a TEST-MODE SIMULATOR and nothing else.
+    #
+    # Everything below records a payment that landed in Fuime's OWN platform
+    # balance and then credits a venture's ledger for it — which is precisely the
+    # pooled-account model CLAUDE.md L1 retires. In production that is unlicensed
+    # money transmission (18 U.S.C. § 1960, criminal) and aggregation outside
+    # Connect, which also breaches Stripe's ToS. The production path is
+    # Fuime::ConnectPaymentRecorder: direct charges on the guardian-owned account,
+    # where Fuime takes an application fee and never touches the funds.
+    #
+    # The code is kept rather than deleted because it is the only end-to-end
+    # exercise of the ledger pipeline that does not require a connected account,
+    # which makes it genuinely useful in development. Keeping it *safe* means it
+    # must be structurally impossible to run against real money — hence this
+    # guard, rather than a comment asking future readers not to.
+    #
+    # Keyed on the EVENT's `livemode`, not on StripeService.mode. The event is the
+    # authoritative statement about the money that actually moved; a
+    # misconfiguration that pointed live webhooks at this endpoint while the app
+    # believed it was in test mode is exactly the scenario worth failing closed on,
+    # and consulting our own config would agree with the misconfiguration.
+    def simulator_mode?
+      return true unless @stripe_event.respond_to?(:livemode)
+      return true unless @stripe_event.livemode
+
+      # Loud, because a live event reaching here means real customer money is
+      # sitting in Fuime's platform balance and something upstream is badly
+      # misconfigured. Refusing to write the ledger line does not un-take the
+      # money — it stops Fuime from also representing itself as its custodian.
+      Rails.error.report(
+        LivePooledPaymentRefused.new(
+          "Refused to record live-mode event #{@stripe_event.id} (#{@stripe_event.type}) through the " \
+          "pooled-account simulator. Pooled custody is money transmission (CLAUDE.md L1); live payments " \
+          "must arrive on the Connect endpoint as direct charges."
+        ),
+        handled: true,
+        context: { stripe_event_id: @stripe_event.id, stripe_event_type: @stripe_event.type }
+      )
+
+      false
+    end
 
     def record_payment(object:, amount_cents:)
       metadata = object.metadata
