@@ -3638,3 +3638,215 @@ next session must close before trusting any of this. Ruby and ERB syntax check c
 every touched file. The `stripe listen` walkthrough is §7 of EMBEDDED_CONNECT.md and
 remains the real gate: every parameter shape in `MANAGEMENT_COMPONENTS` is
 documentation-derived and has never been sent to Stripe.
+
+## 2026-08-13 — Custody becomes a flag, so a sponsor bank is a config change
+
+Phase 1 of the umbrella merchant-of-record pivot (`docs/fuime/MOR_MIGRATION_PLAN.md`).
+Nothing about the money architecture changes here — no Stripe call is added, moved or
+removed. This is the gate the rest of the pivot sits on.
+
+**The problem this fixes.** CLAUDE.md Rule 2 says "disable, don't delete", and Fuime had
+been honouring the letter of it: ACH, checks, wires, disbursements and Emburse were all
+blocked at the request level with their models untouched. But the block was a frozen array
+inside a controller concern, with the reason "Fuime holds no funds and cannot originate"
+written beside it. That reason is a *condition*, and it will stop being true on the day a
+sponsor bank partner exists. Re-enabling would have meant editing the concern, re-reviewing
+a diff and hoping nothing else assumed the old list — which is a rewrite wearing a config
+change's clothes.
+
+**What changed.**
+
+- `app/lib/fuime/features.rb` — new. `FEATURE_SPONSOR_BANKING`, default off, read from
+  ENV. Deliberately NOT Flipper: Flipper flags are togglable from a web UI, and this one
+  decides whether Fuime holds customer funds. `.card_issuing_permitted?` derives the card
+  answer so the request layer and the authorisation layer cannot drift apart.
+- `app/controllers/concerns/fuime/disabled_modules.rb` — one list becomes three.
+  `DISABLED_CONTROLLER_PREFIXES` (never — nonprofit fundraising, G Suite),
+  `SPONSOR_BANKING_CONTROLLER_PREFIXES` (until a sponsor bank exists — the outbound rails,
+  Emburse), `CARD_ISSUING_CONTROLLER_PREFIXES` (until cards have a funding rail). New
+  `.blocked_prefixes` / `.all_gated_prefixes` module methods, because "what is turned off?"
+  stopped being a constant.
+- `app/models/event.rb` — `#can_front_balance?` returns false unless sponsor banking is on.
+  Fronting is HCB advancing spendable credit against unsettled money out of its own
+  reserves; Fuime has no reserves, and under merchant-of-record the figure being fronted
+  against is a payable Fuime owes rather than a balance it holds.
+- `app/models/stripe_card.rb` — `#balance_available` returns 0 unless
+  `card_issuing_permitted?`. Zero rather than raising: this feeds authorisation, and Stripe
+  reads an exception as its own decision, so raising fails open at the terminal.
+- `db/migrate/20260813000000_default_can_front_balance_to_false.rb` — default only, no data
+  migration, column preserved. Upstream defaults it TRUE, so without this every existing
+  venture would silently switch fronting on the moment the flag flipped.
+- `config/initializers/fuime_safety_check.rb` — new check 5. `FEATURE_SPONSOR_BANKING=true`
+  without `FUIME_SPONSOR_BANK_PARTNER` naming an institution refuses to boot. Structural
+  flags are now logged every boot, set or not.
+- `.env.development.example` — both variables documented.
+- `spec/support/sponsor_banking.rb` — new `:sponsor_banking` tag, running an example in the
+  world where Fuime holds funds. For upstream specs whose *subject* is a sponsor-banking
+  module, so they stay recognisable against upstream (Rule 6/8) instead of being rewritten.
+- `spec/lib/fuime/features_spec.rb`, `spec/models/fuime/custody_gate_spec.rb` — new.
+
+**Three decisions worth arguing with later.**
+
+1. **Card issuing is blocked in LIVE mode, not in test.** The 2026-08-02 decision that
+   un-blocked `stripe_cards` ended "Blocked again the moment this fork points at anything
+   but test keys," and nothing in the codebase did that. This does. Test-mode Issuing spends
+   nothing real and the demo is untouched; a careless `STRIPE_MODE=live` is now refused at
+   the controller *and* at `#balance_available`, because blocking the controllers alone
+   would leave an already-issued card authorising swipes.
+2. **The flag is not enough to turn custody on.** `FUIME_SPONSOR_BANK_PARTNER` must name
+   the institution. An env var can be set from a deploy dashboard by anyone; the second one
+   cannot be answered truthfully unless the arrangement is real, which surfaces a missing
+   partnership instead of hiding it behind a boolean.
+3. **Existing `can_front_balance` rows were left alone.** They are inert while the flag is
+   off, and a mass UPDATE would appear in the paper-trail audit log as a mutation with no
+   user behind it — indistinguishable later from a bug.
+
+**Deliberately NOT done here.** No model, table, migration or Stripe call was deleted. The
+Connect stack is untouched — it is flagged for review in the migration plan, not changed,
+because the merchant-of-record structure it would be replaced by is still blocked on
+counsel (`MOR_MIGRATION_PLAN.md` §7 Q1–Q2). `Event` is not renamed to `Operator` (Rule 6).
+The ledger pipeline is untouched (Rule 3).
+
+**Verification: rspec run in Docker, full suite.** See the handoff note at the top of
+SETUP_NOTES.md for counts. Four specs asserted `DISABLED_CONTROLLER_PREFIXES` membership
+directly and were updated to assert `blocked_prefixes` — i.e. what a user actually gets —
+which is a better test and the reason the change was visible to them at all. One upstream
+ACH spec funded its event with fronted money and now says so explicitly.
+
+## 2026-08-13 — A payables ledger, because "your balance" is the wrong product
+
+Phase 2 of the merchant-of-record pivot. New file only; nothing existing changed.
+
+**Why this is not a rename.** Under the umbrella merchant-of-record model Fuime LLC is the
+seller: a customer pays Fuime for a sale Fuime made, that money is Fuime's own revenue, and
+the operator is a vendor Fuime pays on a fixed cadence. What the operator holds is a
+*receivable* — an amount owed, payable on a stated date. What they do not hold is a balance
+on deposit, because a stored balance its holder can withdraw at will is a deposit, and taking
+deposits without a charter is the one thing Fuime cannot do (L1/L5). The difference between
+those two products lives almost entirely in how the number is framed and what the user can do
+with it, which makes the framing part of the compliance posture rather than decoration on it.
+
+- `app/services/fuime/payables_ledger.rb` — new. Reframes `Event#balance_*` as gross sales →
+  Fuime's fee → Stripe's fee → refunds → card spend → paid out → committed → **net payable**,
+  with `#owed_sentence` ("Fuime owes you $84.20, paid on Friday 14 August") and a standing
+  `#disclosure`. `PAYOUT_WEEKDAY = :friday`.
+- `spec/services/fuime/payables_ledger_spec.rb` — new, 21 examples.
+
+**Three decisions worth arguing with later.**
+
+1. **`Event#balance_v2_cents` is untouched and reused verbatim.** The arithmetic is right —
+   the sum of an operator's ledger lines *is* what they are owed. 111 view files reference
+   "balance" and `balance` / `available_balance` / `balance_available` are all aliases of it,
+   so renaming is a mechanical change across hundreds of call sites that breaks every future
+   merge from hackclub/hcb (Rule 6), and the ledger engine is fed rather than modified
+   (Rule 3). This is a thin reframing layer instead. The rule that gives it value —
+   operator-facing views call this and nothing else — is **not yet enforced**; see below.
+2. **`#net_payable_cents` reads `balance_v2_cents`, not `settled_balance_cents`.** Because
+   `Fuime::PayoutService` caps a payout against exactly that figure. Had this used the
+   settled-only sum it would have overstated what could be sent, and Fuime would tell an
+   operator it owes $80 and then refuse to send $80 with no sentence available to explain
+   why. One number, read once, in both places — asserted by two examples.
+3. **`#other_adjustments_cents` is a residual, not a category.** Lines are classified by
+   their `Fuime::VentureLedger` key (embedded in the memo as `[key]` once settled), which is
+   a heuristic over a real ledger and so can be incomplete — school awards, corrections,
+   anything predating the key scheme. Defining the last bucket as "whatever is left" makes
+   the breakdown sum to the total *by construction*, so this class cannot show a teenager
+   figures that do not add up. A growing residual is a signal that a money path needs naming,
+   not a rounding bin.
+
+**A subtlety worth keeping.** Every ledger key contains underscores, and `_` is a
+single-character wildcard in SQL `LIKE`. Unescaped, `fuime_fee_` would also match
+`fuimeXfeeY`. `sanitize_sql_like` is therefore load-bearing, not hygiene — the prefixes are
+mutually unambiguous only once escaped.
+
+**Not done yet, and named so it is not mistaken for done:** no view calls this class. The
+operator-facing pages (`app/views/fuime/payouts/index.html.erb` and the venture dashboard)
+still say "balance", and the spec asserting that operator views call only the presenter is
+not written. That is the remainder of Phase 2 and the next task.
+
+**Verification: full suite in Docker — 2865 examples, 8 failures, all pre-existing and
+attributed in `known-failures.md` (first full-suite baseline recorded there).** That run
+includes this class's 21 examples; they were also run alone (21/21) while it was being
+written.
+
+## 2026-08-13 (later) — The payables framing reaches the screen, and Fuime stops charging 4% twice
+
+Phase 2 finished: operator-facing pages now read `Fuime::PayablesLedger` instead of
+`Event#balance_*`, and a spec keeps them there. Reconciling the two figures uncovered a live
+money bug, which is the more important half of this entry.
+
+### The fee was being charged twice
+
+`FeeEngine::Create` is upstream's mechanism for taking HCB's cut: a positive canonical
+transaction accrues `event.revenue_fee` into `fee_balance`, and
+`Event#balance_available_v2_cents` subtracts it. That is correct **when the accrual is the
+only place the fee is taken.**
+
+It is not, for Fuime. Under Stripe Connect the platform fee is deducted by **Stripe** at the
+moment of the charge (`application_fee_amount`) and posted as its own explicit ledger line by
+`Fuime::ConnectPaymentRecorder`. A $100 sale therefore arrives already broken out as +$100
+gross, −$4 Fuime, −$3.20 Stripe. `FeeEngine::HourlyJob` — scheduled `0 */1 * * *`, scanning
+`CanonicalEventMapping.missing_fee` across every event — then saw the +$100 and accrued
+**another $4**.
+
+Two consequences, both live until now:
+
+- a teenager was charged **8% for a 4% product**;
+- the venture dashboard (which subtracts `fee_balance`) and the payouts page (which does not)
+  disagreed by exactly that amount, with no sentence on either page that could explain it.
+
+**Fix:** `FeeEngine::Create#determine_reason` now ends with
+`reason = :revenue_waived if ::Fuime::VentureLedger.memo_carries_key?(...)`. Three things
+about that shape are deliberate:
+
+1. **`revenue_waived`, not an early return.** The row is still written, with a zero amount, so
+   `CanonicalEventMapping.missing_fee` stops returning the mapping. An early return would
+   leave it unprocessed and the hourly job would re-examine every Fuime transaction ever,
+   forever.
+2. **Last in the method,** so none of the assignments above can override it.
+3. **Keyed on the ledger key, not on the event.** Every settled line Fuime posts ends
+   `… [fuime_something]` (`VentureLedger.settled_memo`), so the guard is narrow by
+   construction: a transaction Fuime did not post has had no fee taken from it yet and still
+   accrues normally. New `VentureLedger.memo_carries_key?` / `MEMO_KEY_PATTERN`, anchored on
+   `[fuime_` plus a letter so ordinary prose cannot match.
+
+`spec/services/fee_engine/fuime_double_charge_spec.rb` — 5 examples, including the narrowness
+control and a memo that merely mentions the word.
+
+**Not addressed here:** any `Fee` rows already accrued in a real database. Nothing has run
+against production money, so there is likely nothing to correct, but a `fee_balance` audit
+belongs on the pre-launch list rather than in this diff.
+
+### The views
+
+- `app/helpers/fuime_helper.rb` — `payables_for(event)`, memoised per event per request. The
+  single door to the presenter from a template, so every page shows the same figure.
+- `app/views/fuime/payouts/index.html.erb` — "Available to pay out" becomes **"Your
+  earnings"**: the amount owed, `#owed_sentence` naming the payout date, pending sales stated
+  *separately and never added in*, a collapsible fee breakdown, and the standing disclosure.
+  The Stripe-available figure survives but only renders when it disagrees with what is owed or
+  cannot be read — the two answer different questions ("what am I owed?" vs "can it move
+  today?") and a second unexplained number just invites the reader to wonder which is theirs.
+- `events/home/_balance.html.erb`, `events/stats.html.erb`, `events/transactions.html.erb`,
+  `events/ledger.html.erb`, `events/async_balance.html.erb` — **"Account balance" → "Owed to
+  you"**, reading the presenter. That phrase is named explicitly by L5's forbidden vocabulary.
+- `spec/views/fuime/payables_copy_spec.rb` — new, 26 examples.
+
+**Why the copy spec reads source text rather than rendering.** Rendering these needs a
+signed-in user with the right position, a connected account, a funded ledger and a Stripe
+stub, and several are turbo-frame endpoints that only exist mid-request. A test that expensive
+gets deleted the first time it is inconvenient. What needs guarding is narrow and static —
+which method a template calls and which nouns it prints — and both are visible in the file.
+It strips ERB and Ruby comments first, so the prose explaining *why* "balance" is wrong does
+not trip the rule forbidding it.
+
+**Deliberately still saying "balance": admin pages, `bank_accounts/*`, internal tooling.**
+There the money genuinely is Fuime's own and the word is accurate. Narrowing the rule to where
+it is true is what keeps it enforceable.
+
+**Verification: full suite in Docker — 2896 examples, 8 failures, all pre-existing.** Four
+Fuime specs asserted the copy this entry replaced (`payouts_controller_spec`,
+`payouts_school_copy_spec`) and were updated. Two of those were doing real work: they caught
+that the first draft of `#owed_sentence` said "Fuime owes you" on a school venture, naming the
+wrong debtor, and that the page now needs a funded LEDGER rather than a stubbed Stripe balance
+— which is the separation working.

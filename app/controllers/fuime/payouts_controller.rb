@@ -44,9 +44,23 @@ module Fuime
       # The account the balance actually sits in — the school's, for a student
       # venture inside a programme.
       @connected_account = @event.payment_account
-      # nil means Stripe could not be reached; the view distinguishes that from a
-      # genuine zero, because "you have $0" and "we can't tell you right now" are
-      # different sentences for a teenager waiting on money.
+
+      # What Fuime OWES this operator, and the breakdown explaining it.
+      #
+      # A ledger fact, not a Stripe fact, and that distinction is why it is read
+      # separately from @available_cents below. Fuime owes an operator what it owes
+      # them whether or not Stripe answers the phone — so this figure always
+      # renders, and the page can state the debt even during an outage.
+      @payables = Fuime::PayablesLedger.new(event: @event)
+
+      # What Stripe could actually SEND right now. nil means Stripe could not be
+      # reached; the view distinguishes that from a genuine zero, because "you have
+      # $0" and "we can't tell you right now" are different sentences for a
+      # teenager waiting on money.
+      #
+      # Kept alongside the payables figure rather than replaced by it: the two
+      # answer different questions ("what am I owed?" vs "can it move today?") and
+      # collapsing them is what produced a page that went blank on a Stripe hiccup.
       @available_cents = service.available_balance_cents
       @pending_request = @event.payout_requests.awaiting_approval.first
       # Approved school transfers the business office still has to pay. Shown

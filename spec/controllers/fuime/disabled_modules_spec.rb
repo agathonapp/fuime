@@ -25,7 +25,14 @@ RSpec.describe AchTransfersController, type: :controller do
   end
 
   describe "the disabled list" do
-    subject(:disabled) { Fuime::DisabledModules::DISABLED_CONTROLLER_PREFIXES }
+    # `blocked_prefixes`, not DISABLED_CONTROLLER_PREFIXES. What is turned off is
+    # no longer one constant: the custody modules moved behind
+    # Fuime::Features.sponsor_banking? so that a sponsor bank re-enables them by
+    # configuration rather than by editing this concern (CLAUDE.md Rule 2).
+    # Reading the raw constant would assert where an entry is filed; this asserts
+    # what a teenager typing a URL actually gets, which is what these tests were
+    # always about.
+    subject(:disabled) { Fuime::DisabledModules.blocked_prefixes }
 
     it "covers every outbound money path" do
       expect(disabled).to include("ach_transfers", "increase_checks", "wires", "disbursements")
@@ -38,9 +45,43 @@ RSpec.describe AchTransfersController, type: :controller do
     # Card issuing was here until test-mode issuing was turned back on. The
     # HTML surface is deliberately open now; the v4 API is not (see below), and
     # Emburse — a dead upstream integration Fuime never had — stays blocked.
+    #
+    # Specs run against Stripe TEST keys, so this is the test-mode arm of
+    # Fuime::Features.card_issuing_permitted? — a card here spends nothing real.
+    # The live-mode arm, where these same prefixes ARE blocked, is asserted below.
     it "no longer covers HTML card issuing, but still covers Emburse" do
       expect(disabled).not_to include("stripe_cards", "stripe_cardholders")
       expect(disabled).to include("emburse_cards", "emburse_card_requests")
+    end
+
+    # The promise the 2026-08-02 card decision made in a comment and nothing
+    # enforced: "blocked again the moment this fork points at anything but test
+    # keys." Issuing spends from a platform balance Fuime funds itself, so in live
+    # mode without a sponsor bank it is uncollateralised credit to a minor.
+    it "covers card issuing once the fork points at live Stripe keys" do
+      allow(StripeService).to receive(:live?).and_return(true)
+
+      live_blocked = Fuime::DisabledModules.blocked_prefixes
+
+      expect(live_blocked).to include("stripe_cards", "stripe_cardholders", "fuime/cards")
+    end
+
+    # The other half of the flag's contract: everything gated on sponsor banking
+    # comes back when a sponsor bank exists, without a code change.
+    it "releases the custody modules when sponsor banking is enabled" do
+      allow(Fuime::Features).to receive(:sponsor_banking?).and_return(true)
+
+      expect(Fuime::DisabledModules.blocked_prefixes)
+        .not_to include("ach_transfers", "wires", "disbursements", "check_deposits")
+    end
+
+    # ...but never the modules that are off for product reasons rather than
+    # licensing ones. No partner bank makes Fuime a fiscal sponsor.
+    it "keeps nonprofit fundraising blocked even with sponsor banking enabled" do
+      allow(Fuime::Features).to receive(:sponsor_banking?).and_return(true)
+
+      expect(Fuime::DisabledModules.blocked_prefixes)
+        .to include("donations", "card_grants", "g_suite")
     end
 
     # Fuime's own money-in and record-keeping must stay reachable.
@@ -71,8 +112,12 @@ RSpec.describe AchTransfersController, type: :controller do
 
     # A typo here silently disables nothing, so assert each prefix resolves to
     # a real controller or namespace on disk.
+    #
+    # Across ALL lists, not just the currently-blocked ones: a typo in the
+    # sponsor-banking list would lie dormant and only fail open on the day someone
+    # turns custody on, which is the worst possible day to discover it.
     it "only lists prefixes that exist" do
-      missing = disabled.reject do |prefix|
+      missing = Fuime::DisabledModules.all_gated_prefixes.reject do |prefix|
         Rails.root.join("app/controllers/#{prefix}_controller.rb").exist? ||
           Rails.root.join("app/controllers/#{prefix}").directory?
       end

@@ -799,6 +799,38 @@ class Event < ApplicationRecord
     overseeing_guardians.exists?
   end
 
+  # Fuime: fronting is credit extension, so it follows the sponsor-banking flag.
+  #
+  # Upstream, "fronting" means the platform lets an org spend against money that
+  # has arrived but has not settled — HCB advances the funds from its own
+  # reserves and collects when settlement lands. That is a lending decision, and
+  # HCB can make it because it is a 501(c)(3) that legally owns the money in the
+  # first place.
+  #
+  # Fuime has no reserves. Under the merchant-of-record model the figure being
+  # fronted against is a PAYABLE — what Fuime owes an operator for sales Stripe
+  # has not released yet — so fronting would mean advancing cash to a minor's
+  # business against Fuime's own unpaid invoice, recoverable only by netting
+  # against future sales that may never happen. Stripe settlement is T+2 with
+  # refund and chargeback risk for 120 days after that.
+  #
+  # The column stays (CLAUDE.md Rule 2) and the migration only changes its
+  # default, because existing rows carry `true` from upstream's default and a
+  # data migration flipping them would be indistinguishable from a bug in the
+  # audit log. This override is what makes the column inert: the answer is false
+  # while custody is off, whatever the row says.
+  #
+  # `Fuime::VentureLedger#post!` already hardcodes `fronted: false` when writing
+  # lines — this closes the other half, where a `true` row would make the READ
+  # side count fronted money that was never posted as fronted.
+  #
+  # See docs/fuime/MOR_MIGRATION_PLAN.md §1 C2.
+  def can_front_balance?
+    return false unless ::Fuime::Features.sponsor_banking?
+
+    super
+  end
+
   def total_raised
     balance = settled_incoming_balance_cents
     if can_front_balance?

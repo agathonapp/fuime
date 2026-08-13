@@ -389,7 +389,25 @@ class StripeCard < ApplicationRecord
     @active_spending_control = event.organizer_positions.find_by(user:)&.active_spending_control
   end
 
+  # Fuime: what this card may spend.
+  #
+  # The zero branch is the authorisation half of the card gate. Blocking the
+  # `stripe_cards` controllers (Fuime::DisabledModules) stops a NEW card being
+  # created, but says nothing about a card that already exists — and an inherited
+  # or previously-issued card would keep authorising swipes against the ledger
+  # after the gate closed. This is where a swipe is actually approved, so this is
+  # where the answer has to be zero.
+  #
+  # Why zero rather than raising: this feeds authorisation decisions and balance
+  # displays alike, and an exception on the authorisation path fails open in the
+  # worst way — Stripe treats a timeout as its own decision, not as a decline.
+  # Zero declines, which is the correct answer when there is no funding rail.
+  #
+  # In test mode `card_issuing_permitted?` is true, so the demo behaves exactly as
+  # before and no spec changes. See Fuime::Features#card_issuing_permitted?.
   def balance_available
+    return 0 unless ::Fuime::Features.card_issuing_permitted?
+
     if subledger.present?
       subledger.balance_cents
     elsif active_spending_control

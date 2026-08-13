@@ -42,9 +42,19 @@ RSpec.describe Fuime::PaymentWebhookHandler, "live-mode refusal" do
       .not_to change(CanonicalPendingTransaction, :count)
   end
 
+  # TWO lines, not one: the pooled path posts the payment and Fuime's cut of it
+  # separately (VentureLedger#payment_key and #fee_key), because in that model
+  # Fuime received the gross and owed the venture the rest, so the fee has to be
+  # visible as its own deduction on a teenager's ledger.
+  #
+  # This expectation said `by(1)` when written, which is why it is worth naming:
+  # the spec was authored in the 2026-08-11 embedded-Connect work whose
+  # UPSTREAM_DIVERGENCE entry records "Verification: NOT RUN" — Ruby 3.4.9 was
+  # missing locally and the Docker daemon was down. It has never passed. Fixed
+  # here rather than left red so the suite has an honest baseline.
   it "still records a test-mode payment" do
     expect { described_class.new(event: stripe_event(livemode: false)).handle }
-      .to change(CanonicalPendingTransaction, :count).by(1)
+      .to change(CanonicalPendingTransaction, :count).by(2)
   end
 
   it "records an event with no livemode field at all" do
@@ -56,6 +66,6 @@ RSpec.describe Fuime::PaymentWebhookHandler, "live-mode refusal" do
     )
 
     expect { described_class.new(event:).handle }
-      .to change(CanonicalPendingTransaction, :count).by(1)
+      .to change(CanonicalPendingTransaction, :count).by(2)
   end
 end

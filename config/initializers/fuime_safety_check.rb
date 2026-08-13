@@ -149,6 +149,58 @@ Rails.application.config.after_initialize do
     MSG
   end
 
+  # --- 5. Custody cannot be switched on by an env var alone ------------------
+  # FEATURE_SPONSOR_BANKING gates every code path that only makes sense if Fuime
+  # holds customer funds: stored balances presented as spendable, card issuing,
+  # ACH/wire/check origination, balance fronting.
+  #
+  # Turning it on without a sponsor bank behind it is not a degraded product. It
+  # is Fuime holding other people's money with no licence and no partner bank —
+  # unlicensed money transmission (18 U.S.C. § 1960, criminal; CLAUDE.md L1), the
+  # single failure this fork has been architected around since Phase 0.
+  #
+  # So the flag alone is not enough to enable it. FUIME_SPONSOR_BANK_PARTNER must
+  # also name the institution actually holding the funds. That pairing is the
+  # point: an env var can be set by anyone with access to a deploy dashboard, and
+  # the second one cannot be answered truthfully unless the arrangement is real.
+  # Somebody has to write down a bank's name, which is a question that surfaces
+  # the missing partnership rather than hiding it behind a boolean.
+  #
+  # Same policy as check 2: an ambiguous half-configured money state refuses to
+  # boot rather than serving traffic while nobody is sure which way it resolved.
+  if Fuime::Features.sponsor_banking?
+    partner = ENV["FUIME_SPONSOR_BANK_PARTNER"].to_s.strip
+
+    if partner.empty?
+      errors << <<~MSG.strip
+        FEATURE_SPONSOR_BANKING is enabled but FUIME_SPONSOR_BANK_PARTNER names no
+        institution. This flag turns on stored balances, card issuing, and outbound
+        transfer origination — every path that implies Fuime holds customer funds.
+        Fuime has no banking licence, so those funds must sit with a sponsor bank,
+        and this refuses to boot until someone states which one.
+
+        If you are trying to run the merchant-of-record model (the current
+        architecture), you want this flag OFF — money reaching Fuime is Fuime's own
+        revenue and what an operator is owed is a payable, not a deposit.
+        See docs/fuime/MOR_MIGRATION_PLAN.md.
+      MSG
+    else
+      warnings << <<~MSG.strip
+        FEATURE_SPONSOR_BANKING is ON, with #{partner} named as the sponsor bank.
+        Fuime is configured to hold customer funds. Confirm the partner-bank
+        agreement, the money-transmission analysis, and the FDIC pass-through
+        disclosure language are all in place before serving traffic.
+      MSG
+    end
+  end
+
+  # Structural flags are logged every boot, set or not. They change what Fuime
+  # legally is, so "which mode is this box in?" should never require reading the
+  # deploy config to answer.
+  Fuime::Features.to_h.each do |flag, on|
+    warnings << "Structural flag #{flag}=#{on ? 'ON' : 'off'}."
+  end
+
   # --- Report ----------------------------------------------------------------
   warnings.each { |w| Rails.logger.warn("[Fuime safety] #{w}") }
 

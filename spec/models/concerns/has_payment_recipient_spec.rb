@@ -2,9 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe HasPaymentRecipient do
+# :sponsor_banking — the AchTransfer examples need a funded event, and the funding
+# here is FRONTED money, which Fuime does not extend while custody is off.
+# See spec/support/sponsor_banking.rb.
+RSpec.describe HasPaymentRecipient, :sponsor_banking do
   let(:attacker_event) do
-    e = create(:event)
+    e = create(:event, can_front_balance: true)
     create(:canonical_pending_transaction, amount_cents: 100_000, event: e, fronted: true)
     e
   end

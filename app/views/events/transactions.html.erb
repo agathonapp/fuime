@@ -47,16 +47,20 @@
 
 <div class="statset mb-2">
   <div class="stat">
-    <span class="stat__label">Account balance</span>
+    <span class="stat__label">Owed to you</span>
+    <%# Fuime: read through Fuime::PayablesLedger so this agrees with the payouts
+        page. `balance_available_v2_cents` subtracts HCB's accrued fee_balance,
+        and Fuime's fee is already deducted by Stripe at the charge — see
+        FeeEngine::Create. %>
     <%# this event has a fee credit (owes negative fees) %>
     <% if @event.fee_balance_v2_cents < 0 %>
-      <span class="stat__value stat__value--no-space"><%= render_money_amount @event.balance_v2_cents %></span>
+      <span class="stat__value stat__value--no-space"><%= render_money_amount payables_for(@event).net_payable_cents %></span>
       <span class="self-end" style="font-size: 10px;">
         +$<%= render_money_amount @event.fee_balance_v2_cents.abs %> fee credit
       </span>
     <% else %>
       <span class="stat__value stat__value--no-space">
-        <%= render_money_amount(@event.balance_available_v2_cents) %>
+        <%= render_money_amount(payables_for(@event).net_payable_cents) %>
       </span>
     <% end %>
   </div>

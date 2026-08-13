@@ -2,10 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe StripeAuthorizationService::Webhook::HandleIssuingAuthorizationRequest, type: :model do
+# :sponsor_banking — this is card authorisation, and cards are a sponsor-banking
+# module: a swipe is funded from a balance somebody holds, and with no sponsor
+# bank that balance would be Fuime's own money advanced against an operator's
+# unpaid payable. Every example here also funds its event with FRONTED money,
+# which Fuime does not extend. Without both, the balance is $0 and every
+# expectation collapses into "inadequate_balance" regardless of what it was
+# testing. See spec/support/sponsor_banking.rb.
+RSpec.describe StripeAuthorizationService::Webhook::HandleIssuingAuthorizationRequest, :sponsor_banking, type: :model do
   include ActionMailer::TestHelper
 
-  let(:event) { create(:event) }
+  let(:event) { create(:event, can_front_balance: true) }
   let(:stripe_card) { create(:stripe_card, :with_stripe_id, event:) }
   let(:stripe_authorization) { build(:stripe_authorization, card: { id: stripe_card.stripe_id }) }
   let(:service) do
@@ -150,7 +157,7 @@ RSpec.describe StripeAuthorizationService::Webhook::HandleIssuingAuthorizationRe
   end
 
   context "card grants" do
-    let(:event) { create(:event, :card_grant_event) }
+    let(:event) { create(:event, :card_grant_event, can_front_balance: true) }
     before(:example) { create(:canonical_pending_transaction, amount_cents: 10000, event:, fronted: true ) }
 
     def create_service(stripe_card: card_grant.stripe_card, amount: 1000)

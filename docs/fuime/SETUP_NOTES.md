@@ -2,6 +2,65 @@
 
 ## Handoff (most recent first)
 
+**2026-08-13 — The merchant-of-record pivot starts; custody is now a flag.** Read
+`docs/fuime/MOR_MIGRATION_PLAN.md` first — it is the plan of record for this work and its §0
+explains why the brief that started it was aimed at a codebase that no longer exists. Phases 1
+and 2 are done on `fuime/mor-pivot-phase1`; phases 3–7 are blocked on the four questions in
+its §7, two of which are for counsel and one for Stripe.
+
+**⏪ There is a restore point.** The complete working tree from immediately before the pivot,
+including the 20 uncommitted Connect files, is in the tag **`pre-mor-pivot`** (`859fc5018`).
+`git checkout -b rescue pre-mor-pivot` recovers all of it. Do not delete that tag until the
+pivot merges — MOR_MIGRATION_PLAN §0.2 explains why the Connect work may need to come back.
+
+What landed: `Fuime::Features` (`app/lib/fuime/features.rb`) with `FEATURE_SPONSOR_BANKING`,
+default off, ENV-only and deliberately **not** Flipper — a Flipper flag is a checkbox any
+admin can tick, and the failure mode here is unlicensed money transmission rather than a bad
+rollout. `Fuime::DisabledModules` went from one hardcoded list to three, so the custody
+modules (ACH, checks, wires, disbursements, Emburse) come back by configuration rather than
+by editing a concern. Plus `Fuime::PayablesLedger`, which reframes `Event#balance_*` as "what
+Fuime owes you, paid Friday" without touching the ledger engine.
+
+**Two gotchas that will bite the next session.**
+
+- **Fronting is off, and it breaks any spec that funds an event with `fronted: true`.**
+  `Event#can_front_balance?` returns false while custody is off, *and* the column now defaults
+  to false — so a spec needs BOTH the `:sponsor_banking` tag and an explicit
+  `can_front_balance: true` to spend fronted money. Three upstream spec files already needed
+  this (see `known-failures.md`). If you see `inadequate_balance` where you expected something
+  specific, this is why.
+- **Cards are now blocked in LIVE mode, not test.** `Fuime::Features.card_issuing_permitted?`
+  keeps test-mode Issuing demonstrable and refuses it against live keys — finally implementing
+  a promise the 2026-08-02 card note made in a comment and nothing enforced. Blocked at the
+  controller *and* at `StripeCard#balance_available`, because blocking controllers alone would
+  leave an already-issued card authorising swipes.
+
+**Verification: the first full-suite baseline exists.** 2896 examples, 8 failures, all
+pre-existing and attributed in `known-failures.md`. ~14 minutes; local `bundle exec rspec`
+still does not work (Ruby 4.0.6 vs the Gemfile's 3.4.9) so it must run in Docker — the exact
+command is further down this file.
+
+**Phase 2 is now finished.** Operator-facing pages read `Fuime::PayablesLedger`
+("Owed to you", never "Account balance"), and `spec/views/fuime/payables_copy_spec.rb` keeps
+them there by reading template source for forbidden nouns and forbidden method calls.
+
+**A live money bug fell out of it, and it is the most important thing in this handoff.**
+`FeeEngine::Create` was charging Fuime's `revenue_fee` a SECOND time. Upstream that engine is
+how HCB takes its cut, but under Connect the fee is already deducted by Stripe
+(`application_fee_amount`) and posted as its own ledger line — so a $100 sale arrived as +$100
+/ −$4 / −$3.20 and the hourly job accrued another $4. That is **8% charged for a 4% product**,
+and it is exactly why the dashboard and the payouts page disagreed. Fixed by waiving the
+accrual on any line carrying a Fuime ledger key. **If a real database ever accrues `Fee` rows,
+audit `fee_balance` before launch** — nothing has run against production money, so there is
+probably nothing to correct, but nobody has checked.
+
+**Next task:** Phase 3+ are blocked on MOR_MIGRATION_PLAN §7. The one engineering decision now
+open is the payout rail — see its **§4.3**, added after the Slash/Mercury/Plaid question. Short
+version: MoR decouples money-in from money-out, so Connect is no longer needed for collection,
+and a business-banking rail is legitimate *because* the balance is Fuime's own revenue rather
+than customer funds. The cost of leaving Connect is 1099-NEC filing, which Connect does and
+Slash/Mercury do not.
+
 **2026-08-07 — The waitlist runs on Render only; Upstash is gone.** Storage moved
 from Upstash REST to a Render Key Value instance, so the site now speaks the
 Redis protocol (`ioredis`, `npm ci --omit=dev` at build) and Rails reads through

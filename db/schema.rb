@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1144,7 +1144,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.datetime "activated_at"
     t.text "address"
     t.string "business_category"
-    t.boolean "can_front_balance", default: true, null: false
+    t.boolean "can_front_balance", default: false, null: false
     t.integer "country"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "deleted_at", precision: nil

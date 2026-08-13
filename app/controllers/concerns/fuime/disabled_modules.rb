@@ -22,13 +22,69 @@ module Fuime
       before_action :block_disabled_fuime_modules
     end
 
-    # Controller path prefixes for modules Fuime does not offer.
+    # ── Three lists, because there are three different reasons ────────────────
     #
-    # Deliberately does NOT include: invoices (money IN — Fuime's model),
-    # receipts, comments, ledger/transactions, card grants' read views, or the
-    # admin console.
+    # This was one list. Splitting it, because "Fuime will never do this" and
+    # "Fuime cannot do this yet" are different statements and only one of them is
+    # meant to be reversible.
+    #
+    # Under the umbrella merchant-of-record model the custody modules are supposed
+    # to come back the day a sponsor bank partner exists. A module that comes back
+    # by editing a frozen array inside a controller concern comes back by
+    # rewriting code and re-reviewing a diff — which is exactly what CLAUDE.md
+    # Rule 2 ("disable, don't delete") was written to avoid. Putting them behind
+    # Fuime::Features makes re-enabling what Rule 2 promised: a config change.
+    #
+    #   DISABLED_CONTROLLER_PREFIXES        — never. Not Fuime's product.
+    #   SPONSOR_BANKING_CONTROLLER_PREFIXES — until a sponsor bank exists.
+    #   CARD_ISSUING_CONTROLLER_PREFIXES    — until cards have a funding rail.
+    #
+    # Deliberately in NONE of them: invoices (money IN — Fuime's model), receipts,
+    # comments, ledger/transactions, card grants' read views, or the admin console.
+    #
+    # NOTE: reimbursements are deliberately absent too. FUIME_HACKATHON_SPEC lists
+    # them as "hide nav", not disable — a teen reimbursing themselves for a
+    # business expense is a legitimate flow, and the money moves within Fuime
+    # rather than out of it. Blocking them silently no-opped report updates: a
+    # PATCH that returned success while changing nothing, which is worse than
+    # either allowing the action or plainly refusing it.
+
+    # Modules Fuime does not offer and will not offer. No flag reaches these.
     DISABLED_CONTROLLER_PREFIXES = [
-      # Outbound money movement — Fuime holds no funds and cannot originate.
+      # Nonprofit fundraising — not applicable to a teen business. Fuime has no
+      # charitable status that could make a donation deductible, so this is a
+      # product statement rather than a licensing one and no partner bank changes
+      # it.
+      "donations",
+      "donation",      # namespace
+      "recurring_donations",
+      "card_grants",
+      "card_grant",    # namespace
+
+      # Google Workspace provisioning for fiscally-sponsored orgs.
+      "g_suite",
+      "g_suite_accounts",
+      "g_suite_aliases",
+
+      # The v4 API exposes the same capabilities under a different path, so
+      # blocking only the HTML controllers would leave an open back door.
+      "api/v4/card_grants",
+      "api/v4/donations",
+    ].freeze
+
+    # Modules that only make sense when money sits in an account Fuime controls on
+    # someone else's behalf — origination of outbound transfers, and the inherited
+    # Emburse spend platform.
+    #
+    # Blocked while Fuime::Features.sponsor_banking? is false, which is Fuime's
+    # shipping posture and has been since Phase 0. Nothing here is deleted, none of
+    # the models are touched, and their specs still run: flipping the flag restores
+    # the routes exactly as upstream wrote them.
+    #
+    # These were formerly hardcoded into the list above with the reason "Fuime
+    # holds no funds and cannot originate", which is true today and is precisely
+    # the condition the flag now names.
+    SPONSOR_BANKING_CONTROLLER_PREFIXES = [
       "ach_transfers",
       "increase_checks",
       "checks",
@@ -41,70 +97,78 @@ module Fuime
       "wise_transfers",
       "disbursements",
 
-      # NOTE: reimbursements are deliberately NOT here. FUIME_HACKATHON_SPEC
-      # lists them as "hide nav", not disable — a teen reimbursing themselves
-      # for a business expense is a legitimate flow, and the money moves within
-      # Fuime rather than out of it. Blocking them silently no-opped report
-      # updates: a PATCH that returned success while changing nothing, which is
-      # worse than either allowing the action or plainly refusing it.
-
-      # Nonprofit fundraising — not applicable to a teen business.
-      "donations",
-      "donation",      # namespace
-      "recurring_donations",
-      "card_grants",
-      "card_grant",    # namespace
-
-      # Google Workspace provisioning for fiscally-sponsored orgs.
-      "g_suite",
-      "g_suite_accounts",
-      "g_suite_aliases",
-
-      # NOTE: stripe_cards and stripe_cardholders were here and are deliberately
-      # not any more (2026-08-02). Issuing runs in Stripe TEST MODE, so a card
-      # created here spends nothing real, and leaving the writes blocked while
-      # EventPolicy#card_overview? was re-enabled would have rebuilt the exact
-      # trap page that list was written to close: a Create button that 302s.
-      # Blocked again the moment this fork points at anything but test keys.
-      #
-      # ⚠️ 2026-08-03 — READ BEFORE GOING LIVE WITH CARDS. Inherited Issuing is
-      # structurally incompatible with the connected-account model added the same
-      # day, and the incompatibility is a funding one, not a config one:
-      #
-      #   * A swipe is approved against `StripeCard#balance_available`, i.e. the
-      #     EVENT'S LEDGER balance (app/models/stripe_card.rb:391).
-      #   * The debit lands on the PLATFORM's Stripe Issuing balance, which HCB
-      #     tops up from its own money (upstream app/jobs/topup_stripe_job.rb) —
-      #     one shared balance for every org, with per-org limits enforced only by
-      #     the subledger.
-      #   * Under Connect that ledger MIRRORS THE GUARDIAN'S Stripe balance. The
-      #     money is the family's, held by Stripe, not Fuime's to spend.
-      #
-      # So going live as-is means Fuime funds the swipe and has no claim on the
-      # revenue backing it: uncollateralised credit extended to a minor's
-      # business. Celtic Bank's own Authorized User Terms make this explicit —
-      # the "Accountholder" is the entity with the credit account, and "all
-      # expenses on your card are the responsibility of the Accountholder". HCB
-      # can carry that because it is a 501(c)(3) that legally owns the funds.
-      # Fuime cannot.
-      #
-      # Cards therefore need their own funding rail, not a flag flip. See
-      # docs/fuime/LEGAL_RESEARCH.md and the handoff note in SETUP_NOTES.md.
+      # Emburse is the pre-Stripe card platform inherited from upstream. Custody
+      # shaped and long dead, but kept loadable for existing rows.
       "emburse_cards",
       "emburse_card_requests",
       "emburse_transactions",
 
-      # The v4 API exposes the same capabilities under a different path, so
-      # blocking only the HTML controllers would leave an open back door.
       "api/v4/ach_transfers",
-      "api/v4/card_grants",
       "api/v4/check_deposits",
       "api/v4/checks",
       "api/v4/disbursements",
-      "api/v4/donations",
-      "api/v4/stripe_cards",
       "api/v4/wires",
     ].freeze
+
+    # Stripe Issuing.
+    #
+    # ⚠️ READ BEFORE GOING LIVE WITH CARDS (note from 2026-08-03, still true).
+    # Inherited Issuing is structurally incompatible with any model where Fuime
+    # does not own the funds, and the incompatibility is a funding one, not a
+    # config one:
+    #
+    #   * A swipe is approved against `StripeCard#balance_available`, i.e. the
+    #     EVENT'S LEDGER balance (app/models/stripe_card.rb:392).
+    #   * The debit lands on the PLATFORM's Stripe Issuing balance, which HCB
+    #     tops up from its own money (upstream app/jobs/topup_stripe_job.rb) —
+    #     one shared balance for every org, with per-org limits enforced only by
+    #     the subledger.
+    #   * Under Connect that ledger MIRRORS THE GUARDIAN'S Stripe balance. The
+    #     money is the family's, held by Stripe, not Fuime's to spend. Under the
+    #     merchant-of-record model it mirrors a PAYABLE — money Fuime owes but has
+    #     not yet paid — so a swipe is Fuime advancing cash against its own unpaid
+    #     invoice to a minor.
+    #
+    # Either way, going live as-is means Fuime funds the swipe: uncollateralised
+    # credit extended to a minor's business. Celtic Bank's own Authorized User
+    # Terms make this explicit — the "Accountholder" is the entity with the credit
+    # account, and "all expenses on your card are the responsibility of the
+    # Accountholder". HCB can carry that because it is a 501(c)(3) that legally
+    # owns the funds. Fuime cannot.
+    #
+    # Cards therefore need their own funding rail, not a flag flip — so the flag
+    # here is a floor, not a green light. See #card_issuing_blocked? for why test
+    # mode is carved out, and docs/fuime/MOR_MIGRATION_PLAN.md §1 C3.
+    CARD_ISSUING_CONTROLLER_PREFIXES = [
+      "stripe_cards",
+      "stripe_cardholders",
+      "fuime/cards",
+      "api/v4/stripe_cards",
+    ].freeze
+
+    # Every prefix blocked *right now*, given the current flag state.
+    #
+    # Exists because "what is turned off?" stopped being a constant the moment the
+    # answer depended on a flag. Callers that used to read
+    # DISABLED_CONTROLLER_PREFIXES to answer it — specs, and any future admin
+    # diagnostics page — were asking about behaviour and happening to get it from a
+    # list. Now the list and the behaviour can differ, so the question needs a real
+    # answer rather than a lucky one.
+    def self.blocked_prefixes
+      prefixes = DISABLED_CONTROLLER_PREFIXES.dup
+      prefixes.concat(SPONSOR_BANKING_CONTROLLER_PREFIXES) unless ::Fuime::Features.sponsor_banking?
+      prefixes.concat(CARD_ISSUING_CONTROLLER_PREFIXES) unless ::Fuime::Features.card_issuing_permitted?
+      prefixes.freeze
+    end
+
+    # Every prefix any list mentions, regardless of flags. For checks about the
+    # lists themselves — that each names a controller that exists, say — where the
+    # current flag state is beside the point.
+    def self.all_gated_prefixes
+      (DISABLED_CONTROLLER_PREFIXES +
+        SPONSOR_BANKING_CONTROLLER_PREFIXES +
+        CARD_ISSUING_CONTROLLER_PREFIXES).freeze
+    end
 
     private
 
@@ -139,7 +203,25 @@ module Fuime
     end
 
     def fuime_module_disabled?
-      DISABLED_CONTROLLER_PREFIXES.any? do |prefix|
+      return true if matches_prefix?(DISABLED_CONTROLLER_PREFIXES)
+      return true if !::Fuime::Features.sponsor_banking? &&
+                     matches_prefix?(SPONSOR_BANKING_CONTROLLER_PREFIXES)
+      return true if card_issuing_blocked? &&
+                     matches_prefix?(CARD_ISSUING_CONTROLLER_PREFIXES)
+
+      false
+    end
+
+    # Deliberately delegated rather than restated: StripeCard#balance_available
+    # asks the same question when it decides whether to approve a swipe, and two
+    # copies of "may Fuime issue cards" is how a card gets refused at the form and
+    # approved at the terminal.
+    def card_issuing_blocked?
+      !::Fuime::Features.card_issuing_permitted?
+    end
+
+    def matches_prefix?(prefixes)
+      prefixes.any? do |prefix|
         controller_path == prefix || controller_path.start_with?("#{prefix}/")
       end
     end

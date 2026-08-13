@@ -59,12 +59,19 @@ RSpec.describe Fuime::PayoutsController do
     # was "what Stripe says can be sent today", which on a shared account is the whole
     # school's balance.
     it "describes the balance as the venture's own earnings" do
+      # Needs actual earnings: with nothing on the ledger the sentence is
+      # correctly "You haven't earned anything yet."
+      credit_venture!(venture, 25_000)
       create_session(student, verified: true)
 
       get :index, params: { event_slug: venture.slug }
 
+      # Fuime::PayablesLedger#owed_sentence branches on who actually pays. On a
+      # shared school account the SCHOOL settles with the student directly and
+      # Fuime is not the rail, so "Fuime owes you" would name the wrong debtor.
       expect(response.body).to match(/has earned and not yet spent/)
-      expect(response.body).not_to match(/what Stripe says can be sent today/)
+      expect(response.body).to match(/Ask the school to pay it out/)
+      expect(response.body).not_to match(/Fuime owes you/)
     end
 
     it "offers reinvesting as an option rather than only cashing out" do
@@ -164,7 +171,9 @@ RSpec.describe Fuime::PayoutsController do
 
       expect(response.body).to include("Ask my guardian")
       expect(response.body).to match(/Your guardian has to approve this/)
-      expect(response.body).to match(/what Stripe says can be sent today/)
+      # The family shape: Fuime IS the seller of record and the payer, so the
+      # sentence names Fuime and commits to the payout date.
+      expect(response.body).to match(/Fuime owes you/)
     end
 
     it "still describes payouts as going to the guardian's bank" do

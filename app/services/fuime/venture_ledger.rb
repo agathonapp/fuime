@@ -205,6 +205,24 @@ module Fuime
       "#{memo} [#{key}]"
     end
 
+    # Does this settled line's memo carry a Fuime ledger key?
+    #
+    # Every settled line Fuime posts ends "… [fuime_something]", written by
+    # `.settled_memo` and by Fuime::ConnectSettlementSweep. That bracketed suffix is
+    # the reliable way to ask "did Fuime put this here?", which two callers need:
+    #
+    #   * Fuime::PayablesLedger, to classify a line into the breakdown.
+    #   * FeeEngine::Create, to NOT charge Fuime's fee a second time — see its
+    #     `revenue_waived` branch, which is the load-bearing one.
+    #
+    # Anchored on "[fuime_" plus a letter so an ordinary memo that happens to
+    # contain a bracket cannot match.
+    MEMO_KEY_PATTERN = /\[fuime_[a-z]/
+
+    def self.memo_carries_key?(memo)
+      memo.to_s.match?(MEMO_KEY_PATTERN)
+    end
+
     def self.find_settled_row(key, memo)
       ::RawCsvTransaction.find_by(
         unique_bank_identifier: UNIQUE_BANK_IDENTIFIER,

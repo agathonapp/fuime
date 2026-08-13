@@ -26,6 +26,12 @@ RSpec.describe Fuime::PayoutsController do
     allow(Stripe::Balance).to receive(:retrieve).and_return(
       Stripe::Balance.construct_from(available: [{ currency: "usd", amount: 50_000 }])
     )
+
+    # The page reports what Fuime OWES, which is a ledger fact — stubbing Stripe's
+    # balance alone leaves the venture at $0 owed however much Stripe holds. That
+    # separation is deliberate (the figure survives Stripe being unreachable), so
+    # the ledger has to be credited too.
+    create(:canonical_transaction, amount_cents: 50_000, memo: "Sale", event: venture)
   end
 
   def stub_payout(id: "po_req_1")
@@ -34,7 +40,7 @@ RSpec.describe Fuime::PayoutsController do
   end
 
   describe "GET #index" do
-    it "shows the available balance to the teen" do
+    it "shows what the teen is owed" do
       create_session(minor, verified: true)
 
       get :index, params: { event_slug: venture.slug }
@@ -51,16 +57,19 @@ RSpec.describe Fuime::PayoutsController do
       expect(response).to have_http_status(:ok)
     end
 
-    # A balance Fuime cannot read must not render as $0.00 — a teen told they have
-    # nothing will conclude their money is gone.
-    it "distinguishes an unreadable balance from zero" do
+    # What Fuime owes is a LEDGER fact, so it survives Stripe being unreachable —
+    # that is the point of reading Fuime::PayablesLedger rather than Stripe's
+    # balance. What becomes unknown is only whether the money can move TODAY, and
+    # the page has to say that without implying the money is gone.
+    it "still states what is owed when Stripe cannot be reached" do
       allow(Stripe::Balance).to receive(:retrieve).and_raise(Stripe::APIError.new("boom"))
       create_session(minor, verified: true)
 
       get :index, params: { event_slug: venture.slug }
 
-      expect(response.body).to include("Unavailable right now")
-      expect(response.body).not_to include("$0.00")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to match(/can't reach Stripe right now/)
+      expect(response.body).to match(/doesn't change what you're owed/)
     end
 
     it "refuses an unrelated user" do
