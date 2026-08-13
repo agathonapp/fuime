@@ -12,6 +12,26 @@
 
 <% account = @connected_account %>
 
+<%# Stripe's own notification banner, mounted above everything else.
+
+    This is the only surface that knows about a problem Fuime's mirror cannot see
+    yet — a document expiring next month, a review that just opened. The mirror in
+    StripeConnectedAccount reports what Stripe has already ACTED on; the banner
+    reports what Stripe is about to act on, which is the half a guardian can still
+    do something about.
+
+    Hidden until Stripe reports at least one notification (the Stimulus controller
+    collapses it), so a healthy account shows nothing rather than an empty box. %>
+<% if @embedded_banner %>
+  <div
+    data-controller="stripe-connect-component"
+    data-stripe-connect-component-publishable-key-value="<%= @publishable_key %>"
+    data-stripe-connect-component-session-url-value="<%= fuime_payment_setup_session_path(event_slug: @event.slug) %>"
+    class="mb2">
+    <div data-stripe-connect-component-target="mount" data-component="notification-banner" hidden></div>
+  </div>
+<% end %>
+
 <% if @inherited_account %>
   <%# A student venture inside a school programme. There is nothing for anyone here
       to set up: the school's account already serves this venture, and offering a
@@ -138,9 +158,20 @@
     <% end %>
 
     <% if @can_set_up %>
-      <%= link_to(account.onboarding_submitted? ? "Update payment details" : "Finish payment setup",
-                  new_fuime_payment_setup_path(event_slug: @event.slug),
-                  class: "btn bg-accent") %>
+      <%# Two different buttons, and which one appears matters. Before submission
+          the guardian needs the onboarding form back. After it, "update details"
+          would send them through an onboarding flow with nothing left to collect;
+          the management page is where changing a bank account or clearing a
+          flagged document actually happens. %>
+      <% if account.onboarding_submitted? %>
+        <%= link_to "Manage payment account",
+                    fuime_payment_setup_manage_path(event_slug: @event.slug),
+                    class: "btn bg-accent" %>
+      <% else %>
+        <%= link_to "Finish payment setup",
+                    new_fuime_payment_setup_path(event_slug: @event.slug),
+                    class: "btn bg-accent" %>
+      <% end %>
     <% end %>
   <% end %>
 
