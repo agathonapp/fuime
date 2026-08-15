@@ -795,3 +795,85 @@ Also raise `FUIME_MINIMUM_FEE_CENTS` to **75¢** if Standard's $10–$14 band ma
 the only remaining negative window outside Pro.
 
 §8.4's open-questions list gains this as item 4.
+
+---
+
+## §9 — Whop as the substrate: an evaluation, not a decision (2026-08-15)
+
+Raised by the founder after finding Whop's neobank template, Whop for Platforms and Whop
+Cards. Recorded here because it is the first proposal that could close **three** open blockers
+at once, and because one part of the reasoning behind it is wrong in a way that would be
+expensive to discover later.
+
+### 9.1 What is actually true
+
+Verified against Whop's own documentation rather than a chat summary:
+
+| Claim | Verdict |
+|---|---|
+| Whop for Platforms enrolls connected accounts under a platform company | **True.** A `Company` object per tenant, taking direct charges, with platform-side splits and commissions via API. |
+| Whop Cards issues cards against an existing balance, no underwriting | **True.** The platform builds no card infrastructure. |
+| Whop is the merchant of record, incl. VAT and sales tax | **True**, and it is why §8.4 item 2 cuts *for* Whop — see 9.3. |
+| **Fuime would not need its own bank partner** | **True.** The licensed chain is Whop → Rain → issuing bank. This is the strongest argument in the proposal. |
+| Therefore Fuime can market itself as a neobank | **False.** See 9.2. |
+
+### 9.2 The one that is wrong, and why it matters
+
+"We do not need a bank partner" and "we may call ourselves a bank" are different claims, and
+only the first follows from the Whop stack.
+
+**L5 restricts the word, not the custody.** Cal. Fin. Code § 562, 205 ILCS 5/46 and FDIC Part
+328 Subpart B govern who may *hold themselves out* as a bank. A fintech sitting three layers
+above an issuing bank is not one. **DFPI v. Chime is precisely this case**: Chime had genuine
+bank partners and was still ordered to stop calling itself a bank. Whop's own copy is
+consistent with that reading — "business banking on the Whop API" is developer documentation,
+not consumer-facing "we are your bank."
+
+Adopting Whop would improve the rails. It would not move one word of L5's forbidden vocabulary
+or remove the standing footer disclosure.
+
+### 9.3 What adopting it would actually change
+
+**It is a substrate swap, not an integration.** If Whop is the merchant of record, **Fuime is
+not** — and phases 3–6 were built on Fuime being the seller. Re-examined, in order of cost:
+
+- `Fuime::PayablesLedger` — still correct in shape (an operator has a receivable, not a
+  balance), but the debtor changes and every copy string naming Fuime as payer is wrong.
+- **The 5% all-in fee** (§8.3 D1). Its whole justification was that Stripe charges *Fuime* for
+  *Fuime's* sale. Under Whop-as-MoR, Whop's take comes first and Fuime's margin is what is
+  left. `Event::Plan`'s ladder needs re-deriving, and the Pro tier is already underwater
+  (§8.6).
+- **1099-NEC filing** (§8.4 item 2) — **this is the argument for Whop.** The obligation is open
+  precisely because leaving Connect means nobody files. If Whop is MoR, Whop files them.
+- `FEATURE_SPONSOR_BANKING`'s boot guard demands a named partner bank. Whop would answer it.
+- Phases 7 (disputes) and 8 (nexus report) largely evaporate — both are obligations Fuime holds
+  *because* Fuime is the seller.
+
+### 9.4 The blocking unknown, and it is the familiar one
+
+**Whop's floor is 13 with guardian supervision, and 13–17 are flagged as minor accounts with
+restrictions** — structurally the same model Fuime built, and a better fit than Stripe's
+arm's-length 13.
+
+But every Whop program that *pays a person* has an adult floor: Content Rewards is 18+, the
+Affiliate Program is 18+. So the question is the one Stripe has not answered either:
+
+> **Q9.** Can a guardian be the verified principal (KYB/KYC) on a Whop connected account whose
+> day-to-day operator is a 16-year-old, with the guardian as obligor on chargebacks — and is
+> that permitted by the Seller Terms rather than merely technically possible?
+
+Until that has an answer in writing, this is not a plan. It is a candidate, and it is the same
+class of unknown as §7 Q1/Q2/Q4: an infrastructure answer does not resolve a licensing question.
+
+### 9.5 Recommendation
+
+**Do not swap yet, and do not stop building.** Ask Whop Q9 in the same conversation already
+owed to Stripe — the two answers are directly comparable and one call decides the substrate.
+Meanwhile the work that is substrate-independent (onboarding, guides, own-business analytics,
+the vetting and payout-review queues) is safe to build under either, and phase 6's dials and
+approval gate survive both.
+
+The failure mode to avoid is the one L8 already names: **letting the story lead the code.** The
+last time that happened it was fuime.com describing a Stripe Connect architecture that did not
+exist. Adopting a substrate because it makes a better sentence is the same error with a larger
+blast radius.
