@@ -49,6 +49,12 @@
             card_to "Disbursements", disbursements_admin_index_path
             card_to "Reimbursements", reimbursements_admin_index_path %>
         <%= card_to "OPDRs", organizer_position_deletion_requests_path, badge: OrganizerPositionDeletionRequest.under_review.count %>
+        <%# Fuime: the two manual-approval controls the whole model rests on. Vetting
+            decides who may sell; payout runs decide what Fuime actually pays them.
+            Both badge the outstanding count, because a queue nobody can see the
+            depth of is a queue that silently stops being worked. %>
+        <%= card_to "Operator vetting (Fuime)", operator_vetting_admin_index_path, badge: Event.not_hidden.operator_vetting_unvetted.count %>
+        <%= card_to "Payout runs (Fuime)", payout_batches_admin_index_path, badge: Fuime::PayoutBatch.awaiting_approval.count %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Disputes", link_to_airtable_task(:disputed_transactions), async_badge: :pending_disputed_transactions_airtable %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Feedback", link_to_airtable_task(:feedback), async_badge: :pending_feedback_airtable %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Warehouse SKUs", link_to_airtable_task(:marketing_shipment_request) %>

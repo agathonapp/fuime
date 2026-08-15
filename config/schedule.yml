@@ -276,3 +276,11 @@ hide_onboarding_messages:
 fuime_connect_settlement_sweep_job:
   cron: "*/30 * * * *"
   class: "Fuime::ConnectSettlementSweepJob"
+
+# Fuime: generate the weekly payout run. Wednesday 14:00 UTC (9am ET) for a Friday
+# payout — the two-day gap is where a human reviews every line, which is the
+# brief's control on every payout. See Fuime::GeneratePayoutBatchJob for why this
+# is safe to schedule while FEATURE_MERCHANT_OF_RECORD is off.
+fuime_generate_payout_batch_job:
+  cron: "0 14 * * WED"
+  class: "Fuime::GeneratePayoutBatchJob"

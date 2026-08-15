@@ -159,4 +159,75 @@ RSpec.describe PayoutRequest, type: :model do
       expect(create(:payout_request, :approved, event: create(:event))).not_to be_settled
     end
   end
+
+  # ── Batch lines ────────────────────────────────────────────────────────────
+  #
+  # The third shape this record takes: not a person asking, but the weekly run
+  # generating. See CreateFuimePayoutBatches for why the requester is null rather
+  # than invented, and Fuime::PayoutBatchService for what generates these.
+  describe "a scheduled batch line", :merchant_of_record do
+    let(:batch) { create(:fuime_payout_batch) }
+
+    def line(**attrs)
+      build(:payout_request, event: venture, requested_by: nil, payout_batch: batch,
+                             destination: described_class::FUIME_VENDOR_PAYMENT, **attrs)
+    end
+
+    it "is valid with no requester, because nobody asked" do
+      expect(line).to be_valid
+      expect(line).to be_scheduled
+    end
+
+    # The nullability exists for batch lines and must not leak into the two
+    # person-initiated paths, where a request with no requester is a payout nobody
+    # can be shown to have asked for.
+    it "still requires a requester on a request somebody made" do
+      request = build(:payout_request, event: venture, requested_by: nil)
+
+      expect(request).not_to be_valid
+      expect(request.errors[:requested_by]).to be_present
+    end
+
+    # A guardian's decision queue reads `awaiting_approval.person_initiated`. A
+    # batch line appearing there would ask a parent to approve a payment Fuime
+    # makes out of Fuime's own money, which is not their decision to make.
+    it "neither blocks nor is blocked by a guardian's pending request" do
+      create(:payout_request, event: venture, requested_by: minor)
+
+      expect(line).to be_valid
+      expect(described_class.awaiting_approval.person_initiated.count).to eq(1)
+      expect(described_class.scheduled.count).to eq(0)
+    end
+
+    it "may be approved by a Fuime admin, who is not anybody's guardian" do
+      request = line
+      request.save!
+      request.approved_by = create(:user, :make_admin)
+
+      expect(request).to be_valid
+    end
+  end
+
+  describe "the fuime_vendor_payment destination" do
+    # The check that keeps the third destination honest. Under Connect the
+    # customer's money is in the family's own account, so a Fuime-originated
+    # payment to them would be Fuime moving a third party's money — L1, which is
+    # the constraint the whole architecture is built around.
+    it "is refused while Fuime is not the seller of record" do
+      request = build(:payout_request, event: venture, requested_by: nil,
+                                       payout_batch: create(:fuime_payout_batch),
+                                       destination: described_class::FUIME_VENDOR_PAYMENT)
+
+      expect(request).not_to be_valid
+      expect(request.errors[:destination].join).to match(/seller of record/i)
+    end
+
+    it "is allowed once Fuime is the seller of record", :merchant_of_record do
+      request = build(:payout_request, event: venture, requested_by: nil,
+                                       payout_batch: create(:fuime_payout_batch),
+                                       destination: described_class::FUIME_VENDOR_PAYMENT)
+
+      expect(request).to be_valid
+    end
+  end
 end

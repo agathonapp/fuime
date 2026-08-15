@@ -87,6 +87,10 @@ module Fuime
     PAYOUT_PREFIX         = "fuime_payout_"
     PAYOUT_REVERSAL_PREFIX = "fuime_payoutrev_"
     SCHOOL_PAID_PREFIX    = "fuime_schoolpaid_"
+    # A weekly run Fuime paid out of its own account. Deliberately not sharing
+    # PAYOUT_PREFIX: "fuime_batchpayout_" is not a "fuime_payout_" string, so the
+    # two classify separately and neither can silently absorb the other.
+    BATCH_PAYOUT_PREFIX   = "fuime_batchpayout_"
     CARD_SPEND_PREFIX     = "fuime_card_"
 
     attr_reader :event
@@ -185,12 +189,14 @@ module Fuime
       @card_spend_cents ||= settled_sum(CARD_SPEND_PREFIX).abs
     end
 
-    # Money already paid to this operator, as a positive number. Covers both rails:
-    # a Stripe payout, and a transfer a school settled itself.
+    # Money already paid to this operator, as a positive number. Covers all three
+    # rails: a Stripe payout from the family's own account, a transfer a school
+    # settled itself, and a weekly run Fuime paid out of Fuime's own account.
     def paid_out_cents
       @paid_out_cents ||= (settled_sum(PAYOUT_PREFIX) +
                            settled_sum(PAYOUT_REVERSAL_PREFIX) +
-                           settled_sum(SCHOOL_PAID_PREFIX)).abs
+                           settled_sum(SCHOOL_PAID_PREFIX) +
+                           settled_sum(BATCH_PAYOUT_PREFIX)).abs
     end
 
     # Money already spent or committed that has not settled yet, as a positive
@@ -246,6 +252,14 @@ module Fuime
     # the payout day — `Date#next_occurring` would skip a week, telling somebody on
     # payout morning that their money comes in seven days.
     def next_payout_on(from: Date.current)
+      self.class.next_payout_on(from:)
+    end
+
+    # The cadence with no operator attached, for callers deciding when a RUN goes
+    # out rather than what one operator is told. Fuime::PayoutBatchService needs
+    # exactly this and has no event to ask about.
+    def self.next_payout_on(from: Date.current)
+      from = from.to_date
       return from if from.strftime("%A").downcase.to_sym == PAYOUT_WEEKDAY
 
       from.next_occurring(PAYOUT_WEEKDAY)
@@ -315,9 +329,8 @@ module Fuime
         "you on account."
     end
 
-    private
-
-    # Sum of settled lines whose Fuime ledger key starts with `prefix`.
+    # Sum of settled lines whose Fuime ledger key starts with `prefix`, optionally
+    # bounded by date.
     #
     # The key is embedded in the memo as "[key]" by VentureLedger.settled_memo, so
     # this matches on that rather than on memo prose.
@@ -325,12 +338,25 @@ module Fuime
     # `sanitize_sql_like` is not optional: every key prefix here contains
     # underscores, and `_` is a single-character wildcard in SQL LIKE. Unescaped,
     # "fuime_fee_" would also match "fuimeXfeeY" — harmless today only by luck.
-    def settled_sum(prefix)
+    #
+    # Public and on the class because Fuime::PayableAssessment needs the same
+    # classification over a date window, and a second copy of this query is a
+    # second place for the underscore-wildcard bug to come back. One definition.
+    def self.settled_sum_for(event:, prefix:, on_or_before: nil, on_or_after: nil)
       escaped = ActiveRecord::Base.sanitize_sql_like(prefix)
 
-      event.canonical_transactions
-           .where("canonical_transactions.memo LIKE ?", "%[#{escaped}%")
-           .sum(:amount_cents)
+      scope = event.canonical_transactions
+                   .where("canonical_transactions.memo LIKE ?", "%[#{escaped}%")
+      scope = scope.where(canonical_transactions: { date: ..on_or_before.to_date }) if on_or_before
+      scope = scope.where(canonical_transactions: { date: on_or_after.to_date.. }) if on_or_after
+
+      scope.sum(:amount_cents)
+    end
+
+    private
+
+    def settled_sum(prefix)
+      self.class.settled_sum_for(event:, prefix:)
     end
 
     def format_cents(cents)

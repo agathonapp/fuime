@@ -410,6 +410,14 @@ Rails.application.routes.draw do
       # they can sell — see Fuime::OperatorEligibility.
       get "operator_vetting", to: "admin#operator_vetting"
       post "operator_vetting/:id", to: "admin#operator_vetting_decide", as: "operator_vetting_decide"
+      # FUIME: the weekly payout runs. A human reads every line before Fuime pays
+      # anybody — see Fuime::PayoutBatchService.
+      get "payout_batches", to: "admin#payout_batches"
+      get "payout_batches/:id", to: "admin#payout_batch", as: "payout_batch"
+      post "payout_batches", to: "admin#payout_batch_generate", as: "payout_batch_generate"
+      post "payout_batches/:id/approve", to: "admin#payout_batch_approve", as: "payout_batch_approve"
+      post "payout_batches/:id/mark_paid", to: "admin#payout_batch_mark_paid", as: "payout_batch_mark_paid"
+      post "payout_batches/:id/cancel", to: "admin#payout_batch_cancel", as: "payout_batch_cancel"
       get "paypal_transfers", to: "admin#paypal_transfers"
       get "wires", to: "admin#wires"
       get "wise_transfers", to: "admin#wise_transfers"

@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_000100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1275,6 +1275,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
   end
 
+  create_table "fuime_payout_batches", force: :cascade do |t|
+    t.string "aasm_state", default: "draft", null: false
+    t.datetime "approved_at"
+    t.bigint "approved_by_id"
+    t.text "cancellation_reason"
+    t.datetime "cancelled_at"
+    t.datetime "created_at", null: false
+    t.integer "hold_days", null: false
+    t.integer "maximum_cents", null: false
+    t.integer "minimum_cents", null: false
+    t.text "notes"
+    t.datetime "paid_at"
+    t.bigint "paid_by_id"
+    t.date "payout_on", null: false
+    t.date "period_end", null: false
+    t.date "period_start", null: false
+    t.integer "reserve_basis_points", null: false
+    t.integer "reserve_window_days", null: false
+    t.datetime "updated_at", null: false
+    t.index ["aasm_state"], name: "index_fuime_payout_batches_on_aasm_state"
+    t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
+    t.index ["paid_by_id"], name: "index_fuime_payout_batches_on_paid_by_id"
+    t.index ["period_end"], name: "index_live_fuime_payout_batches_on_period_end", unique: true, where: "((aasm_state)::text <> 'cancelled'::text)"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[])", name: "fuime_payout_batches_state_known"
+    t.check_constraint "period_end >= period_start", name: "fuime_payout_batches_period_ordered"
+  end
+
   create_table "fuime_subscriptions", force: :cascade do |t|
     t.bigint "billed_to_id", null: false
     t.boolean "cancel_at_period_end", default: false, null: false
@@ -2094,13 +2121,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
     t.datetime "created_at", null: false
     t.string "destination", default: "account_owner_bank", null: false
     t.text "destination_note"
+    t.integer "eligible_cents"
     t.bigint "event_id", null: false
     t.string "failure_code"
     t.text "failure_message"
     t.datetime "paid_at"
+    t.bigint "payout_batch_id"
     t.datetime "rejected_at"
     t.text "rejection_reason"
-    t.bigint "requested_by_id", null: false
+    t.bigint "requested_by_id"
+    t.integer "reserve_held_cents", default: 0, null: false
     t.datetime "settled_at"
     t.bigint "settled_by_id"
     t.text "stripe_payout_id"
@@ -2108,10 +2138,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
     t.index ["approved_by_id"], name: "index_payout_requests_on_approved_by_id"
     t.index ["event_id", "created_at"], name: "index_pending_payout_requests_on_event", where: "((aasm_state)::text = 'pending'::text)"
     t.index ["event_id"], name: "index_payout_requests_on_event_id"
+    t.index ["payout_batch_id", "event_id"], name: "index_payout_requests_on_batch_and_event", unique: true, where: "(payout_batch_id IS NOT NULL)"
+    t.index ["payout_batch_id"], name: "index_payout_requests_on_payout_batch_id"
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
     t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
-    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying]::text[])", name: "payout_requests_destination_known"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying, 'fuime_vendor_payment'::character varying]::text[])", name: "payout_requests_destination_known"
+    t.check_constraint "reserve_held_cents >= 0", name: "payout_requests_reserve_not_negative"
   end
 
   create_table "paypal_transfers", force: :cascade do |t|
@@ -3322,6 +3355,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"
   add_foreign_key "fees", "canonical_event_mappings"
+  add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
+  add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "g_suite_accounts", "g_suites"
@@ -3393,6 +3428,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
   add_foreign_key "organizer_positions", "users"
   add_foreign_key "payment_recipients", "events"
   add_foreign_key "payout_requests", "events"
+  add_foreign_key "payout_requests", "fuime_payout_batches", column: "payout_batch_id"
   add_foreign_key "payout_requests", "users", column: "approved_by_id"
   add_foreign_key "payout_requests", "users", column: "requested_by_id"
   add_foreign_key "payout_requests", "users", column: "settled_by_id"

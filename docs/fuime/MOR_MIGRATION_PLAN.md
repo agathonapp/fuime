@@ -620,13 +620,25 @@ product liability, are the two the brief leans on hardest.
 
 ### 8.4 Still open after the brief
 
-1. **Hold period before payout.** The dispute window is 120 days; weekly payout leaves Fuime
-   unsecured for the difference. The brief's clawback answer is "net against future payables",
-   which is empty for an operator who stops selling. Needs a number, and it interacts with §7 Q3.
+1. ~~**Hold period before payout.**~~ **Answered in phase 6 (2026-08-15), pending the founder's
+   sign-off on the numbers.** The exposure is split rather than closed by one dial: a **7-day
+   hold** catches fast failures and a **10% rolling reserve over a 90-day trailing window**
+   carries the tail. A 120-day hold would close the gap and destroy the product — a teenager
+   paid in October for a June job is not running a business. Rolling rather than
+   withhold-and-release, because a release schedule creates money Fuime holds while somebody
+   waits on a job to notice it, which is a stored balance with extra steps. All four dials are
+   env-tunable (`Fuime::PayoutPolicy`) and **frozen onto each batch row**, so a run stays
+   explainable after the configuration moves. Still interacts with §7 Q3 — the reserve is what
+   a clawback nets against when an operator has stopped selling, which is the case the brief's
+   answer does not cover.
 2. **1099-NEC filing** (§4.3). Collection is built; filing is not, and leaving Connect means
    nobody files it. Decide before January, not in it.
-3. **Per-operator volume caps and reserve** — the brief lists both as concentration mitigations
-   and neither exists. Cheap to build, so they are in the sequence below.
+3. ~~**Per-operator volume caps and reserve.**~~ **Built in phase 6.** The cap is $2,500 per
+   operator per run and is a *concentration limit, not a refusal* — the remainder stays payable
+   and rolls into the following week. What it buys is time: an operator whose volume suddenly
+   looks nothing like the vetted business Fuime approved cannot empty the account before a human
+   reads the run. There is also a $10 floor, below which a payable rolls forward rather than
+   generating a line.
 
 ### 8.5 Revised sequencing — supersedes §5
 
@@ -671,7 +683,7 @@ Each phase is one branch, one PR (Rule 5). Everything ships behind `FEATURE_MERC
 | **3c** | Agreement v3 | MoR relationship, guardian as obligor on clawbacks | 3b, §7 Q3 |
 | **4** | Money-in flips to Fuime | promote `PaymentWebhookHandler`, buyer jurisdiction capture | 3a; §7 Q1+Q4 to *enable* |
 | **5** | Fee becomes 5% all-in | processing fee leaves the operator's side (D1) | 4 |
-| **6** | Payout batches | weekly cadence, approval step, volume caps, reserve | 5 |
+| **6** | Payout batches ✅ | weekly cadence, approval step, volume caps, reserve — **shipped 2026-08-15**, minus the originator (§4.3), which a human assertion stands in for | 5 |
 | **7** | Disputes and clawback | attribution, netting against payables | 6, §7 Q3 |
 | **8** | Nexus report | volume + count by state | 4 |
 | **9** | Operator directory | listing-not-dispatch (D2) | 6 |

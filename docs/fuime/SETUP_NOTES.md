@@ -2,6 +2,37 @@
 
 ## Handoff (most recent first)
 
+**2026-08-15 — Phase 6: the weekly payout run exists, and it deliberately cannot send money.**
+
+`Fuime::PayoutBatchService` generates a run every Wednesday for a Friday payout, an admin reads
+every line at **/admin/payout_batches**, and `mark_paid!` is the only thing that debits an
+operator's ledger. Approving posts nothing — the page's copy says so and a spec asserts it.
+
+**The thing to hold onto: a run's terminal step is a human assertion, not a transfer.** The
+originator is still an open decision (MOR_MIGRATION_PLAN §4.3 — Mercury's ToS on programmatic
+ACH to hundreds of third parties, Slash as the API-native alternative, Plaid behind either).
+When it lands it becomes a `LegalEntity::PayoutMethod::BankAccount` behind the same transition
+and nothing in phase 6 changes.
+
+**Four new env dials, all defaulted and all frozen onto each batch row at generation:**
+`FUIME_PAYOUT_HOLD_DAYS` 7 · `FUIME_PAYOUT_RESERVE_BASIS_POINTS` 1000 ·
+`FUIME_PAYOUT_RESERVE_WINDOW_DAYS` 90 · `FUIME_PAYOUT_MAXIMUM_CENTS` 250000 ·
+`FUIME_PAYOUT_MINIMUM_CENTS` 1000. Frozen rather than read live because a run that floats with
+the configuration is a run nobody can explain to an operator afterwards. **The numbers are the
+founder's call** — they answer §8.4 item 1 defensibly, not finally. A steady $100/week operator
+ends up with a standing $130 reserve (~1.3 weeks of earnings) and is then paid in full weekly.
+
+**Two traps worth carrying forward.** `Fuime::VentureLedger#post!` writes a PENDING line that
+something must later promote, and `ConnectSettlementSweep` only promotes payment- and
+refund-shaped keys — so any new Fuime money path that has no Stripe settlement event must use
+`post_settled!` or its debit sits in `committed_cents` forever. And `PayoutRequest#reject`
+cannot leave `approved` by design (on the Connect paths approval IS the money moving), so
+cancelling a batch line needed a separate `cancel_from_run` event guarded on `scheduled?`.
+
+**Verification: 3091 examples, 8 failures — the eight pre-existing ones and nothing else.** One
+seed; see `known-failures.md` for why that is recorded as weaker evidence than the phase-3 run.
+
+
 **2026-08-14 — Phase 3: vetting is live in every model, and the launch scope is a gate.**
 Read `docs/fuime/MOR_MIGRATION_PLAN.md` **§8** first — it is new, it supersedes §5's
 sequencing, and it records what the revised brief settles versus what it only assumes.

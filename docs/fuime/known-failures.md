@@ -582,3 +582,24 @@ leaking a child's age in plain sight**.
 `wkhtmltopdf`, `guardianships_controller_index_spec.rb:91`, `event/plan_spec.rb:32`,
 `event_spec.rb:296`, `stripe_connected_account_spec.rb:134`), **plus up to one order-dependent
 flake** from the pair above depending on seed. Anything else is new and yours.
+
+### Baseline after MoR phase 6 (2026-08-15)
+
+**3091 examples, 8 failures, 17 pending.** +122 examples over the phase-3 run, and the
+failures are the same eight, unchanged:
+
+| Spec | Cause |
+|---|---|
+| `receipt_bin_mailbox_spec.rb` ×4 | Apple-Silicon `wkhtmltopdf` |
+| `guardianships_controller_index_spec.rb:91` | pre-existing |
+| `event/plan_spec.rb:32` | pre-existing |
+| `event_spec.rb:296` | pre-existing |
+| `stripe_connected_account_spec.rb:134` | pre-existing |
+
+Nothing new. The order-dependent pair recorded above (`flipper_groups_spec.rb:25`,
+`requirement_collections_controller_spec.rb:156`) did not recur at this seed.
+
+One run, not three. The phase-3 note argues for several seeds when a change adds ~75 examples,
+and that reasoning still holds — this run is a single seed and should be read as such. It is
+recorded because the failure *set* matches the standing baseline exactly, which is the check
+that matters; a second seed would strengthen it, not change what it says.

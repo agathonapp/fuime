@@ -4019,3 +4019,87 @@ fewer than `PER_PAGE` entries. `#accepts_payments?` cannot be expressed in SQL, 
 school venture inherits its payment account from an ancestor (`Event#payment_account`) and a
 join would miss exactly the students a school programme exists to serve. Filtering one bounded
 page in Ruby is the trade.
+
+---
+
+## 2026-08-15 — MoR phase 6: the weekly payout run
+
+`fuime/mor-phase6-payout-batches`. Delivers §8.5's phase 6 — weekly cadence, approval step,
+volume caps, reserve — and answers §8.4 item 1 (hold period) and item 3 (caps and reserve) with
+defensible, env-tunable defaults rather than leaving them open.
+
+**Nothing here moves money, and that is structural rather than unfinished.** The originator is
+still an open decision blocked on diligence (§4.3: Mercury's ToS on programmatic ACH to
+hundreds of third parties, Slash as the API-native alternative, Plaid behind either). So a run
+ends at `mark_paid!` — a human asserting the transfers went out — which is exactly the shape
+the school path already uses in `PayoutService#settle!`. When the rail lands it becomes a
+`LegalEntity::PayoutMethod::BankAccount` behind that same transition and none of this changes.
+
+### New
+
+| File | What |
+|---|---|
+| `db/migrate/20260815000000_create_fuime_payout_batches.rb` | `fuime_payout_batches`; `payout_requests` gains `payout_batch_id`, `reserve_held_cents`, `eligible_cents`; `requested_by_id` becomes nullable; a third destination |
+| `db/migrate/20260815000100_validate_fuime_payout_batch_constraints.rb` | the FK/check validation half, per the house split |
+| `app/lib/fuime/payout_policy.rb` | the four dials, env-tunable, with the exposure arithmetic written down |
+| `app/services/fuime/payable_assessment.rb` | what one operator is owed in one run, and why not when not |
+| `app/models/fuime/payout_batch.rb` | the run and its lifecycle |
+| `app/services/fuime/payout_batch_service.rb` | generation, approval, mark-paid, cancel |
+| `app/jobs/fuime/generate_payout_batch_job.rb` + `config/schedule.yml` | Wednesday 14:00 UTC for a Friday payout |
+| `app/controllers/admin_controller.rb` + `app/views/admin/payout_batch{,es}.html.erb` + routes | the review surface |
+
+### Changed
+
+- `app/models/payout_request.rb` — a batch line is a third shape of this record. `requested_by`
+  optional (nullable **only** for scheduled lines; `requester_present_unless_scheduled` keeps
+  the two person-initiated paths honest), new `FUIME_VENDOR_PAYMENT` destination gated on the
+  MoR flag, `person_initiated`/`scheduled` scopes, and a `cancel_from_run` AASM event.
+- `app/services/fuime/payables_ledger.rb` — `settled_sum_for` promoted to a class method with
+  date bounds so `PayableAssessment` reuses one definition of the `sanitize_sql_like`
+  classification rather than copying it; `next_payout_on` gains a class-level twin;
+  `BATCH_PAYOUT_PREFIX` added to `paid_out_cents`.
+- `app/services/fuime/venture_ledger.rb` — `batch_payout_key`.
+- `app/views/static_pages/admin_tools.html.erb` — nav cards for payout runs **and for operator
+  vetting**, which had no entry despite the 2026-08-14 handoff saying it did.
+
+### The four dials, and why these numbers
+
+`FUIME_PAYOUT_HOLD_DAYS` 7 · `FUIME_PAYOUT_RESERVE_BASIS_POINTS` 1000 ·
+`FUIME_PAYOUT_RESERVE_WINDOW_DAYS` 90 · `FUIME_PAYOUT_MAXIMUM_CENTS` 250000 ·
+`FUIME_PAYOUT_MINIMUM_CENTS` 1000.
+
+The dispute window is 120 days and a weekly payout leaves Fuime unsecured for the difference.
+A 120-day hold closes that and destroys the product, so the exposure is split: a short hold
+catches fast failures, a **rolling reserve** carries the tail. Rolling rather than per-payout
+withholding-with-release, because a release schedule means money owed to somebody, held by
+Fuime, waiting on a job to notice — a stored balance with extra steps, which is the thing
+`PayablesLedger` exists not to build. A target recomputed from trailing volume unwinds on its
+own as sales age out of the window.
+
+Worked: a steady $100/week operator reaches a **$130** standing reserve (10% × 13 weeks), i.e.
+~1.3 weeks of earnings held while they trade, then is paid the full $100/week. Pinned by
+`spec/lib/fuime/payout_policy_spec.rb` so the doc and the code cannot drift.
+
+**These are the founder's call, not engineering constants.** Implemented as a defensible answer
+to §8.4 item 1, not a settled one.
+
+### Two bugs the specs caught, both invisible to a status-code test
+
+- **`post!` would have left every payout debit pending forever.** `ConnectSettlementSweep`
+  matches only payment and refund key shapes, so a `fuime_batchpayout_` line would never be
+  promoted — the debit would live in `committed_cents` permanently, telling an operator their
+  *paid* money was still "committed". Fixed by `post_settled!`, which is correct anyway: Fuime
+  paid its own vendor and no third party will ever say more about it. Caught by asserting
+  `paid_out_cents` moves.
+- **Cancelling an approved run raised `AASM::InvalidTransition`.** `PayoutRequest#reject` only
+  leaves `pending`, deliberately — on the Connect paths approval IS the money moving. A batch
+  line is genuinely reversible between approval and payment, so `cancel_from_run` is a separate
+  event `guard:`ed on `scheduled?` rather than widening `reject` for everybody.
+
+### Ordering property
+
+`PayableAssessment` applies payable → aged → committed → reserve → cap → floor, and every term
+can only reduce the figure. `spec/services/fuime/payable_assessment_spec.rb` asserts the
+invariant directly across a spread of ledgers rather than trusting the six rules to compose.
+The `aged` term is a **ceiling**, not a substitution: summing aged lines alone would ignore a
+refund newer than the cutoff and pay out money the operator no longer has.
