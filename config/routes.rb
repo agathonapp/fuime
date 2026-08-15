@@ -166,6 +166,11 @@ Rails.application.routes.draw do
   post "/:event_slug/cards/:id/unfreeze", to: "fuime/cards#unfreeze", as: :fuime_card_unfreeze
   delete "/:event_slug/cards/:id", to: "fuime/cards#destroy", as: :fuime_card_cancel
 
+  # Fuime: the public directory of teen-run businesses. A listing, never a
+  # dispatch — see Fuime::DirectoryController for why that distinction is
+  # load-bearing rather than stylistic.
+  get "/directory", to: "fuime/directory#index", as: :fuime_directory
+
   # Fuime: Public storefront
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
   post "/b/:slug/pay", to: "fuime/checkouts#create", as: :fuime_storefront_pay
@@ -401,6 +406,10 @@ Rails.application.routes.draw do
       get "checks", to: "admin#checks"
       get "increase_checks", to: "admin#increase_checks"
       get "applications", to: "admin#applications"
+      # FUIME: the operator vetting queue. A human approves every operator before
+      # they can sell — see Fuime::OperatorEligibility.
+      get "operator_vetting", to: "admin#operator_vetting"
+      post "operator_vetting/:id", to: "admin#operator_vetting_decide", as: "operator_vetting_decide"
       get "paypal_transfers", to: "admin#paypal_transfers"
       get "wires", to: "admin#wires"
       get "wise_transfers", to: "admin#wise_transfers"

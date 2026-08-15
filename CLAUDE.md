@@ -130,9 +130,14 @@ with all three deductions visible, payouts gated on guardian approval, cards beh
 default-off flag with a business-purchases-only category allowlist, and guardian identity
 collection that forwards to Stripe while persisting only the consent record.
 
-**The single most important caveat: none of it has been exercised against Stripe, in any
-mode.** Every API parameter shape is documentation-derived. The next engineering task is a
-`stripe listen` pass in test mode, and it outranks writing more features.
+**The caveat, updated 2026-08-14: the money-in half has now been exercised against Stripe
+(test mode); nothing else has.** `Fuime::PaymentLinkService`'s direct-charge shape is
+accepted by Stripe and `application_fee_amount` is stored at the right value. **Every
+webhook path, the onboarding flow, the embedded components and all ledger posting remain
+documentation-derived.** Finishing the `stripe listen` pass still outranks writing more
+features — and it is blocked on one thing: the Stripe CLI is logged into a Hack Club test
+account rather than Fuime's, so forwarded events would come from an account this app does
+not know. Results, remaining steps and that blocker are in `docs/fuime/EMBEDDED_CONNECT.md` §7.
 
 **Engineering is no longer the critical path.** The gates are a counsel memo on §1.1 and
 three unanswered questions to Stripe. Adding code does not move either.

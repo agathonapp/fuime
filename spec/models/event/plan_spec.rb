@@ -85,9 +85,17 @@ RSpec.describe Event::Plan, type: :model do
   end
 
   describe "#revenue_fee" do
-    it "charges Fuime's 4% on the standard plan" do
-      expect(Event::Plan::Standard.new.revenue_fee).to eq(0.04)
-      expect(Event::Plan::Standard.new.label).to eq("Fuime standard (4.0%)")
+    # Reads the constant rather than restating the number: the rate is a product
+    # decision (it moved 4% -> 5% when merchant-of-record made Stripe's fee
+    # Fuime's own cost), and a pricing change should not read as a failing test.
+    # What is asserted is that Standard IS the fallback rate and that the label
+    # renders it.
+    it "charges the fallback rate on the standard plan" do
+      rate = Event::Plan::FALLBACK_REVENUE_FEE
+
+      expect(Event::Plan::Standard.new.revenue_fee).to eq(rate)
+      expect(Event::Plan::Standard.new.label)
+        .to eq("Fuime standard (#{ActionController::Base.helpers.number_to_percentage(rate * 100, precision: 1)})")
     end
 
     it "waives the fee on the founders plan" do

@@ -22,9 +22,47 @@
 #
 class Event
   class Plan < ApplicationRecord
-    # Fuime's platform fee. Upstream HCB used 0.07, the headline rate of its
-    # fiscal sponsorship agreement; Fuime charges 4% on money in.
-    FALLBACK_REVENUE_FEE = 0.04
+    # Fuime's platform fee on money in. Upstream HCB used 0.07, the headline rate
+    # of its fiscal sponsorship agreement.
+    #
+    # ── Why this went from 4% to 5% (2026-08-14) ────────────────────────────
+    #
+    # Not a price rise for its own sake. Under merchant-of-record, Fuime is the
+    # seller, so **Stripe's processing fee comes out of Fuime's own balance** —
+    # where under Connect it was deducted from the family's connected account and
+    # never touched Fuime at all. The same headline number therefore means two
+    # completely different things before and after the flip.
+    #
+    # At 2.9% + 30¢, Fuime's margin on a sale is `(rate − 2.9%) × amount − 30¢`,
+    # so each rate has a break-even below which Fuime LOSES money on the sale:
+    #
+    #     4%  →  1.1% × amount = 30¢  →  break-even ≈ $27.27
+    #     5%  →  2.1% × amount = 30¢  →  break-even ≈ $14.29
+    #
+    # Teen businesses sell small things. At 4% every sale under about $27 costs
+    # Fuime money, which is most of them — so 4% is not a cheaper product, it is a
+    # product that stops working. 5% is the brief's number and it roughly halves
+    # the break-even; it still loses on sub-$15 sales, which is a real limit worth
+    # knowing rather than discovering.
+    #
+    # This is the STANDARD/default rate. The other tiers are deliberately not
+    # collapsed into it — see docs/fuime/MOR_MIGRATION_PLAN.md §8.3 D1 for the
+    # open question about whether the ladder survives the brief's "5% flat, one
+    # number teens understand".
+    FALLBACK_REVENUE_FEE = 0.05
+
+    # The minimum Fuime charges on a sale, in cents.
+    #
+    # Stripe's fee has a fixed 30¢ component that a percentage cannot cover on a
+    # small sale, so without this the operators who sell most often — stickers,
+    # small commissions, digital downloads — are the ones Fuime loses most money
+    # on. 50¢ recovers the 30¢ with room for the percentage part.
+    #
+    # Applied by Event#fuime_fee_cents_on, and ONLY under merchant-of-record,
+    # where Stripe's fee is Fuime's own cost. See that method for why.
+    #
+    # Env-tunable like the other two dials: it is a price.
+    MINIMUM_FEE_CENTS = ENV.fetch("FUIME_MINIMUM_FEE_CENTS", "50").to_i
 
     has_paper_trail
 

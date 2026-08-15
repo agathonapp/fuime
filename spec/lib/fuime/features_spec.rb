@@ -95,11 +95,77 @@ RSpec.describe Fuime::Features do
     end
   end
 
+  describe ".merchant_of_record?" do
+    it "is false when the variable is unset" do
+      with_env("FEATURE_MERCHANT_OF_RECORD", nil) do
+        expect(described_class.merchant_of_record?).to be(false)
+      end
+    end
+
+    it "is true only for the word true" do
+      with_env("FEATURE_MERCHANT_OF_RECORD", "true") do
+        expect(described_class.merchant_of_record?).to be(true)
+      end
+    end
+
+    it "is false for every other value, including ones other tools treat as truthy" do
+      ["false", "", "0", "1", "yes", "on"].each do |spelling|
+        with_env("FEATURE_MERCHANT_OF_RECORD", spelling) do
+          expect(described_class.merchant_of_record?).to be(false), "expected #{spelling.inspect} NOT to enable"
+        end
+      end
+    end
+
+    # The two structural flags are near-opposites and are easy to conflate:
+    # custody is "Fuime holds your money", MoR is "the money is Fuime's own and we
+    # owe you a payable". Neither implies the other, and a reader that leaked would
+    # let one legal posture switch on the other's code paths.
+    it "is independent of custody in both directions" do
+      with_env("FEATURE_SPONSOR_BANKING", "true") do
+        with_env("FEATURE_MERCHANT_OF_RECORD", nil) do
+          expect(described_class.merchant_of_record?).to be(false)
+        end
+      end
+
+      with_env("FEATURE_MERCHANT_OF_RECORD", "true") do
+        with_env("FEATURE_SPONSOR_BANKING", nil) do
+          expect(described_class.sponsor_banking?).to be(false)
+        end
+      end
+    end
+  end
+
+  describe ".merchant_of_record!" do
+    it "raises when Fuime is not configured as the seller" do
+      with_env("FEATURE_MERCHANT_OF_RECORD", nil) do
+        expect { described_class.merchant_of_record! }.to raise_error(Fuime::Features::Disabled, /not configured as the legal seller/)
+      end
+    end
+
+    it "passes when it is" do
+      with_env("FEATURE_MERCHANT_OF_RECORD", "true") do
+        expect(described_class.merchant_of_record!).to be(true)
+      end
+    end
+  end
+
   describe ".to_h" do
     it "reports every structural flag, so a boot log answers what mode this box is in" do
       with_env("FEATURE_SPONSOR_BANKING", nil) do
-        expect(described_class.to_h).to eq("FEATURE_SPONSOR_BANKING" => false)
+        with_env("FEATURE_MERCHANT_OF_RECORD", nil) do
+          expect(described_class.to_h).to eq(
+            "FEATURE_SPONSOR_BANKING" => false,
+            "FEATURE_MERCHANT_OF_RECORD" => false
+          )
+        end
       end
+    end
+
+    # Not redundant with the case above: the point is that to_h enumerates ALL
+    # rather than a hardcoded pair, so a flag added later shows up in the boot log
+    # without anyone remembering to add it here too.
+    it "covers every flag in ALL" do
+      expect(described_class.to_h.keys).to match_array(described_class::ALL)
     end
   end
 

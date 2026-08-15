@@ -52,13 +52,66 @@ module Fuime
     # they have on deposit with us. See docs/fuime/MOR_MIGRATION_PLAN.md §1.
     SPONSOR_BANKING = "FEATURE_SPONSOR_BANKING"
 
+    # Is Fuime LLC the legal seller of what operators sell?
+    #
+    # Gates the umbrella merchant-of-record model: customer payments landing in
+    # Fuime's own Stripe balance, operators paid afterwards as vendors on a
+    # cadence. See docs/fuime/MOR_MIGRATION_PLAN.md §8.
+    #
+    # ── Why this needs a flag of its own ────────────────────────────────────────
+    #
+    # SPONSOR_BANKING and this one look similar and are close to opposites. Custody
+    # is "Fuime holds YOUR money" — that needs a bank. MoR is "the money is Fuime's
+    # own revenue, and we owe you a payable" — that needs no bank, but it only
+    # holds if Fuime really is the seller: Fuime's terms of sale, Fuime's name on
+    # the receipt, Fuime bearing the refund and chargeback obligation to the buyer.
+    #
+    # That is a fact about the commercial relationship, not about the code. Turning
+    # this on when those documents do not exist does not make Fuime a merchant of
+    # record — it makes Fuime a conduit accepting a stranger's payment, which is
+    # the unlicensed money transmission L1 has been architected around since Phase
+    # 0. The flag cannot make the structure true; it can only stop the code
+    # pretending the structure is there.
+    #
+    # Hence the boot guard in config/initializers/fuime_safety_check.rb: this flag
+    # alone will not enable it. FUIME_MOR_COUNSEL_MEMO must cite the memo, for the
+    # same reason FUIME_SPONSOR_BANK_PARTNER must name a bank — someone has to
+    # write down an answer that cannot be given truthfully unless the work is real.
+    #
+    # OFF is the shipping posture. MOR_MIGRATION_PLAN §7 Q1, Q2 and Q4 are open:
+    # two questions for counsel and one for Stripe. Phases 3+ are built behind this
+    # so the engineering can run alongside the legal work rather than behind it —
+    # writing the code moves no money, and this is what keeps that true.
+    MERCHANT_OF_RECORD = "FEATURE_MERCHANT_OF_RECORD"
+
     # Every structural flag, so the safety check and the admin diagnostics page can
     # enumerate them without this list drifting out of sync with reality.
-    ALL = [SPONSOR_BANKING].freeze
+    ALL = [SPONSOR_BANKING, MERCHANT_OF_RECORD].freeze
 
     class << self
       def sponsor_banking?
         enabled?(SPONSOR_BANKING)
+      end
+
+      def merchant_of_record?
+        enabled?(MERCHANT_OF_RECORD)
+      end
+
+      # Raise unless Fuime is configured as the seller of record.
+      #
+      # Same reasoning as #sponsor_banking! — for the call sites where a safe
+      # default would silently do the wrong thing. A service that would collect a
+      # payment into Fuime's balance must fail loudly when Fuime is not the seller,
+      # because the quiet version of that failure is money transmission.
+      def merchant_of_record!
+        return true if merchant_of_record?
+
+        raise Disabled, <<~MSG.squish
+          This requires the merchant-of-record model, which is off
+          (#{MERCHANT_OF_RECORD} is not enabled). Fuime is not configured as the
+          legal seller, so a payment collected here would be a third party's money.
+          See docs/fuime/MOR_MIGRATION_PLAN.md §8.
+        MSG
       end
 
       # Raise unless custody is enabled.

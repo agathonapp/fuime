@@ -530,3 +530,55 @@ rather than rewritten (see `spec/support/sponsor_banking.rb`):
 Each also needed `can_front_balance: true` passed explicitly to its event factory, because
 the tag governs whether Fuime fronts *at all* and the column governs whether it fronts for
 that venture. A spec that spends fronted money now has to ask for both.
+
+## Full-suite baselines — measured 2026-08-14 on `fuime/mor-pivot-phase1` (MoR phase 3)
+
+Two runs, deliberately, at two different seeds. RSpec randomises order per run, and adding
+~75 examples reshuffles everything — so a one-run comparison against the 2026-08-13 baseline
+cannot distinguish a regression from an order-dependent spec that happened to land differently.
+
+| Run | Seed | Result |
+|---|---|---|
+| A | 8951 | 2964 examples, 9 failures, 17 pending |
+| B | 4242 | 2969 examples, 10 failures, 17 pending |
+| **C (final)** | 30780 | **2969 examples, 8 failures, 17 pending** — the 8 pre-existing ones and nothing else |
+
+Run B has five more examples than A because
+`spec/controllers/fuime/selling_blockers_partial_spec.rb` was written after A had already
+loaded its files. Run C is the state of the branch: B's two real failures fixed, and the
+`flipper_groups` flake did not recur.
+
+### `flipper_groups_spec.rb:25` — order-dependent, NOT a regression
+
+Run A's ninth failure, absent from the 2026-08-13 baseline:
+
+| Spec | Verdict | How attributed |
+|---|---|---|
+| `spec/initializers/flipper_groups_spec.rb:25` "gates a feature on the `:hcb_engineers` group" | **Pre-existing / order-dependent** | `expect(gate(:hcb_engineers, outsider)).to be(false)` got `true` — the feature read as enabled for everyone. **Passes in isolation** (6 examples, 0 failures) and **passed in run B** at a different seed. The spec exercises Flipper group wiring against `hackclub.com` email addresses; nothing in the phase 3 diff touches Flipper, its group config, or user emails. Its own header comment names the hazard: "a distinct feature per group keeps `enable_group` state from leaking between examples." |
+
+Same class as `requirement_collections_controller_spec.rb:156` recorded above — a spec whose
+result depends on what ran before it. Neither is fixed; both are attributable.
+
+### The two real failures, found by run B and fixed
+
+Both were in a spec written after run A, so this is the first run that ever executed them —
+worth recording because the cause is a trap that will recur.
+
+`selling_blockers_partial_spec.rb:51` and `:62` asserted
+`include("This business can't take payments yet")`. The callout's title reaches the page
+through `<%= local_assigns[:title] %>`, so the apostrophe renders as `&#39;` and the raw
+string never appears. The markup was correct; the assertion was not. **This is the same trap
+`storefronts_controller_spec.rb` documents for Faker names containing apostrophes.**
+
+Fixed by asserting against `CGI.unescapeHTML(response.body)` rather than by rewording the
+copy — the copy is what an operator reads and should not be shaped by the test. The same
+helper was then added to `storefront_blocker_privacy_spec.rb`, where it matters more: that
+file's guarantee is `not_to include(blocker)`, and an escaped page would have **passed while
+leaking a child's age in plain sight**.
+
+### Standing baseline after phase 3
+
+**8 pre-existing failures**, unchanged from 2026-08-13 (4 × `receipt_bin_mailbox` Apple-Silicon
+`wkhtmltopdf`, `guardianships_controller_index_spec.rb:91`, `event/plan_spec.rb:32`,
+`event_spec.rb:296`, `stripe_connected_account_spec.rb:134`), **plus up to one order-dependent
+flake** from the pair above depending on seed. Anything else is new and yours.

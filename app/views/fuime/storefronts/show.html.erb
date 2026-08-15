@@ -125,10 +125,29 @@
           to run the platform.
         </p>
       <% else %>
+        <%# Fuime: two reasons, and only one of them is safe to state.
+
+            #accepts_payments? is now false either because the guardian has not
+            finished Stripe setup OR because Fuime has not approved this operator
+            to sell (Fuime::OperatorEligibility). The first is a normal,
+            non-damaging fact the customer can act on — check back later. The
+            second is a decision about a child's business on a page anyone can
+            load, and "this venture is suspended" is both reputationally harmful
+            and nobody's business but the operator's, their guardian's and
+            Fuime's.
+
+            So the reason is named only when it is the harmless one. The operator
+            sees the real blockers on their own authenticated pages. Never render
+            Event#selling_blockers here — those strings state children's ages. %>
         <p class="muted m-0">
-          <strong><%= @event.name %> isn't set up to take payments yet.</strong>
-          A parent or guardian still needs to finish setting up the account money
-          is paid into. Please check back soon.
+          <% if @event.payment_account&.ready_for_payments? %>
+            <strong><%= @event.name %> isn't taking payments right now.</strong>
+            Please check back soon.
+          <% else %>
+            <strong><%= @event.name %> isn't set up to take payments yet.</strong>
+            A parent or guardian still needs to finish setting up the account money
+            is paid into. Please check back soon.
+          <% end %>
         </p>
       <% end %>
       <% unless stripe_live %>

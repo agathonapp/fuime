@@ -13,7 +13,11 @@ require "rails_helper"
 # This spec is what makes "test mode only" structural rather than a comment
 # asking future readers to be careful.
 RSpec.describe Fuime::PaymentWebhookHandler, "live-mode refusal" do
-  let(:venture) { create(:event) }
+  # A plan that charges, so a recorded payment posts BOTH lines (gross + fee) and
+  # "changed by 2" means what it says. The factory defaults to FeeWaived, where
+  # the correct posting is one line and the assertion would be measuring the
+  # waiver rather than the guard.
+  let(:venture) { create(:event, plan_type: Event::Plan::Standard) }
 
   def payment_intent
     { id: "pi_live_guard", amount_received: 10_00, created: Time.current.to_i,

@@ -865,6 +865,54 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: the operator vetting queue.
+  #
+  # Manual approval on every operator is the compensating control for letting
+  # minors sell — and under merchant-of-record, for Fuime being the legal seller
+  # of whatever they sell. It deliberately does not scale: the first hundred
+  # decisions here are what teach us what a bad application looks like, and that
+  # pattern is the automated risk model later.
+  #
+  # Separate from #applications, which reviews whether a venture should EXIST.
+  # This reviews whether it may SELL, which is revocable and asked repeatedly.
+  def operator_vetting
+    @page = params[:page] || 1
+    @per = params[:per] || 20
+    @q = params[:q].presence
+    @status = params[:status].presence
+
+    @events = Event.not_hidden.includes(:users, :plan)
+    @events = @events.where(operator_vetting_status: @status) if Event.operator_vetting_statuses.key?(@status)
+    @events = @events.search_name(@q) if @q
+
+    # `unscope(:order)` because Event's default_scope orders by id, and Postgres
+    # rejects an ORDER BY column that is neither grouped nor aggregated.
+    @counts = Event.not_hidden.unscope(:order).group(:operator_vetting_status).count
+
+    # Unreviewed first — the queue is the point of the page. `unscope` because
+    # Event's default_scope orders by id, which would otherwise win.
+    @events = @events.unscope(:order).page(@page).per(@per).order(
+      Arel.sql("operator_vetting_status = 0 DESC"),
+      "created_at desc"
+    )
+  end
+
+  def operator_vetting_decide
+    @event = Event.friendly.find(params[:id])
+    status = params[:status].to_s
+
+    unless Event.operator_vetting_statuses.key?(status)
+      redirect_back fallback_location: operator_vetting_admin_index_path,
+                    alert: "#{status.presence || 'That'} is not a vetting decision."
+      return
+    end
+
+    @event.record_vetting_decision!(status:, by: current_user, notes: params[:notes])
+
+    redirect_back fallback_location: operator_vetting_admin_index_path,
+                  flash: { success: "#{@event.name} is now #{status}." }
+  end
+
   def donations
     @page = params[:page] || 1
     @per = params[:per] || 20

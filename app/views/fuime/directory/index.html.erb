@@ -1,0 +1,109 @@
+<% title "Directory | Fuime" %>
+
+<% content_for :head do %>
+  <meta name="description" content="Businesses run by teenagers on Fuime. Browse by what they do and pay them directly.">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="Teen-run businesses on Fuime">
+  <meta property="og:url" content="<%= fuime_directory_url %>">
+<% end %>
+
+<%# Fuime: the public directory.
+
+    A LISTING, not a dispatch. See Fuime::DirectoryController for the full
+    reasoning; the short version is that Fuime must never route work to an
+    operator or set their rates, so this page has:
+
+      * no ratings, reviews, or completion/response-rate metrics
+      * no "featured", "top", "recommended" or "best match"
+      * no prices shown or suggested by Fuime — operators price themselves, on
+        their own storefront
+      * neutral ordering only
+
+    Also: nothing here names an operator or states an age. The cards carry the
+    BUSINESS, exactly the information already on each public storefront. A minor's
+    identity is not directory data. %>
+
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Teen-run businesses</h1>
+    <p class="muted m-0">
+      Every business here is run by a young founder, with a parent or guardian on
+      the account. Browse, then pay them directly.
+    </p>
+  </div>
+
+  <%= form_with url: fuime_directory_path, method: :get, local: true, class: "card mb-6" do |form| %>
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="field">
+        <%= form.label :category, "What they do" %>
+        <%= form.select :category,
+                        options_for_select([["Everything", ""]] + @categories.map { |c| [c.humanize, c] }, @category) %>
+      </div>
+
+      <div class="field">
+        <%# Both options are neutral by construction. There is deliberately no
+            "most popular" or "highest rated" — that is the line this page does
+            not cross. %>
+        <%= form.label :order, "Order" %>
+        <%= form.select :order,
+                        options_for_select(Fuime::DirectoryController::ORDERINGS.map { |k, v| [v, k] }, @ordering) %>
+      </div>
+
+      <%= form.submit "Show", class: "btn" %>
+    </div>
+  <% end %>
+
+  <% if @ventures.empty? %>
+    <div class="card text-center py-8">
+      <p class="m-0 muted">
+        <% if @category %>
+          No businesses in <strong><%= @category.humanize %></strong> are taking payments yet.
+          <%= link_to "See everything", fuime_directory_path, class: "underline" %>.
+        <% else %>
+          No businesses are taking payments yet. Check back soon.
+        <% end %>
+      </p>
+    </div>
+  <% else %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <% @ventures.each do |venture| %>
+        <%= link_to fuime_storefront_path(slug: venture.slug), class: "card flex flex-col gap-2 no-underline" do %>
+          <div class="flex items-center gap-3">
+            <% if venture.logo.attached? %>
+              <%= image_tag venture.logo, class: "w-12 h-12 rounded-full object-cover", alt: venture.name %>
+            <% else %>
+              <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
+                <span class="text-white text-lg font-bold"><%= venture.name.first.upcase %></span>
+              </div>
+            <% end %>
+
+            <div class="min-w-0">
+              <strong class="block truncate"><%= venture.name %></strong>
+              <% if venture.business_category.present? %>
+                <span class="muted text-sm"><%= venture.business_category.humanize %></span>
+              <% end %>
+            </div>
+          </div>
+
+          <% if venture.storefront_tagline.present? %>
+            <p class="m-0 text-sm muted"><%= venture.storefront_tagline %></p>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# @page, not @ventures: the latter is a filtered Array and knows nothing
+        about pages. See the controller. %>
+    <div class="mt-6">
+      <%= paginate @page %>
+    </div>
+  <% end %>
+
+  <p class="muted text-sm mt-8">
+    <%# The classification line, said plainly to buyers as well as to operators.
+        It is also simply true, and a buyer who thinks Fuime assigns the work will
+        complain to Fuime when it goes wrong. %>
+    Each business sets its own prices and chooses its own customers. Fuime provides
+    the payment tools — it does not assign work, set rates, or rank these businesses.
+  </p>
+</div>

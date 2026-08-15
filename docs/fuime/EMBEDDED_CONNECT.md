@@ -214,7 +214,47 @@ Production money-in is `Fuime::ConnectPaymentRecorder`, on the connect endpoint.
 
 ## 7. Test plan (`stripe listen`, test mode)
 
-Nothing here has been run against Stripe. Do this before trusting any of it.
+> ### ✅ Partial pass completed 2026-08-14 — the money-in shape is no longer theoretical
+>
+> Run against the Fuime test account (`acct_1TznaN2Uz4P3wrXO`), `STRIPE_MODE=test`, using
+> the real `Fuime::PaymentLinkService` rather than a hand-written request, so what was
+> verified is the code and not a reimplementation of it.
+>
+> **Verified:**
+>
+> - **Connect is enabled** on the platform account; 5 connected accounts already exist, one
+>   fully ready (`acct_1U1EBOJvQ1BSjJCo`, `card_payments` and `transfers` active).
+> - **`create_checkout_session` is accepted by Stripe.** The direct-charge shape — session
+>   created with `stripe_account:`, `application_fee_amount` nested inside
+>   `payment_intent_data`, `statement_descriptor_suffix`, metadata on both the session and
+>   the intent — returns a live `cs_test_…` session. Step 8's parameter shape holds.
+> - **`application_fee_amount` is stored, not merely tolerated.** A Checkout Session does
+>   not mint a PaymentIntent until the customer pays, so the session alone proves only that
+>   Stripe *accepted* the field. A direct `PaymentIntent.create` on the same connected
+>   account echoed `application_fee_amount = 400` on a $100 charge (4%) and kept
+>   `statement_descriptor_suffix`. Cancelled afterwards.
+> - **The vetting gate works end to end on real data**: `accepts_payments?` was `false` with
+>   the blocker "This venture has not been approved by Fuime yet", and `true` after approval.
+>
+> **Not verified — still the open half:**
+>
+> - **Every webhook path.** Steps 1, 4, 6 and the replay half of 8 are untouched. Nothing has
+>   exercised `Fuime::ConnectWebhookHandler`, `ConnectPaymentRecorder` or ledger posting.
+> - **Onboarding and the embedded components** (steps 2, 3, 5, 7).
+> - **The fee reaching the ledger.** Only that Stripe holds the right number.
+>
+> **⚠️ Blocker for the webhook half: the Stripe CLI is logged into the wrong account.**
+> `stripe config --list` reports `acct_1TmdhsGRzfgn1FN5` ("Hack Club Shop testing"), while
+> the app's key is `acct_1TznaN2Uz4P3wrXO`. `stripe listen` would forward events from an
+> account this app knows nothing about, and every handler would no-op while appearing to
+> run. **Run `stripe login` against the Fuime account before step 1.**
+>
+> Also note `FUIME_STRIPE_WEBHOOK_SECRET` is empty in `.env.development`, and
+> `StripeService.construct_webhook_event` **skips signature verification entirely when the
+> secret is blank** (its own `TODO` says so). Fine for a local pass; it must not reach
+> production unset.
+
+Below is the original plan. Steps not marked verified above have still not been run.
 
 **Setup**
 

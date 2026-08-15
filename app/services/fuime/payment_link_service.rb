@@ -46,7 +46,73 @@ module Fuime
       @description = description
     end
 
+    # Fuime: under merchant-of-record the charge is on FUIME's own account.
+    #
+    # No `stripe_account:` and no `application_fee_amount`, and both omissions are
+    # the point rather than a simplification:
+    #
+    #   * no `stripe_account:` — the customer is buying from Fuime LLC, so the
+    #     money lands in Fuime's balance as Fuime's own revenue. That is what makes
+    #     it lawful without a licence (§0.2): Fuime is a principal receiving its own
+    #     sale proceeds, not a conduit holding a stranger's money.
+    #   * no application fee — an application fee is how a PLATFORM takes a cut of
+    #     someone else's charge. Fuime is not taking a cut of the operator's sale;
+    #     it made the sale. What the operator is owed is a payable Fuime settles
+    #     later, and it is computed on the ledger, not by Stripe.
+    #
+    # The customer's statement therefore reads FUIME, the receipt is Fuime's, and
+    # the refund and chargeback obligation is Fuime's. Those are not side effects —
+    # they are the facts the whole structure rests on, and if they were not true
+    # this would be the pooled model L1 forbids.
+    def create_mor_checkout_session(success_url:, cancel_url:)
+      Fuime::Features.merchant_of_record!
+      @event.selling_blockers.then do |blockers|
+        if blockers.any?
+          raise NotAcceptingPayments,
+                "Event #{@event.id} is not eligible to sell under Fuime: #{blockers.join('; ')}"
+        end
+      end
+
+      Stripe::Checkout::Session.create(
+        {
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: @description,
+                  # "Sold by Fuime" rather than "Payment to <venture>": under MoR
+                  # the buyer's counterparty IS Fuime, and a receipt naming the
+                  # venture as the seller would contradict the terms of sale.
+                  description: "#{@event.name} — sold by Fuime",
+                },
+                unit_amount: @amount_cents,
+              },
+              quantity: 1,
+            },
+          ],
+          metadata: metadata,
+          payment_intent_data: {
+            metadata: metadata,
+            statement_descriptor_suffix: statement_descriptor,
+          },
+          # Phase 8 groundwork, and the reason it is collected from day one: all
+          # operator sales aggregate under ONE entity, so Fuime crosses state
+          # economic-nexus thresholds far faster than any individual teen would.
+          # Nexus is measured on history, and history cannot be backfilled — a
+          # buyer's state that was never collected is not recoverable later.
+          billing_address_collection: "required",
+          success_url: success_url,
+          cancel_url: cancel_url,
+        },
+        { api_key: StripeService.secret_key }
+      )
+    end
+
     def create_checkout_session(success_url:, cancel_url:)
+      return create_mor_checkout_session(success_url:, cancel_url:) if Fuime::Features.merchant_of_record?
+
       # #payment_account, not #stripe_connected_account: inside a school programme
       # the account belongs to the school and serves every student venture beneath
       # it. Reading the venture's own account here is what made a student sub org
@@ -60,6 +126,29 @@ module Fuime
       unless account&.ready_for_payments?
         raise NotAcceptingPayments,
               "Event #{@event.id} has no Stripe account ready to accept payments"
+      end
+
+      # Fuime: and only ventures Fuime is willing to sell for.
+      #
+      # Belt and braces with Fuime::CheckoutsController again, for a different
+      # reason than the check above. That one is a UI concern — do not show a
+      # payment form that cannot work. This one is the last statement executed
+      # before a Stripe session exists, and under merchant-of-record every sale
+      # made through it is legally Fuime's own: Fuime's terms, Fuime's receipt,
+      # Fuime's chargeback. A venture selling something outside the vetted scope
+      # is therefore Fuime selling it.
+      #
+      # So this raises rather than returning nil, and it is a check on the money
+      # path rather than the page path — a future caller reaching for
+      # PaymentLinkService directly (a CSV importer, an API endpoint, a console
+      # session) gets the gate whether or not it remembered to ask for it.
+      #
+      # Narrower while FEATURE_MERCHANT_OF_RECORD is off — vetting still binds,
+      # the launch-scope checks do not. See Fuime::OperatorEligibility#blockers.
+      blockers = @event.selling_blockers
+      if blockers.any?
+        raise NotAcceptingPayments,
+              "Event #{@event.id} is not eligible to sell under Fuime: #{blockers.join('; ')}"
       end
 
       Stripe::Checkout::Session.create(
@@ -123,7 +212,7 @@ module Fuime
     # the school it belongs to is fee-waived, and charging the venture's own plan
     # billed a school customer twice for one product. See Event#billing_plan.
     def fee_cents
-      @fee_cents ||= (@amount_cents * @event.revenue_fee).round
+      @fee_cents ||= @event.fuime_fee_cents_on(@amount_cents)
     end
 
     def metadata

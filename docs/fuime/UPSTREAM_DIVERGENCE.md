@@ -3850,3 +3850,172 @@ Fuime specs asserted the copy this entry replaced (`payouts_controller_spec`,
 that the first draft of `#owed_sentence` said "Fuime owes you" on a school venture, naming the
 wrong debtor, and that the page now needs a funded LEDGER rather than a stubbed Stripe balance
 — which is the separation working.
+
+---
+
+## 2026-08-14 — Merchant-of-record phase 3: the launch scope becomes a gate
+
+Plan of record: `docs/fuime/MOR_MIGRATION_PLAN.md` **§8**, added in this change. §8 records
+what the revised 2026-08-14 brief settles (services only, operators 16–17, 5% flat, weekly
+payouts), the three things it did not price (§8.3 D1–D3), and a resequenced §8.5 that
+supersedes §5.
+
+### `FEATURE_MERCHANT_OF_RECORD` — so the build can run ahead of the lawyers
+
+- `app/lib/fuime/features.rb` — second structural flag, `.merchant_of_record?` /
+  `.merchant_of_record!`, default off. Near-opposite of `SPONSOR_BANKING` and easy to conflate:
+  custody is "Fuime holds YOUR money"; MoR is "the money is Fuime's own and we owe you a
+  payable". Neither implies the other, and a spec asserts the readers are independent in both
+  directions.
+- `config/initializers/fuime_safety_check.rb` — check 6. The flag alone will not enable it:
+  `FUIME_MOR_COUNSEL_MEMO` must cite the memo or production refuses to boot. Same device as
+  `FUIME_SPONSOR_BANK_PARTNER`, for the same reason — **nothing observable at runtime
+  distinguishes "Fuime is the merchant of record" from "Fuime is a conduit that hasn't papered
+  it"**. That difference lives in contracts, so the code refuses to guess.
+
+  This is what makes phases 3+ safe to write while §7 Q1/Q2/Q4 are open: the gate moves from
+  "do not write it" to "cannot switch it on", which is mechanical rather than remembered.
+- `spec/support/merchant_of_record.rb` — `:merchant_of_record` tag, sibling of
+  `:sponsor_banking`. `spec/lib/fuime/features_spec.rb` +23 examples.
+
+### `Fuime::OperatorEligibility` — may this venture sell today?
+
+New `app/services/fuime/operator_eligibility.rb`. Returns *reasons*, not a boolean, modelled on
+`Guardianship#activation_blockers`. **Two scopes, and the split is the design:**
+
+- **Vetting binds in every model.** A human approving each operator is the compensating control
+  for letting minors sell at all — worth the same under Connect, where the guardian is the
+  merchant, as under MoR, where Fuime is.
+- **The launch scope binds only under MoR** — services-only (`ELIGIBLE_CATEGORIES`), the
+  `MINIMUM_OPERATOR_AGE` floor of 16, and a guardian per operator. Those bound liability Fuime
+  inherits *as seller of record*; under Connect that risk sits with the family, and enforcing
+  them anyway would block ventures — notably school ones, where
+  `Event#institutionally_sponsored?` already stands in for a guardian.
+
+Fails closed throughout: a blank category, an unknown birthday and an unreviewed venture all
+block. 16 comes from FLSA (non-hazardous occupations are unrestricted at 16), and is a floor on
+*operators* — stricter than the platform's own 13 floor per L6, which is unchanged.
+
+### Vetting state, and the queue that works it
+
+- `db/migrate/20260814000000_add_operator_vetting_to_events.rb` +
+  `…000100_validate_operator_vetted_by_foreign_key.rb` — `operator_vetting_status` (enum,
+  defaults **unvetted**), `operator_vetted_at/_by_id/_notes`. FK added unvalidated then
+  validated separately, matching `20260806120100`. Column default is deliberately *not*
+  backfilled to approved: that would exempt exactly the population the control exists for.
+- `app/models/event.rb` — enum (prefix `operator_vetting`), `#selling_blockers`,
+  `#record_vetting_decision!` (keeps prior notes; the reason for approving in September is the
+  context for suspending in November), and **`#accepts_payments?` now folds in
+  `#selling_blockers`** — one definition, so both existing call sites inherit it.
+- `app/controllers/admin_controller.rb` — `#operator_vetting` queue + `#operator_vetting_decide`.
+  Distinct from `#applications`, which asks whether a venture should *exist*; this asks whether
+  it may *sell*, which is revocable and re-asked.
+- `app/views/admin/operator_vetting.html.erb`, `app/models/admin/nav.rb` (count as `:tasks`, not
+  `:records` — an unvetted venture cannot take a payment, so it is work owed), `config/routes.rb`.
+- `spec/factories/event_factory.rb` — ventures default to **approved**, with `:unvetted` /
+  `:rejected` / `:suspended` traits. Same convention and same reasoning as users defaulting to
+  adults: otherwise every storefront, checkout and payout spec silently becomes a test of this
+  gate.
+
+### The privacy boundary
+
+`Event#selling_blockers` returns strings naming children and their ages ("Maya Operator is 15").
+They are for the operator, their guardian and staff.
+
+- `app/views/fuime/_selling_blockers.html.erb` — new, authenticated pages only; rendered on the
+  payouts page. Renders nothing when clear.
+- `app/views/fuime/storefronts/show.html.erb` — the public refusal copy previously asserted one
+  specific reason ("a parent or guardian still needs to finish setting up"). Once vetting could
+  also be the cause that became a confident statement of the wrong thing, and "this venture is
+  suspended" is both damaging and nobody's business on a public URL. The reason is now named
+  only when it is the harmless one.
+- `spec/controllers/fuime/storefront_blocker_privacy_spec.rb` — new, 9 examples, including one
+  that asserts **no blocker string appears verbatim** so the guarantee survives rewording.
+
+### Also
+
+- `app/services/fuime/payment_link_service.rb` — the same gate at the money path, not just the
+  page path, so a future caller reaching for the service directly inherits it.
+
+**Two bugs the specs caught, both invisible to a status-code test:** the admin queue's
+`group(:operator_vetting_status).count` raised `PG::GroupingError` because `Event`'s
+`default_scope` orders by id (fixed with `unscope(:order)`); and the three decision buttons were
+written as `form.submit`, whose label *is* its value — they posted `status=Approve` rather than
+`approved`. Now `form.button`, with a spec that posts `"Approve"` and asserts nothing changes.
+
+**Verification:** `spec/services/fuime/`, `spec/lib/fuime/`, `spec/controllers/fuime/`,
+`spec/views/fuime/`, `spec/requests`, `spec/models/guardianship_spec.rb` — all green. New:
+`operator_eligibility_spec` (24), `event_operator_vetting_spec` (16),
+`fuime_operator_vetting_spec` (15), `storefront_blocker_privacy_spec` (9).
+
+---
+
+## 2026-08-14 (later) — Connect stays; the Stripe pass runs; the directory ships
+
+### The decision, and its reversal the same day
+
+A "Connect only, park MoR" decision was recorded here and **reversed within the hour**. The
+final position is in `MOR_MIGRATION_PLAN.md` §8.5: **merchant of record is the destination;
+Connect is the shipping path until it can go live.** The reversal is kept in the log rather
+than edited away, because the reasoning is the useful part.
+
+What settled it: **Connect cannot deliver the product's headline promise.** The pitch is "no
+parent's SSN, bank account, or tax identity is required", but under Connect the guardian owns
+the Stripe account, so Stripe demands their SSN last-4 and bank account and the income lands
+under their tax identity (L3). Only MoR moves the tax identity to the teen's own SSN.
+
+The corollary that shapes the fee work: **"5% flat, all-in" is achievable only under MoR.**
+Under Connect, Stripe deducts its fee from the *family's* account, so Fuime cannot absorb a
+cost it never touches. Under MoR the charge is on Fuime's own account and the operator's
+payable is a clean `gross − 5%`.
+
+### The Stripe pass — money-in is no longer documentation-derived
+
+Run in test mode against the Fuime platform account, driving the real
+`Fuime::PaymentLinkService` rather than a hand-written request. Full results, and the
+still-untested half, are in `EMBEDDED_CONNECT.md` §7. Summary:
+
+- Connect is enabled; one connected account is fully ready.
+- `create_checkout_session`'s direct-charge shape is accepted by Stripe — `stripe_account:`,
+  `application_fee_amount` nested in `payment_intent_data`, statement descriptor, metadata on
+  both objects.
+- `application_fee_amount` is **stored**, not merely accepted: a Checkout Session mints no
+  PaymentIntent until payment, so a direct `PaymentIntent.create` on the same account was used
+  to confirm it echoes 400 on a $100 charge.
+- The vetting gate works on real data.
+
+**Two findings that would have cost a launch day.** The Stripe CLI is authenticated to
+`acct_1Tmdhs…` ("Hack Club Shop testing") while the app key is `acct_1Tzna…` — `stripe listen`
+would forward events from an account this app has never seen and every handler would no-op
+while appearing to run. And `StripeService.construct_webhook_event` **skips signature
+verification entirely** when the signing secret is blank, which it currently is.
+
+Docs corrected in four places that still asserted "nothing has been exercised against Stripe":
+`CLAUDE.md`, `docs/fuime/README.md`, `SETUP_NOTES.md`, `EMBEDDED_CONNECT.md` §7. Also migrated
+the development database, which was behind.
+
+### Phase 9 — the public directory
+
+`GET /directory`. New `app/controllers/fuime/directory_controller.rb` +
+`app/views/fuime/directory/index.html.erb` + route.
+
+Lists ventures that are public, indexable, not demo, not hidden, approved, and can actually be
+paid. Eligibility reuses `Event#accepts_payments?`, so an unreviewed or suspended venture drops
+out **without a second rule that could drift from the first**.
+
+**Built as a listing, never a dispatch**, and the rules are tested rather than commented:
+neutral ordering only (newest / A–Z), no ratings or reviews, no performance metrics, nothing
+featured or recommended, no Fuime-quoted prices, and a standing line telling buyers that Fuime
+does not assign work or set rates. The reasoning is §8.3 D2 — the brief's own mitigation for
+worker classification is "we never route work to them or set rates", and a directory that
+ranks or scores does exactly that.
+
+Nothing on the page names an operator or states an age; the cards carry the business only.
+`spec/controllers/fuime/directory_controller_spec.rb` — 15 examples, including the whole
+listing-not-dispatch boundary and the privacy check.
+
+**A deliberate consequence, stated so it is not read as a bug:** a directory page can show
+fewer than `PER_PAGE` entries. `#accepts_payments?` cannot be expressed in SQL, because a
+school venture inherits its payment account from an ancestor (`Event#payment_account`) and a
+join would miss exactly the students a school programme exists to serve. Filtering one bounded
+page in Ruby is the trade.

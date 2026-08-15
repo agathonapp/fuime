@@ -2,6 +2,68 @@
 
 ## Handoff (most recent first)
 
+**2026-08-14 — Phase 3: vetting is live in every model, and the launch scope is a gate.**
+Read `docs/fuime/MOR_MIGRATION_PLAN.md` **§8** first — it is new, it supersedes §5's
+sequencing, and it records what the revised brief settles versus what it only assumes.
+
+**The single most important thing in this handoff: `Event#accepts_payments?` now returns
+false for any venture nobody has approved.** The column defaults to `unvetted`, so *every
+existing venture is blocked from selling until an admin approves it* at **/admin/operator_vetting**.
+That is intended — manual approval is the control the whole model rests on — but it means a
+production deploy needs someone to work that queue before anyone can sell. The nav item shows
+the outstanding count. There is no bulk-approve and deliberately so; if you want one for
+existing ventures, write it as a one-off task with a recorded reason, not as a migration.
+
+The spec factory defaults ventures to **approved** (`:unvetted` / `:rejected` / `:suspended`
+traits exist), for the same reason users default to adults — otherwise every storefront,
+checkout and payout spec silently becomes a test of this gate.
+
+**Two flags now, and they are near-opposites.** `FEATURE_SPONSOR_BANKING` = "Fuime holds YOUR
+money" (needs a named partner bank to boot). `FEATURE_MERCHANT_OF_RECORD` = "the money is
+Fuime's own and we owe you a payable" (needs `FUIME_MOR_COUNSEL_MEMO` to boot). Neither implies
+the other. Both default off, and with MoR off the app still runs the **guardian-owned Stripe
+Connect model exactly as before** — the pivot is additive, not a replacement.
+
+**What binds when.** Vetting binds always. Services-only, the 16+ operator floor and
+per-operator guardianship bind *only* under MoR, because they bound liability Fuime carries as
+seller of record — under Connect that risk sits with the family, and enforcing them anyway
+would block school ventures that `Event#institutionally_sponsored?` already covers. Tag a spec
+`:merchant_of_record` to exercise that half (sibling of `:sponsor_banking`).
+
+**Never render `Event#selling_blockers` on a public page.** Those strings name operators and
+state their ages. `app/views/fuime/_selling_blockers.html.erb` is the authenticated-only
+partial; `spec/controllers/fuime/storefront_blocker_privacy_spec.rb` asserts none of them
+appear verbatim on the storefront, so the guarantee survives rewording.
+
+**Two bugs the new specs caught, both invisible to a status-code test:** the admin queue's
+`group(...).count` raised `PG::GroupingError` because `Event`'s `default_scope` orders by id
+(`unscope(:order)`), and the three decision buttons were `form.submit`, whose label *is* its
+value — they posted `status=Approve`. Use `form.button` when several buttons share a param.
+
+**The Stripe pass is half done, and the second half has a specific blocker.** Test keys *are*
+present — they resolve through `Credentials.fetch(:STRIPE, mode, :SECRET_KEY)`, i.e.
+`STRIPE__TEST__SECRET_KEY`, **not** the flat `STRIPE_SECRET_KEY` you might grep for. Money-in
+is verified against real Stripe: the direct-charge shape is accepted and
+`application_fee_amount` stores correctly. Webhooks, onboarding, embedded components and
+ledger posting are all still untested — see `EMBEDDED_CONNECT.md` §7 for exactly what was and
+was not run.
+
+**Before continuing: `stripe login` against the Fuime account.** The CLI is authenticated to
+`acct_1TmdhsGRzfgn1FN5` ("Hack Club Shop testing") while the app key is
+`acct_1TznaN2Uz4P3wrXO`. `stripe listen` would forward events from an account this app knows
+nothing about, and every handler would no-op while looking like it ran. Also
+`FUIME_STRIPE_WEBHOOK_SECRET` is empty, and `StripeService.construct_webhook_event` skips
+signature verification entirely when it is blank.
+
+**Verification: 2969 examples, 8 failures — the 8 pre-existing ones and nothing else.** Three
+full-suite runs at different seeds, because adding ~75 examples reshuffles RSpec's random order
+and a single run cannot tell a regression from an order-dependent spec. Run A surfaced
+`spec/initializers/flipper_groups_spec.rb:25`, which passes in isolation and passed at another
+seed — order-dependent Flipper state, not the diff. Run B surfaced two real failures in a spec
+written after A, both fixed. All three runs and the attribution are in `known-failures.md`.
+
+---
+
 **2026-08-13 — The merchant-of-record pivot starts; custody is now a flag.** Read
 `docs/fuime/MOR_MIGRATION_PLAN.md` first — it is the plan of record for this work and its §0
 explains why the brief that started it was aimed at a codebase that no longer exists. Phases 1

@@ -9,7 +9,7 @@
 #  activated_at                                 :datetime
 #  address                                      :text
 #  business_category                            :string
-#  can_front_balance                            :boolean          default(TRUE), not null
+#  can_front_balance                            :boolean          default(FALSE), not null
 #  country                                      :integer
 #  deleted_at                                   :datetime
 #  demo_mode                                    :boolean          default(FALSE), not null
@@ -28,6 +28,9 @@
 #  is_public                                    :boolean          default(TRUE)
 #  last_fee_processed_at                        :datetime
 #  name                                         :text             not null
+#  operator_vetted_at                           :datetime
+#  operator_vetting_notes                       :text
+#  operator_vetting_status                      :integer          default(0), not null
 #  postal_code                                  :string
 #  public_message                               :text
 #  public_reimbursement_page_enabled            :boolean          default(FALSE), not null
@@ -47,18 +50,21 @@
 #  discord_guild_id                             :string
 #  emburse_department_id                        :string
 #  increase_account_id                          :string           not null
+#  operator_vetted_by_id                        :bigint
 #  parent_id                                    :bigint
 #  point_of_contact_id                          :bigint
 #
 # Indexes
 #
-#  index_events_on_discord_channel_id   (discord_channel_id) UNIQUE
-#  index_events_on_discord_guild_id     (discord_guild_id) UNIQUE
-#  index_events_on_parent_id            (parent_id)
-#  index_events_on_point_of_contact_id  (point_of_contact_id)
+#  index_events_on_discord_channel_id       (discord_channel_id) UNIQUE
+#  index_events_on_discord_guild_id         (discord_guild_id) UNIQUE
+#  index_events_on_operator_vetting_status  (operator_vetting_status)
+#  index_events_on_parent_id                (parent_id)
+#  index_events_on_point_of_contact_id      (point_of_contact_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (operator_vetted_by_id => users.id)
 #  fk_rails_...  (point_of_contact_id => users.id)
 #
 class Event < ApplicationRecord
@@ -663,6 +669,26 @@ class Event < ApplicationRecord
     high: 3,
   }, suffix: :risk_level
 
+  # Fuime: has a human approved this venture to sell under Fuime's umbrella?
+  #
+  # Distinct from :risk_level, which upstream uses to grade an organization for
+  # monitoring. This decides permission rather than attention, and it is
+  # revocable: under merchant-of-record Fuime is the legal seller, so an operator
+  # who starts selling something they never applied with has to be stoppable
+  # today, without pretending their approved application was wrong in March.
+  #
+  # Read through Fuime::OperatorEligibility rather than directly — approval is
+  # one of four conditions and the other three are not on this record.
+  # See docs/fuime/MOR_MIGRATION_PLAN.md §8.
+  enum :operator_vetting_status, {
+    unvetted: 0,
+    approved: 1,
+    rejected: 2,
+    suspended: 3,
+  }, prefix: :operator_vetting
+
+  belongs_to :operator_vetted_by, class_name: "User", optional: true
+
   include PublicActivity::Model
   tracked owner: proc{ |controller, record| controller&.current_user }, event_id: proc { |controller, record| record.id }, only: [:create]
 
@@ -764,7 +790,60 @@ class Event < ApplicationRecord
   # Stripe state, and false when no guardian has set payments up — which is the
   # correct answer for every venture until one has.
   def accepts_payments?
-    payment_account&.ready_for_payments? || false
+    return false unless payment_account&.ready_for_payments?
+
+    selling_blockers.empty?
+  end
+
+  # Fuime: why this venture may not sell right now, if it may not.
+  #
+  # Always includes vetting — a human approving each operator is the compensating
+  # control for letting minors sell at all, and it applies whether the guardian is
+  # the merchant (Connect) or Fuime is (merchant-of-record). The launch-scope
+  # checks on top of it bind only under MoR. Fuime::OperatorEligibility#blockers
+  # explains the split; this method deliberately does not repeat it, so there is
+  # one place that decides.
+  #
+  # ── Handle these carefully ──────────────────────────────────────────────────
+  #
+  # The strings name people and state their ages ("Jane Doe is 15"). They are for
+  # the operator, their guardian and Fuime staff. They must never reach the
+  # public storefront, which is why #accepts_payments? reduces them to a boolean
+  # rather than the storefront rendering the list: an unauthenticated stranger
+  # asking to pay a business is not entitled to the birthday of a child who runs
+  # it.
+  #
+  # Not memoised. Eligibility depends on who holds a position, which changes
+  # without this record being saved, and a stale "yes" here is a payment Fuime
+  # was not entitled to take.
+  def selling_blockers
+    Fuime::OperatorEligibility.new(event: self).blockers
+  end
+
+  # Fuime: record a human's decision about whether this operator may sell.
+  #
+  # The status alone is not the record. Under merchant-of-record Fuime is the
+  # legal seller and manual review is the control that makes that survivable, so
+  # what has to be reconstructable later is *who decided, when, and why* — not
+  # merely the current value. paper_trail records that the column changed; it
+  # cannot tell a reviewer's judgement apart from a background job's.
+  #
+  # Notes are kept on re-decision rather than overwritten, because the reason a
+  # venture was approved in September is the context for suspending it in
+  # November, and it is exactly what the automated risk model this replaces will
+  # need as training data.
+  def record_vetting_decision!(status:, by:, notes: nil)
+    stamped = [
+      notes.presence && "#{Time.current.to_fs(:long)} — #{by&.name}: #{notes.strip}",
+      operator_vetting_notes.presence
+    ].compact.join("\n\n")
+
+    update!(
+      operator_vetting_status: status,
+      operator_vetted_at: Time.current,
+      operator_vetted_by: by,
+      operator_vetting_notes: stamped.presence
+    )
   end
 
   # Fuime: the adults legally responsible for this venture.
@@ -1119,6 +1198,50 @@ class Event < ApplicationRecord
     Rails.error.unexpected("#{id} is missing a plan!")
 
     Event::Plan::FALLBACK_REVENUE_FEE
+  end
+
+  # Fuime: what Fuime charges on a sale of this size — the ONE definition.
+  #
+  # `revenue_fee` is a percentage; this is the money. They are separate because a
+  # percentage alone cannot express the floor, and the floor is what keeps a small
+  # sale from costing Fuime more than it earns.
+  #
+  # ── Why there is a floor at all ─────────────────────────────────────────────
+  #
+  # Under merchant-of-record Fuime is the seller, so Stripe charges FUIME its
+  # 2.9% + 30¢ rather than the family. The 30¢ is fixed, so Fuime's margin is
+  # `(rate − 2.9%) × amount − 30¢` and every rate has a sale size below which it
+  # is negative — $14.29 at 5%, and $300.00 at Pro's 3% (see
+  # docs/fuime/MOR_MIGRATION_PLAN.md §8.6). Teen businesses sell stickers and
+  # small commissions, so without a floor the most active operators would be the
+  # most expensive to serve.
+  #
+  # A minimum is how Gumroad, Etsy and Paddle solve the same problem, and it
+  # recovers exactly what causes it: Stripe's fixed component.
+  #
+  # ── Why it applies only under merchant-of-record ────────────────────────────
+  #
+  # Under Connect, Stripe's fee is deducted from the FAMILY's connected account
+  # and costs Fuime nothing — so a floor there would not be recovering a cost,
+  # it would be a surcharge on the smallest sellers on top of a Stripe fee they
+  # are already paying themselves. On a $5 sale that is 50¢ from Fuime plus ~45¢
+  # from Stripe: 19% of the sale. The floor exists to recover a real cost, so it
+  # applies exactly where the cost is real.
+  def fuime_fee_cents_on(amount_cents)
+    amount_cents = amount_cents.to_i
+    return 0 if amount_cents <= 0
+
+    percentage_fee = (amount_cents * revenue_fee).round
+
+    # A fee-waived or Founders venture pays nothing, and the floor must not
+    # quietly reintroduce a charge for them. Zero means zero.
+    return 0 if revenue_fee.to_f <= 0
+
+    return percentage_fee unless Fuime::Features.merchant_of_record?
+
+    # Never more than the sale itself: on a $0.30 sale the floor would otherwise
+    # exceed the payment and hand the operator a negative payable.
+    [[percentage_fee, Event::Plan::MINIMUM_FEE_CENTS].max, amount_cents].min
   end
 
   def generate_stripe_card_designs

@@ -1,6 +1,7 @@
-# Umbrella merchant-of-record migration — plan, not yet approved
+# Umbrella merchant-of-record migration — plan of record
 
-Status: **plan approved 2026-08-13; Phase 1 in progress on `fuime/mor-pivot-phase1`.**
+Status: **plan approved 2026-08-13; phases 1–2 landed (`837884068`). Phases 3+ resequenced
+2026-08-14 — see §8, which supersedes §5.**
 Written 2026-08-13 against `fuime/close-the-marketing-site` @ `a6002f4e6`.
 
 > ## ⏪ Restore point — read this before undoing anything
@@ -530,3 +531,255 @@ Prime Directive 1 applies throughout: baseline is **573 examples / 1 known failu
 8. Under-16-with-consent: MoR removes Stripe's 13+ floor for *operators* (they no longer hold
    a Stripe account), but `User` still refuses under-13 signup at
    [user.rb:933](app/models/user.rb#L933) per L6. Confirm that stays.
+
+---
+
+## §8 — Revision 2026-08-14: the brief answers §7, and adds three things it did not price
+
+A revised product brief ("Fuime is Whop for under-18s") arrived 2026-08-14. It is the same
+structure this plan describes, with a launch shape attached: **services only, operators 16–17,
+5% flat, weekly payouts, 25 operators / $25K GMV by November.** This section records what it
+settles, what it changes, and what it missed. **It supersedes §5's sequencing.**
+
+### 8.1 What the brief settles (the non-blocking half of §7)
+
+| §7 | Question | Answer |
+|---|---|---|
+| Q5 | Payout cadence | **Weekly**, with an approval step. Hold period still unstated — see 8.4. |
+| Q6 | Does the 4% fee survive? | **No — 5% flat, all-in.** This is not a number change. See 8.3 D1. |
+| Q7 | House `Event` vs nullable `payee.event_id` | Brief is silent; recommendation stands — **house Event**. |
+| Q8 | Does the under-13 refusal stay? | **Yes.** Phase 1 is 16–17; the brief widens to 14 only in its own Phase 2, still above L6's floor. |
+
+Scope decisions the brief adds, all of which need enforcement rather than intent:
+**services only** (no physical goods, so no sales-tax nexus and no product liability),
+**16–17 only** (FLSA leaves non-hazardous occupations unrestricted at 16, which is the whole
+reason for the bracket), and **manual approval on every operator and every payout**.
+
+### 8.2 The blocking half of §7 is accepted risk, not resolved risk
+
+The brief does not answer Q1, Q2 or Q4 — it *accepts* them and budgets $5–8K of counsel plus a
+direct conversation with Stripe. That is a legitimate posture and this plan proceeds on it, but
+the distinction matters: the questions are still open, and Q2 in particular now constrains
+product decisions (8.3 D2).
+
+**The engineering consequence: writing this code moves no money.** `STRIPE_MODE` is test
+everywhere including production, and phases 3+ ship behind a new structural flag
+(`FEATURE_MERCHANT_OF_RECORD`, 8.5) whose boot guard demands a counsel-memo reference the same
+way `FEATURE_SPONSOR_BANKING` demands a named bank. The gate moves from "do not write it" to
+"cannot switch it on" — mechanical rather than remembered, and it lets the build run in parallel
+with the legal work instead of behind it.
+
+### 8.3 Three deltas the brief did not price
+
+**D1 — "5% flat, all-in" changes who pays Stripe, and the ledger currently says the operator does.**
+
+This is the most consequential line in the brief and it reads as pricing. It is not.
+
+Today an operator's payables page is debited three times: gross, −4% Fuime
+([venture_ledger.rb](app/services/fuime/venture_ledger.rb)), and −(2.9% + 30¢) Stripe, surfaced
+as [`PayablesLedger#processing_fee_cents`](app/services/fuime/payables_ledger.rb#L172).
+On a $100 sale the operator nets **$92.80 — an effective take of 7.2%**, not 4%.
+
+The brief's "5% flat, all-in… net to Fuime after processing: roughly 2%" means Stripe's fee is
+**Fuime's cost of being the merchant**, not a pass-through. Under MoR that is also the only
+coherent answer: Fuime is the merchant of record, so Stripe charges Fuime for Fuime's own sale,
+and billing it onward to a vendor is a second, undisclosed markup on top of the advertised flat
+rate.
+
+So `processing_fee_cents` must stop being an operator deduction, and the operator-facing
+breakdown goes from four rows to two: **gross − 5% = net payable.** The Stripe fee stays posted
+(it is real, and reconciliation needs it) but moves to Fuime's side of the line. That is a
+ledger-shape change, which is why the fee is its own phase below rather than a constant edit.
+
+**D2 — the brief's Phase 2 directory contradicts the brief's own Q2 mitigation.**
+
+The brief mitigates misclassification with: *"operators must control their own pricing, clients,
+and hours. We never route work to them or set rates."* Its Phase 2 then builds *"operator
+directory, reputation, completed-job history"* and calls the demand side the moat.
+
+Those are in tension. A directory that **ranks, matches, or assigns** is routing work, and
+reputation scoring that gates visibility functions as performance management — precisely the
+evidence an FLSA or IRS examiner looks for. The moat is real and worth building; it has to be
+built as a **listing, not a dispatch**:
+
+- Operators publish; buyers browse and contact. Fuime never assigns a buyer to an operator.
+- No Fuime-set or Fuime-suggested rates. Operators price themselves, always.
+- No acceptance-rate, response-time or completion-rate metric that Fuime enforces or ranks on.
+- Ordering is neutral (recency, alphabetical, operator-chosen category) — not a quality score.
+
+Encoded as a spec in the shape of `spec/views/fuime/payables_copy_spec.rb`, which already proves
+this repo can hold a legal distinction in place with a test rather than a comment.
+
+**D3 — services-only needs a gate, and the category list does not have one.**
+
+[`Event::BUSINESS_CATEGORIES`](app/models/event.rb#L92) is
+`crafts services digital food other`. Two of those five are physical goods and one (`food`)
+carries its own licensing regime. Phase 1 being services-only is currently a sentence in a
+document rather than a validation — and the exposures it exists to remove, sales-tax nexus and
+product liability, are the two the brief leans on hardest.
+
+### 8.4 Still open after the brief
+
+1. **Hold period before payout.** The dispute window is 120 days; weekly payout leaves Fuime
+   unsecured for the difference. The brief's clawback answer is "net against future payables",
+   which is empty for an operator who stops selling. Needs a number, and it interacts with §7 Q3.
+2. **1099-NEC filing** (§4.3). Collection is built; filing is not, and leaving Connect means
+   nobody files it. Decide before January, not in it.
+3. **Per-operator volume caps and reserve** — the brief lists both as concentration mitigations
+   and neither exists. Cheap to build, so they are in the sequence below.
+
+### 8.5 Revised sequencing — supersedes §5
+
+> **✅ DECISION 2026-08-14: merchant of record is the destination. Build phases 3c–8.**
+>
+> A "Connect for now" reading was recorded earlier the same day and **reversed within the
+> hour** — noted because the reversal is the useful part of the record, not an embarrassment
+> to hide. The reasoning that settled it:
+>
+> **Connect cannot deliver the product's headline promise.** The brief's pitch is *"no
+> parent's SSN, bank account, or tax identity is required."* Under Connect the guardian owns
+> the Stripe account, so Stripe demands their SSN last-4, their address and their bank
+> account, and the income lands under their tax identity (L3). That is precisely the status
+> quo the brief describes as the problem. Only MoR moves the tax identity to the teen's own
+> SSN via a 1099-NEC.
+>
+> **Two consequences that shape everything below:**
+>
+> 1. **Connect stays as the shipping path until MoR can go live.** It is what HEAD runs with
+>    the flag off, it is the only thing that can carry real users while Fuime LLC does not
+>    exist, and phase 9 (the directory) already runs under both. Nothing here deletes it —
+>    `FEATURE_MERCHANT_OF_RECORD` is the switch, and MOR_MIGRATION_PLAN §0.2 plus the
+>    `pre-mor-pivot` tag are the way back.
+> 2. **"5% flat, all-in" becomes achievable, and only here.** Under Connect, Stripe deducts
+>    its fee from the *family's* account and Fuime cannot absorb a cost it never touches.
+>    Under MoR the charge is on Fuime's own account, so Stripe's fee is Fuime's cost and the
+>    operator's payable is a clean `gross − 5%`. This is why D1 is a ledger-shape change
+>    rather than a constant edit.
+>
+> **Still true, and unchanged by this decision:** MoR cannot be switched on until Fuime LLC
+> exists, the operator agreements are papered, and the boot guard's `FUIME_MOR_COUNSEL_MEMO`
+> can be answered truthfully. Building the code now is safe precisely because that gate is
+> mechanical rather than remembered (§8.2).
+
+Each phase is one branch, one PR (Rule 5). Everything ships behind `FEATURE_MERCHANT_OF_RECORD`
+(default off, boot-guarded) so none of it can transact until the §8.2 gate opens.
+
+| # | Phase | Delivers | Depends on |
+|---|---|---|---|
+| **3a** | MoR structural flag + boot guard | `FEATURE_MERCHANT_OF_RECORD`, counsel-memo boot check | nothing |
+| **3b** | Operator model | age bracket, vetting status, prohibited categories, services-only gate (D3) | 3a |
+| **3c** | Agreement v3 | MoR relationship, guardian as obligor on clawbacks | 3b, §7 Q3 |
+| **4** | Money-in flips to Fuime | promote `PaymentWebhookHandler`, buyer jurisdiction capture | 3a; §7 Q1+Q4 to *enable* |
+| **5** | Fee becomes 5% all-in | processing fee leaves the operator's side (D1) | 4 |
+| **6** | Payout batches | weekly cadence, approval step, volume caps, reserve | 5 |
+| **7** | Disputes and clawback | attribution, netting against payables | 6, §7 Q3 |
+| **8** | Nexus report | volume + count by state | 4 |
+| **9** | Operator directory | listing-not-dispatch (D2) | 6 |
+
+Baseline throughout (Prime Directive 1): **2896 examples, 8 known failures**
+(`docs/fuime/known-failures.md`), Docker only.
+
+---
+
+## §8.6 — Pricing, and the Pro margin problem (2026-08-14)
+
+The founder's ladder, implemented in `Event::Plan::{Free,Standard,Pro}` and pinned by
+`spec/models/event/plan_pricing_spec.rb`:
+
+| Plan | Monthly | Rate |
+|---|---|---|
+| Free | $0 | 7% |
+| Standard | $15.00 | 5% |
+| Pro (family) | $19.99 | 3% |
+
+Both dials are env-tunable (`FUIME_STANDARD_MONTHLY_CENTS`, `FUIME_PRO_MONTHLY_CENTS`) and the
+rate is read from the class everywhere — specs derive expectations from
+`FALLBACK_REVENUE_FEE` rather than restating it, so a price change is a one-line decision and
+not a wave of red tests.
+
+### Why the rate changed meaning, not just value
+
+Under Connect, `revenue_fee` was a **platform cut** and Stripe's 2.9% + 30¢ was deducted from
+the *family's* connected account. Under merchant-of-record Fuime is the seller, so Stripe
+charges **Fuime**. The rate stops being a cut and becomes a margin:
+
+```
+margin per sale = (rate − 2.9%) × amount − 30¢
+break-even      = 30¢ ÷ (rate − 2.9%)
+```
+
+| Rate | Margin over Stripe | Break-even sale |
+|---|---|---|
+| 7% (Free) | 4.1% | **$7.32** |
+| 5% (Standard) | 2.1% | **$14.29** |
+| 3% (Pro) | 0.1% | **$300.00** |
+
+### ⚠️ Pro at 3% loses money on essentially every teen-sized sale
+
+0.1% over Stripe's own rate means a $100 sale nets Fuime **−20¢**. The $19.99 subscription is
+the entire margin, and whether the tier works depends on volume in a way that inverts:
+
+```
+ 20 sales × $100/mo  →  −$4.00 margin + $19.99  =  +$15.99  ✅
+200 sales × $10/mo   →  −$58.00 margin + $19.99 =  −$38.01  ❌
+```
+
+The second row is the ordinary shape of a teen business — stickers, small commissions, digital
+downloads — so this is a live exposure, and it gets *worse* the more successful a Pro operator
+is at low ticket sizes. It is implemented as specified rather than quietly corrected, because
+pricing is the founder's call; the code documents it at
+[pro.rb](app/models/event/plan/pro.rb) and the spec asserts the loss zone so nobody
+"fixes" the sign later without realising.
+
+### The floor: implemented, and what it actually fixes
+
+`Event#fuime_fee_cents_on` now charges `max(rate × amount, MINIMUM_FEE_CENTS)` with a **50¢**
+default (`FUIME_MINIMUM_FEE_CENTS`), applied **only under merchant-of-record** — under Connect
+Stripe bills the family, so a floor there would be a surcharge on the smallest sellers rather
+than the recovery of a Fuime cost. It is the single definition both the checkout and the
+webhook fallback use. A fee waiver stays a waiver, and the fee never exceeds the sale itself.
+
+Margin per sale, in cents, before and after:
+
+| Sale | Free 7% | Standard 5% | Pro 3% |
+|---|---|---|---|
+| $5 | −9.5 → **+5.5** | −19.5 → **+5.5** | −29.5 → **+5.5** |
+| $10 | +11.0 | −9.0 | −29.0 → **−9.0** |
+| $20 | +52.0 | +12.0 | **−28.0** |
+| $100 | +380.0 | +180.0 | **−20.0** |
+| $300 | +1200.0 | +600.0 | 0.0 |
+
+**The floor fixes Free, mostly fixes Standard, and does not fix Pro.** A minimum only bites
+while `rate × amount` is below it, so it rescues small sales — and Pro's problem is not small
+sales. At 3% the margin over Stripe is 0.1 points at *every* size, so Pro loses from about $7
+all the way to $300.
+
+Solving `max(rate·A, F) ≥ 2.9%·A + 30` for all A gives `F ≥ 30 ÷ (1 − 2.9%/rate)`:
+
+| Rate | Minimum fee that would make it never lose |
+|---|---|
+| 7% | 52¢ |
+| 5% | 72¢ |
+| **3%** | **$9.09** — not a real option |
+
+### ⚠️ Still open: Pro needs a rate change, not a floor
+
+Pinned by `spec/models/event/plan_pricing_spec.rb` ("the floor does not rescue Pro"), so this
+cannot be quietly forgotten. Three real options:
+
+1. **Raise Pro to ~4.5–5%.** At 4% the margin is 1.1 points and break-even falls to $27.27;
+   at 4.5% it is $18.75. This is the only option that fixes the middle of the range, which is
+   where teen sales actually sit.
+2. **Position Pro for high-ticket operators** — tutoring, dev work, commissions over $300 —
+   and say so in the plan copy so it is never sold to a sticker shop. The $19.99 covers a
+   low-volume operator and inverts on a high-volume one.
+3. **Raise the subscription** enough to cover expected volume. Fragile: the loss scales with
+   the operator's success, so the sub would have to be priced for the worst case.
+
+Note that a 3% Pro rate *below* a 5% Standard rate also inverts the usual logic: the tier that
+pays Fuime most per month is the one Fuime loses most on per sale.
+
+Also raise `FUIME_MINIMUM_FEE_CENTS` to **75¢** if Standard's $10–$14 band matters — that is
+the only remaining negative window outside Pro.
+
+§8.4's open-questions list gains this as item 4.

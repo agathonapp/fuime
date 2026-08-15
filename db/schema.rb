@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_000100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1168,6 +1168,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_000000) do
     t.boolean "is_public", default: true
     t.datetime "last_fee_processed_at", precision: nil
     t.text "name", null: false
+    t.datetime "operator_vetted_at"
+    t.bigint "operator_vetted_by_id"
+    t.text "operator_vetting_notes"
+    t.integer "operator_vetting_status", default: 0, null: false
     t.bigint "parent_id"
     t.bigint "point_of_contact_id"
     t.string "postal_code"
@@ -1186,6 +1190,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_000000) do
     t.string "website"
     t.index ["discord_channel_id"], name: "index_events_on_discord_channel_id", unique: true
     t.index ["discord_guild_id"], name: "index_events_on_discord_guild_id", unique: true
+    t.index ["operator_vetting_status"], name: "index_events_on_operator_vetting_status"
     t.index ["parent_id"], name: "index_events_on_parent_id"
     t.index ["point_of_contact_id"], name: "index_events_on_point_of_contact_id"
   end
@@ -3312,6 +3317,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_000000) do
   add_foreign_key "event_scoped_tags", "events", column: "parent_event_id"
   add_foreign_key "event_scoped_tags_events", "event_scoped_tags"
   add_foreign_key "event_scoped_tags_events", "events"
+  add_foreign_key "events", "users", column: "operator_vetted_by_id"
   add_foreign_key "events", "users", column: "point_of_contact_id"
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"

@@ -27,6 +27,9 @@ failure mode doc sprawl produces.
 - **`PRODUCTION_READINESS.md` section numbers (§1.4, §2.1, …) are still cited from code
   comments** and from the other docs. They are stable identifiers for *findings*, even
   though the document's own status summary is out of date. Do not renumber them.
-- **Nothing in this repo has been exercised against Stripe**, in any mode, as of the
-  latest entry in `UPSTREAM_DIVERGENCE.md`. Treat every API parameter shape as
-  documentation-derived until a `stripe listen` run says otherwise.
+- **The money-in path has now been exercised against Stripe** (test mode, 2026-08-14):
+  `Fuime::PaymentLinkService`'s direct-charge shape is accepted, and
+  `application_fee_amount` is stored at the right value. **Everything else is still
+  documentation-derived** — no webhook, no onboarding, no ledger posting has ever run.
+  Results and the remaining steps are in `EMBEDDED_CONNECT.md` §7, which is the only place
+  that record lives.

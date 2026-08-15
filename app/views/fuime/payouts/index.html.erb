@@ -4,6 +4,10 @@
 
 <h1 class="heading">Payouts</h1>
 
+<%# Fuime: above everything, because a venture that cannot sell has a more
+    urgent problem than how it gets paid. Renders nothing when clear. %>
+<%= render "fuime/selling_blockers", event: @event %>
+
 <%# Fuime: moving money out of the venture.
 
     Two audiences on one page, deliberately. The teen sees what they have and can

@@ -53,23 +53,28 @@ RSpec.describe Fuime::SubscriptionService do
     )
   end
 
-  it "walks the ladder: Free 7% by default, Pro 4% family-wide once the guardian subscribes, back on lapse" do
+  # Rates read from the plan classes rather than restated: the ladder's NUMBERS
+  # are a founder decision (Pro moved 4% -> 3% on 2026-08-14) while its SHAPE —
+  # Free by default, Pro family-wide on subscribe, Free again on lapse — is the
+  # behaviour under test. Hardcoding the rate made a pricing change look like a
+  # broken subscription.
+  it "walks the ladder: Free by default, Pro family-wide once the guardian subscribes, back on lapse" do
     stub_billing!
     venture = family_venture
 
     expect(venture.billing_plan).to be_a(Event::Plan::Free)
-    expect(venture.revenue_fee).to eq(0.07)
+    expect(venture.revenue_fee).to eq(Event::Plan::Free::REVENUE_FEE)
 
     described_class.new(guardian:).checkout_session(success_url: "s", cancel_url: "c")
     Fuime::Subscription.family.find_by(billed_to: guardian).update!(status: "active")
 
     upgraded = Event.find(venture.id) # fresh instance: resolution is memoised per object
     expect(upgraded.billing_plan).to be_a(Event::Plan::Pro)
-    expect(upgraded.revenue_fee).to eq(0.04)
+    expect(upgraded.revenue_fee).to eq(Event::Plan::Pro::REVENUE_FEE)
 
     Fuime::Subscription.family.find_by(billed_to: guardian).update!(status: "past_due")
     lapsed = Event.find(venture.id)
-    expect(lapsed.revenue_fee).to eq(0.07)
+    expect(lapsed.revenue_fee).to eq(Event::Plan::Free::REVENUE_FEE)
   end
 
   it "a school venture stays 0% regardless of any guardian's subscription" do
