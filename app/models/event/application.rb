@@ -18,6 +18,7 @@
 #  annual_budget_cents          :integer
 #  approved_at                  :datetime
 #  archived_at                  :datetime
+#  business_category            :string
 #  committed_amount_cents       :integer
 #  cosigner_email               :string
 #  currently_fiscally_sponsored :boolean
@@ -33,6 +34,8 @@
 #  referral_code                :string
 #  referrer                     :string
 #  rejected_at                  :datetime
+#  service_type                 :string
+#  starting_point               :string
 #  submitted_at                 :datetime
 #  team_size                    :integer
 #  teen_led                     :boolean
@@ -47,13 +50,18 @@
 #
 # Indexes
 #
-#  index_event_applications_on_event_id  (event_id)
-#  index_event_applications_on_user_id   (user_id)
+#  index_event_applications_on_event_id      (event_id)
+#  index_event_applications_on_service_type  (service_type) WHERE (service_type IS NOT NULL)
+#  index_event_applications_on_user_id       (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (user_id => users.id)
+#
+# Check Constraints
+#
+#  event_applications_starting_point_known  (starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[])))
 #
 class Event
   class Application < ApplicationRecord
@@ -93,6 +101,15 @@ class Event
 
     validate :cosigner_cannot_change_after_sign
 
+    # Fuime: the category follows from the service and is never posted directly.
+    #
+    # `business_category` is what Fuime::OperatorEligibility reads to decide
+    # whether a venture may sell, so a form field carrying it would be a form
+    # field carrying an approval. It is derived here rather than in the
+    # controller so every path that sets a service type gets the same answer —
+    # including the console, a fixture, and whatever imports applications next.
+    before_validation :derive_business_category
+
     after_save :check_cosigner_update
 
     monetize :annual_budget_cents, allow_nil: true
@@ -112,8 +129,44 @@ class Event
 
     scope :active, -> { where(archived_at: nil, event_id: nil) }
 
+    # Fuime: the business-type step. See Fuime::ServiceCatalog for the catalog and
+    # AddBusinessTypeToEventApplications for why the question is asked at all.
+    #
+    # Validated on the record rather than only in the controller because
+    # `business_category` is read by Fuime::OperatorEligibility to decide whether a
+    # venture may sell — a value that arrived by some other path and is not a
+    # catalog key would be a category nobody chose, gating real money.
+    validates :starting_point,
+              inclusion: { in: Fuime::ServiceCatalog::STARTING_POINT_KEYS },
+              allow_blank: true
+
+    # `if: :service_type_changed?` is load-bearing, not an optimisation.
+    #
+    # The catalog is product copy and will be edited — services renamed, retired,
+    # split. Validating on every save would mean the day a key leaves the catalog,
+    # every application that ever chose it becomes unsaveable: a founder could not
+    # fix a typo in their business name because of a decision somebody else made
+    # about the menu months later. Only a NEW choice has to be one Fuime currently
+    # offers.
+    validates :service_type,
+              inclusion: {
+                in: ->(_) { Fuime::ServiceCatalog.services.map(&:key) },
+                message: "isn't a service Fuime offers yet"
+              },
+              allow_blank: true,
+              if: :service_type_changed?
+
+    validates :business_category,
+              inclusion: { in: ::Event::BUSINESS_CATEGORIES },
+              allow_blank: true
+
     enum :last_page_viewed, {
       show: "show",
+      # Fuime: inserted ahead of project_info — a founder says what kind of
+      # business this is before describing it, because a teenager who does not
+      # yet know what to sell cannot answer "describe your business" and that is
+      # where the funnel loses them.
+      business_type: "business_type",
       project_info: "project_info",
       personal_info: "personal_info",
       review: "review",
@@ -277,7 +330,20 @@ class Event
       }
     end
 
+    # Fuime: the chosen service, or nil. The one place a view or mailer should ask
+    # — nothing else should be matching on `service_type` strings.
+    def service
+      return nil if service_type.blank?
+
+      Fuime::ServiceCatalog.find(service_type)
+    end
+
+    def started_from_template?
+      starting_point == "from_template"
+    end
+
     def next_step
+      return "Choose what kind of business" if business_category.blank?
       return "Tell us about your project" if name.blank? || description.blank?
       return "Add your information" if address_line1.blank? || address_city.blank? || address_country.blank? || address_postal_code.blank?
       return "Review and submit" if draft?
@@ -292,6 +358,7 @@ class Event
     end
 
     def completion_percentage
+      return 10 if next_step == "Choose what kind of business"
       return 25 if next_step == "Tell us about your project"
       return 50 if next_step == "Add your information"
       return 75 if next_step == "Review and submit"
@@ -441,6 +508,18 @@ class Event
           country: address_country,
           point_of_contact_id: poc_user.id,
           application: self,
+          # Fuime: carried from the application rather than left blank.
+          #
+          # Nothing used to set this, so every venture the funnel produced started
+          # with no category — and under merchant-of-record
+          # Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES is `%w[services]`,
+          # which a blank does not satisfy. Ventures were created pre-blocked from
+          # selling and the vetting queue was where anyone found out.
+          #
+          # Still nullable on the way in: applications that predate the
+          # business-type step have nothing to carry, and inventing "services" for
+          # them would be inventing the answer that unblocks selling.
+          business_category: business_category.presence,
           event_tags: tags.filter { |tag| EventTag::Tags::ALL.include?(tag) }.map { |tag| EventTag.find_or_create_by!(name: tag) },
           risk_level:
         )
@@ -528,6 +607,17 @@ class Event
     end
 
     private
+
+    # Fuime. Only ever moves the category forward from a known service key; a
+    # service key that is not in the catalog leaves it alone rather than clearing
+    # it, so retiring a key later cannot silently un-categorise an application
+    # that was already reviewed and approved under it.
+    def derive_business_category
+      return if service_type.blank?
+
+      derived = Fuime::ServiceCatalog.category_for(service_type)
+      self.business_category = derived if derived.present?
+    end
 
     FIELD_LABELS = {
       "name"                   => "Business name",

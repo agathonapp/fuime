@@ -603,3 +603,13 @@ One run, not three. The phase-3 note argues for several seeds when a change adds
 and that reasoning still holds — this run is a single seed and should be read as such. It is
 recorded because the failure *set* matches the standing baseline exactly, which is the check
 that matters; a second seed would strengthen it, not change what it says.
+
+### Baseline after phase 7a (2026-08-15)
+
+**3115 examples, 8 failures, 17 pending** — the same eight as the phase-6 baseline above,
+unchanged. +24 examples.
+
+One failure during the run was **new and correct**: `applications_spec.rb:37` "redirects to the
+project info step" encoded the pre-phase-7 flow, where `#create` sent an applicant straight to
+`project_info`. The business-type fork now comes first. The spec was updated to assert the new
+destination rather than the behaviour being reverted — the redirect change is the feature.

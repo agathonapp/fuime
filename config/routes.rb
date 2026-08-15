@@ -1104,6 +1104,9 @@ Rails.application.routes.draw do
       end
 
       member do
+        # Fuime: what kind of business, ahead of describing it. See
+        # Fuime::ServiceCatalog.
+        get "business_type"
         get "personal_info"
         get "project_info"
         get "videos"

@@ -34,10 +34,14 @@ RSpec.describe Event::ApplicationsController, type: :controller do
       expect(Event::Application.last.teen_led).to be true
     end
 
-    it "redirects to the project info step" do
+    # Fuime: the business-type fork now comes first — a founder says what kind of
+    # business this is before describing it, because "describe your business" is a
+    # wall to a teenager who has not decided what to sell yet. See
+    # Fuime::ServiceCatalog.
+    it "redirects to the business type step" do
       post :create, params: { event_application: { teen_led: "true" } }
 
-      expect(response).to redirect_to(project_info_application_path(Event::Application.last))
+      expect(response).to redirect_to(business_type_application_path(Event::Application.last))
     end
   end
 

@@ -4103,3 +4103,77 @@ can only reduce the figure. `spec/services/fuime/payable_assessment_spec.rb` ass
 invariant directly across a spread of ledgers rather than trusting the six rules to compose.
 The `aged` term is a **ceiling**, not a substitution: summing aged lines alone would ignore a
 refund newer than the cutoff and pay out money the operator no longer has.
+
+---
+
+## 2026-08-15 — Phase 7a: the business-type step
+
+`fuime/phase7-onboarding`. Whop's new-business onboarding fork, adapted. New step
+`business_type` between the intro screen and `project_info`, plus `Fuime::ServiceCatalog`.
+
+**It also fixes a bug older than the UI.** Nothing ever set `Event#business_category` from an
+application — `activate_event!` did not carry it — so every venture the funnel produced started
+blank. Under merchant-of-record `Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES` is
+`%w[services]`, and a blank does not satisfy it. **Ventures were being created already unable
+to sell, and the vetting queue was where anyone found out.** Asking the question properly is
+what fixes it; `spec/models/event/application_business_category_spec.rb` asserts the value
+survives the trip to the Event.
+
+### New
+
+| File | What |
+|---|---|
+| `db/migrate/20260815120000_*` / `...120100_*` | `starting_point`, `service_type`, `business_category` on `event_applications` |
+| `app/lib/fuime/service_catalog.rb` | ten services, each with a checklist; the three starting points |
+| `app/views/event/applications/business_type.html.erb` | the fork and the picker |
+| `spec/lib/fuime/service_catalog_spec.rb` | 12 examples, mostly guarding the two constraints below |
+| `spec/controllers/event/applications_business_type_spec.rb` | 8 examples |
+| `spec/models/event/application_business_category_spec.rb` | 4 examples |
+
+### Three deliberate departures from Whop
+
+**1. The third card is a template, not a clone.** Whop offers "clone a proven business."
+Cloning requires holding real operators up as proven, and ranking operators is what §8.3 D2
+forbids — the same reasoning that made `/directory` a listing rather than a dispatch. Fuime's
+third card is a Fuime-authored template, which names nobody and ranks nothing. A spec asserts
+the starting-point copy contains no `clone|proven|top|best|successful|popular`.
+
+**2. No template carries a price.** The most useful line a starter template could hold is "most
+people charge about $25", and it is the one line Fuime may not write: D2's misclassification
+mitigation is that operators control their own pricing and Fuime never sets rates, and a
+*suggested* rate is a set rate with a softer verb. Every checklist is asserted against five
+price-shaped patterns — and asserted *positively* to contain "your own rate", because "no
+price" could otherwise be satisfied by saying nothing, leaving a 16-year-old unaware it is
+their call.
+
+**3. A template's opening line is a placeholder, never a value.** A description Fuime wrote is
+a description Fuime authored, and under MoR Fuime is already the seller of record for whatever
+it describes. The operator's own words are the only ones that reach a buyer.
+
+### Two exclusions from the catalog, asserted rather than commented
+
+**Babysitting/childcare and coaching children are absent** — the two most common teen service
+businesses in the country, so the absence is a decision. Under MoR Fuime is the legal seller:
+for lawn mowing the failure is a badly cut lawn, for childcare it is injury to a child. That is
+a different order of liability and an insurance conversation nobody has had. Music and academic
+tutoring stay; the failure mode there is a wasted hour. **A launch-scope judgement, not a
+permanent one** — it belongs in the §7 Q1 counsel conversation, and "allowed, with insurance"
+may well be the right answer.
+
+### Two bugs found on the way
+
+- **`Event::ApplicationsController#update` raised `DoubleRenderError`** on any non-autosave
+  update that arrived without a `return_to` — `redirect_back_or_to` does not end the action and
+  execution fell through to `head :no_content`. Latent only because every step view passes
+  `return_to`. Pre-existing; fixed with the missing `return`.
+- **A catalog edit would have bricked existing applications.** `validates :service_type,
+  inclusion:` ran on every save, so the day a key left the catalog every application that ever
+  chose it became unsaveable — a founder could not fix a typo in their business name because of
+  a menu decision made months later. Now `if: :service_type_changed?`: only a NEW choice must
+  be one Fuime currently offers.
+
+### On "all the business help"
+
+The per-service checklists ARE the help, delivered at the moment it is useful rather than in a
+guides section nobody opens. Own-business analytics is not built and is the remaining half of
+phase 7.

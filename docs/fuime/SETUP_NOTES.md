@@ -2,6 +2,36 @@
 
 ## Handoff (most recent first)
 
+**2026-08-15 — Phase 7a: the business-type step, and the venture-born-blocked bug it fixes.**
+
+New `business_type` step between the intro screen and `project_info`, plus
+`Fuime::ServiceCatalog` — ten services, each with a checklist, and Whop's three-card fork with
+its third card changed from "clone a proven business" to "start from a template".
+
+**The bug is older than the UI and worth knowing about: nothing ever set
+`Event#business_category` from an application.** `activate_event!` did not carry it, so every
+venture the funnel produced started blank — and `OperatorEligibility::ELIGIBLE_CATEGORIES` is
+`%w[services]`, which a blank does not satisfy. Ventures were created already unable to sell
+and the vetting queue was where anybody found out.
+
+**Two constraints in the catalog are asserted, not commented, because both are under constant
+pressure to "just be helpful".** No template may suggest a price (§8.3 D2 — a suggested rate is
+a set rate with a softer verb) and the checklists must positively say the rate is the
+operator's. And babysitting, childcare and coaching children are deliberately absent: under MoR
+Fuime is the legal seller, and for childcare the foreseeable failure is injury to a child. That
+is a launch-scope judgement for the §7 Q1 counsel conversation, not a permanent rule.
+
+**Two bugs found on the way.** `Event::ApplicationsController#update` raised
+`DoubleRenderError` on any non-autosave update with no `return_to` — `redirect_back_or_to` does
+not end the action and it fell through to `head :no_content`. And validating `service_type`
+inclusion on every save would have bricked every existing application the day a catalog key was
+retired; it is now `if: :service_type_changed?`.
+
+**Whop as the whole substrate is open, not chosen** — see MOR_MIGRATION_PLAN §9. Better rails,
+same L5 vocabulary. Blocking unknown is Q9 (guardian as verified principal), which should be
+asked in the same conversation already owed to Stripe.
+
+
 **2026-08-15 — Phase 6: the weekly payout run exists, and it deliberately cannot send money.**
 
 `Fuime::PayoutBatchService` generates a run every Wednesday for a Friday payout, an admin reads

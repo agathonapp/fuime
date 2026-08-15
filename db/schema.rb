@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1025,6 +1025,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_000100) do
     t.integer "annual_budget_cents"
     t.datetime "approved_at"
     t.datetime "archived_at"
+    t.string "business_category"
     t.integer "committed_amount_cents"
     t.string "cosigner_email"
     t.datetime "created_at", null: false
@@ -1042,6 +1043,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_000100) do
     t.string "referral_code"
     t.string "referrer"
     t.datetime "rejected_at"
+    t.string "service_type"
+    t.string "starting_point"
     t.datetime "submitted_at"
     t.integer "team_size"
     t.boolean "teen_led"
@@ -1051,7 +1054,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_000100) do
     t.boolean "videos_watched", default: false
     t.string "website_url"
     t.index ["event_id"], name: "index_event_applications_on_event_id"
+    t.index ["service_type"], name: "index_event_applications_on_service_type", where: "(service_type IS NOT NULL)"
     t.index ["user_id"], name: "index_event_applications_on_user_id"
+    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[]))", name: "event_applications_starting_point_known"
   end
 
   create_table "event_configurations", force: :cascade do |t|

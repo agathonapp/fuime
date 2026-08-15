@@ -31,8 +31,28 @@
       <p class="text-sm muted mt-1 mb-2">
         Tell us what you sell or what services you offer. This helps us understand your business!
       </p>
-      <%= form.text_area :description, class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null", "x-model": "description", placeholder: "I create and sell custom art prints and stickers..." %>
+      <%# Fuime: a template's opening line becomes the PLACEHOLDER, never the
+          value. A description Fuime wrote is a description Fuime authored, and
+          under merchant-of-record Fuime is already the seller of record for
+          whatever it describes — the operator's own words are the only ones that
+          should reach a buyer. See ApplicationsController#project_info. %>
+      <%= form.text_area :description, class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null", "x-model": "description", placeholder: @template&.description_prompt || "I create and sell custom art prints and stickers..." %>
     </div>
+
+    <% if @template.present? %>
+      <div class="card card--outline mb-4">
+        <p class="text-sm mb-1"><strong>Your <%= @template.name.downcase %> outline</strong></p>
+        <p class="text-sm muted mb-2">
+          Things worth settling before your first customer. Nothing here is set by
+          Fuime — including what you charge, which is always yours to decide.
+        </p>
+        <ul class="text-sm muted mb-0 pl-4">
+          <% @template.checklist.each do |item| %>
+            <li><%= item %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
 
     <div class="field">
       <%= form.label :has_website do %>
