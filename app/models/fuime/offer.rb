@@ -75,6 +75,7 @@ module Fuime
               }
 
     validate :only_a_selling_venture_may_publish, if: :published?
+    validate :text_must_not_impersonate_a_ledger_key
 
     scope :published, -> { where(aasm_state: "published") }
     scope :live, -> { where.not(aasm_state: "archived") }
@@ -135,7 +136,13 @@ module Fuime
     # which is the other half of why this object is worth having — before it,
     # every ledger line said whatever the buyer typed.
     def payment_description
-      [name, unit_label.presence].compact.join(" — ").truncate(120)
+      raw = [name, unit_label.presence].compact.join(" — ")
+
+      # Sanitised on the way out as well as validated on the way in. The
+      # validation is what tells an operator; this is what protects the ledger
+      # from a row that predates the validation, or one written by a console, an
+      # importer, or a fixture. See VentureLedger.sanitize_memo_text.
+      ::Fuime::VentureLedger.sanitize_memo_text(raw).truncate(120)
     end
 
     private
@@ -145,6 +152,23 @@ module Fuime
     # onboarding is the ordinary case. Publishing is different: a published offer
     # is a public promise that a payment will work, and `#accepts_payments?`
     # covers vetting, the flag scope and payment setup in one place.
+    # An offer's name reaches a ledger memo, and a bracketed "[fuime_…]" in a memo
+    # is how Fuime::PayablesLedger decides what a line IS. An offer named
+    # "Mow [fuime_fee_x" would make a $35 sale classify as a $35 platform fee on
+    # the operator's own earnings page.
+    #
+    # Refused rather than silently stripped, because this is the path where there
+    # is a person to tell. The buyer's free-text box on the public checkout has no
+    # such person, so it is sanitised instead — see
+    # VentureLedger.sanitize_memo_text.
+    def text_must_not_impersonate_a_ledger_key
+      offending = [name, description, unit_label].compact
+                                                 .select { |t| ::Fuime::VentureLedger.memo_carries_key?(t) }
+      return if offending.empty?
+
+      errors.add(:base, "Text like \"[fuime_…]\" is reserved — Fuime uses it to label transactions. Try it without the brackets.")
+    end
+
     def only_a_selling_venture_may_publish
       return if event.blank? || event.accepts_payments?
 

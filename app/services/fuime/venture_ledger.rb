@@ -239,6 +239,38 @@ module Fuime
       memo.to_s.match?(MEMO_KEY_PATTERN)
     end
 
+    # Strip anything that could be mistaken for a Fuime ledger key.
+    #
+    # ── Why this exists ─────────────────────────────────────────────────────
+    #
+    # The bracketed key is how a settled line says what it IS: Fuime::PayablesLedger
+    # classifies the whole breakdown by matching `memo LIKE '%[fuime_fee_%'` and
+    # friends, and FeeEngine::Create reads `.memo_carries_key?` to decide whether
+    # a transaction has already had Fuime's fee taken.
+    #
+    # Two paths put human text into those memos, and both are attacker-adjacent:
+    #
+    #   * `Fuime::Offer#payment_description` — the OPERATOR names their own offer.
+    #   * `Fuime::CheckoutsController#payment_description` — an anonymous BUYER
+    #     types "what's this for?" on a public, unauthenticated page.
+    #
+    # So an offer named "Mow [fuime_fee_x", or a stranger typing it into a
+    # teenager's checkout, produces a sale whose memo classifies as Fuime's fee —
+    # and the operator's earnings page then reports a $35 sale as a $35 platform
+    # fee. The breakdown still reconciles (`#other_adjustments_cents` is a
+    # residual by construction, which is exactly why that design was worth
+    # having), but the figures a teenager reads are wrong and a stranger chose
+    # them.
+    #
+    # Stripping rather than refusing, because the two callers cannot both refuse:
+    # a buyer typing a square bracket into a free-text box is not doing anything
+    # wrong and must not get a validation error. `Fuime::Offer` additionally
+    # *validates* against the pattern, so an operator gets told rather than
+    # silently edited — defence in depth on the path where a person can be told.
+    def self.sanitize_memo_text(text)
+      text.to_s.gsub(/[\[\]]/, "")
+    end
+
     def self.find_settled_row(key, memo)
       ::RawCsvTransaction.find_by(
         unique_bank_identifier: UNIQUE_BANK_IDENTIFIER,

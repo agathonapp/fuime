@@ -109,7 +109,20 @@ module Fuime
     end
 
     def payment_description(event)
-      supplied = params[:description].to_s.gsub(/[[:cntrl:]]/, "").strip
+      # Control characters, and now square brackets.
+      #
+      # A bracketed "[fuime_…]" in a memo is how Fuime::PayablesLedger classifies
+      # a ledger line, so an anonymous stranger typing "[fuime_fee_x" into this
+      # box on a public page could make a teenager's $35 sale appear on their own
+      # earnings page as a $35 platform fee. Unauthenticated free text that
+      # reaches a ledger is exactly the input that has to be assumed hostile.
+      #
+      # See Fuime::VentureLedger.sanitize_memo_text. Stripped rather than refused
+      # because there is nobody here to tell — the payer is a customer, not a
+      # Fuime user, and a validation error on a checkout is a lost sale for a
+      # child over a character they had no reason to avoid.
+      supplied = ::Fuime::VentureLedger.sanitize_memo_text(params[:description])
+                                       .gsub(/[[:cntrl:]]/, "").strip
       return "Payment to #{event.name}" if supplied.blank?
 
       supplied.truncate(MAX_DESCRIPTION_LENGTH)
