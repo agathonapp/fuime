@@ -192,7 +192,16 @@ class CreateFuimePayoutBatches < ActiveRecord::Migration[8.0]
     # would be Fuime forwarding a stranger's funds, which is the thing L1 forbids —
     # so `PayoutRequest#destination_must_suit_the_account` refuses this value when
     # the flag is off, and this constraint is not the place that check lives.
+    # The expression is passed even though removal does not need it: inside
+    # `change`, Rails reverts a `remove_check_constraint` by ADDING the
+    # constraint back, and without the expression it has nothing to add — which
+    # raised `ArgumentError: wrong number of arguments (given 1, expected 2)` on
+    # the reversibility check and made the whole migration un-rollbackable.
+    #
+    # This is the PRE-EXISTING expression (two destinations), not the new one, so
+    # a rollback restores the constraint as it was before this migration ran.
     remove_check_constraint :payout_requests,
+                            "destination IN ('account_owner_bank', 'personal_transfer')",
                             name: "payout_requests_destination_known"
 
     add_check_constraint :payout_requests,
