@@ -119,7 +119,7 @@
                 <% if @accepts_payments %>
                   <%= button_to "Buy", fuime_storefront_pay_path(slug: @event.slug),
                                 method: :post,
-                                params: { offer_token: offer.public_token! },
+                                params: { offer_token: offer.to_param },
                                 class: "btn #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
                 <% end %>
               </div>

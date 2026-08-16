@@ -73,8 +73,8 @@ module Fuime
         amount_cents:,
         description: offer&.payment_description || payment_description(event)
       ).create_checkout_session(
-        success_url: fuime_storefront_url(slug: event.slug, paid: 1),
-        cancel_url: fuime_storefront_url(slug: event.slug)
+        success_url: return_url(event, offer, paid: true),
+        cancel_url: return_url(event, offer)
       )
 
       redirect_to session.url, allow_other_host: true
@@ -97,11 +97,10 @@ module Fuime
 
     # The offer being bought, if one was named.
     #
-    # By **token, not id**, so the primary key never appears in public HTML. The
-    # storefront's Buy buttons and the hosted payment page both post the token,
-    # and `/pay/:token` is built on the same value — one public identity for an
-    # offer rather than two, and the enumerable one is not it. See
-    # AddPublicTokenToFuimeOffers.
+    # Never by id, so the primary key does not appear in public HTML. The
+    # storefront's Buy buttons and the payment page both post `offer.to_param` —
+    # the operator's slug when they have chosen one, the permanent token when
+    # they have not. See Fuime::Offer.find_public and AddSlugToFuimeOffers.
     #
     # Scoped to this venture's PUBLISHED offers. Both halves matter: a token from
     # another venture would charge this buyer for something this business does
@@ -111,7 +110,24 @@ module Fuime
     def find_offer(event)
       return nil if params[:offer_token].blank?
 
-      event.fuime_offers.published.find_by(public_token: params[:offer_token])
+      # Slug or token — see Fuime::Offer.find_public. Scoped to this venture's
+      # published offers either way.
+      ::Fuime::Offer.find_public(event.fuime_offers.published, params[:offer_token])
+    end
+
+    # Where Stripe sends the buyer back to.
+    #
+    # The page they came from, which for a payment link is the payment page
+    # itself. Bouncing a customer who followed a direct link into a storefront
+    # they never asked to see is the browse step the link exists to avoid — and
+    # it hands them a shop when what they wanted was a receipt.
+    def return_url(event, offer, paid: false)
+      if offer.present?
+        return fuime_payment_page_url(event_slug: event.slug, offer: offer.to_param,
+                                      **(paid ? { paid: 1 } : {}))
+      end
+
+      fuime_storefront_url(slug: event.slug, **(paid ? { paid: 1 } : {}))
     end
 
     def payment_description(event)

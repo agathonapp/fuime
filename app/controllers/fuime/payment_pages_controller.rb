@@ -51,14 +51,15 @@ module Fuime
     # sale, and a link that keeps working after they do is a link they cannot
     # revoke. A non-public venture has deliberately not published a storefront,
     # and a payment page is a public page.
+    #
+    # Resolved venture-first so the offer identifier is namespaced: `mow` means
+    # this business's mow, and a slug or token belonging to another business
+    # finds nothing here rather than quietly charging for somebody else's work.
     def published_offer
-      token = params[:token].to_s
-      return nil if token.blank?
+      venture = ::Event.not_hidden.find_by(slug: params[:event_slug], is_public: true)
+      return nil if venture.nil?
 
-      ::Fuime::Offer.published
-                    .joins(:event)
-                    .where(events: { is_public: true, hidden_at: nil })
-                    .find_by(public_token: token)
+      ::Fuime::Offer.find_public(venture.fuime_offers.published, params[:offer])
     end
 
     # 404 rather than a redirect with a flash.

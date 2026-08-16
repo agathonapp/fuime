@@ -32,14 +32,14 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
       expect(::Fuime::PaymentLinkService).to receive(:new)
         .with(hash_including(amount_cents: 35_00)).and_return(payment_link)
 
-      buy!(offer_token: offer.public_token!)
+      buy!(offer_token: offer.to_param)
     end
 
     it "describes the thing sold rather than whatever the buyer typed" do
       expect(::Fuime::PaymentLinkService).to receive(:new)
         .with(hash_including(description: offer.payment_description)).and_return(payment_link)
 
-      buy!(offer_token: offer.public_token!, description: "lol")
+      buy!(offer_token: offer.to_param, description: "lol")
     end
 
     # The one that matters most. A posted `amount` alongside an `offer_id` must
@@ -50,13 +50,13 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
       expect(::Fuime::PaymentLinkService).to receive(:new)
         .with(hash_including(amount_cents: 35_00)).and_return(payment_link)
 
-      buy!(offer_token: offer.public_token!, amount: "1.00")
+      buy!(offer_token: offer.to_param, amount: "1.00")
     end
   end
 
   describe "offers that are not for sale" do
     it "refuses a draft" do
-      buy!(offer_token: offer.public_token!)
+      buy!(offer_token: offer.to_param)
 
       expect(::Fuime::PaymentLinkService).not_to have_received(:new)
       expect(flash[:alert]).to match(/isn't for sale/)
@@ -66,7 +66,7 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
       offer.publish!
       offer.archive!
 
-      buy!(offer_token: offer.public_token!)
+      buy!(offer_token: offer.to_param)
 
       expect(flash[:alert]).to match(/isn't for sale/)
     end
@@ -77,7 +77,7 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
       other = create(:fuime_offer, event: create(:event))
       other.publish!
 
-      buy!(offer_token: other.public_token!)
+      buy!(offer_token: other.to_param)
 
       expect(flash[:alert]).to match(/isn't for sale/)
     end

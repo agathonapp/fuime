@@ -4319,3 +4319,60 @@ naming a field, never by loosening the filter.**
 The toggle's copy says what it actually does: turning the storefront off stops every payment
 link working too, because a payment page is a public page. Said up front rather than discovered
 by a founder wondering why their Replit button 404s.
+
+---
+
+## 2026-08-16 (later) — Custom payment links, and a correction
+
+`fuime/custom-payment-links`. Supersedes the URL shape shipped hours earlier in `fuime/public-side`.
+
+### The correction
+
+`AddPublicTokenToFuimeOffers` gave every offer a random 12-character token and argued the random
+string was the *right* public identity: `/pay/42` is enumerable, and an enumerable catalogue of
+minors' businesses with prices attached is a targeting list.
+
+The enumeration half is still true. **The conclusion was too strong** — `/fuime_directory`
+already lists ventures publicly, by name. Business names were never secret. What a sequential
+integer leaks is the *complete catalogue and its growth rate*; a name-shaped URL leaks neither,
+because you cannot walk `sunset-lawn-care` to find the next business.
+
+So the token was solving a real problem with the wrong tool, and the operator paid for it:
+`fuime.com/pay/x7Kp2mQb9rTs` is not a link a 16-year-old puts in an Instagram bio, and "send it
+and get paid" is the entire product.
+
+### The shape now
+
+```
+/pay/sunset-lawn-care/mow        the link they choose, share and print
+/pay/sunset-lawn-care/x7Kp2…     the same page, by permalink
+```
+
+**Direct, never a browse step.** There is deliberately no `/pay/:event_slug` index — a payment
+link lands the buyer on the thing they are paying for, and a link that makes a customer choose
+loses the sale the operator already earned. Browsing is what the storefront is for.
+
+**Two segments**, so the offer identifier is namespaced by the venture: two businesses may both
+sell `mow` without one finding out the other got there first, and a slug or token from another
+business resolves to nothing rather than quietly charging for somebody else's work.
+
+**Both identifiers survive, and that is the point.** A slug is renameable; a link already sent is
+not. When an operator tidies "mow" to "lawn-mowing", every flyer, bio and Replit button carrying
+the old slug would break — the token is what stays valid forever, so the offer keeps one
+identifier its own owner's edit cannot take away. `Fuime::Offer.find_public` resolves either.
+Said in the UI too, because *"will this break the link I already sent?"* is the question that
+stops a teenager from ever changing it.
+
+### Details
+
+- Slugs derive from the name on create (`front-and-back-lawn-mow`), dedupe **within the venture**
+  (`mow-2`), and fall back to the token when a name parameterizes to nothing — so an offer named
+  in a non-Latin script still has a working link.
+- Typed input is tidied rather than refused: `"  Lawn Mow  "` → `lawn-mow`, `lawn__mow--now` →
+  `lawn-mow-now`. Reserved words (`pay`, `checkout`, `admin`, `fuime`, …) are refused.
+- Stripe now returns the buyer to **the payment page**, not the storefront. Bouncing somebody who
+  followed a direct link into a shop they never asked to see is the browse step the link exists
+  to avoid — and hands them a storefront when what they wanted was a receipt.
+
+`spec/models/fuime/offer_slug_spec.rb` (12 examples) and the payment-page request spec cover the
+rename-survives-the-link guarantee, the per-venture namespacing, and the fallbacks.

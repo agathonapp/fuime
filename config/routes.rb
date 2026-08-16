@@ -184,9 +184,22 @@ Rails.application.routes.draw do
 
   # Fuime: Public storefront
   # FUIME: a hosted payment page for one offer — the link an operator pastes into
-  # a Replit site, an Instagram bio or a DM. Short path on purpose: it gets typed
-  # and shared. See Fuime::PaymentPagesController.
-  get "/pay/:token", to: "fuime/payment_pages#show", as: :fuime_payment_page
+  # a Replit site, an Instagram bio or a DM.
+  #
+  #   /pay/sunset-lawn-care/mow
+  #
+  # **Direct, never a browse step.** A payment link lands the buyer on the thing
+  # they are paying for; if they wanted to look around they would be on the
+  # storefront (`/b/:slug`), which is what that page is for. So there is
+  # deliberately no `/pay/:event_slug` index — a link that makes a customer
+  # choose is a link that loses the sale a teenager already earned.
+  #
+  # Two segments so the offer identifier is namespaced by the venture: two
+  # businesses may both sell "mow" without one of them having to find out the
+  # other got there first. `:offer` resolves as a slug or as the permanent token
+  # (Fuime::Offer.find_public), so renaming an offer never breaks a link somebody
+  # already printed.
+  get "/pay/:event_slug/:offer", to: "fuime/payment_pages#show", as: :fuime_payment_page
 
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
   post "/b/:slug/pay", to: "fuime/checkouts#create", as: :fuime_storefront_pay

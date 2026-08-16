@@ -28,6 +28,7 @@
 #  position     :integer          default(0), not null
 #  price_cents  :integer          not null
 #  public_token :string
+#  slug         :string
 #  unit_label   :string
 #  created_at   :datetime         not null
 #  updated_at   :datetime         not null
@@ -35,6 +36,7 @@
 #
 # Indexes
 #
+#  index_fuime_offers_on_event_and_slug                (event_id,slug) UNIQUE WHERE (slug IS NOT NULL)
 #  index_fuime_offers_on_event_id                      (event_id)
 #  index_fuime_offers_on_public_token                  (public_token) UNIQUE WHERE (public_token IS NOT NULL)
 #  index_published_fuime_offers_on_event_and_position  (event_id,position) WHERE ((aasm_state)::text = 'published'::text)
@@ -84,7 +86,29 @@ module Fuime
     # businesses with prices attached is a targeting list.
     TOKEN_LENGTH = 12
 
+    # The operator's own link. See AddSlugToFuimeOffers for why this exists
+    # alongside the token rather than replacing it.
+    MAX_SLUG_LENGTH = 40
+    SLUG_FORMAT = /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/
+
+    # Slugs that would collide with the shape of a token lookup or read as
+    # something Fuime said. `pay` and `checkout` because a link like
+    # `/pay/shop/checkout` reads as a Fuime page rather than one operator's
+    # thing; `admin` and `fuime` because they imply endorsement.
+    RESERVED_SLUGS = %w[pay checkout admin fuime new edit index].freeze
+
+    validates :slug,
+              length: { maximum: MAX_SLUG_LENGTH },
+              format: {
+                with: SLUG_FORMAT,
+                message: "can use lowercase letters, numbers and hyphens — like \"lawn-mow\""
+              },
+              exclusion: { in: RESERVED_SLUGS, message: "is reserved — try something else" },
+              allow_blank: true
+
+    before_validation :normalise_slug
     before_create :assign_public_token
+    before_create :assign_slug
 
     # The token, generating one if this offer predates the column.
     #
@@ -104,6 +128,28 @@ module Fuime
         candidate = SecureRandom.alphanumeric(TOKEN_LENGTH)
         break candidate unless exists?(public_token: candidate)
       end
+    end
+
+    # What goes in the link. The operator's slug when they have one, the token
+    # when they do not — so an offer always has a working link and the operator
+    # is never blocked on choosing a name for it.
+    def to_param
+      slug.presence || public_token!
+    end
+
+    # Find an offer within a venture by either identifier.
+    #
+    # The slug is the pretty one and the token is the permanent one. Both resolve
+    # here so that renaming an offer does not break a link somebody already
+    # printed on a flyer — see AddSlugToFuimeOffers.
+    #
+    # Scoped by the caller to a single venture's published offers, so a token or
+    # slug from another business cannot buy here.
+    def self.find_public(scope, identifier)
+      identifier = identifier.to_s
+      return nil if identifier.blank?
+
+      scope.find_by(slug: identifier) || scope.find_by(public_token: identifier)
     end
 
     scope :published, -> { where(aasm_state: "published") }
@@ -178,6 +224,39 @@ module Fuime
 
     def assign_public_token
       self.public_token ||= self.class.generate_public_token
+    end
+
+    # Lowercase, hyphenated, trimmed — so an operator typing "Lawn Mow" or
+    # " lawn mow " gets the link they meant rather than a validation error about
+    # a capital letter.
+    def normalise_slug
+      return if slug.nil?
+
+      self.slug = slug.to_s.strip.downcase.gsub(/[\s_]+/, "-").gsub(/-+/, "-").gsub(/\A-|-\z/, "")
+      self.slug = nil if slug.blank?
+    end
+
+    # A starting slug derived from the name, so an operator who never opens the
+    # link field still gets "lawn-mow" rather than a random string.
+    #
+    # Deduped within the venture: a second "Lawn mow" becomes "lawn-mow-2". Falls
+    # back to nil rather than raising if the name yields nothing sluggable (an
+    # offer named entirely in a non-Latin script), in which case `#to_param`
+    # returns the token and the link still works.
+    def assign_slug
+      return if slug.present?
+
+      base = name.to_s.parameterize.first(MAX_SLUG_LENGTH).gsub(/-\z/, "")
+      return if base.blank? || RESERVED_SLUGS.include?(base)
+
+      candidate = base
+      suffix = 1
+      while self.class.where(event_id:, slug: candidate).exists?
+        suffix += 1
+        candidate = "#{base.first(MAX_SLUG_LENGTH - 3)}-#{suffix}"
+      end
+
+      self.slug = candidate
     end
 
     # An offer can be drafted before a venture can sell — that is the point of

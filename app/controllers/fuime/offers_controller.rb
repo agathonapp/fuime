@@ -164,7 +164,7 @@ module Fuime
 
     def offer_params
       params.require(:fuime_offer)
-            .permit(:name, :description, :unit_label, :position)
+            .permit(:name, :description, :unit_label, :position, :slug)
             .merge(price_cents: price_cents_param)
     end
 

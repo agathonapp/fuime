@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1289,9 +1289,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_140000) do
     t.integer "position", default: 0, null: false
     t.integer "price_cents", null: false
     t.string "public_token"
+    t.string "slug"
     t.string "unit_label"
     t.datetime "updated_at", null: false
     t.index ["event_id", "position"], name: "index_published_fuime_offers_on_event_and_position", where: "((aasm_state)::text = 'published'::text)"
+    t.index ["event_id", "slug"], name: "index_fuime_offers_on_event_and_slug", unique: true, where: "(slug IS NOT NULL)"
     t.index ["event_id"], name: "index_fuime_offers_on_event_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"

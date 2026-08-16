@@ -162,10 +162,37 @@
               <div class="mt1">
                 <input type="text" readonly class="w-full text-sm"
                        onclick="this.select()"
-                       value="<%= fuime_payment_page_url(token: offer.public_token!) %>">
+                       value="<%= fuime_payment_page_url(event_slug: @event.slug, offer: offer.to_param) %>">
                 <div class="muted text-sm mt-1">
                   Paste this anywhere — a website, a bio, a message.
                 </div>
+
+                <%# The operator edits the last part of their own link.
+
+                    The old link keeps working after a rename: Fuime::Offer's
+                    permanent token resolves to the same page, so a flyer already
+                    printed or a Replit button already shipped does not break
+                    because somebody tidied a name. Said here, because "will this
+                    break the link I already sent?" is the question that stops a
+                    16-year-old from ever changing it. %>
+                <% if @can_manage %>
+                  <details class="mt-1">
+                    <summary class="muted text-sm">Change this link</summary>
+                    <%= form_with url: fuime_offer_path(event_slug: @event.slug, id: offer.id),
+                                  method: :patch, scope: :fuime_offer, local: true,
+                                  class: "flex items-center gap-1 mt-1 flex-wrap" do |form| %>
+                      <span class="muted text-sm">/pay/<%= @event.slug %>/</span>
+                      <%= form.text_field :slug, value: offer.slug,
+                                          maxlength: Fuime::Offer::MAX_SLUG_LENGTH,
+                                          placeholder: "lawn-mow", class: "text-sm" %>
+                      <%= form.submit "Save link", class: "btn btn--sm" %>
+                    <% end %>
+                    <p class="muted text-sm mt-1 mb-0">
+                      Lowercase letters, numbers and hyphens. Links you've already
+                      shared keep working.
+                    </p>
+                  </details>
+                <% end %>
               </div>
             <% end %>
           </td>

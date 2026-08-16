@@ -61,7 +61,7 @@
         <%# The offer decides the amount. There is deliberately no amount field on
             this page — the price comes off the record, and the checkout endpoint
             ignores any posted `amount` when an offer_id is present. %>
-        <%= form.hidden_field :offer_token, value: @offer.public_token! %>
+        <%= form.hidden_field :offer_token, value: @offer.to_param %>
 
         <div class="field">
           <%= form.label :description, "Anything they should know? (optional)", class: "text-left block" %>

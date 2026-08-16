@@ -15,8 +15,8 @@ RSpec.describe "the hosted payment page", type: :request do
                          price_cents: 35_00)
   end
 
-  def visit!(token = offer.public_token!)
-    get "/pay/#{token}"
+  def visit!(identifier = offer.to_param, venture: event.slug)
+    get "/pay/#{venture}/#{identifier}"
   end
 
   describe "a published offer on a public venture" do
@@ -61,13 +61,41 @@ RSpec.describe "the hosted payment page", type: :request do
       event.selling_blockers.each { |blocker| expect(body).not_to include(blocker) }
     end
 
-    # The primary key must never appear in public HTML — the token exists so an
-    # enumerable catalogue of minors' businesses does not.
-    it "never puts the offer's id on the page" do
+    # The primary key never appears in public HTML — a sequential id is the one
+    # identifier somebody can walk to enumerate the catalogue.
+    it "posts the operator's own identifier, never the id" do
       visit!
 
-      expect(response.body).to include(offer.public_token)
+      expect(response.body).to include(%(value="#{offer.to_param}"))
+      expect(offer.to_param).to eq("front-and-back-lawn-mow"),
+                                "the link should read as the thing, not as a random string"
       expect(response.body).not_to match(/offer_token"[^>]*value="#{offer.id}"/)
+    end
+
+    # The permanent identifier still resolves, so a link already printed on a
+    # flyer survives the operator tidying up the slug afterwards.
+    it "still answers on the permanent token after a rename" do
+      original = offer.public_token
+      offer.update!(slug: "renamed-later")
+
+      visit!(original)
+
+      expect(response).to have_http_status(:ok)
+      expect(CGI.unescapeHTML(response.body)).to include("Front and back lawn mow")
+    end
+
+    it "refuses a slug that belongs to another business" do
+      other_event = create(:event, is_public: true)
+      other = create(:fuime_offer, event: other_event, name: "Front and back lawn mow")
+      allow_any_instance_of(Event).to receive(:accepts_payments?).and_return(true)
+      other.publish!
+
+      # Same slug text, different venture — the venture segment is the namespace.
+      visit!(other.to_param, venture: other_event.slug)
+      expect(response).to have_http_status(:ok)
+
+      expect(other.to_param).to eq(offer.to_param),
+                                "two businesses may both sell the same thing under the same slug"
     end
 
     it "posts the token, so the price cannot be rewritten in a browser" do

@@ -115,7 +115,7 @@ RSpec.describe "the full business flow", type: :request do
       .and_return(payment_link)
 
     # …and a tampered amount alongside the offer changes nothing.
-    post "/b/#{venture.slug}/pay", params: { offer_token: offer.public_token!, amount: "1.00" }
+    post "/b/#{venture.slug}/pay", params: { offer_token: offer.to_param, amount: "1.00" }
     expect(response).to have_http_status(:redirect)
 
     # ── 9. The sale reaches the ledger ──────────────────────────────────────
