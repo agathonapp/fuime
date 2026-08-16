@@ -32,20 +32,53 @@
 <div class="flex flex-col gap-4 -mt-3" data-controller="event-home">
   <% if organizer_signed_in?(as: :member) %>
     <div class="flex max-w-full overflow-auto whitespace-nowrap scrollbar-hidden mt-3">
-      <%= link_to event_transfers_new_path(@event), class: "list-badge quick-action ml-0", data: { behavior: "modal_trigger", modal: "send_transfer" } do %>
-        <%= inline_icon "payment-transfer", size: 20 %>
-        Transfer money
+      <%# FUIME: the quick actions Fuime actually has.
+
+          Every one of these used to render unconditionally, and most of them
+          pointed at a module `Fuime::DisabledModules` refuses at the request
+          level — so "Transfer money" and "Deposit a check" were buttons that
+          answered "That feature isn't available on Fuime." A teenager clicking
+          one reads that as broken rather than as absent, which is worse than
+          not showing it, and Milestone 5's own verification says a click-through
+          must find no dead nav links.
+
+          Gated on `fuime_module_hidden?`, which reads
+          `DisabledModules.blocked_prefixes` — the same source the request-level
+          block uses, so a flag flip brings the button back with the feature
+          rather than needing a second edit here (Rule 2). %>
+
+      <%# The first thing a founder does: list something to sell. Ahead of the
+          money actions because until there is an offer there is nothing to be
+          paid for. See Fuime::Offer. %>
+      <% if policy(@event).manage_offers? %>
+        <%= link_to fuime_offers_path(event_slug: @event.slug), class: "list-badge quick-action ml-0" do %>
+          <%= inline_icon "bag", size: 20 %>
+          Add something to sell
+        <% end %>
       <% end %>
-      <%= render "events/transfers/modal" %>
+
+      <%# Disbursements — origination out of a Fuime-held balance. Blocked while
+          FEATURE_SPONSOR_BANKING is off, which is the shipping posture. %>
+      <% unless fuime_module_hidden?("disbursements") %>
+        <%= link_to event_transfers_new_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "send_transfer" } do %>
+          <%= inline_icon "payment-transfer", size: 20 %>
+          Transfer money
+        <% end %>
+        <%= render "events/transfers/modal" %>
+      <% end %>
       <%= render "card_grants/create_modal" if @event.plan.card_grants_enabled? %>
 
+      <%# Kept. Reimbursements are deliberately NOT in any disabled list — a teen
+          reimbursing themselves for a business expense is a legitimate flow and
+          the money moves within Fuime rather than out of it. See the note in
+          Fuime::DisabledModules. %>
       <%= link_to event_reimbursements_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "create_reimbursement" } do %>
         <%= inline_icon "attachment", size: 20 %>
         Get reimbursed
       <% end %>
       <%= render "reimbursement/reports/create_form", modal_id: "create_reimbursement" %>
 
-      <% if policy(@event.check_deposits.build).create? %>
+      <% if policy(@event.check_deposits.build).create? && !fuime_module_hidden?("check_deposits") %>
         <%= link_to event_check_deposits_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "deposit_check" }  do %>
           <%= inline_icon "cheque", size: 20 %>
           Deposit a check
@@ -56,7 +89,16 @@
         </section>
       <% end %>
 
-      <% if policy(@event).account_number? %>
+      <%# Account numbers are hidden rather than blocked, and they are the one
+          entry here that cannot be gated by controller prefix — they are served
+          by EventsController, so a prefix rule would take the whole venture down
+          with them.
+
+          They exist upstream because HCB holds funds at a partner bank and an org
+          genuinely has a routing and account number. Fuime holds no funds and has
+          no such relationship, so the modal renders a number nobody can send
+          money to. Restore this alongside FEATURE_SPONSOR_BANKING, not before. %>
+      <% if Fuime::Features.sponsor_banking? && policy(@event).account_number? %>
         <%= link_to account_number_event_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "account_number" } do %>
           <%= inline_icon "bank-account", size: 20 %>
           Account numbers
@@ -96,6 +138,56 @@
         <% end %>
       </div>
     <% end %>
+  <% end %>
+
+  <%# FUIME: what this business sells — the dashboard's answer to "how is the
+      business doing", ahead of the ledger widgets.
+
+      A venture with nothing listed sees the empty state, which is the single
+      most useful thing this page can say to a founder on day one: the storefront
+      works, but a customer has to already know the price. See Fuime::Offer.
+
+      Drafts are included here and nowhere else. This is the operator's own
+      dashboard, where an unfinished offer is work outstanding rather than
+      something to hide; the storefront reads `published` only. %>
+  <% if organizer_signed_in?(as: :member) %>
+    <div class="card mb-4">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <h2 class="mt0 mb0 text-lg">What you sell</h2>
+        <%= link_to "Manage", fuime_offers_path(event_slug: @event.slug), class: "muted" %>
+      </div>
+
+      <% if @offer_count.zero? %>
+        <p class="muted mb-2">
+          You haven't listed anything yet. People can still pay you any amount on
+          your storefront — listing what you sell means they don't have to ask
+          what it costs.
+        </p>
+        <% if policy(@event).manage_offers? %>
+          <%= link_to "List something you sell", fuime_offers_path(event_slug: @event.slug), class: "btn" %>
+        <% end %>
+      <% else %>
+        <div class="flex flex-col gap-1 mt-2">
+          <% @offers.each do |offer| %>
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span><%= offer.name %></span>
+              <span class="muted">
+                <%= offer.price_sentence %>
+                <% unless offer.published? %>· draft<% end %>
+              </span>
+            </div>
+          <% end %>
+        </div>
+        <% if @offer_count > @offers.size %>
+          <p class="muted mt-2 mb-0">and <%= @offer_count - @offers.size %> more</p>
+        <% end %>
+        <% if @published_offer_count.zero? %>
+          <p class="muted mt-2 mb-0">
+            Nothing is live on your storefront yet — publish one so people can buy it.
+          </p>
+        <% end %>
+      <% end %>
+    </div>
   <% end %>
 
   <%= render "events/public_message" %>

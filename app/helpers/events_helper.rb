@@ -83,6 +83,23 @@ module EventsHelper
       symbol: :payments,
       available_proc: ->(event) { policy(event).payment_setup_status? && organizer_signed_in? }
     },
+    # Fuime: what the venture sells.
+    #
+    # Ahead of Payments and Payouts because it is the first thing a founder
+    # actually does — the money screens are about a business that already has
+    # something to sell, and until offers existed the storefront was a box a
+    # stranger typed an amount into. See Fuime::Offer.
+    #
+    # `bag.svg` is verified to exist in app/assets/images/icons — a missing icon
+    # 500s the whole org nav rather than just one entry (see the Taxes note).
+    {
+      name: "What you sell",
+      path_proc: ->(event_id) { fuime_offers_path(event_slug: event_id) },
+      tooltip: "List what you sell and set your prices",
+      icon: "bag",
+      symbol: :offers,
+      available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
+    },
     # Fuime: Payouts — moving money to the family's bank.
     #
     # Separate from "Payments" above because they are opposite directions and
@@ -193,7 +210,19 @@ module EventsHelper
       tooltip: "View account numbers",
       icon: "hashtag",
       symbol: :account_number,
-      available_proc: ->(event) { policy(event).account_number? }
+      # Fuime: hidden until Fuime holds funds somewhere that has account numbers.
+      #
+      # The one gated item that cannot use `module_prefix`: it is served by
+      # EventsController, so a prefix rule would take every venture page down with
+      # it. Upstream this is real — HCB holds funds at a partner bank and an org
+      # genuinely has a routing and account number. Fuime holds none and has no
+      # such relationship, so the page shows a number nobody can send money to.
+      #
+      # `sponsor_banking?` rather than a bare `false`, so it returns with the
+      # feature rather than needing somebody to remember this line (Rule 2).
+      available_proc: lambda { |event|
+        ::Fuime::Features.sponsor_banking? && policy(event).account_number?
+      }
     },
     {
       section: "Receive",
@@ -201,6 +230,7 @@ module EventsHelper
     },
     {
       name: "Donations",
+      module_prefix: "donations",
       path_proc: ->(event_id) { event_donation_overview_path(event_id:) },
       tooltip: "Support this organization",
       icon: "support",
@@ -218,6 +248,7 @@ module EventsHelper
     },
     {
       name: "Check deposits",
+      module_prefix: "check_deposits",
       path_proc: ->(event_id) { event_check_deposits_path(event_id:) },
       tooltip: "Deposit a check",
       icon: "cheque",
@@ -239,6 +270,7 @@ module EventsHelper
     },
     {
       name: "Grants",
+      module_prefix: "card_grants",
       path_proc: ->(event_id) { event_card_grant_overview_path(event_id:) },
       tooltip: "Manage card grants",
       icon: "bag",
@@ -247,6 +279,7 @@ module EventsHelper
     },
     {
       name: "Transfers",
+      module_prefix: "ach_transfers",
       path_proc: ->(event_id) { event_transfers_path(event_id:) },
       tooltip: "Send & transfer money",
       icon: "payment-transfer",
@@ -303,6 +336,7 @@ module EventsHelper
     },
     {
       name: "Google Workspace",
+      module_prefix: "g_suite",
       path_proc: ->(event_id) { event_g_suite_overview_path(event_id:) },
       tooltip: "Manage domain Google Workspace",
       dynamic_tooltip: lambda do |event|
@@ -351,6 +385,7 @@ module EventsHelper
         },
         {
           name: "Donations",
+      module_prefix: "donations",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "donations") },
           tooltip: "Edit donation page, goals, and tiers",
           symbol: :settings_donations,
@@ -416,11 +451,40 @@ module EventsHelper
     }
   ].freeze
 
+  # Fuime: is this nav item's controller one Fuime has turned off?
+  #
+  # ── Why the nav asks the blocker rather than carrying its own list ─────────
+  #
+  # `Fuime::DisabledModules` already refuses these at the request level, so
+  # every one of them was a link to a page that answers "That feature isn't
+  # available on Fuime." A teenager clicking "Deposit a check" and being bounced
+  # is worse than not seeing it: it reads as broken rather than as absent, and
+  # Milestone 5's own verification step says a click-through must find no dead
+  # nav links.
+  #
+  # Driven off `DisabledModules.blocked_prefixes` rather than a second hardcoded
+  # list, because the answer depends on feature flags — `sponsor_banking?` and
+  # `card_issuing_permitted?` — and two lists that must agree eventually will
+  # not. Flip a flag and the nav item returns on its own, which is what Rule 2's
+  # "disable, don't delete" is supposed to feel like.
+  #
+  # GETs are still permitted by the blocker (a transaction drawer legitimately
+  # links to an existing ACH transfer's detail page). This hides the *entry
+  # point* — you cannot start one — without breaking a deep link to a record
+  # that already exists.
+  def fuime_module_hidden?(prefix)
+    return false if prefix.blank?
+
+    ::Fuime::DisabledModules.blocked_prefixes.include?(prefix)
+  end
+
   def events_nav(event = @event, selected: nil)
-    NAV_ITEMS.select { |i| instance_exec(event, &i[:available_proc]) }.map do |item|
+    NAV_ITEMS.reject { |i| fuime_module_hidden?(i[:module_prefix]) }
+             .select { |i| instance_exec(event, &i[:available_proc]) }.map do |item|
       item.dup.tap do |h|
         if h[:dropdown].present?
-          h[:dropdown_items] = h[:dropdown_items].select { |i| instance_exec(event, &i[:available_proc]) }.map do |dropdown_item|
+          h[:dropdown_items] = h[:dropdown_items].reject { |i| fuime_module_hidden?(i[:module_prefix]) }
+                                                 .select { |i| instance_exec(event, &i[:available_proc]) }.map do |dropdown_item|
             dropdown_item[:selected] = dropdown_item[:symbol] == selected if dropdown_item[:symbol].present?
             dropdown_item[:path] = instance_exec(event.slug, &dropdown_item[:path_proc]) if dropdown_item[:path_proc].present?
 

@@ -46,6 +46,19 @@ module Fuime
       # before any guardian had set payments up.
       @accepts_payments = @event.accepts_payments?
 
+      # What this business sells, in the operator's own order.
+      #
+      # Published only. A draft is an offer the operator has not finished, and an
+      # archived one is one they took off sale — neither is a promise to a buyer,
+      # and the checkout endpoint scopes the same way so a stale link cannot buy
+      # one either.
+      #
+      # Loaded even when payments are off so the page can still show what the
+      # business does. The Buy buttons are what @accepts_payments gates, not the
+      # list — a storefront that goes blank while a guardian finishes Stripe
+      # onboarding tells a customer the business does not exist.
+      @offers = @event.fuime_offers.published.in_operator_order
+
       # The tax estimate is the business's own private figure — it is not
       # transparency data and must never appear on a public page.
       @tax_tracker = nil

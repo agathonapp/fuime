@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1278,6 +1278,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_120100) do
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id"
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
+  end
+
+  create_table "fuime_offers", force: :cascade do |t|
+    t.string "aasm_state", default: "draft", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "event_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "price_cents", null: false
+    t.string "unit_label"
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "position"], name: "index_published_fuime_offers_on_event_and_position", where: "((aasm_state)::text = 'published'::text)"
+    t.index ["event_id"], name: "index_fuime_offers_on_event_id"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
+    t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
   end
 
   create_table "fuime_payout_batches", force: :cascade do |t|
@@ -3360,6 +3376,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_120100) do
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"
   add_foreign_key "fees", "canonical_event_mappings"
+  add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_subscriptions", "events"

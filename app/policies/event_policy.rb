@@ -524,6 +524,32 @@ class EventPolicy < ApplicationPolicy
     auditor_or_reader?
   end
 
+  # Fuime: offers — what the venture sells and what it costs.
+  #
+  # Deliberately the OPPOSITE split from payouts, and the contrast is the point.
+  # A guardian decides money leaving because they own the account and the funds
+  # (L2). A guardian does not decide what their kid's work is worth: §8.3 D2's
+  # mitigation for worker misclassification is that the operator controls their
+  # own pricing, and a third party setting the rate is a third party setting the
+  # rate whether that party is Fuime or a parent.
+  #
+  # So the guardian reads and the operator writes. Visibility without control —
+  # every offer is on the storefront and every sale is in the ledger a guardian
+  # can already see.
+  def offers?
+    auditor_or_reader?
+  end
+
+  def manage_offers?
+    return false if user.blank?
+    return true if user.admin?
+
+    # #permitted_to_operate_business? rather than a bare `member?`: it is the
+    # same gate as spending, and it carries the guardianship check a minor needs
+    # before acting on a venture at all.
+    member? && permitted_to_operate_business?
+  end
+
   # Fuime: cards. Four predicates rather than one, because the interesting design here
   # is that they do NOT all belong to the same person.
   #

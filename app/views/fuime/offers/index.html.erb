@@ -1,0 +1,151 @@
+<% title "What you sell — #{@event.name}" %>
+
+<%# FUIME: where a teenager decides what they sell and what it costs.
+
+    The one rule this page exists to hold: **nothing here suggests a price.** No
+    placeholder amount, no "most people charge", no average, no range. §8.3 D2's
+    mitigation for worker misclassification is that operators control their own
+    pricing and Fuime never sets rates, and a suggested rate is a set rate with a
+    softer verb. spec/controllers/fuime/offers_controller_spec.rb asserts it so
+    the constraint survives a redesign. %>
+
+<h1>What you sell</h1>
+
+<p class="muted">
+  Each thing you list shows up on your storefront with a Buy button. You set the
+  price — Fuime never sets it or suggests one.
+</p>
+
+<% if @selling_blockers.any? %>
+  <%# Authenticated page only. These strings name operators and state their
+      ages — see app/views/fuime/_selling_blockers.html.erb and the privacy spec
+      that keeps them off the storefront. %>
+  <%= render "fuime/selling_blockers", event: @event,
+             title: "You can't publish offers yet" %>
+<% end %>
+
+<%# ── Add one ──────────────────────────────────────────────────────────── %>
+
+<% if @can_manage %>
+  <div class="card mb2">
+    <h2 class="mt0 text-lg">Add something you sell</h2>
+    <%= form_with model: @offer, url: fuime_offers_create_path(event_slug: @event.slug),
+                  method: :post, scope: :fuime_offer, local: true do |form| %>
+      <div class="field">
+        <%= form.label :name, "What is it?" %>
+        <%= form.text_field :name, required: true, class: "w-full max-w-full",
+                            maxlength: Fuime::Offer::MAX_NAME_LENGTH,
+                            placeholder: "Front and back lawn mow" %>
+      </div>
+
+      <div class="flex gap-2 flex-wrap">
+        <div class="field">
+          <%= form.label :price, "Your price" %>
+          <%# No placeholder amount. A number here would be a Fuime-suggested
+              rate for every operator who left it alone. %>
+          <%= form.text_field :price, required: true, inputmode: "decimal",
+                              placeholder: "$", class: "w-full" %>
+        </div>
+        <div class="field">
+          <%= form.label :unit_label, "Per what? (optional)" %>
+          <%= form.text_field :unit_label, class: "w-full",
+                              maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
+                              placeholder: "per lawn" %>
+        </div>
+      </div>
+
+      <div class="field">
+        <%= form.label :description, "Anything the customer should know? (optional)" %>
+        <%= form.text_area :description, class: "w-full max-w-full", rows: 2,
+                           maxlength: Fuime::Offer::MAX_DESCRIPTION_LENGTH,
+                           placeholder: "Includes edging. I bring my own mower." %>
+      </div>
+
+      <%= form.submit "Save as draft" %>
+    <% end %>
+  </div>
+<% end %>
+
+<%# ── What you have ────────────────────────────────────────────────────── %>
+
+<% if @offers.empty? %>
+  <p class="muted">
+    Nothing listed yet. Your storefront still works — a customer can pay you any
+    amount — but listing what you sell means they don't have to ask.
+  </p>
+<% else %>
+  <table class="min-w-0">
+    <thead>
+      <tr>
+        <th>What</th>
+        <th>Price</th>
+        <th>Status</th>
+        <% if @can_manage %><th class="w-64">Actions</th><% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @offers.each do |offer| %>
+        <tr>
+          <td>
+            <strong><%= offer.name %></strong>
+            <% if offer.description.present? %>
+              <div class="muted"><%= offer.description %></div>
+            <% end %>
+          </td>
+          <td><%= offer.price_sentence %></td>
+          <td>
+            <%= offer.published? ? "On your storefront" : "Draft" %>
+          </td>
+          <% if @can_manage %>
+            <td>
+              <div class="flex gap-1 flex-wrap">
+                <% if offer.draft? %>
+                  <%= button_to "Publish", fuime_offer_publish_path(event_slug: @event.slug, id: offer.id),
+                                method: :post, class: "btn" %>
+                <% else %>
+                  <%= button_to "Take down", fuime_offer_unpublish_path(event_slug: @event.slug, id: offer.id),
+                                method: :post, class: "btn bg-muted" %>
+                <% end %>
+                <%= button_to "Archive", fuime_offer_archive_path(event_slug: @event.slug, id: offer.id),
+                              method: :post, class: "btn bg-muted",
+                              form: { data: { turbo_confirm: "Archive \"#{offer.name}\"? Payments people already made for it aren't affected." } } %>
+              </div>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @archived.any? %>
+  <details class="mt2">
+    <summary class="muted">Archived (<%= @archived.count %>)</summary>
+    <%# Kept rather than deleted: a sold offer is referenced by a ledger memo and
+        a buyer's receipt, so removing it would leave a payment nobody can
+        explain. %>
+    <table class="min-w-0 mt1">
+      <tbody>
+        <% @archived.each do |offer| %>
+          <tr>
+            <td><%= offer.name %></td>
+            <td class="muted"><%= offer.price_sentence %></td>
+            <% if @can_manage %>
+              <td>
+                <%= button_to "Restore as draft", fuime_offer_restore_path(event_slug: @event.slug, id: offer.id),
+                              method: :post, class: "btn bg-muted" %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </details>
+<% end %>
+
+<% unless @can_manage %>
+  <p class="muted mt2">
+    You can see everything this business sells. Only the person running it can
+    change what's listed or what it costs.
+  </p>
+<% end %>

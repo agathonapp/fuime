@@ -40,7 +40,28 @@ module Fuime
         return
       end
 
-      amount_cents = parse_amount(params[:amount])
+      # ── Buying an offer, or paying an amount ──────────────────────────────
+      #
+      # Two shapes, and the difference is who chose the number.
+      #
+      # With an offer, the operator set the price and the buyer is agreeing to
+      # it: the amount comes off the record and the buyer's input is ignored
+      # entirely. That is not a UI nicety — a posted `amount` alongside an
+      # `offer_id` would let a stranger buy a $35 lawn mow for $1, and reading
+      # the price from the record is the only version of this that cannot be
+      # rewritten in a form.
+      #
+      # Without one, the old free-amount path stands. It is still the right thing
+      # for a venture that has not listed anything yet, and for the customer who
+      # was told a price in person.
+      offer = find_offer(event)
+      if params[:offer_id].present? && offer.nil?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "That isn't for sale right now."
+        return
+      end
+
+      amount_cents = offer&.price_cents || parse_amount(params[:amount])
       if amount_cents.nil?
         redirect_to fuime_storefront_path(slug: event.slug),
                     alert: "Enter an amount between $1 and $10,000."
@@ -50,7 +71,7 @@ module Fuime
       session = ::Fuime::PaymentLinkService.new(
         event:,
         amount_cents:,
-        description: payment_description(event)
+        description: offer&.payment_description || payment_description(event)
       ).create_checkout_session(
         success_url: fuime_storefront_url(slug: event.slug, paid: 1),
         cancel_url: fuime_storefront_url(slug: event.slug)
@@ -73,6 +94,19 @@ module Fuime
     # characters so an anonymous stranger can't write arbitrary text onto a
     # child's ledger.
     MAX_DESCRIPTION_LENGTH = 120
+
+    # The offer being bought, if one was named.
+    #
+    # Scoped to this venture's PUBLISHED offers. Both halves matter: an offer id
+    # from another venture would charge this buyer for something this business
+    # does not sell, and a draft or archived offer is one the operator has
+    # deliberately taken off sale — a stale link or a guessed id must not be able
+    # to buy it.
+    def find_offer(event)
+      return nil if params[:offer_id].blank?
+
+      event.fuime_offers.published.find_by(id: params[:offer_id])
+    end
 
     def payment_description(event)
       supplied = params[:description].to_s.gsub(/[[:cntrl:]]/, "").strip

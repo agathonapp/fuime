@@ -521,6 +521,15 @@ class Event < ApplicationRecord
   # authorised moving money, so they outlive the venture on purpose.
   has_many :payout_requests, dependent: :restrict_with_error
 
+  # Fuime: the things this venture sells. See Fuime::Offer — an offer is what
+  # turns the storefront from a tip jar into a store.
+  #
+  # `restrict_with_error` rather than `destroy`: an offer that was bought is
+  # referenced by a ledger memo and a buyer's receipt, so cascading a delete
+  # through it would leave payments nobody can explain. Offers archive; they do
+  # not disappear.
+  has_many :fuime_offers, class_name: "Fuime::Offer", dependent: :restrict_with_error
+
   # Fuime: top-ups this school made into its own Stripe balance. Restricted rather
   # than dependent-destroy for the same reason as payout_requests — these are the
   # record of real money movements a business office reconciles against, and they

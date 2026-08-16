@@ -4177,3 +4177,86 @@ may well be the right answer.
 The per-service checklists ARE the help, delivered at the moment it is useful rather than in a
 guides section nobody opens. Own-business analytics is not built and is the remaining half of
 phase 7.
+
+---
+
+## 2026-08-16 — Offers, and hiding the fintech Fuime does not have
+
+`fuime/offers`. The object that makes a storefront a store, plus the nav cleanup
+that had to come with it.
+
+### Offers
+
+Until now a buyer landed on a storefront and typed **any amount they liked**. That is a tip
+jar: it works for a donation and not for a business, because the buyer has to already know what
+they are buying and what it costs — which means the operator told them somewhere else and the
+storefront is only collecting.
+
+`Fuime::Offer` is the missing object. Everything downstream already worked —
+`PaymentLinkService` takes an amount and a description, the webhook posts to the ledger,
+`PayablesLedger` explains it, phase 6's batches pay it out. This is the piece missing at the
+front.
+
+| File | What |
+|---|---|
+| `db/migrate/20260816100000_*` / `...100100_*` | `fuime_offers` |
+| `app/models/fuime/offer.rb` | draft → published → archived |
+| `app/controllers/fuime/offers_controller.rb` + view + routes | the operator's shop page |
+| `app/policies/event_policy.rb` | `offers?` / `manage_offers?` |
+| `app/controllers/fuime/checkouts_controller.rb` | buying an offer |
+| `app/views/fuime/storefronts/show.html.erb` | offers with Buy buttons |
+| `app/views/events/show.html.erb` + `events_controller.rb` | "What you sell" on the dashboard |
+
+**The price is the operator's, enforced at the schema level.** `price_cents` is NOT NULL with
+**no default**, there is no `suggested_price_cents`, and the form's price field has no
+placeholder number. §8.3 D2's mitigation for worker misclassification is that operators control
+their own pricing and Fuime never sets rates — a default is a Fuime-set rate for everyone who
+never changes it, and a suggestion is a set rate with a softer verb.
+`spec/controllers/fuime/offers_controller_spec.rb` greps the rendered page for a numeric
+placeholder and for "most people charge"-shaped copy, because this constraint will be under
+permanent pressure from anybody trying to be helpful.
+
+**The authorization split is the opposite of payouts, deliberately.** A guardian decides money
+leaving (L2 — they own the account and the funds). A guardian does **not** price their kid's
+work: a third party setting the rate is a third party whether that party is Fuime or a parent.
+So `manage_offers?` is the operator and `offers?` is everyone — visibility without control.
+
+**Un-riggable checkout.** With an `offer_id` the amount comes off the record and any posted
+`amount` is ignored entirely — otherwise a stranger buys a $35 lawn mow for $1 by editing a form
+field. Offers are scoped to the venture's *published* set, so another venture's id, a draft, an
+archived offer and a stale link all refuse rather than falling back to a free amount. Five
+examples in `spec/controllers/fuime/offer_checkout_spec.rb` cover exactly those.
+
+**A bug the specs caught: AASM is not whiny by default.** A transition whose save fails
+validation **reverts the in-memory state and returns false** rather than raising. The publish
+action's unconditional success message would have told a teenager their offer was live while it
+sat in draft — and the validation that fires there is the one refusing to publish for a venture
+that cannot take payments, i.e. exactly the case they most need told about.
+
+### Hiding what the app already refuses
+
+The venture nav and the home page offered **Transfer money, Deposit a check, Add funds,
+Transfers, Check deposits, Donations, Grants, Google Workspace and Account numbers** — most of
+which `Fuime::DisabledModules` refuses at the request level. Clicking one answered "That feature
+isn't available on Fuime", which reads as broken rather than as absent, and Milestone 5's own
+verification step says a click-through must find no dead nav links.
+
+Nav items now carry a `module_prefix:` and `EventsHelper#fuime_module_hidden?` filters them
+against **`DisabledModules.blocked_prefixes`** — the same source the request-level block reads,
+rather than a second hardcoded list. Two lists that must agree eventually do not; and because
+the answer depends on `sponsor_banking?` and `card_issuing_permitted?`, **flipping a flag brings
+the nav item back on its own**, which is what Rule 2's "disable, don't delete" is supposed to
+feel like. `spec/helpers/events_nav_fuime_spec.rb` asserts both directions and that no
+`module_prefix` names a prefix nothing gates.
+
+**Account numbers are the one exception** and could not use a prefix: they are served by
+`EventsController`, so a prefix rule would take every venture page down with them. Gated on
+`Fuime::Features.sponsor_banking?` directly, which is the honest condition — upstream this is
+real because HCB holds funds at a partner bank, and Fuime holds none.
+
+### The dashboard
+
+`events/show` now leads with **What you sell** — the offers, their prices, and whether anything
+is live. Drafts appear here and nowhere else: this is the operator's own dashboard, where an
+unfinished offer is work outstanding rather than something to hide. The empty state is the most
+useful thing the page can say on day one.

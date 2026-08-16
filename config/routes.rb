@@ -133,6 +133,16 @@ Rails.application.routes.draw do
   #
   # All four are POSTs on a member route rather than a PATCH on the request, because
   # each is a distinct decision being recorded, not an edit to a field.
+  # FUIME: what the venture sells. See Fuime::Offer — the object that makes a
+  # storefront a store rather than a tip jar.
+  get "/:event_slug/offers", to: "fuime/offers#index", as: :fuime_offers
+  post "/:event_slug/offers", to: "fuime/offers#create", as: :fuime_offers_create
+  patch "/:event_slug/offers/:id", to: "fuime/offers#update", as: :fuime_offer
+  post "/:event_slug/offers/:id/publish", to: "fuime/offers#publish", as: :fuime_offer_publish
+  post "/:event_slug/offers/:id/unpublish", to: "fuime/offers#unpublish", as: :fuime_offer_unpublish
+  post "/:event_slug/offers/:id/archive", to: "fuime/offers#archive", as: :fuime_offer_archive
+  post "/:event_slug/offers/:id/restore", to: "fuime/offers#restore", as: :fuime_offer_restore
+
   get "/:event_slug/payouts", to: "fuime/payouts#index", as: :fuime_payouts
   post "/:event_slug/payouts", to: "fuime/payouts#create", as: :fuime_payouts_create
   post "/:event_slug/payouts/:id/approve", to: "fuime/payouts#approve", as: :fuime_payout_approve
