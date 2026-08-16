@@ -4260,3 +4260,62 @@ real because HCB holds funds at a partner bank, and Fuime holds none.
 is live. Drafts appear here and nowhere else: this is the operator's own dashboard, where an
 unfinished offer is work outstanding rather than something to hide. The empty state is the most
 useful thing the page can say on day one.
+
+---
+
+## 2026-08-16 — The public side: hosted payment links and storefront settings
+
+`fuime/public-side`. Two gaps on the buyer-facing half.
+
+### Payment links — `/pay/:token`
+
+A hosted page for **one offer**: what you're buying, from whom, how much, who takes the card.
+The link an operator *sends*, as against the storefront a customer *browses* — a 16-year-old
+shipping a site on Replit, posting an Instagram bio or sending a DM wants a URL for the one
+thing they sell, not a shop the buyer has to navigate. Same shape as a Stripe Payment Link.
+
+| File | What |
+|---|---|
+| `db/migrate/20260816140000_*` | `public_token` on `fuime_offers` |
+| `app/controllers/fuime/payment_pages_controller.rb` | public, unauthenticated |
+| `app/views/layouts/fuime_payment_page.html.erb` | no app chrome — the visitor arrived cold |
+| `app/views/fuime/payment_pages/{show,not_found}.html.erb` | |
+| `spec/requests/fuime_payment_page_spec.rb` | 12 examples |
+
+**A token, not the id, and the reason is specific to this product.** `/pay/42` is enumerable —
+anyone could walk the integers and read the name, description and price of every offer on the
+platform. That is free to an attacker and free to prevent anywhere; here it matters more,
+because an enumerable list of **minors' businesses with prices attached is a targeting list**,
+which is the same instinct behind `Event#selling_blockers` never reaching a public page.
+
+The token is now the *only* public identity: the storefront's Buy buttons and the payment page
+both post `offer_token`, and `Fuime::CheckoutsController#find_offer` looks up by it. The primary
+key no longer appears in public HTML at all, and a spec asserts it.
+
+**The page shows strictly less than the storefront**, not more. The storefront already reasons
+about a minor's name beside a price being a targeting profile; this page shows the business,
+the thing and the price, and nothing about the child running it.
+
+**404, never a redirect with a flash.** A redirect saying "that isn't for sale" tells whoever is
+probing that the token space is worth probing — and tells a customer that an offer their friend
+took down used to exist. Every wrong guess renders the same bytes, asserted directly.
+
+Refuses: drafts, archived offers, offers on a venture that has withdrawn its storefront, and
+tokens that never existed. A venture that can no longer sell gets an honest message instead of a
+dead button, and deliberately does not say why (the reason names operators and states ages).
+
+### Storefront settings
+
+`storefront_tagline` has been a column since the storefront shipped **with no UI to edit it** —
+which is how a field ends up permanently blank in production and nobody notices for months. Now
+editable, alongside the logo and the public toggle, from the same screen as the offers: a
+founder thinks "my shop", not "my offers" and separately "my storefront settings".
+
+`storefront_params` permits exactly three fields. `Event` is HCB's core model with a very wide
+attribute surface including things that decide whether a venture can spend money — a permissive
+filter here would be a mass-assignment hole on a page a 16-year-old can reach. **Widen it by
+naming a field, never by loosening the filter.**
+
+The toggle's copy says what it actually does: turning the storefront off stops every payment
+link working too, because a payment page is a public page. Said up front rather than discovered
+by a founder wondering why their Replit button 404s.

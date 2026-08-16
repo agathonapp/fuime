@@ -137,6 +137,7 @@ Rails.application.routes.draw do
   # storefront a store rather than a tip jar.
   get "/:event_slug/offers", to: "fuime/offers#index", as: :fuime_offers
   post "/:event_slug/offers", to: "fuime/offers#create", as: :fuime_offers_create
+  patch "/:event_slug/storefront", to: "fuime/offers#update_storefront", as: :fuime_storefront_settings
   patch "/:event_slug/offers/:id", to: "fuime/offers#update", as: :fuime_offer
   post "/:event_slug/offers/:id/publish", to: "fuime/offers#publish", as: :fuime_offer_publish
   post "/:event_slug/offers/:id/unpublish", to: "fuime/offers#unpublish", as: :fuime_offer_unpublish
@@ -182,6 +183,11 @@ Rails.application.routes.draw do
   get "/directory", to: "fuime/directory#index", as: :fuime_directory
 
   # Fuime: Public storefront
+  # FUIME: a hosted payment page for one offer — the link an operator pastes into
+  # a Replit site, an Instagram bio or a DM. Short path on purpose: it gets typed
+  # and shared. See Fuime::PaymentPagesController.
+  get "/pay/:token", to: "fuime/payment_pages#show", as: :fuime_payment_page
+
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
   post "/b/:slug/pay", to: "fuime/checkouts#create", as: :fuime_storefront_pay
 

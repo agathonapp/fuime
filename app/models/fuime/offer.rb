@@ -21,20 +21,22 @@
 #
 # Table name: fuime_offers
 #
-#  id          :bigint           not null, primary key
-#  aasm_state  :string           default("draft"), not null
-#  description :text
-#  name        :string           not null
-#  position    :integer          default(0), not null
-#  price_cents :integer          not null
-#  unit_label  :string
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
-#  event_id    :bigint           not null
+#  id           :bigint           not null, primary key
+#  aasm_state   :string           default("draft"), not null
+#  description  :text
+#  name         :string           not null
+#  position     :integer          default(0), not null
+#  price_cents  :integer          not null
+#  public_token :string
+#  unit_label   :string
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  event_id     :bigint           not null
 #
 # Indexes
 #
 #  index_fuime_offers_on_event_id                      (event_id)
+#  index_fuime_offers_on_public_token                  (public_token) UNIQUE WHERE (public_token IS NOT NULL)
 #  index_published_fuime_offers_on_event_and_position  (event_id,position) WHERE ((aasm_state)::text = 'published'::text)
 #
 # Foreign Keys
@@ -76,6 +78,33 @@ module Fuime
 
     validate :only_a_selling_venture_may_publish, if: :published?
     validate :text_must_not_impersonate_a_ledger_key
+
+    # The shareable link's identity. See AddPublicTokenToFuimeOffers for why this
+    # is a random token and not the id — an enumerable catalogue of minors'
+    # businesses with prices attached is a targeting list.
+    TOKEN_LENGTH = 12
+
+    before_create :assign_public_token
+
+    # The token, generating one if this offer predates the column.
+    #
+    # Lazy rather than backfilled in a migration: generating unique random values
+    # in a loop against a live table is the kind of migration that locks for
+    # minutes and then half-fails. Anything older gets one the first time somebody
+    # asks for its link, which is also what an importer gets for free.
+    def public_token!
+      return public_token if public_token.present?
+
+      update_column(:public_token, self.class.generate_public_token)
+      public_token
+    end
+
+    def self.generate_public_token
+      loop do
+        candidate = SecureRandom.alphanumeric(TOKEN_LENGTH)
+        break candidate unless exists?(public_token: candidate)
+      end
+    end
 
     scope :published, -> { where(aasm_state: "published") }
     scope :live, -> { where.not(aasm_state: "archived") }
@@ -146,6 +175,10 @@ module Fuime
     end
 
     private
+
+    def assign_public_token
+      self.public_token ||= self.class.generate_public_token
+    end
 
     # An offer can be drafted before a venture can sell — that is the point of
     # draft, and a teenager setting up their shop while a guardian finishes Stripe

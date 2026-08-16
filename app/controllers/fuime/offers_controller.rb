@@ -117,7 +117,40 @@ module Fuime
       redirect_to fuime_offers_path(event_slug: @event.slug), alert: "That isn't archived."
     end
 
+    # The public page's own settings, edited from the same screen as the things
+    # on it.
+    #
+    # `storefront_tagline` has been a column since the storefront shipped with no
+    # UI to edit it — which is how a field ends up permanently blank in
+    # production and nobody notices for months.
+    #
+    # Same authorization as pricing: the operator runs their own shop. A guardian
+    # reads it. `manage_offers?` rather than a new predicate, because "who may
+    # change how this business presents itself" and "who may price its work" are
+    # the same question with the same answer.
+    def update_storefront
+      authorize @event, :manage_offers?
+
+      if @event.update(storefront_params)
+        redirect_to fuime_offers_path(event_slug: @event.slug), notice: "Storefront updated."
+      else
+        redirect_to fuime_offers_path(event_slug: @event.slug),
+                    alert: @event.errors.full_messages.to_sentence
+      end
+    end
+
     private
+
+    # Deliberately three fields.
+    #
+    # `Event` is HCB's core model with a very wide attribute surface, including
+    # things that decide whether a venture can spend money. A permissive
+    # `params.require(:event).permit!` here would be a mass-assignment hole on a
+    # page a 16-year-old can reach. Widen this by naming a field, never by
+    # loosening the filter.
+    def storefront_params
+      params.require(:event).permit(:storefront_tagline, :logo, :is_public)
+    end
 
     def set_event
       @event = Event.find_by!(slug: params[:event_slug])

@@ -55,7 +55,7 @@ module Fuime
       # for a venture that has not listed anything yet, and for the customer who
       # was told a price in person.
       offer = find_offer(event)
-      if params[:offer_id].present? && offer.nil?
+      if params[:offer_token].present? && offer.nil?
         redirect_to fuime_storefront_path(slug: event.slug),
                     alert: "That isn't for sale right now."
         return
@@ -97,15 +97,21 @@ module Fuime
 
     # The offer being bought, if one was named.
     #
-    # Scoped to this venture's PUBLISHED offers. Both halves matter: an offer id
-    # from another venture would charge this buyer for something this business
-    # does not sell, and a draft or archived offer is one the operator has
-    # deliberately taken off sale — a stale link or a guessed id must not be able
-    # to buy it.
+    # By **token, not id**, so the primary key never appears in public HTML. The
+    # storefront's Buy buttons and the hosted payment page both post the token,
+    # and `/pay/:token` is built on the same value — one public identity for an
+    # offer rather than two, and the enumerable one is not it. See
+    # AddPublicTokenToFuimeOffers.
+    #
+    # Scoped to this venture's PUBLISHED offers. Both halves matter: a token from
+    # another venture would charge this buyer for something this business does
+    # not sell and credit the wrong operator's ledger, and a draft or archived
+    # offer is one the operator has deliberately taken off sale — a stale link
+    # must not still be able to buy it.
     def find_offer(event)
-      return nil if params[:offer_id].blank?
+      return nil if params[:offer_token].blank?
 
-      event.fuime_offers.published.find_by(id: params[:offer_id])
+      event.fuime_offers.published.find_by(public_token: params[:offer_token])
     end
 
     def payment_description(event)

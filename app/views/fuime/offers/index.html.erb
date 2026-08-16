@@ -24,6 +24,57 @@
              title: "You can't publish offers yet" %>
 <% end %>
 
+<%# ── Your storefront ──────────────────────────────────────────────────── %>
+
+<%# FUIME: the public page, editable from the same screen as the things on it.
+
+    Deliberately not its own settings page. A founder setting up thinks "my
+    shop", not "my offers" and separately "my storefront settings" — and the
+    tagline has existed as a column since the storefront shipped with no UI to
+    edit it, which is how a field ends up permanently blank in production. %>
+<div class="card mb2">
+  <div class="flex items-center justify-between gap-2 flex-wrap">
+    <h2 class="mt0 mb0 text-lg">Your storefront</h2>
+    <%= link_to "View it", fuime_storefront_path(slug: @event.slug), class: "muted", target: "_blank", rel: "noopener" %>
+  </div>
+
+  <p class="muted text-sm mt-1">
+    <%= fuime_storefront_url(slug: @event.slug) %>
+  </p>
+
+  <% if @can_manage %>
+    <%= form_with url: fuime_storefront_settings_path(event_slug: @event.slug),
+                  method: :patch, scope: :event, local: true do |form| %>
+      <div class="field">
+        <%= form.label :storefront_tagline, "One line about your business" %>
+        <%= form.text_field :storefront_tagline, value: @event.storefront_tagline,
+                            class: "w-full max-w-full", maxlength: 140,
+                            placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
+      </div>
+
+      <div class="field">
+        <%= form.label :logo, "Logo (optional)" %>
+        <%= form.file_field :logo, accept: "image/png,image/jpeg,image/webp" %>
+      </div>
+
+      <div class="field">
+        <%= form.check_box :is_public, checked: @event.is_public %>
+        <%= form.label :is_public, "Show my storefront publicly" %>
+        <%# Turning this off does not only hide the storefront — it stops every
+            payment link working too, because a payment page is a public page.
+            Said here rather than discovered later by a founder wondering why
+            their Replit button 404s. %>
+        <p class="muted text-sm mt-1 mb-0">
+          Turning this off hides your storefront <strong>and</strong> stops your
+          payment links working.
+        </p>
+      </div>
+
+      <%= form.submit "Save storefront" %>
+    <% end %>
+  <% end %>
+</div>
+
 <%# ── Add one ──────────────────────────────────────────────────────────── %>
 
 <% if @can_manage %>
@@ -95,6 +146,28 @@
           <td><%= offer.price_sentence %></td>
           <td>
             <%= offer.published? ? "On your storefront" : "Draft" %>
+
+            <%# FUIME: the shareable payment link.
+
+                The whole point of the object for a founder who has built
+                something on Replit or has an Instagram bio: one URL for one
+                thing, send it, get paid. Shown only when published, because a
+                link to a draft is a link that 404s the moment somebody clicks
+                it — and the operator would have sent it already.
+
+                Rendered as a readonly input rather than text so it can be
+                selected and copied on a phone, which is where most of these get
+                sent from. %>
+            <% if offer.published? %>
+              <div class="mt1">
+                <input type="text" readonly class="w-full text-sm"
+                       onclick="this.select()"
+                       value="<%= fuime_payment_page_url(token: offer.public_token!) %>">
+                <div class="muted text-sm mt-1">
+                  Paste this anywhere — a website, a bio, a message.
+                </div>
+              </div>
+            <% end %>
           </td>
           <% if @can_manage %>
             <td>

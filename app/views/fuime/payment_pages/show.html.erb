@@ -1,0 +1,99 @@
+<% title "#{@offer.name} — #{@event.name}" %>
+
+<%# FUIME: the hosted payment page.
+
+    Reached cold from somewhere else — a Replit site, an Instagram bio, a DM — by
+    somebody who has never heard of Fuime. Four questions, in this order: what am
+    I buying, from whom, how much, and who is taking my card. Anything else on
+    this screen costs a teenager a sale.
+
+    Deliberately says LESS than the storefront about who runs the business. The
+    storefront reasons about this at length — a minor's first name beside a price
+    is a targeting profile — and this page shows the business only. %>
+
+<% content_for :head do %>
+  <meta name="robots" content="noindex">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="<%= @offer.name %> — <%= @event.name %>">
+  <meta property="og:description" content="<%= @offer.price_sentence %>">
+  <meta name="twitter:card" content="summary">
+<% end %>
+
+<% if @paid %>
+  <%# The return leg. Stripe sends the buyer back here with ?paid=1. %>
+  <div class="card text-center">
+    <h1 class="text-2xl mt-0 mb-2">Thanks — you're paid up</h1>
+    <p class="muted mb-0">
+      <%= @event.name %> has your payment for <strong><%= @offer.name %></strong>.
+      Stripe has emailed you a receipt.
+    </p>
+  </div>
+<% else %>
+  <div class="card">
+    <%# Who from. Logo and name only. %>
+    <div class="flex items-center gap-3 mb-4">
+      <% if @event.logo.attached? %>
+        <%= image_tag @event.logo, class: "w-12 h-12 rounded-full object-cover", alt: @event.name %>
+      <% else %>
+        <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+          <span class="text-white text-xl font-bold"><%= @event.name.first.upcase %></span>
+        </div>
+      <% end %>
+      <div>
+        <div class="muted text-sm">Pay</div>
+        <strong><%= @event.name %></strong>
+      </div>
+    </div>
+
+    <%# What, and how much. The price is the headline because it is the one thing
+        a buyer must not have to hunt for. %>
+    <h1 class="text-2xl mt-0 mb-1"><%= @offer.name %></h1>
+    <p class="text-3xl font-bold mt-0 mb-3"><%= @offer.price_sentence %></p>
+
+    <% if @offer.description.present? %>
+      <p class="muted mb-4"><%= @offer.description %></p>
+    <% end %>
+
+    <% if @accepts_payments %>
+      <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
+                    class: "flex flex-col gap-3" do |form| %>
+        <%# The offer decides the amount. There is deliberately no amount field on
+            this page — the price comes off the record, and the checkout endpoint
+            ignores any posted `amount` when an offer_id is present. %>
+        <%= form.hidden_field :offer_token, value: @offer.public_token! %>
+
+        <div class="field">
+          <%= form.label :description, "Anything they should know? (optional)", class: "text-left block" %>
+          <%= form.text_field :description, class: "w-full max-w-full",
+                              placeholder: "Address, date, or a note" %>
+        </div>
+
+        <%= form.submit "Pay #{number_to_currency(@offer.price)}", class: "btn btn--lg btn--primary" %>
+      <% end %>
+
+      <p class="text-sm muted mt-3 mb-0 text-center">
+        Secure checkout by Stripe. You'll be taken to Stripe to pay.
+      </p>
+    <% else %>
+      <%# A dead Pay button on a link a teenager has already sent to a real
+          customer is worse than an honest message. Unlike the storefront — which
+          stays useful as a description of the business — this page has exactly
+          one purpose, so when it cannot serve it, it says so.
+
+          Says nothing about WHY. The reason is in Event#selling_blockers, which
+          names operators and states their ages and must never reach a public
+          page. %>
+      <div class="card bg-muted mt-4">
+        <p class="mb-0">
+          <%= @event.name %> isn't able to take payments right now. Get in touch
+          with them directly — they'll know when it's sorted.
+        </p>
+      </div>
+    <% end %>
+  </div>
+
+  <p class="text-sm muted mt-4 text-center">
+    <%= link_to "See everything #{@event.name} sells", fuime_storefront_path(slug: @event.slug) %>
+  </p>
+<% end %>
