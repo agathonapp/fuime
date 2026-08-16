@@ -865,7 +865,19 @@ Affiliate Program is 18+. So the question is the one Stripe has not answered eit
 Until that has an answer in writing, this is not a plan. It is a candidate, and it is the same
 class of unknown as §7 Q1/Q2/Q4: an infrastructure answer does not resolve a licensing question.
 
-### 9.5 Recommendation
+### 9.5 Recommendation — ⛔ SUPERSEDED 2026-08-16: decided, staying on Stripe Connect
+
+> **The decision and its reasoning are in `WHOP_EVALUATION.md` §11.** Short version: the fee
+> analysis decides it, not §9.4's Q9 and not the fiat question — with Whop's tax add-on the
+> effective processor rate is 4.7% + $0.30, which makes Standard what Pro is today and Pro
+> structurally unprofitable, and $2.50/payout against Stripe's free is worse than the
+> processing spread. All four of Whop's apparent wins are off the launch path or cost ~$75/yr
+> to solve otherwise. §11.4 names the two changes that would reopen it.
+>
+> Also corrects §9.1 below: "Fuime would not need its own bank partner" is true *because there
+> is no bank deposit* — Whop balances are USDT held self-custodially. §9 did not have that.
+
+The original recommendation, kept as the record of what was thought before the second pass:
 
 **Do not swap yet, and do not stop building.** Ask Whop Q9 in the same conversation already
 owed to Stripe — the two answers are directly comparable and one call decides the substrate.

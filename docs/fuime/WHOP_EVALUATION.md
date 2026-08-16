@@ -477,3 +477,95 @@ Whop primary: [Docs index](https://docs.whop.com/llms.txt) ·
 Third party: [Rain — how Whop launched a global card program](https://www.rain.xyz/resources/how-whop-launched-a-global-card-program-in-weeks-instead-of-years-using-stablecoins) ·
 [Finextra — Whop issues stablecoin debit card](https://www.finextra.com/pressarticle/109969/whop-issues-stablecoin-debit-card) ·
 [Sacra — Whop revenue and funding](https://sacra.com/c/whop/)
+
+---
+
+## §11 — DECISION (2026-08-16): stay on Stripe Connect
+
+**Decided.** The dossier's §10 says the fiat question decides the substrate. On the numbers in
+§8, it does not — **the economics decide it, and they decide it against Whop regardless of what
+currency the balance is in.** Recording the reasoning because the four things Whop appears to
+win are real, and somebody will raise them again.
+
+### 11.1 The fee analysis is substrate-deciding on its own
+
+§8's own table, restated as the thing it actually implies. With the tax add-on enabled — which
+is *most of why* you would pick Whop, since it is what makes Whop the MoR and makes phase 8
+evaporate — the effective processor rate is **4.7% + $0.30**:
+
+| Plan | Rate | Margin over Whop | Break-even sale |
+|---|---|---|---|
+| Free | 7% | 2.3% | $13.04 |
+| Standard | 5% | 0.3% | $100.00 |
+| Pro | 3% | **−1.7%** | **never** |
+
+`Event::Plan`'s ladder does not survive that. **Standard becomes what Pro is today** — §8.6
+already records Pro as a live exposure that gets worse the more successful a low-ticket operator
+is — and Pro becomes structurally unprofitable at every sale size. The 50¢ floor rescues small
+sales and nothing in the middle.
+
+**And the payout fee is worse than the processing fee.** $2.50 flat per next-day ACH payout,
+against **free** on Stripe Connect. On a teen's $40 payout that is 6.25% — more than Fuime's
+entire Standard-tier take on the sale that produced it. Phase 6's batching mitigates it (one
+fee per operator per run, not per sale), which is the dossier's good catch, but at launch scale
+— 25 operators, $25K GMV by November, ~$77/operator/week — a weekly batch still burns 3.25% of
+gross on the payout alone, i.e. **two-thirds of Standard-tier revenue**.
+
+None of that depends on §3's fiat question. It is true in USD and true in USDT.
+
+### 11.2 Each of the four apparent wins is off the launch path or cheap
+
+| Apparent win | Why it does not decide |
+|---|---|
+| **No bank partner needed** | Only `FEATURE_SPONSOR_BANKING` ever needed one, it is off, and it is not on the launch path. The launch path is Connect, which needs no bank partner either. §9.1 called this "the strongest argument"; §3 of this dossier shows *why* it is available — there is no bank deposit — which makes it an argument for a different product, not a cheaper version of this one. |
+| **1099-NEC filing** (§8.4 item 2) | A vendor problem, not a substrate problem. Track1099/Tax1099-class filing runs ~$3/form; at 25 operators that is **~$75/year**. HCB already does the hard half — `Tax::Form` (DocuSeal W-9) and `LegalEntity#tin_hash` collect the data. Swapping payment substrates to avoid $75/year of filing is not a trade. |
+| **Sales tax / nexus** (phase 8) | **Already neutralised by a decision made in §8.3 D3.** Phase 1 is services-only precisely to remove sales-tax nexus and product liability. Whop's biggest structural advantage is against an exposure Fuime deliberately does not have. It becomes real only if physical goods open — see 11.4. |
+| **Whop's sandbox unblocks provider testing** | The Stripe blocker (`EMBEDDED_CONNECT.md` §7, open since 2026-08-14) is that **the CLI is logged into the wrong account**. That is a `stripe login` away. It has been quoted three times now as though it were structural; it is not, and it must stop being an argument for anything. |
+
+### 11.3 And three costs that land squarely on the launch path
+
+1. **A minor's revenue would sit in USDT.** §3 is the finding of this dossier and it is
+   disqualifying on its own terms for a 13–17 product. Not because stablecoins are
+   illegitimate, but because of what it does to Fuime's own position: L5's forbidden words stop
+   being *unlicensed* and become **affirmatively false** — "deposit", "savings", "your money is
+   safe" are not merely unavailable, they would be untrue. It also opens a legal workstream
+   `LEGAL_RESEARCH.md` has nothing on (a yield-bearing instrument held for a minor, plus state
+   VASC/BitLicense regimes), which is a new research programme rather than a section.
+2. **Fuime probably loses its card allowlist** (§6.2). The webhook set is
+   `card_transaction.created/updated/completed/declined/reversed` — notifications, not
+   authorisation hooks. Fuime's business-purchases-only category allowlist is *the* control that
+   makes teen cards defensible; converting it from a Fuime control into a request to Whop is
+   worse than having no cards.
+3. **It discards the only integration ever exercised against a live provider.** The
+   direct-charge shape and `application_fee_amount` were verified against real Stripe on
+   2026-08-14. That is the single piece of this system with evidence behind it.
+
+### 11.4 What would reopen this
+
+Not "Whop got better" — two specific changes in **Fuime's** situation, and both must hold:
+
+1. **Physical goods or digital products open up**, making sales-tax nexus a real exposure rather
+   than one designed out. That is when Whop-as-MoR starts paying for itself.
+2. **§3's fiat question resolves in favour of a USD-in / USD-out path** with no stablecoin leg
+   (dossier §10 step 1 — still a half-day of sandbox work, still worth doing when the time comes).
+
+Even then the fee ladder in 11.1 has to be re-derived, because a 4.7% all-in processor cost
+does not support a 5% retail rate under any arrangement.
+
+### 11.5 What to do now
+
+- **Stay on Stripe Connect.** Phases 3a–6 and 9 stand. Nothing gets rewritten.
+- **Run `stripe login` against the Fuime account** and finish the `stripe listen` pass. It is
+  the oldest open item in the repo and it is five minutes of work.
+- **Put 1099-NEC filing on the roadmap as a vendor integration**, not as a reason to move.
+  §8.4 item 2 stops being an argument for anything once it is priced.
+- **Keep this dossier.** It is the best provider research in the repo and 11.4 names exactly
+  when to reread it. Nothing in it was wasted; §4's Youth Safety finding in particular is worth
+  carrying — Whop publishing a guardian-consent-for-minor-earnings rule is independent evidence
+  that Fuime's guardianship model is the industry-standard shape and not an idiosyncratic one.
+
+### 11.6 A naming collision to fix
+
+The onboarding work committed on 2026-08-15 was called "phase 7a", which collides with §8.5's
+**phase 7 (disputes and clawback)**. §8.5's numbering is the plan of record and does not move.
+The onboarding work should be referred to as **the business-type step**, not phase 7.
