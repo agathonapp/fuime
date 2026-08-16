@@ -85,7 +85,7 @@
       <span></span>
     <% end %>
     <% if application.present? %>
-      <button class="btn bg-blue" formaction="<%= application_path(@application, return_to: project_info_application_path(@application)) %>" form="edit_application_<%= @application.id %>">Continue application</button>
+      <button class="btn bg-blue" formaction="<%= application_path(@application, return_to: business_type_application_path(@application)) %>" form="edit_application_<%= @application.id %>">Continue application</button>
     <% else %>
       <button class="btn bg-blue" formaction="<%= applications_path %>" form="create_application" id="start_application">Start application</button>
     <% end %>

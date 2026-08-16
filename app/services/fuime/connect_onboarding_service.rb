@@ -50,6 +50,89 @@ module Fuime
   class ConnectOnboardingService
     class UnknownProfile < StandardError; end
     class OnboardingPathNotImplemented < StandardError; end
+    class AccountNotProvisioned < StandardError; end
+
+    # ── Embedded component sets ─────────────────────────────────────────────
+    #
+    # Fuime's product promise is that a family never opens stripe.com. That is
+    # only true if every routine thing a Stripe Dashboard would be needed for has
+    # an embedded equivalent inside Fuime, so these two constants are effectively
+    # the list of Dashboard trips the product has eliminated.
+    #
+    # Split into two sets because the two surfaces have different jobs and
+    # different risks. Onboarding is a one-shot form; management is a long-lived
+    # page a guardian returns to, where enabling the wrong feature would hand
+    # them a control that silently defeats a Fuime rule.
+
+    ONBOARDING_COMPONENTS = {
+      account_onboarding: {
+        enabled: true,
+        features: {
+          # The guardian connects their own bank here, in the same sitting.
+          # Without it Stripe collects identity but not a payout destination, and
+          # the family finishes "setup" with money that can never reach them.
+          external_account_collection: true
+        }
+      },
+      # Required alongside onboarding for this configuration: the notification
+      # banner is how Stripe reaches the guardian when re-verification is needed.
+      # Without it a venture can go dead with no in-product explanation.
+      notification_banner: {
+        enabled: true,
+        features: { external_account_collection: true }
+      },
+      account_management: {
+        enabled: true,
+        features: { external_account_collection: true }
+      }
+    }.freeze
+
+    MANAGEMENT_COMPONENTS = {
+      # "Something needs your attention", surfaced by Stripe itself. The single
+      # most important component on the page: it is the only thing that knows a
+      # document expired or a review opened before the account goes dark.
+      notification_banner: {
+        enabled: true,
+        features: { external_account_collection: true }
+      },
+      # Business details, representative details, and the connected bank account.
+      # This is the component that replaces the Stripe Dashboard's settings pages.
+      account_management: {
+        enabled: true,
+        features: { external_account_collection: true }
+      },
+      # Balance, payout history, and the bank account money lands in.
+      #
+      # ⚠️ The two `false` flags below are load-bearing Fuime rules, not defaults:
+      #
+      #   standard_payouts / instant_payouts: false
+      #     Turning these on would put a "Pay out now" button in front of the
+      #     guardian. They own the account, so Stripe would allow it — but it
+      #     would route money out AROUND Fuime's PayoutRequest flow, which is the
+      #     one control that makes "the teen asks, the adult decides" an audited
+      #     record rather than a story. Read-only here means Fuime's approval gate
+      #     is the only door, and every payout has a request behind it.
+      #
+      #   edit_payout_schedule: false
+      #     ConnectOnboardingService creates every account on a MANUAL payout
+      #     schedule precisely so nothing leaves until an adult decides it should.
+      #     A guardian who flipped this to "automatic daily" would drain the
+      #     balance on a timer and make the approval gate decorative — while every
+      #     screen in Fuime continued to describe a gate that no longer existed.
+      payouts: {
+        enabled: true,
+        features: {
+          instant_payouts: false,
+          standard_payouts: false,
+          edit_payout_schedule: false,
+          external_account_collection: true
+        }
+      },
+      # Stripe's own 1099/tax documents for the account holder. A guardian who
+      # cannot reach these has to open a Dashboard in January, which is exactly
+      # the trip this whole file exists to remove.
+      documents: { enabled: true }
+    }.freeze
 
     # ── Account configuration profiles ──────────────────────────────────────
     #
@@ -162,7 +245,21 @@ module Fuime
       )
       record.update!(controller_profile: @profile.to_s) if record.controller_profile != @profile.to_s
 
-      account = Stripe::Account.create(account_params, request_options)
+      # Idempotency-keyed because this is now reachable from two directions at
+      # once: Fuime::ProvisionConnectAccountJob provisions eagerly when a
+      # guardianship activates, and the guardian may click "Set up payments" in
+      # the same breath. Both would read a blank `stripe_connected_account` and
+      # both would call Stripe. The unique index on event_id stops the second ROW,
+      # but nothing would stop the second ACCOUNT — leaving a real, orphaned Stripe
+      # account for a minor's business that Fuime has no record of and can never
+      # reconcile. Stripe dedupes on this key for 24 hours, which closes the window.
+      #
+      # Keyed on the profile as well as the venture because the two profiles are
+      # different accounts, not different settings on one.
+      account = Stripe::Account.create(
+        account_params,
+        request_options.merge(idempotency_key: "fuime-connect-account-#{@event.id}-#{@profile}")
+      )
       record.sync_from_stripe!(account)
 
       # Stripe is the authority on what it actually built. If the returned account
@@ -210,23 +307,27 @@ module Fuime
 
       record = find_or_create_account!
 
-      session = Stripe::AccountSession.create(
-        {
-          account: record.stripe_id,
-          components: {
-            account_onboarding: { enabled: true },
-            # Required alongside onboarding for this configuration: the
-            # notification banner is how Stripe reaches the guardian when
-            # re-verification is needed. Without it a venture can go dead with no
-            # in-product explanation.
-            notification_banner: { enabled: true },
-            account_management: { enabled: true }
-          }
-        },
-        request_options
-      )
+      create_account_session(record, ONBOARDING_COMPONENTS)
+    end
 
-      session.client_secret
+    # Mint a client secret for the guardian's ongoing MANAGEMENT surface — the
+    # embedded replacement for the Stripe Dashboard.
+    #
+    # Deliberately does NOT call #find_or_create_account!, unlike the onboarding
+    # secret above. Management is by definition an operation on an account that
+    # already exists; creating one here would mean a stray GET on a management
+    # URL could bring a real Stripe account into being for a venture nobody ever
+    # onboarded. Raising instead keeps account creation to the one explicit path.
+    def management_session_client_secret
+      record = @event.payment_account
+
+      if record.blank? || record.stripe_id.blank?
+        raise AccountNotProvisioned,
+              "Venture #{@event.id} has no Stripe account to manage yet; it must complete " \
+              "payment setup first."
+      end
+
+      create_account_session(record, MANAGEMENT_COMPONENTS)
     end
 
     # Re-fetch from Stripe and update the mirror.
@@ -252,6 +353,17 @@ module Fuime
     end
 
     private
+
+    # Account Sessions are ephemeral (Stripe returns an `expires_at`), so nothing
+    # is persisted — callers mint one per page load or per fetchClientSecret call.
+    def create_account_session(record, components)
+      session = Stripe::AccountSession.create(
+        { account: record.stripe_id, components: },
+        request_options
+      )
+
+      session.client_secret
+    end
 
     def profile_config
       PROFILES.fetch(@profile)

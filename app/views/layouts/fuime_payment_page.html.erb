@@ -1,0 +1,40 @@
+<%# FUIME: the layout for a hosted payment page.
+
+    Its own layout rather than `application` or `bare`, for one reason: this page
+    is reached from somewhere else. A buyer clicks a link on a teenager's Replit
+    site, an Instagram bio or a DM, and lands here cold — with no idea what Fuime
+    is and no reason to trust it yet.
+
+    So there is no app chrome, no nav, no sidebar and nothing to click away to
+    except the business's own storefront. What a stranger needs is: what am I
+    buying, from whom, how much, and who is taking my card. Everything else is
+    noise on the one screen where noise costs a teenager a sale.
+
+    `bare: true` on the head partial for the same reason the login layout uses
+    it — no command bar, no signed-in machinery, on a page nobody is signed in
+    to. %>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= render "layouts/head", bare: true %>
+  </head>
+  <body class="fuime-payment-page">
+    <main class="mx-auto px-4 py-10" style="max-width: 30rem;">
+      <%= yield %>
+    </main>
+
+    <%# The standing disclosure. It is not decoration and it is not optional:
+        L5 requires it wherever Fuime describes what it is, and this page is
+        seen by more strangers than any authenticated page will ever be. %>
+    <footer class="mx-auto px-4 pb-10 text-center" style="max-width: 30rem;">
+      <p class="text-sm muted mb-1">
+        Payments by <strong>Fuime</strong>, the financial platform for young
+        founders. Card details are handled by Stripe — Fuime never sees them.
+      </p>
+      <p class="text-sm muted mt-0 mb-0">
+        Fuime is a financial technology company, not a bank. Fuime does not take
+        deposits and does not offer FDIC-insured products.
+      </p>
+    </footer>
+  </body>
+</html>

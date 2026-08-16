@@ -1,0 +1,87 @@
+<% title "Manage payments — #{@event.name}" %>
+
+<%= render "events/nav", selected: :payments %>
+
+<h1 class="heading">Manage payments</h1>
+
+<%# Fuime: the embedded replacement for the Stripe Dashboard.
+
+    Every account Fuime creates is `stripe_dashboard.type = none` — the guardian
+    has no Stripe login and never sees stripe.com. That is deliberate (it keeps
+    the family inside one product, and it means there is no second place where
+    Fuime's rules do not apply), but it is only honest if everything a Dashboard
+    would be needed for lives here. This page is that promise, kept.
+
+    Guardian-only. Fuime::PaymentSetupsController gates it on `setup_payments?`,
+    not on membership: these components show the account holder's own identity
+    details and bank account, which is not information a teen on the venture is
+    entitled to. %>
+
+<p class="muted">
+  This is everything you'd normally use a Stripe account for — your details, your
+  bank account, your payouts and tax documents — without leaving Fuime.
+  <%= link_to "Payment status", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
+</p>
+
+<% unless @connected_account.livemode %>
+  <p class="muted text-sm">
+    This is a Stripe <strong>test</strong> account — no real money can move through it.
+  </p>
+<% end %>
+
+<%# One controller instance wraps the whole region so all four components share a
+    single Account Session. See stripe_connect_component_controller.js for why
+    that matters (one instance per component would mint one session per box). %>
+<div
+  data-controller="stripe-connect-component"
+  data-stripe-connect-component-publishable-key-value="<%= @publishable_key %>"
+  data-stripe-connect-component-session-url-value="<%= fuime_payment_setup_session_path(event_slug: @event.slug) %>">
+
+  <%# Stripe's own "we need something from you" banner. First, because it is the
+      only thing on this page that can tell a guardian their venture is about to
+      stop working. The controller keeps it hidden until Stripe reports at least
+      one notification, so an all-clear account shows no empty box. %>
+  <div data-stripe-connect-component-target="mount" data-component="notification-banner" class="mb2" hidden></div>
+
+  <h2 class="mt2">Your details</h2>
+  <p class="muted text-sm">
+    Your name, address and business details as Stripe holds them. Fuime never sees
+    or stores any of it.
+  </p>
+  <div data-stripe-connect-component-target="mount" data-component="account-management" class="mb3"></div>
+
+  <h2 class="mt2">Payouts and bank account</h2>
+  <%# Read-only on purpose, and this note is the user-facing half of a rule
+      enforced in MANAGEMENT_COMPONENTS: `standard_payouts` and
+      `edit_payout_schedule` are off, so this component can show the balance,
+      the history and the connected bank account, but cannot start a payout or
+      switch the account to an automatic schedule. Both would route money around
+      the approval flow that makes "the teen asks, the adult decides" real. %>
+  <p class="muted text-sm">
+    Money is paid out only when you approve a request, from
+    <%= link_to "the payouts page", fuime_payouts_path(event_slug: @event.slug), class: "underline" %>.
+    You can change the bank account it goes to here.
+  </p>
+  <div data-stripe-connect-component-target="mount" data-component="payouts" class="mb3"></div>
+
+  <h2 class="mt2">Tax documents</h2>
+  <p class="muted text-sm">
+    Any tax forms Stripe issues for this account, such as a 1099-K.
+  </p>
+  <div data-stripe-connect-component-target="mount" data-component="documents" class="mb3"></div>
+
+  <%# Left in place if the components never mount — a page of empty headings gives
+      a parent no way to tell "still loading" from "broken". %>
+  <p data-stripe-connect-component-target="fallback" class="muted text-sm">
+    Loading your payment tools…
+    If nothing appears, check that your browser isn't blocking scripts from Stripe,
+    then reload this page.
+  </p>
+</div>
+
+<p class="muted text-sm mt-4">
+  Fuime is a financial technology company, not a bank. Fuime does not hold
+  deposits and does not offer FDIC-insured products. Payments are processed by
+  Stripe into an account owned by
+  <%= @event.institutionally_sponsored? ? "the sponsoring school" : "a parent or legal guardian" %>.
+</p>

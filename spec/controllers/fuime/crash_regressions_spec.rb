@@ -109,8 +109,11 @@ RSpec.describe "crash-test regressions" do
   # the only member of it missing from the disabled list, so Fuime could still
   # originate one.
   describe "disabled outbound money movement" do
+    # Asks what is blocked rather than which list it is filed under: the outbound
+    # rails moved behind Fuime::Features.sponsor_banking? so a sponsor bank can
+    # restore them by configuration. Still blocked today, which is the point.
     it "blocks wise_transfers alongside the other outbound rails" do
-      expect(Fuime::DisabledModules::DISABLED_CONTROLLER_PREFIXES)
+      expect(Fuime::DisabledModules.blocked_prefixes)
         .to include("wise_transfers")
     end
   end

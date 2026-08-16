@@ -62,6 +62,16 @@ class EventsController < ApplicationController
 
     render_tour @organizer_position, :welcome
     @requesting_call = params[:request_call] == "true" && policy(@event).request_call?
+
+    # Fuime: what this business sells, for the home dashboard.
+    #
+    # `live` rather than `published`, because on this page a draft is the useful
+    # thing to see — it is the operator's own dashboard and an offer they have not
+    # finished is work outstanding, not something to hide from them. The
+    # storefront reads `published` and only `published`.
+    @offers = @event.fuime_offers.live.in_operator_order.limit(5)
+    @offer_count = @event.fuime_offers.live.count
+    @published_offer_count = @event.fuime_offers.published.count
   end
 
   def transaction_heatmap

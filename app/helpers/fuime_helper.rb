@@ -21,4 +21,24 @@ module FuimeHelper
     # and the banner would be noise in one and unassertable in the other.
     !Rails.env.local?
   end
+
+  # What Fuime owes an operator, for any operator-facing view.
+  #
+  # The single door to Fuime::PayablesLedger from a template. It exists so that
+  # every page showing "what you're owed" shows the SAME figure: before this, the
+  # venture dashboard read `Event#balance_available_v2_cents` and the payouts page
+  # read the payables total, and the two genuinely disagreed — see the
+  # `revenue_waived` branch in FeeEngine::Create for the 4%-charged-twice bug that
+  # made them differ, and docs/fuime/MOR_MIGRATION_PLAN.md §3.4 for why the framing
+  # matters legally rather than cosmetically.
+  #
+  # Memoised per event per request: the presenter runs several aggregate queries
+  # and the dashboard renders it more than once (the figure, and the hidden sizing
+  # element the balance-graph controller measures against).
+  # rubocop:disable Rails/HelperInstanceVariable -- a per-request memo, not state
+  def payables_for(event)
+    @payables_by_event ||= {}
+    @payables_by_event[event.id] ||= Fuime::PayablesLedger.new(event:)
+  end
+  # rubocop:enable Rails/HelperInstanceVariable
 end

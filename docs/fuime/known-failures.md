@@ -479,3 +479,137 @@ That last one is a stale assertion rather than a defect: the code comment at
 `event.rb:1345` states the new default on purpose. Fixing it means editing an upstream
 spec, so it wants its own commit and an `UPSTREAM_DIVERGENCE` line — deliberately not
 folded into the rescue branch, whose job was to recover lost work unchanged.
+
+## Full-suite baseline — measured 2026-08-13 on `fuime/mor-pivot-phase1`
+
+**The first full-suite baseline in this file.** Everything above is a subset run, which is
+why the counts here are so much larger and are not comparable to them. Recorded because the
+merchant-of-record pivot touches `Event#can_front_balance?`, and a change to a balance
+method can only be judged against a number somebody has actually measured.
+
+`docker compose run --rm -e RAILS_ENV=test -e DATABASE_URL=... web bundle exec rspec`
+(no path argument), ~14 minutes on an M-series Mac.
+
+**2896 examples, 8 failures, 17 pending.** All 8 are already accounted for above:
+
+| Spec | Verdict |
+|---|---|
+| `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — Apple Silicon `wkhtmltopdf` |
+| `guardianships_controller_index_spec.rb:91` | Pre-existing (`e6691c7ac`) |
+| `event/plan_spec.rb:32` | Pre-existing — the `School` plan lineup contradiction |
+| `event_spec.rb:296` | Pre-existing — stale assertion after `8f372bd0a` |
+| `stripe_connected_account_spec.rb:134` | Pre-existing — `mirrors livemode` |
+
+`requirement_collections_controller_spec.rb:156` (recorded above as run-order pollution)
+did **not** fail in this run. It remains order-dependent rather than fixed.
+
+### Two specs that were red before this baseline and are green in it
+
+Neither was a regression from the pivot; both are recorded here so the delta is
+attributable rather than mysterious.
+
+- **`spec/services/fuime/pooled_simulator_guard_spec.rb` :45 :50** — asserted the pooled
+  handler posts ONE `CanonicalPendingTransaction` per payment. It posts two (the payment and
+  Fuime's cut, `VentureLedger#payment_key` and `#fee_key`). Written in the 2026-08-11
+  embedded-Connect work whose `UPSTREAM_DIVERGENCE` entry records "Verification: NOT RUN",
+  so it had never passed. Corrected to `by(2)`.
+
+### Specs newly tagged `:sponsor_banking`
+
+`Event#can_front_balance?` now returns false unless `FEATURE_SPONSOR_BANKING` is on, and the
+column defaults to false. Three files fund their events with **fronted** pending
+transactions — credit the platform advances against unsettled sales — so they were asserting
+against a $0 balance and failing with `inadequate_balance` or a transfer validation error.
+They test upstream behaviour that is still correct *when custody is on*, so they are tagged
+rather than rewritten (see `spec/support/sponsor_banking.rb`):
+
+- `spec/models/ach_transfer_spec.rb` (7 examples)
+- `spec/models/concerns/has_payment_recipient_spec.rb` (1)
+- `spec/services/stripe_authorization_service/webhook/handle_issuing_authorization_request_spec.rb` (25)
+
+Each also needed `can_front_balance: true` passed explicitly to its event factory, because
+the tag governs whether Fuime fronts *at all* and the column governs whether it fronts for
+that venture. A spec that spends fronted money now has to ask for both.
+
+## Full-suite baselines — measured 2026-08-14 on `fuime/mor-pivot-phase1` (MoR phase 3)
+
+Two runs, deliberately, at two different seeds. RSpec randomises order per run, and adding
+~75 examples reshuffles everything — so a one-run comparison against the 2026-08-13 baseline
+cannot distinguish a regression from an order-dependent spec that happened to land differently.
+
+| Run | Seed | Result |
+|---|---|---|
+| A | 8951 | 2964 examples, 9 failures, 17 pending |
+| B | 4242 | 2969 examples, 10 failures, 17 pending |
+| **C (final)** | 30780 | **2969 examples, 8 failures, 17 pending** — the 8 pre-existing ones and nothing else |
+
+Run B has five more examples than A because
+`spec/controllers/fuime/selling_blockers_partial_spec.rb` was written after A had already
+loaded its files. Run C is the state of the branch: B's two real failures fixed, and the
+`flipper_groups` flake did not recur.
+
+### `flipper_groups_spec.rb:25` — order-dependent, NOT a regression
+
+Run A's ninth failure, absent from the 2026-08-13 baseline:
+
+| Spec | Verdict | How attributed |
+|---|---|---|
+| `spec/initializers/flipper_groups_spec.rb:25` "gates a feature on the `:hcb_engineers` group" | **Pre-existing / order-dependent** | `expect(gate(:hcb_engineers, outsider)).to be(false)` got `true` — the feature read as enabled for everyone. **Passes in isolation** (6 examples, 0 failures) and **passed in run B** at a different seed. The spec exercises Flipper group wiring against `hackclub.com` email addresses; nothing in the phase 3 diff touches Flipper, its group config, or user emails. Its own header comment names the hazard: "a distinct feature per group keeps `enable_group` state from leaking between examples." |
+
+Same class as `requirement_collections_controller_spec.rb:156` recorded above — a spec whose
+result depends on what ran before it. Neither is fixed; both are attributable.
+
+### The two real failures, found by run B and fixed
+
+Both were in a spec written after run A, so this is the first run that ever executed them —
+worth recording because the cause is a trap that will recur.
+
+`selling_blockers_partial_spec.rb:51` and `:62` asserted
+`include("This business can't take payments yet")`. The callout's title reaches the page
+through `<%= local_assigns[:title] %>`, so the apostrophe renders as `&#39;` and the raw
+string never appears. The markup was correct; the assertion was not. **This is the same trap
+`storefronts_controller_spec.rb` documents for Faker names containing apostrophes.**
+
+Fixed by asserting against `CGI.unescapeHTML(response.body)` rather than by rewording the
+copy — the copy is what an operator reads and should not be shaped by the test. The same
+helper was then added to `storefront_blocker_privacy_spec.rb`, where it matters more: that
+file's guarantee is `not_to include(blocker)`, and an escaped page would have **passed while
+leaking a child's age in plain sight**.
+
+### Standing baseline after phase 3
+
+**8 pre-existing failures**, unchanged from 2026-08-13 (4 × `receipt_bin_mailbox` Apple-Silicon
+`wkhtmltopdf`, `guardianships_controller_index_spec.rb:91`, `event/plan_spec.rb:32`,
+`event_spec.rb:296`, `stripe_connected_account_spec.rb:134`), **plus up to one order-dependent
+flake** from the pair above depending on seed. Anything else is new and yours.
+
+### Baseline after MoR phase 6 (2026-08-15)
+
+**3091 examples, 8 failures, 17 pending.** +122 examples over the phase-3 run, and the
+failures are the same eight, unchanged:
+
+| Spec | Cause |
+|---|---|
+| `receipt_bin_mailbox_spec.rb` ×4 | Apple-Silicon `wkhtmltopdf` |
+| `guardianships_controller_index_spec.rb:91` | pre-existing |
+| `event/plan_spec.rb:32` | pre-existing |
+| `event_spec.rb:296` | pre-existing |
+| `stripe_connected_account_spec.rb:134` | pre-existing |
+
+Nothing new. The order-dependent pair recorded above (`flipper_groups_spec.rb:25`,
+`requirement_collections_controller_spec.rb:156`) did not recur at this seed.
+
+One run, not three. The phase-3 note argues for several seeds when a change adds ~75 examples,
+and that reasoning still holds — this run is a single seed and should be read as such. It is
+recorded because the failure *set* matches the standing baseline exactly, which is the check
+that matters; a second seed would strengthen it, not change what it says.
+
+### Baseline after phase 7a (2026-08-15)
+
+**3115 examples, 8 failures, 17 pending** — the same eight as the phase-6 baseline above,
+unchanged. +24 examples.
+
+One failure during the run was **new and correct**: `applications_spec.rb:37` "redirects to the
+project info step" encoded the pre-phase-7 flow, where `#create` sent an applicant straight to
+`project_info`. The business-type fork now comes first. The spec was updated to assert the new
+destination rather than the behaviour being reverted — the redirect change is the feature.

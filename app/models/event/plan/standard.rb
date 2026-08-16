@@ -27,6 +27,29 @@ class Event
         Event::Plan::FALLBACK_REVENUE_FEE
       end
 
+      # Fuime: $15/mo alongside the 5% rate (founder's pricing, 2026-08-14).
+      #
+      # ── Why the instance_of? guard ─────────────────────────────────────────
+      #
+      # Eleven plans subclass Standard, and only two of them (Free, Pro) state
+      # their own answer. Charging from this method unguarded would have started
+      # billing $15/mo to `fee_waived`, `terminated`, `spend_only`, `cards_only`,
+      # `sc_google_grant` and the four legacy HCB rate plans — every one of which
+      # exists precisely because somebody is NOT paying the standard price.
+      #
+      # So the charge attaches to the Standard tier itself and not to the
+      # inheritance tree beneath it. `#description` in this same class already
+      # draws that line the same way, which is the convention being followed
+      # rather than a new one being invented.
+      #
+      # Env-tunable for the same reason Pro's is: a price is a business decision
+      # and should not need a Ruby deploy to change.
+      def monthly_fee_cents
+        return 0 unless instance_of?(Event::Plan::Standard)
+
+        ENV.fetch("FUIME_STANDARD_MONTHLY_CENTS", "1500").to_i
+      end
+
       def label
         "Fuime standard (#{revenue_fee_label})"
       end

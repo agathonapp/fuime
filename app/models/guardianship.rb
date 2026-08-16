@@ -148,6 +148,14 @@ class Guardianship < ApplicationRecord
 
     if result
       GuardianshipMailer.accepted(guardianship: self).deliver_later
+
+      # Activation is the moment a venture of this minor's finally has an adult who
+      # can legally own its payment account, so it is the earliest honest moment to
+      # create one at Stripe. Enqueued rather than inline: a Stripe outage must
+      # never be able to stop a parent from signing for their kid, and the job
+      # refuses far more often than it acts — see
+      # Fuime::ProvisionConnectAccountJob for every case it declines.
+      Fuime::ProvisionConnectAccountJob.perform_later(id)
     end
 
     result

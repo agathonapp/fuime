@@ -1,0 +1,35 @@
+<%# FUIME: why this venture cannot sell, shown to the people who can fix it.
+
+    The mirror image of the public storefront, which deliberately says nothing.
+    These strings name operators and state their ages, so this partial belongs
+    only on authenticated pages the operator or their guardian can see — never on
+    a public URL. See Event#selling_blockers.
+
+    Renders nothing when there is nothing wrong, so it is safe to drop at the top
+    of any venture page.
+
+    Usage: <%%= render "fuime/selling_blockers", event: @event %> %>
+
+<% blockers = event.selling_blockers %>
+
+<% if blockers.any? %>
+  <%= render "application/callout", type: "warning", title: "This business can't take payments yet" do %>
+    <ul class="mb-2 pl-4">
+      <% blockers.each do |blocker| %>
+        <li><%= blocker %></li>
+      <% end %>
+    </ul>
+
+    <p class="mb-0 text-sm muted">
+      <%# The two states differ in who has to act, and saying so saves a support
+          email: "not approved yet" is Fuime's move, everything else is theirs. %>
+      <% if event.operator_vetting_unvetted? %>
+        Fuime reviews every new business before it can sell. We'll email you when
+        yours is approved.
+      <% else %>
+        Once these are sorted, your payment page starts working again.
+        <%= help_message %>
+      <% end %>
+    </p>
+  <% end %>
+<% end %>

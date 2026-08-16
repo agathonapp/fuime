@@ -1,0 +1,123 @@
+<% title "What kind of business?" %>
+
+<% content_for :progress, 10 %>
+
+<%# FUIME: the three-card fork and the service picker, ahead of describing the
+    business.
+
+    Modelled on Whop's new-business onboarding, with its third card deliberately
+    changed. Whop offers "clone a proven business"; that requires holding real
+    operators up as proven, and ranking operators is what MOR_MIGRATION_PLAN
+    §8.3 D2 forbids — the same reasoning that made /directory a listing rather
+    than a dispatch. A Fuime-authored template names nobody and ranks nothing.
+
+    Nothing on this page suggests a price. See Fuime::ServiceCatalog for why that
+    is a constraint rather than an omission, and
+    spec/lib/fuime/service_catalog_spec.rb for the check that keeps it true. %>
+
+<% content_for :info_pane do %>
+  <div class="flex flex-col">
+    <h2 class="text-4xl">What kind of business?</h2>
+    <p class="mt-0 text-lg muted">
+      Two quick questions, then we'll get to the details.
+    </p>
+
+    <%# The launch scope, said plainly rather than discovered at vetting. L8's
+        failure mode is the site describing a product that does not exist, and a
+        picker showing categories the app then blocks is that in miniature. %>
+    <div class="card card--outline mt-6">
+      <h3 class="text-base mt-0 mb-1">Services first</h3>
+      <p class="text-sm muted mb-0">
+        Fuime is open to service businesses right now — work you do for someone.
+        Selling physical products and digital downloads is coming later.
+      </p>
+    </div>
+  </div>
+<% end %>
+
+<%= form_with model: @application,
+              url: application_path(@application, return_to: project_info_application_path(@application)),
+              method: :patch,
+              id: "edit_application_#{@application.id}",
+              class: "mt-7" do |form| %>
+
+  <%# ── Question one: where are you starting from ───────────────────────── %>
+  <div class="card card--outline mb-6">
+    <%= form.label :starting_point do %>
+      Where are you starting from? <span class="text-primary">*</span>
+    <% end %>
+    <p class="text-sm muted mt-1 mb-3">There's no wrong answer — it just changes what we show you next.</p>
+
+    <div class="field field--options max-w-none mb-0 relative">
+      <% @starting_points.each do |point| %>
+        <%= form.radio_button :starting_point, point.key,
+                              { checked: @application.starting_point == point.key,
+                                required: true,
+                                class: "absolute !block opacity-0"
+} %>
+        <%= form.label :starting_point, value: point.key do %>
+          <strong><%= point.name %></strong>
+          <small><%= point.blurb %></small>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Question two: what do you do ────────────────────────────────────── %>
+  <div class="card card--outline mb-6">
+    <%= form.label :service_type do %>
+      What do you do? <span class="text-primary">*</span>
+    <% end %>
+    <p class="text-sm muted mt-1 mb-3">
+      Pick the closest one. You'll describe it in your own words on the next page.
+    </p>
+
+    <%= form.select :service_type,
+                    options_for_select(@services.map { |s| [s.name, s.key] }, @application.service_type),
+                    { include_blank: "Choose a service…" },
+                    { class: "w-full max-w-full", required: true } %>
+
+    <%# The checklist for whichever service is selected. Rendered for all of them
+        and revealed by the picker rather than fetched, because the whole catalog
+        is a few hundred bytes and a round-trip per selection would make the page
+        feel slower than the question deserves. %>
+    <% @services.each do |service| %>
+      <div class="mt-4" data-service-checklist="<%= service.key %>"
+           style="<%= "display: none;" unless @application.service_type == service.key %>">
+        <p class="text-sm mb-1"><strong><%= service.name %></strong> — <%= service.blurb %></p>
+        <p class="text-sm muted mb-1">Worth deciding before your first customer:</p>
+        <ul class="text-sm muted mb-0 pl-4">
+          <% service.checklist.each do |item| %>
+            <li><%= item %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<%# No build step and no Stimulus controller for six lines of show/hide. The
+    page works without it — every checklist would simply render — so this is
+    progressive enhancement rather than a dependency. %>
+<script>
+  (function () {
+    var picker = document.getElementById("event_application_service_type");
+    if (!picker) return;
+
+    function sync() {
+      document.querySelectorAll("[data-service-checklist]").forEach(function (el) {
+        el.style.display = el.dataset.serviceChecklist === picker.value ? "" : "none";
+      });
+    }
+
+    picker.addEventListener("change", sync);
+    sync();
+  })();
+</script>
+
+<% content_for :footer do %>
+  <div class="flex items-center justify-start gap-4">
+    <%= responsive_link_to applications_path, text: "Back to dashboard", icon: "view-back", class: "btn bg-muted" %>
+  </div>
+  <button class="btn bg-blue" form="edit_application_<%= @application.id %>">Continue</button>
+<% end %>

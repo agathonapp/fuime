@@ -3566,3 +3566,813 @@ how to serve all three.
 **Verification:** site 21/21 server + 17/17 waitlist. Confirmed live against a running
 server: `/` 200; `/home`, `/pricing`, `/parents`, `/index.html`, `/pricing.html` all 307
 to `/`. No console errors, checked at 390×844 and 1440×900.
+
+---
+
+## 2026-08-11 — Fully embedded Connect: the guardian never opens stripe.com
+
+**Why.** Accounts are created with `stripe_dashboard.type = none`, so a guardian has no
+Stripe login *by design*. That was only half-built: onboarding was embedded, but nothing
+else was. A parent who needed to change a bank account, clear a document Stripe had
+flagged, or find a 1099 had nowhere to go — the "no dashboard" decision was a dead end
+rather than a feature. This closes it.
+
+**Files.**
+
+- `app/services/fuime/connect_onboarding_service.rb` — split the component list into
+  `ONBOARDING_COMPONENTS` and `MANAGEMENT_COMPONENTS`; added
+  `#management_session_client_secret` (deliberately does NOT create an account — see
+  below); added `external_account_collection` to onboarding; added an idempotency key to
+  `Stripe::Account.create`.
+- `app/controllers/fuime/payment_setups_controller.rb` — `#manage` and `#manage_session`,
+  both gated on `setup_payments?`; `#show` now mounts Stripe's notification banner for the
+  guardian.
+- `config/routes.rb` — `GET /:slug/payments/manage`, `GET /:slug/payments/session`.
+- `app/views/fuime/payment_setups/manage.html.erb` — new. `show.html.erb` — banner, and
+  "Manage payment account" replaces "Update payment details" once onboarding is submitted.
+- `app/javascript/controllers/stripe_connect_component_controller.js` — new, general-case
+  mounter. `common/stripeConnectAppearance.js` — new, the single shared theme; the
+  onboarding controller now uses it instead of its own copy.
+- `app/jobs/fuime/provision_connect_account_job.rb` — new. `app/models/guardianship.rb` —
+  `#accept!` enqueues it.
+- `app/services/fuime/payment_webhook_handler.rb` — refuses `livemode: true` events.
+- `README.md` — the "how the money works" section; removed Stripe Issuing from the list of
+  infrastructure Fuime inherits from HCB.
+- `docs/fuime/EMBEDDED_CONNECT.md` — new, and the place to start.
+- Three new specs: management components, the provisioning job, the simulator guard.
+
+**Five decisions worth arguing with later.**
+
+1. **The `payouts` component is read-only.** `standard_payouts`, `instant_payouts` and
+   `edit_payout_schedule` are all `false`. The guardian owns the account, so Stripe would
+   happily give them a "Pay out now" button — but it would route money around
+   `PayoutRequest`, and an editable schedule would let them switch to automatic daily,
+   draining the balance on a timer while every screen in Fuime kept describing an approval
+   gate that no longer existed. The gate is only real if Fuime's flow is the only door.
+2. **`#management_session_client_secret` refuses to create an account,** unlike its
+   onboarding sibling. Otherwise a stray GET on a management URL brings a real Stripe
+   account into being for a venture nobody onboarded.
+3. **Management is `setup_payments?`, not `member?`.** These components show the account
+   holder's identity details and bank account. A teen holding a manager position on the
+   venture must not see them.
+4. **Provisioning declines more often than it acts.** School ventures, ventures inheriting
+   a school's account, and any venture without exactly one overseeing guardian are all
+   skipped. `controller` is create-only, so a wrongly-owned account cannot be repaired.
+   The idempotency key exists because this job can now race a guardian clicking "Set up
+   payments" — the unique index stops the second row, but nothing stopped the second
+   *Stripe account*.
+5. **The pooled guard keys on the event's `livemode`, not `StripeService.mode`.** The
+   event is the authoritative statement about money that actually moved; consulting our
+   own config would agree with the misconfiguration. Absent `livemode` still records, since
+   absence means "not a real Stripe event".
+
+**Legal architecture unchanged.** Direct charges on the guardian-owned account,
+`application_fee_amount` to Fuime, payouts to the family's bank, Fuime never in the flow
+of funds. Nothing here touches the ledger pipeline, `requirement_collection` stays
+`stripe` on the default profile (so no identity documents reach Fuime), and Issuing stays
+behind its default-off flag.
+
+**Verification: NOT RUN.** Ruby 3.4.9 is not installed on this machine and the Docker
+daemon was down, so `bundle exec rspec` could not be run — a Prime Directive 1 gap that the
+next session must close before trusting any of this. Ruby and ERB syntax check clean on
+every touched file. The `stripe listen` walkthrough is §7 of EMBEDDED_CONNECT.md and
+remains the real gate: every parameter shape in `MANAGEMENT_COMPONENTS` is
+documentation-derived and has never been sent to Stripe.
+
+## 2026-08-13 — Custody becomes a flag, so a sponsor bank is a config change
+
+Phase 1 of the umbrella merchant-of-record pivot (`docs/fuime/MOR_MIGRATION_PLAN.md`).
+Nothing about the money architecture changes here — no Stripe call is added, moved or
+removed. This is the gate the rest of the pivot sits on.
+
+**The problem this fixes.** CLAUDE.md Rule 2 says "disable, don't delete", and Fuime had
+been honouring the letter of it: ACH, checks, wires, disbursements and Emburse were all
+blocked at the request level with their models untouched. But the block was a frozen array
+inside a controller concern, with the reason "Fuime holds no funds and cannot originate"
+written beside it. That reason is a *condition*, and it will stop being true on the day a
+sponsor bank partner exists. Re-enabling would have meant editing the concern, re-reviewing
+a diff and hoping nothing else assumed the old list — which is a rewrite wearing a config
+change's clothes.
+
+**What changed.**
+
+- `app/lib/fuime/features.rb` — new. `FEATURE_SPONSOR_BANKING`, default off, read from
+  ENV. Deliberately NOT Flipper: Flipper flags are togglable from a web UI, and this one
+  decides whether Fuime holds customer funds. `.card_issuing_permitted?` derives the card
+  answer so the request layer and the authorisation layer cannot drift apart.
+- `app/controllers/concerns/fuime/disabled_modules.rb` — one list becomes three.
+  `DISABLED_CONTROLLER_PREFIXES` (never — nonprofit fundraising, G Suite),
+  `SPONSOR_BANKING_CONTROLLER_PREFIXES` (until a sponsor bank exists — the outbound rails,
+  Emburse), `CARD_ISSUING_CONTROLLER_PREFIXES` (until cards have a funding rail). New
+  `.blocked_prefixes` / `.all_gated_prefixes` module methods, because "what is turned off?"
+  stopped being a constant.
+- `app/models/event.rb` — `#can_front_balance?` returns false unless sponsor banking is on.
+  Fronting is HCB advancing spendable credit against unsettled money out of its own
+  reserves; Fuime has no reserves, and under merchant-of-record the figure being fronted
+  against is a payable Fuime owes rather than a balance it holds.
+- `app/models/stripe_card.rb` — `#balance_available` returns 0 unless
+  `card_issuing_permitted?`. Zero rather than raising: this feeds authorisation, and Stripe
+  reads an exception as its own decision, so raising fails open at the terminal.
+- `db/migrate/20260813000000_default_can_front_balance_to_false.rb` — default only, no data
+  migration, column preserved. Upstream defaults it TRUE, so without this every existing
+  venture would silently switch fronting on the moment the flag flipped.
+- `config/initializers/fuime_safety_check.rb` — new check 5. `FEATURE_SPONSOR_BANKING=true`
+  without `FUIME_SPONSOR_BANK_PARTNER` naming an institution refuses to boot. Structural
+  flags are now logged every boot, set or not.
+- `.env.development.example` — both variables documented.
+- `spec/support/sponsor_banking.rb` — new `:sponsor_banking` tag, running an example in the
+  world where Fuime holds funds. For upstream specs whose *subject* is a sponsor-banking
+  module, so they stay recognisable against upstream (Rule 6/8) instead of being rewritten.
+- `spec/lib/fuime/features_spec.rb`, `spec/models/fuime/custody_gate_spec.rb` — new.
+
+**Three decisions worth arguing with later.**
+
+1. **Card issuing is blocked in LIVE mode, not in test.** The 2026-08-02 decision that
+   un-blocked `stripe_cards` ended "Blocked again the moment this fork points at anything
+   but test keys," and nothing in the codebase did that. This does. Test-mode Issuing spends
+   nothing real and the demo is untouched; a careless `STRIPE_MODE=live` is now refused at
+   the controller *and* at `#balance_available`, because blocking the controllers alone
+   would leave an already-issued card authorising swipes.
+2. **The flag is not enough to turn custody on.** `FUIME_SPONSOR_BANK_PARTNER` must name
+   the institution. An env var can be set from a deploy dashboard by anyone; the second one
+   cannot be answered truthfully unless the arrangement is real, which surfaces a missing
+   partnership instead of hiding it behind a boolean.
+3. **Existing `can_front_balance` rows were left alone.** They are inert while the flag is
+   off, and a mass UPDATE would appear in the paper-trail audit log as a mutation with no
+   user behind it — indistinguishable later from a bug.
+
+**Deliberately NOT done here.** No model, table, migration or Stripe call was deleted. The
+Connect stack is untouched — it is flagged for review in the migration plan, not changed,
+because the merchant-of-record structure it would be replaced by is still blocked on
+counsel (`MOR_MIGRATION_PLAN.md` §7 Q1–Q2). `Event` is not renamed to `Operator` (Rule 6).
+The ledger pipeline is untouched (Rule 3).
+
+**Verification: rspec run in Docker, full suite.** See the handoff note at the top of
+SETUP_NOTES.md for counts. Four specs asserted `DISABLED_CONTROLLER_PREFIXES` membership
+directly and were updated to assert `blocked_prefixes` — i.e. what a user actually gets —
+which is a better test and the reason the change was visible to them at all. One upstream
+ACH spec funded its event with fronted money and now says so explicitly.
+
+## 2026-08-13 — A payables ledger, because "your balance" is the wrong product
+
+Phase 2 of the merchant-of-record pivot. New file only; nothing existing changed.
+
+**Why this is not a rename.** Under the umbrella merchant-of-record model Fuime LLC is the
+seller: a customer pays Fuime for a sale Fuime made, that money is Fuime's own revenue, and
+the operator is a vendor Fuime pays on a fixed cadence. What the operator holds is a
+*receivable* — an amount owed, payable on a stated date. What they do not hold is a balance
+on deposit, because a stored balance its holder can withdraw at will is a deposit, and taking
+deposits without a charter is the one thing Fuime cannot do (L1/L5). The difference between
+those two products lives almost entirely in how the number is framed and what the user can do
+with it, which makes the framing part of the compliance posture rather than decoration on it.
+
+- `app/services/fuime/payables_ledger.rb` — new. Reframes `Event#balance_*` as gross sales →
+  Fuime's fee → Stripe's fee → refunds → card spend → paid out → committed → **net payable**,
+  with `#owed_sentence` ("Fuime owes you $84.20, paid on Friday 14 August") and a standing
+  `#disclosure`. `PAYOUT_WEEKDAY = :friday`.
+- `spec/services/fuime/payables_ledger_spec.rb` — new, 21 examples.
+
+**Three decisions worth arguing with later.**
+
+1. **`Event#balance_v2_cents` is untouched and reused verbatim.** The arithmetic is right —
+   the sum of an operator's ledger lines *is* what they are owed. 111 view files reference
+   "balance" and `balance` / `available_balance` / `balance_available` are all aliases of it,
+   so renaming is a mechanical change across hundreds of call sites that breaks every future
+   merge from hackclub/hcb (Rule 6), and the ledger engine is fed rather than modified
+   (Rule 3). This is a thin reframing layer instead. The rule that gives it value —
+   operator-facing views call this and nothing else — is **not yet enforced**; see below.
+2. **`#net_payable_cents` reads `balance_v2_cents`, not `settled_balance_cents`.** Because
+   `Fuime::PayoutService` caps a payout against exactly that figure. Had this used the
+   settled-only sum it would have overstated what could be sent, and Fuime would tell an
+   operator it owes $80 and then refuse to send $80 with no sentence available to explain
+   why. One number, read once, in both places — asserted by two examples.
+3. **`#other_adjustments_cents` is a residual, not a category.** Lines are classified by
+   their `Fuime::VentureLedger` key (embedded in the memo as `[key]` once settled), which is
+   a heuristic over a real ledger and so can be incomplete — school awards, corrections,
+   anything predating the key scheme. Defining the last bucket as "whatever is left" makes
+   the breakdown sum to the total *by construction*, so this class cannot show a teenager
+   figures that do not add up. A growing residual is a signal that a money path needs naming,
+   not a rounding bin.
+
+**A subtlety worth keeping.** Every ledger key contains underscores, and `_` is a
+single-character wildcard in SQL `LIKE`. Unescaped, `fuime_fee_` would also match
+`fuimeXfeeY`. `sanitize_sql_like` is therefore load-bearing, not hygiene — the prefixes are
+mutually unambiguous only once escaped.
+
+**Not done yet, and named so it is not mistaken for done:** no view calls this class. The
+operator-facing pages (`app/views/fuime/payouts/index.html.erb` and the venture dashboard)
+still say "balance", and the spec asserting that operator views call only the presenter is
+not written. That is the remainder of Phase 2 and the next task.
+
+**Verification: full suite in Docker — 2865 examples, 8 failures, all pre-existing and
+attributed in `known-failures.md` (first full-suite baseline recorded there).** That run
+includes this class's 21 examples; they were also run alone (21/21) while it was being
+written.
+
+## 2026-08-13 (later) — The payables framing reaches the screen, and Fuime stops charging 4% twice
+
+Phase 2 finished: operator-facing pages now read `Fuime::PayablesLedger` instead of
+`Event#balance_*`, and a spec keeps them there. Reconciling the two figures uncovered a live
+money bug, which is the more important half of this entry.
+
+### The fee was being charged twice
+
+`FeeEngine::Create` is upstream's mechanism for taking HCB's cut: a positive canonical
+transaction accrues `event.revenue_fee` into `fee_balance`, and
+`Event#balance_available_v2_cents` subtracts it. That is correct **when the accrual is the
+only place the fee is taken.**
+
+It is not, for Fuime. Under Stripe Connect the platform fee is deducted by **Stripe** at the
+moment of the charge (`application_fee_amount`) and posted as its own explicit ledger line by
+`Fuime::ConnectPaymentRecorder`. A $100 sale therefore arrives already broken out as +$100
+gross, −$4 Fuime, −$3.20 Stripe. `FeeEngine::HourlyJob` — scheduled `0 */1 * * *`, scanning
+`CanonicalEventMapping.missing_fee` across every event — then saw the +$100 and accrued
+**another $4**.
+
+Two consequences, both live until now:
+
+- a teenager was charged **8% for a 4% product**;
+- the venture dashboard (which subtracts `fee_balance`) and the payouts page (which does not)
+  disagreed by exactly that amount, with no sentence on either page that could explain it.
+
+**Fix:** `FeeEngine::Create#determine_reason` now ends with
+`reason = :revenue_waived if ::Fuime::VentureLedger.memo_carries_key?(...)`. Three things
+about that shape are deliberate:
+
+1. **`revenue_waived`, not an early return.** The row is still written, with a zero amount, so
+   `CanonicalEventMapping.missing_fee` stops returning the mapping. An early return would
+   leave it unprocessed and the hourly job would re-examine every Fuime transaction ever,
+   forever.
+2. **Last in the method,** so none of the assignments above can override it.
+3. **Keyed on the ledger key, not on the event.** Every settled line Fuime posts ends
+   `… [fuime_something]` (`VentureLedger.settled_memo`), so the guard is narrow by
+   construction: a transaction Fuime did not post has had no fee taken from it yet and still
+   accrues normally. New `VentureLedger.memo_carries_key?` / `MEMO_KEY_PATTERN`, anchored on
+   `[fuime_` plus a letter so ordinary prose cannot match.
+
+`spec/services/fee_engine/fuime_double_charge_spec.rb` — 5 examples, including the narrowness
+control and a memo that merely mentions the word.
+
+**Not addressed here:** any `Fee` rows already accrued in a real database. Nothing has run
+against production money, so there is likely nothing to correct, but a `fee_balance` audit
+belongs on the pre-launch list rather than in this diff.
+
+### The views
+
+- `app/helpers/fuime_helper.rb` — `payables_for(event)`, memoised per event per request. The
+  single door to the presenter from a template, so every page shows the same figure.
+- `app/views/fuime/payouts/index.html.erb` — "Available to pay out" becomes **"Your
+  earnings"**: the amount owed, `#owed_sentence` naming the payout date, pending sales stated
+  *separately and never added in*, a collapsible fee breakdown, and the standing disclosure.
+  The Stripe-available figure survives but only renders when it disagrees with what is owed or
+  cannot be read — the two answer different questions ("what am I owed?" vs "can it move
+  today?") and a second unexplained number just invites the reader to wonder which is theirs.
+- `events/home/_balance.html.erb`, `events/stats.html.erb`, `events/transactions.html.erb`,
+  `events/ledger.html.erb`, `events/async_balance.html.erb` — **"Account balance" → "Owed to
+  you"**, reading the presenter. That phrase is named explicitly by L5's forbidden vocabulary.
+- `spec/views/fuime/payables_copy_spec.rb` — new, 26 examples.
+
+**Why the copy spec reads source text rather than rendering.** Rendering these needs a
+signed-in user with the right position, a connected account, a funded ledger and a Stripe
+stub, and several are turbo-frame endpoints that only exist mid-request. A test that expensive
+gets deleted the first time it is inconvenient. What needs guarding is narrow and static —
+which method a template calls and which nouns it prints — and both are visible in the file.
+It strips ERB and Ruby comments first, so the prose explaining *why* "balance" is wrong does
+not trip the rule forbidding it.
+
+**Deliberately still saying "balance": admin pages, `bank_accounts/*`, internal tooling.**
+There the money genuinely is Fuime's own and the word is accurate. Narrowing the rule to where
+it is true is what keeps it enforceable.
+
+**Verification: full suite in Docker — 2896 examples, 8 failures, all pre-existing.** Four
+Fuime specs asserted the copy this entry replaced (`payouts_controller_spec`,
+`payouts_school_copy_spec`) and were updated. Two of those were doing real work: they caught
+that the first draft of `#owed_sentence` said "Fuime owes you" on a school venture, naming the
+wrong debtor, and that the page now needs a funded LEDGER rather than a stubbed Stripe balance
+— which is the separation working.
+
+---
+
+## 2026-08-14 — Merchant-of-record phase 3: the launch scope becomes a gate
+
+Plan of record: `docs/fuime/MOR_MIGRATION_PLAN.md` **§8**, added in this change. §8 records
+what the revised 2026-08-14 brief settles (services only, operators 16–17, 5% flat, weekly
+payouts), the three things it did not price (§8.3 D1–D3), and a resequenced §8.5 that
+supersedes §5.
+
+### `FEATURE_MERCHANT_OF_RECORD` — so the build can run ahead of the lawyers
+
+- `app/lib/fuime/features.rb` — second structural flag, `.merchant_of_record?` /
+  `.merchant_of_record!`, default off. Near-opposite of `SPONSOR_BANKING` and easy to conflate:
+  custody is "Fuime holds YOUR money"; MoR is "the money is Fuime's own and we owe you a
+  payable". Neither implies the other, and a spec asserts the readers are independent in both
+  directions.
+- `config/initializers/fuime_safety_check.rb` — check 6. The flag alone will not enable it:
+  `FUIME_MOR_COUNSEL_MEMO` must cite the memo or production refuses to boot. Same device as
+  `FUIME_SPONSOR_BANK_PARTNER`, for the same reason — **nothing observable at runtime
+  distinguishes "Fuime is the merchant of record" from "Fuime is a conduit that hasn't papered
+  it"**. That difference lives in contracts, so the code refuses to guess.
+
+  This is what makes phases 3+ safe to write while §7 Q1/Q2/Q4 are open: the gate moves from
+  "do not write it" to "cannot switch it on", which is mechanical rather than remembered.
+- `spec/support/merchant_of_record.rb` — `:merchant_of_record` tag, sibling of
+  `:sponsor_banking`. `spec/lib/fuime/features_spec.rb` +23 examples.
+
+### `Fuime::OperatorEligibility` — may this venture sell today?
+
+New `app/services/fuime/operator_eligibility.rb`. Returns *reasons*, not a boolean, modelled on
+`Guardianship#activation_blockers`. **Two scopes, and the split is the design:**
+
+- **Vetting binds in every model.** A human approving each operator is the compensating control
+  for letting minors sell at all — worth the same under Connect, where the guardian is the
+  merchant, as under MoR, where Fuime is.
+- **The launch scope binds only under MoR** — services-only (`ELIGIBLE_CATEGORIES`), the
+  `MINIMUM_OPERATOR_AGE` floor of 16, and a guardian per operator. Those bound liability Fuime
+  inherits *as seller of record*; under Connect that risk sits with the family, and enforcing
+  them anyway would block ventures — notably school ones, where
+  `Event#institutionally_sponsored?` already stands in for a guardian.
+
+Fails closed throughout: a blank category, an unknown birthday and an unreviewed venture all
+block. 16 comes from FLSA (non-hazardous occupations are unrestricted at 16), and is a floor on
+*operators* — stricter than the platform's own 13 floor per L6, which is unchanged.
+
+### Vetting state, and the queue that works it
+
+- `db/migrate/20260814000000_add_operator_vetting_to_events.rb` +
+  `…000100_validate_operator_vetted_by_foreign_key.rb` — `operator_vetting_status` (enum,
+  defaults **unvetted**), `operator_vetted_at/_by_id/_notes`. FK added unvalidated then
+  validated separately, matching `20260806120100`. Column default is deliberately *not*
+  backfilled to approved: that would exempt exactly the population the control exists for.
+- `app/models/event.rb` — enum (prefix `operator_vetting`), `#selling_blockers`,
+  `#record_vetting_decision!` (keeps prior notes; the reason for approving in September is the
+  context for suspending in November), and **`#accepts_payments?` now folds in
+  `#selling_blockers`** — one definition, so both existing call sites inherit it.
+- `app/controllers/admin_controller.rb` — `#operator_vetting` queue + `#operator_vetting_decide`.
+  Distinct from `#applications`, which asks whether a venture should *exist*; this asks whether
+  it may *sell*, which is revocable and re-asked.
+- `app/views/admin/operator_vetting.html.erb`, `app/models/admin/nav.rb` (count as `:tasks`, not
+  `:records` — an unvetted venture cannot take a payment, so it is work owed), `config/routes.rb`.
+- `spec/factories/event_factory.rb` — ventures default to **approved**, with `:unvetted` /
+  `:rejected` / `:suspended` traits. Same convention and same reasoning as users defaulting to
+  adults: otherwise every storefront, checkout and payout spec silently becomes a test of this
+  gate.
+
+### The privacy boundary
+
+`Event#selling_blockers` returns strings naming children and their ages ("Maya Operator is 15").
+They are for the operator, their guardian and staff.
+
+- `app/views/fuime/_selling_blockers.html.erb` — new, authenticated pages only; rendered on the
+  payouts page. Renders nothing when clear.
+- `app/views/fuime/storefronts/show.html.erb` — the public refusal copy previously asserted one
+  specific reason ("a parent or guardian still needs to finish setting up"). Once vetting could
+  also be the cause that became a confident statement of the wrong thing, and "this venture is
+  suspended" is both damaging and nobody's business on a public URL. The reason is now named
+  only when it is the harmless one.
+- `spec/controllers/fuime/storefront_blocker_privacy_spec.rb` — new, 9 examples, including one
+  that asserts **no blocker string appears verbatim** so the guarantee survives rewording.
+
+### Also
+
+- `app/services/fuime/payment_link_service.rb` — the same gate at the money path, not just the
+  page path, so a future caller reaching for the service directly inherits it.
+
+**Two bugs the specs caught, both invisible to a status-code test:** the admin queue's
+`group(:operator_vetting_status).count` raised `PG::GroupingError` because `Event`'s
+`default_scope` orders by id (fixed with `unscope(:order)`); and the three decision buttons were
+written as `form.submit`, whose label *is* its value — they posted `status=Approve` rather than
+`approved`. Now `form.button`, with a spec that posts `"Approve"` and asserts nothing changes.
+
+**Verification:** `spec/services/fuime/`, `spec/lib/fuime/`, `spec/controllers/fuime/`,
+`spec/views/fuime/`, `spec/requests`, `spec/models/guardianship_spec.rb` — all green. New:
+`operator_eligibility_spec` (24), `event_operator_vetting_spec` (16),
+`fuime_operator_vetting_spec` (15), `storefront_blocker_privacy_spec` (9).
+
+---
+
+## 2026-08-14 (later) — Connect stays; the Stripe pass runs; the directory ships
+
+### The decision, and its reversal the same day
+
+A "Connect only, park MoR" decision was recorded here and **reversed within the hour**. The
+final position is in `MOR_MIGRATION_PLAN.md` §8.5: **merchant of record is the destination;
+Connect is the shipping path until it can go live.** The reversal is kept in the log rather
+than edited away, because the reasoning is the useful part.
+
+What settled it: **Connect cannot deliver the product's headline promise.** The pitch is "no
+parent's SSN, bank account, or tax identity is required", but under Connect the guardian owns
+the Stripe account, so Stripe demands their SSN last-4 and bank account and the income lands
+under their tax identity (L3). Only MoR moves the tax identity to the teen's own SSN.
+
+The corollary that shapes the fee work: **"5% flat, all-in" is achievable only under MoR.**
+Under Connect, Stripe deducts its fee from the *family's* account, so Fuime cannot absorb a
+cost it never touches. Under MoR the charge is on Fuime's own account and the operator's
+payable is a clean `gross − 5%`.
+
+### The Stripe pass — money-in is no longer documentation-derived
+
+Run in test mode against the Fuime platform account, driving the real
+`Fuime::PaymentLinkService` rather than a hand-written request. Full results, and the
+still-untested half, are in `EMBEDDED_CONNECT.md` §7. Summary:
+
+- Connect is enabled; one connected account is fully ready.
+- `create_checkout_session`'s direct-charge shape is accepted by Stripe — `stripe_account:`,
+  `application_fee_amount` nested in `payment_intent_data`, statement descriptor, metadata on
+  both objects.
+- `application_fee_amount` is **stored**, not merely accepted: a Checkout Session mints no
+  PaymentIntent until payment, so a direct `PaymentIntent.create` on the same account was used
+  to confirm it echoes 400 on a $100 charge.
+- The vetting gate works on real data.
+
+**Two findings that would have cost a launch day.** The Stripe CLI is authenticated to
+`acct_1Tmdhs…` ("Hack Club Shop testing") while the app key is `acct_1Tzna…` — `stripe listen`
+would forward events from an account this app has never seen and every handler would no-op
+while appearing to run. And `StripeService.construct_webhook_event` **skips signature
+verification entirely** when the signing secret is blank, which it currently is.
+
+Docs corrected in four places that still asserted "nothing has been exercised against Stripe":
+`CLAUDE.md`, `docs/fuime/README.md`, `SETUP_NOTES.md`, `EMBEDDED_CONNECT.md` §7. Also migrated
+the development database, which was behind.
+
+### Phase 9 — the public directory
+
+`GET /directory`. New `app/controllers/fuime/directory_controller.rb` +
+`app/views/fuime/directory/index.html.erb` + route.
+
+Lists ventures that are public, indexable, not demo, not hidden, approved, and can actually be
+paid. Eligibility reuses `Event#accepts_payments?`, so an unreviewed or suspended venture drops
+out **without a second rule that could drift from the first**.
+
+**Built as a listing, never a dispatch**, and the rules are tested rather than commented:
+neutral ordering only (newest / A–Z), no ratings or reviews, no performance metrics, nothing
+featured or recommended, no Fuime-quoted prices, and a standing line telling buyers that Fuime
+does not assign work or set rates. The reasoning is §8.3 D2 — the brief's own mitigation for
+worker classification is "we never route work to them or set rates", and a directory that
+ranks or scores does exactly that.
+
+Nothing on the page names an operator or states an age; the cards carry the business only.
+`spec/controllers/fuime/directory_controller_spec.rb` — 15 examples, including the whole
+listing-not-dispatch boundary and the privacy check.
+
+**A deliberate consequence, stated so it is not read as a bug:** a directory page can show
+fewer than `PER_PAGE` entries. `#accepts_payments?` cannot be expressed in SQL, because a
+school venture inherits its payment account from an ancestor (`Event#payment_account`) and a
+join would miss exactly the students a school programme exists to serve. Filtering one bounded
+page in Ruby is the trade.
+
+---
+
+## 2026-08-15 — MoR phase 6: the weekly payout run
+
+`fuime/mor-phase6-payout-batches`. Delivers §8.5's phase 6 — weekly cadence, approval step,
+volume caps, reserve — and answers §8.4 item 1 (hold period) and item 3 (caps and reserve) with
+defensible, env-tunable defaults rather than leaving them open.
+
+**Nothing here moves money, and that is structural rather than unfinished.** The originator is
+still an open decision blocked on diligence (§4.3: Mercury's ToS on programmatic ACH to
+hundreds of third parties, Slash as the API-native alternative, Plaid behind either). So a run
+ends at `mark_paid!` — a human asserting the transfers went out — which is exactly the shape
+the school path already uses in `PayoutService#settle!`. When the rail lands it becomes a
+`LegalEntity::PayoutMethod::BankAccount` behind that same transition and none of this changes.
+
+### New
+
+| File | What |
+|---|---|
+| `db/migrate/20260815000000_create_fuime_payout_batches.rb` | `fuime_payout_batches`; `payout_requests` gains `payout_batch_id`, `reserve_held_cents`, `eligible_cents`; `requested_by_id` becomes nullable; a third destination |
+| `db/migrate/20260815000100_validate_fuime_payout_batch_constraints.rb` | the FK/check validation half, per the house split |
+| `app/lib/fuime/payout_policy.rb` | the four dials, env-tunable, with the exposure arithmetic written down |
+| `app/services/fuime/payable_assessment.rb` | what one operator is owed in one run, and why not when not |
+| `app/models/fuime/payout_batch.rb` | the run and its lifecycle |
+| `app/services/fuime/payout_batch_service.rb` | generation, approval, mark-paid, cancel |
+| `app/jobs/fuime/generate_payout_batch_job.rb` + `config/schedule.yml` | Wednesday 14:00 UTC for a Friday payout |
+| `app/controllers/admin_controller.rb` + `app/views/admin/payout_batch{,es}.html.erb` + routes | the review surface |
+
+### Changed
+
+- `app/models/payout_request.rb` — a batch line is a third shape of this record. `requested_by`
+  optional (nullable **only** for scheduled lines; `requester_present_unless_scheduled` keeps
+  the two person-initiated paths honest), new `FUIME_VENDOR_PAYMENT` destination gated on the
+  MoR flag, `person_initiated`/`scheduled` scopes, and a `cancel_from_run` AASM event.
+- `app/services/fuime/payables_ledger.rb` — `settled_sum_for` promoted to a class method with
+  date bounds so `PayableAssessment` reuses one definition of the `sanitize_sql_like`
+  classification rather than copying it; `next_payout_on` gains a class-level twin;
+  `BATCH_PAYOUT_PREFIX` added to `paid_out_cents`.
+- `app/services/fuime/venture_ledger.rb` — `batch_payout_key`.
+- `app/views/static_pages/admin_tools.html.erb` — nav cards for payout runs **and for operator
+  vetting**, which had no entry despite the 2026-08-14 handoff saying it did.
+
+### The four dials, and why these numbers
+
+`FUIME_PAYOUT_HOLD_DAYS` 7 · `FUIME_PAYOUT_RESERVE_BASIS_POINTS` 1000 ·
+`FUIME_PAYOUT_RESERVE_WINDOW_DAYS` 90 · `FUIME_PAYOUT_MAXIMUM_CENTS` 250000 ·
+`FUIME_PAYOUT_MINIMUM_CENTS` 1000.
+
+The dispute window is 120 days and a weekly payout leaves Fuime unsecured for the difference.
+A 120-day hold closes that and destroys the product, so the exposure is split: a short hold
+catches fast failures, a **rolling reserve** carries the tail. Rolling rather than per-payout
+withholding-with-release, because a release schedule means money owed to somebody, held by
+Fuime, waiting on a job to notice — a stored balance with extra steps, which is the thing
+`PayablesLedger` exists not to build. A target recomputed from trailing volume unwinds on its
+own as sales age out of the window.
+
+Worked: a steady $100/week operator reaches a **$130** standing reserve (10% × 13 weeks), i.e.
+~1.3 weeks of earnings held while they trade, then is paid the full $100/week. Pinned by
+`spec/lib/fuime/payout_policy_spec.rb` so the doc and the code cannot drift.
+
+**These are the founder's call, not engineering constants.** Implemented as a defensible answer
+to §8.4 item 1, not a settled one.
+
+### Two bugs the specs caught, both invisible to a status-code test
+
+- **`post!` would have left every payout debit pending forever.** `ConnectSettlementSweep`
+  matches only payment and refund key shapes, so a `fuime_batchpayout_` line would never be
+  promoted — the debit would live in `committed_cents` permanently, telling an operator their
+  *paid* money was still "committed". Fixed by `post_settled!`, which is correct anyway: Fuime
+  paid its own vendor and no third party will ever say more about it. Caught by asserting
+  `paid_out_cents` moves.
+- **Cancelling an approved run raised `AASM::InvalidTransition`.** `PayoutRequest#reject` only
+  leaves `pending`, deliberately — on the Connect paths approval IS the money moving. A batch
+  line is genuinely reversible between approval and payment, so `cancel_from_run` is a separate
+  event `guard:`ed on `scheduled?` rather than widening `reject` for everybody.
+
+### Ordering property
+
+`PayableAssessment` applies payable → aged → committed → reserve → cap → floor, and every term
+can only reduce the figure. `spec/services/fuime/payable_assessment_spec.rb` asserts the
+invariant directly across a spread of ledgers rather than trusting the six rules to compose.
+The `aged` term is a **ceiling**, not a substitution: summing aged lines alone would ignore a
+refund newer than the cutoff and pay out money the operator no longer has.
+
+---
+
+## 2026-08-15 — Phase 7a: the business-type step
+
+`fuime/phase7-onboarding`. Whop's new-business onboarding fork, adapted. New step
+`business_type` between the intro screen and `project_info`, plus `Fuime::ServiceCatalog`.
+
+**It also fixes a bug older than the UI.** Nothing ever set `Event#business_category` from an
+application — `activate_event!` did not carry it — so every venture the funnel produced started
+blank. Under merchant-of-record `Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES` is
+`%w[services]`, and a blank does not satisfy it. **Ventures were being created already unable
+to sell, and the vetting queue was where anyone found out.** Asking the question properly is
+what fixes it; `spec/models/event/application_business_category_spec.rb` asserts the value
+survives the trip to the Event.
+
+### New
+
+| File | What |
+|---|---|
+| `db/migrate/20260815120000_*` / `...120100_*` | `starting_point`, `service_type`, `business_category` on `event_applications` |
+| `app/lib/fuime/service_catalog.rb` | ten services, each with a checklist; the three starting points |
+| `app/views/event/applications/business_type.html.erb` | the fork and the picker |
+| `spec/lib/fuime/service_catalog_spec.rb` | 12 examples, mostly guarding the two constraints below |
+| `spec/controllers/event/applications_business_type_spec.rb` | 8 examples |
+| `spec/models/event/application_business_category_spec.rb` | 4 examples |
+
+### Three deliberate departures from Whop
+
+**1. The third card is a template, not a clone.** Whop offers "clone a proven business."
+Cloning requires holding real operators up as proven, and ranking operators is what §8.3 D2
+forbids — the same reasoning that made `/directory` a listing rather than a dispatch. Fuime's
+third card is a Fuime-authored template, which names nobody and ranks nothing. A spec asserts
+the starting-point copy contains no `clone|proven|top|best|successful|popular`.
+
+**2. No template carries a price.** The most useful line a starter template could hold is "most
+people charge about $25", and it is the one line Fuime may not write: D2's misclassification
+mitigation is that operators control their own pricing and Fuime never sets rates, and a
+*suggested* rate is a set rate with a softer verb. Every checklist is asserted against five
+price-shaped patterns — and asserted *positively* to contain "your own rate", because "no
+price" could otherwise be satisfied by saying nothing, leaving a 16-year-old unaware it is
+their call.
+
+**3. A template's opening line is a placeholder, never a value.** A description Fuime wrote is
+a description Fuime authored, and under MoR Fuime is already the seller of record for whatever
+it describes. The operator's own words are the only ones that reach a buyer.
+
+### Two exclusions from the catalog, asserted rather than commented
+
+**Babysitting/childcare and coaching children are absent** — the two most common teen service
+businesses in the country, so the absence is a decision. Under MoR Fuime is the legal seller:
+for lawn mowing the failure is a badly cut lawn, for childcare it is injury to a child. That is
+a different order of liability and an insurance conversation nobody has had. Music and academic
+tutoring stay; the failure mode there is a wasted hour. **A launch-scope judgement, not a
+permanent one** — it belongs in the §7 Q1 counsel conversation, and "allowed, with insurance"
+may well be the right answer.
+
+### Two bugs found on the way
+
+- **`Event::ApplicationsController#update` raised `DoubleRenderError`** on any non-autosave
+  update that arrived without a `return_to` — `redirect_back_or_to` does not end the action and
+  execution fell through to `head :no_content`. Latent only because every step view passes
+  `return_to`. Pre-existing; fixed with the missing `return`.
+- **A catalog edit would have bricked existing applications.** `validates :service_type,
+  inclusion:` ran on every save, so the day a key left the catalog every application that ever
+  chose it became unsaveable — a founder could not fix a typo in their business name because of
+  a menu decision made months later. Now `if: :service_type_changed?`: only a NEW choice must
+  be one Fuime currently offers.
+
+### On "all the business help"
+
+The per-service checklists ARE the help, delivered at the moment it is useful rather than in a
+guides section nobody opens. Own-business analytics is not built and is the remaining half of
+phase 7.
+
+---
+
+## 2026-08-16 — Offers, and hiding the fintech Fuime does not have
+
+`fuime/offers`. The object that makes a storefront a store, plus the nav cleanup
+that had to come with it.
+
+### Offers
+
+Until now a buyer landed on a storefront and typed **any amount they liked**. That is a tip
+jar: it works for a donation and not for a business, because the buyer has to already know what
+they are buying and what it costs — which means the operator told them somewhere else and the
+storefront is only collecting.
+
+`Fuime::Offer` is the missing object. Everything downstream already worked —
+`PaymentLinkService` takes an amount and a description, the webhook posts to the ledger,
+`PayablesLedger` explains it, phase 6's batches pay it out. This is the piece missing at the
+front.
+
+| File | What |
+|---|---|
+| `db/migrate/20260816100000_*` / `...100100_*` | `fuime_offers` |
+| `app/models/fuime/offer.rb` | draft → published → archived |
+| `app/controllers/fuime/offers_controller.rb` + view + routes | the operator's shop page |
+| `app/policies/event_policy.rb` | `offers?` / `manage_offers?` |
+| `app/controllers/fuime/checkouts_controller.rb` | buying an offer |
+| `app/views/fuime/storefronts/show.html.erb` | offers with Buy buttons |
+| `app/views/events/show.html.erb` + `events_controller.rb` | "What you sell" on the dashboard |
+
+**The price is the operator's, enforced at the schema level.** `price_cents` is NOT NULL with
+**no default**, there is no `suggested_price_cents`, and the form's price field has no
+placeholder number. §8.3 D2's mitigation for worker misclassification is that operators control
+their own pricing and Fuime never sets rates — a default is a Fuime-set rate for everyone who
+never changes it, and a suggestion is a set rate with a softer verb.
+`spec/controllers/fuime/offers_controller_spec.rb` greps the rendered page for a numeric
+placeholder and for "most people charge"-shaped copy, because this constraint will be under
+permanent pressure from anybody trying to be helpful.
+
+**The authorization split is the opposite of payouts, deliberately.** A guardian decides money
+leaving (L2 — they own the account and the funds). A guardian does **not** price their kid's
+work: a third party setting the rate is a third party whether that party is Fuime or a parent.
+So `manage_offers?` is the operator and `offers?` is everyone — visibility without control.
+
+**Un-riggable checkout.** With an `offer_id` the amount comes off the record and any posted
+`amount` is ignored entirely — otherwise a stranger buys a $35 lawn mow for $1 by editing a form
+field. Offers are scoped to the venture's *published* set, so another venture's id, a draft, an
+archived offer and a stale link all refuse rather than falling back to a free amount. Five
+examples in `spec/controllers/fuime/offer_checkout_spec.rb` cover exactly those.
+
+**A bug the specs caught: AASM is not whiny by default.** A transition whose save fails
+validation **reverts the in-memory state and returns false** rather than raising. The publish
+action's unconditional success message would have told a teenager their offer was live while it
+sat in draft — and the validation that fires there is the one refusing to publish for a venture
+that cannot take payments, i.e. exactly the case they most need told about.
+
+### Hiding what the app already refuses
+
+The venture nav and the home page offered **Transfer money, Deposit a check, Add funds,
+Transfers, Check deposits, Donations, Grants, Google Workspace and Account numbers** — most of
+which `Fuime::DisabledModules` refuses at the request level. Clicking one answered "That feature
+isn't available on Fuime", which reads as broken rather than as absent, and Milestone 5's own
+verification step says a click-through must find no dead nav links.
+
+Nav items now carry a `module_prefix:` and `EventsHelper#fuime_module_hidden?` filters them
+against **`DisabledModules.blocked_prefixes`** — the same source the request-level block reads,
+rather than a second hardcoded list. Two lists that must agree eventually do not; and because
+the answer depends on `sponsor_banking?` and `card_issuing_permitted?`, **flipping a flag brings
+the nav item back on its own**, which is what Rule 2's "disable, don't delete" is supposed to
+feel like. `spec/helpers/events_nav_fuime_spec.rb` asserts both directions and that no
+`module_prefix` names a prefix nothing gates.
+
+**Account numbers are the one exception** and could not use a prefix: they are served by
+`EventsController`, so a prefix rule would take every venture page down with them. Gated on
+`Fuime::Features.sponsor_banking?` directly, which is the honest condition — upstream this is
+real because HCB holds funds at a partner bank, and Fuime holds none.
+
+### The dashboard
+
+`events/show` now leads with **What you sell** — the offers, their prices, and whether anything
+is live. Drafts appear here and nowhere else: this is the operator's own dashboard, where an
+unfinished offer is work outstanding rather than something to hide. The empty state is the most
+useful thing the page can say on day one.
+
+---
+
+## 2026-08-16 — The public side: hosted payment links and storefront settings
+
+`fuime/public-side`. Two gaps on the buyer-facing half.
+
+### Payment links — `/pay/:token`
+
+A hosted page for **one offer**: what you're buying, from whom, how much, who takes the card.
+The link an operator *sends*, as against the storefront a customer *browses* — a 16-year-old
+shipping a site on Replit, posting an Instagram bio or sending a DM wants a URL for the one
+thing they sell, not a shop the buyer has to navigate. Same shape as a Stripe Payment Link.
+
+| File | What |
+|---|---|
+| `db/migrate/20260816140000_*` | `public_token` on `fuime_offers` |
+| `app/controllers/fuime/payment_pages_controller.rb` | public, unauthenticated |
+| `app/views/layouts/fuime_payment_page.html.erb` | no app chrome — the visitor arrived cold |
+| `app/views/fuime/payment_pages/{show,not_found}.html.erb` | |
+| `spec/requests/fuime_payment_page_spec.rb` | 12 examples |
+
+**A token, not the id, and the reason is specific to this product.** `/pay/42` is enumerable —
+anyone could walk the integers and read the name, description and price of every offer on the
+platform. That is free to an attacker and free to prevent anywhere; here it matters more,
+because an enumerable list of **minors' businesses with prices attached is a targeting list**,
+which is the same instinct behind `Event#selling_blockers` never reaching a public page.
+
+The token is now the *only* public identity: the storefront's Buy buttons and the payment page
+both post `offer_token`, and `Fuime::CheckoutsController#find_offer` looks up by it. The primary
+key no longer appears in public HTML at all, and a spec asserts it.
+
+**The page shows strictly less than the storefront**, not more. The storefront already reasons
+about a minor's name beside a price being a targeting profile; this page shows the business,
+the thing and the price, and nothing about the child running it.
+
+**404, never a redirect with a flash.** A redirect saying "that isn't for sale" tells whoever is
+probing that the token space is worth probing — and tells a customer that an offer their friend
+took down used to exist. Every wrong guess renders the same bytes, asserted directly.
+
+Refuses: drafts, archived offers, offers on a venture that has withdrawn its storefront, and
+tokens that never existed. A venture that can no longer sell gets an honest message instead of a
+dead button, and deliberately does not say why (the reason names operators and states ages).
+
+### Storefront settings
+
+`storefront_tagline` has been a column since the storefront shipped **with no UI to edit it** —
+which is how a field ends up permanently blank in production and nobody notices for months. Now
+editable, alongside the logo and the public toggle, from the same screen as the offers: a
+founder thinks "my shop", not "my offers" and separately "my storefront settings".
+
+`storefront_params` permits exactly three fields. `Event` is HCB's core model with a very wide
+attribute surface including things that decide whether a venture can spend money — a permissive
+filter here would be a mass-assignment hole on a page a 16-year-old can reach. **Widen it by
+naming a field, never by loosening the filter.**
+
+The toggle's copy says what it actually does: turning the storefront off stops every payment
+link working too, because a payment page is a public page. Said up front rather than discovered
+by a founder wondering why their Replit button 404s.
+
+---
+
+## 2026-08-16 (later) — Custom payment links, and a correction
+
+`fuime/custom-payment-links`. Supersedes the URL shape shipped hours earlier in `fuime/public-side`.
+
+### The correction
+
+`AddPublicTokenToFuimeOffers` gave every offer a random 12-character token and argued the random
+string was the *right* public identity: `/pay/42` is enumerable, and an enumerable catalogue of
+minors' businesses with prices attached is a targeting list.
+
+The enumeration half is still true. **The conclusion was too strong** — `/fuime_directory`
+already lists ventures publicly, by name. Business names were never secret. What a sequential
+integer leaks is the *complete catalogue and its growth rate*; a name-shaped URL leaks neither,
+because you cannot walk `sunset-lawn-care` to find the next business.
+
+So the token was solving a real problem with the wrong tool, and the operator paid for it:
+`fuime.com/pay/x7Kp2mQb9rTs` is not a link a 16-year-old puts in an Instagram bio, and "send it
+and get paid" is the entire product.
+
+### The shape now
+
+```
+/pay/sunset-lawn-care/mow        the link they choose, share and print
+/pay/sunset-lawn-care/x7Kp2…     the same page, by permalink
+```
+
+**Direct, never a browse step.** There is deliberately no `/pay/:event_slug` index — a payment
+link lands the buyer on the thing they are paying for, and a link that makes a customer choose
+loses the sale the operator already earned. Browsing is what the storefront is for.
+
+**Two segments**, so the offer identifier is namespaced by the venture: two businesses may both
+sell `mow` without one finding out the other got there first, and a slug or token from another
+business resolves to nothing rather than quietly charging for somebody else's work.
+
+**Both identifiers survive, and that is the point.** A slug is renameable; a link already sent is
+not. When an operator tidies "mow" to "lawn-mowing", every flyer, bio and Replit button carrying
+the old slug would break — the token is what stays valid forever, so the offer keeps one
+identifier its own owner's edit cannot take away. `Fuime::Offer.find_public` resolves either.
+Said in the UI too, because *"will this break the link I already sent?"* is the question that
+stops a teenager from ever changing it.
+
+### Details
+
+- Slugs derive from the name on create (`front-and-back-lawn-mow`), dedupe **within the venture**
+  (`mow-2`), and fall back to the token when a name parameterizes to nothing — so an offer named
+  in a non-Latin script still has a working link.
+- Typed input is tidied rather than refused: `"  Lawn Mow  "` → `lawn-mow`, `lawn__mow--now` →
+  `lawn-mow-now`. Reserved words (`pay`, `checkout`, `admin`, `fuime`, …) are refused.
+- Stripe now returns the buyer to **the payment page**, not the storefront. Bouncing somebody who
+  followed a direct link into a shop they never asked to see is the browse step the link exists
+  to avoid — and hands them a storefront when what they wanted was a receipt.
+
+`spec/models/fuime/offer_slug_spec.rb` (12 examples) and the payment-page request spec cover the
+rename-survives-the-link guarantee, the per-venture namespacing, and the fallbacks.

@@ -865,6 +865,121 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: the operator vetting queue.
+  #
+  # Manual approval on every operator is the compensating control for letting
+  # minors sell — and under merchant-of-record, for Fuime being the legal seller
+  # of whatever they sell. It deliberately does not scale: the first hundred
+  # decisions here are what teach us what a bad application looks like, and that
+  # pattern is the automated risk model later.
+  #
+  # Separate from #applications, which reviews whether a venture should EXIST.
+  # This reviews whether it may SELL, which is revocable and asked repeatedly.
+  def operator_vetting
+    @page = params[:page] || 1
+    @per = params[:per] || 20
+    @q = params[:q].presence
+    @status = params[:status].presence
+
+    @events = Event.not_hidden.includes(:users, :plan)
+    @events = @events.where(operator_vetting_status: @status) if Event.operator_vetting_statuses.key?(@status)
+    @events = @events.search_name(@q) if @q
+
+    # `unscope(:order)` because Event's default_scope orders by id, and Postgres
+    # rejects an ORDER BY column that is neither grouped nor aggregated.
+    @counts = Event.not_hidden.unscope(:order).group(:operator_vetting_status).count
+
+    # Unreviewed first — the queue is the point of the page. `unscope` because
+    # Event's default_scope orders by id, which would otherwise win.
+    @events = @events.unscope(:order).page(@page).per(@per).order(
+      Arel.sql("operator_vetting_status = 0 DESC"),
+      "created_at desc"
+    )
+  end
+
+  def operator_vetting_decide
+    @event = Event.friendly.find(params[:id])
+    status = params[:status].to_s
+
+    unless Event.operator_vetting_statuses.key?(status)
+      redirect_back fallback_location: operator_vetting_admin_index_path,
+                    alert: "#{status.presence || 'That'} is not a vetting decision."
+      return
+    end
+
+    @event.record_vetting_decision!(status:, by: current_user, notes: params[:notes])
+
+    redirect_back fallback_location: operator_vetting_admin_index_path,
+                  flash: { success: "#{@event.name} is now #{status}." }
+  end
+
+  # FUIME: the weekly payout runs.
+  #
+  # The second half of the brief's manual-approval control — #operator_vetting
+  # decides who may sell, this decides what Fuime actually pays them. One review
+  # per run rather than one per operator, deliberately: a reviewer comparing fifty
+  # lines against each other spots the anomalous one, and fifty separate approvals
+  # is a queue people learn to clear rather than read.
+  def payout_batches
+    @page = params[:page] || 1
+    @per = params[:per] || 20
+
+    @batches = Fuime::PayoutBatch.recent_first.page(@page).per(@per)
+    @counts = Fuime::PayoutBatch.group(:aasm_state).count
+    @merchant_of_record = Fuime::Features.merchant_of_record?
+  end
+
+  def payout_batch
+    @batch = Fuime::PayoutBatch.find(params[:id])
+    # `includes(:event)` because the review table renders one row per line and the
+    # whole value of this page is reading them together.
+    @lines = @batch.payout_requests.includes(:event).order(amount_cents: :desc)
+  end
+
+  def payout_batch_generate
+    batch = payout_batch_service.generate!(
+      period_end: params[:period_end].presence&.to_date || Date.current,
+      generated_by: current_user
+    )
+
+    redirect_to payout_batch_admin_index_path(id: batch.id),
+                flash: { success: "Run generated: #{batch.summary}." }
+  rescue Fuime::Features::Disabled, Fuime::PayoutBatchService::Error => e
+    redirect_to payout_batches_admin_index_path, alert: e.message
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to payout_batches_admin_index_path, alert: e.record.errors.full_messages.to_sentence
+  end
+
+  def payout_batch_approve
+    batch = Fuime::PayoutBatch.find(params[:id])
+    payout_batch_service.approve!(batch:, approver: current_user)
+
+    redirect_to payout_batch_admin_index_path(id: batch.id),
+                flash: { success: "Approved. No money has moved yet — mark the run as paid once the transfers have gone out." }
+  rescue Fuime::PayoutBatchService::Error => e
+    redirect_to payout_batch_admin_index_path(id: params[:id]), alert: e.message
+  end
+
+  def payout_batch_mark_paid
+    batch = Fuime::PayoutBatch.find(params[:id])
+    payout_batch_service.mark_paid!(batch:, paid_by: current_user)
+
+    redirect_to payout_batch_admin_index_path(id: batch.id),
+                flash: { success: "Recorded as paid. #{batch.operator_count} operator ledger(s) debited." }
+  rescue Fuime::PayoutBatchService::Error => e
+    redirect_to payout_batch_admin_index_path(id: params[:id]), alert: e.message
+  end
+
+  def payout_batch_cancel
+    batch = Fuime::PayoutBatch.find(params[:id])
+    payout_batch_service.cancel!(batch:, cancelled_by: current_user, reason: params[:reason])
+
+    redirect_to payout_batch_admin_index_path(id: batch.id),
+                flash: { success: "Run cancelled. Every line on it has been declined." }
+  rescue Fuime::PayoutBatchService::Error => e
+    redirect_to payout_batch_admin_index_path(id: params[:id]), alert: e.message
+  end
+
   def donations
     @page = params[:page] || 1
     @per = params[:per] || 20
@@ -1631,6 +1746,10 @@ class AdminController < Admin::BaseController
   end
 
   private
+
+  def payout_batch_service
+    @payout_batch_service ||= Fuime::PayoutBatchService.new
+  end
 
   def cache_event_metric(metric_name, &block)
     @event = Event.friendly.find(params[:id])

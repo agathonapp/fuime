@@ -6,7 +6,10 @@ require "rails_helper"
 # idempotency and reversal handling are correctness-critical.
 # See docs/fuime/PRODUCTION_READINESS.md §1.4.
 RSpec.describe Fuime::PaymentWebhookHandler do
-  let(:event) { create(:event) }
+  # A plan that actually charges. The factory defaults to FeeWaived (0%), and
+  # these examples are about how a fee is posted — on a fee-waived venture the
+  # correct behaviour is to post no fee at all, which is asserted separately below.
+  let(:event) { create(:event, plan_type: Event::Plan::Standard) }
 
   def stripe_event(type, object)
     Stripe::Event.construct_from(type:, data: { object: })
@@ -38,6 +41,16 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     ledger_lines.sum(&:amount_cents)
   end
 
+  # Fuime: derived from the configured rate, never restated as a literal.
+  #
+  # These examples are about the SHAPE of the posting — gross and fee as separate
+  # lines, one fee per payment, a proportional rebate that never exceeds what was
+  # charged. None of that depends on the number, and hardcoding it meant a pricing
+  # decision surfaced as eight failing tests that looked like a regression.
+  # Delegates to the model so the minimum-fee floor is included. Re-deriving it
+  # here as `rate * cents` would drift the moment the floor bites.
+  def fee_on(cents) = event.fuime_fee_cents_on(cents)
+
   def fee_lines
     ledger_lines.select { |l| l.memo.to_s.match?(/platform fee/i) }
   end
@@ -47,16 +60,33 @@ RSpec.describe Fuime::PaymentWebhookHandler do
       handle("payment_intent.succeeded", payment_intent)
 
       expect(ledger_lines.size).to eq(2)
-      expect(ledger_lines.map(&:amount_cents)).to contain_exactly(10_000, -400)
-      # 4% of $100.00 = $4.00, so the business keeps $96.00.
-      expect(net_cents).to eq(9_600)
+      expect(ledger_lines.map(&:amount_cents)).to contain_exactly(10_000, -fee_on(10_000))
+      # The business keeps the gross less Fuime's cut, whatever that rate is.
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
+    end
+
+    # Regression: the fallback used to compute the fee from the HEADLINE rate
+    # constant, which ignored the venture's plan entirely — so a venture whose
+    # whole promise is 0% was charged anyway whenever a payment arrived without
+    # fee metadata. Same bug PaymentLinkService's header describes, in the other
+    # half of the flow.
+    it "charges no fee to a fee-waived venture, even with no fee metadata" do
+      waived = create(:event, plan_type: Event::Plan::FeeWaived)
+      handle("payment_intent.succeeded", payment_intent(event_id: waived.id))
+
+      lines = CanonicalPendingEventMapping.where(event_id: waived.id)
+                                          .map(&:canonical_pending_transaction)
+
+      expect(lines.size).to eq(1)
+      expect(lines.map(&:amount_cents)).to contain_exactly(10_000)
     end
 
     it "labels the fee so the teen can see what Fuime charged" do
       handle("payment_intent.succeeded", payment_intent)
 
       expect(fee_lines.size).to eq(1)
-      expect(fee_lines.first.memo).to match(/Fuime platform fee \(4%\)/i)
+      expect(fee_lines.first.memo)
+        .to match(/Fuime platform fee \(#{Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT}%\)/i)
       expect(fee_lines.first.fronted).to be false
     end
 
@@ -94,7 +124,7 @@ RSpec.describe Fuime::PaymentWebhookHandler do
       # One payment line + one fee line, however many times Stripe retries.
       expect(ledger_lines.size).to eq(2)
       expect(fee_lines.size).to eq(1)
-      expect(net_cents).to eq(9_600)
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
     end
 
     # A Checkout payment emits BOTH events with different object ids. Handling
@@ -110,7 +140,7 @@ RSpec.describe Fuime::PaymentWebhookHandler do
              })
 
       expect(ledger_lines.size).to eq(2)
-      expect(net_cents).to eq(9_600)
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
     end
   end
 
@@ -140,9 +170,10 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     it "handles a partial refund, rebating the fee in proportion" do
       handle("charge.refunded", charge(amount_refunded: 4_000))
 
-      # $100 in, $4 fee, $40 refunded → $1.60 of fee returned.
-      # Business keeps 6000 - 400 + 160 = 5760.
-      expect(net_cents).to eq(5_760)
+      # $40 of $100 refunded → 40% of the fee returned, whatever the rate is.
+      # Spelled as the four postings rather than as a total, so a wrong number
+      # says which leg is wrong: gross, fee, reversal, rebate.
+      expect(net_cents).to eq(10_000 - fee_on(10_000) - 4_000 + fee_on(4_000))
     end
 
     it "is idempotent on retries of the same refund" do
@@ -165,7 +196,7 @@ RSpec.describe Fuime::PaymentWebhookHandler do
       handle("charge.refunded", charge(amount_refunded: 10_000))
 
       rebated = ledger_lines.select { |l| l.memo.to_s.match?(/fee refunded/i) }.sum(&:amount_cents)
-      expect(rebated).to eq(400)
+      expect(rebated).to eq(fee_on(10_000))
     end
 
     it "ignores a refund for a payment it never recorded" do

@@ -1,0 +1,133 @@
+<% title "Operator vetting (Fuime)" %>
+
+<%# FUIME: the queue where a human decides whether an operator may sell.
+
+    Deliberately unglamorous and deliberately manual. Under merchant-of-record
+    Fuime LLC is the legal seller of everything an operator sells, so Fuime
+    inherits their liability by design — and the compensating control is that
+    somebody looks at each one. The first hundred decisions made on this page are
+    the training data for the risk model that eventually replaces it, which is
+    why the notes field matters more than it looks.
+
+    Separate from admin/applications, which asks whether a venture should EXIST.
+    This asks whether it may SELL — revocable, and asked again whenever something
+    changes. See Fuime::OperatorEligibility. %>
+
+<%= form_with local: true, class: "card", url: operator_vetting_admin_index_path, method: :get do |form| %>
+  <%= render "events/filters/search", form: %>
+
+  <div class="flex flex-col sm:flex-row items-center gap-2 mt-2">
+    <div class="flex items-center gap-2">
+      <%= form.label :status, "Status" %>
+      <%= form.select :status,
+                      options_for_select(
+                        [["All", ""]] + Event.operator_vetting_statuses.keys.map { |s| [s.humanize, s] },
+                        @status
+                      ) %>
+    </div>
+
+    <%= form.submit "Search", class: "ml-auto" %>
+  </div>
+<% end %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <% Event.operator_vetting_statuses.keys.each do |status| %>
+    <%= link_to operator_vetting_admin_index_path(status:), class: "badge #{status == 'unvetted' ? 'bg-warning' : 'bg-muted'}" do %>
+      <%= status.humanize %>: <%= @counts[status] || 0 %>
+    <% end %>
+  <% end %>
+</div>
+
+<div class="flex items-center mb2 flex-col sm:flex-row">
+  <div class="flex-grow">
+    <%= page_entries_info @events, entry_name: "ventures" %>
+  </div>
+  <%= paginate @events %>
+</div>
+
+<table class="min-w-0">
+  <thead>
+    <tr>
+      <th class="w-24">ID</th>
+      <th>Venture</th>
+      <th>Operators</th>
+      <th>Sells</th>
+      <th>Status</th>
+      <th>Blockers</th>
+      <th class="w-64">Decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @events.each do |event| %>
+      <tr class="<%= "admin-bg-pending" if event.operator_vetting_unvetted? %>">
+        <td><%= event.id %></td>
+        <td>
+          <%= link_to event.name, event_path(event) %>
+          <div class="muted"><%= event.created_at.strftime("%Y-%m-%d") %></div>
+        </td>
+        <td>
+          <%# Ages are shown because they are the decision. Admin-only page. %>
+          <% event.users.each do |user| %>
+            <div>
+              <%= user_mention(user) %>
+              <span class="muted"><%= user.age ? user.age.to_s : "age unknown" %></span>
+            </div>
+          <% end %>
+        </td>
+        <td><%= event.business_category.presence || content_tag(:span, "not set", class: "muted") %></td>
+        <td><%= event.operator_vetting_status.humanize %></td>
+        <td>
+          <%# Empty here means "nothing is stopping them", which under Connect is a
+              narrower claim than under merchant-of-record — the launch-scope checks
+              only bind once Fuime is the seller. See Fuime::OperatorEligibility. %>
+          <% blockers = event.selling_blockers %>
+          <% if blockers.empty? %>
+            <span class="muted">None</span>
+          <% else %>
+            <ul class="mb-0 pl-3">
+              <% blockers.each do |blocker| %>
+                <li><%= blocker %></li>
+              <% end %>
+            </ul>
+          <% end %>
+        </td>
+        <td>
+          <%= form_with url: operator_vetting_decide_admin_index_path(id: event.slug), method: :post, local: true do |form| %>
+            <%= form.text_field :notes, placeholder: "Why (kept on the record)", class: "w-full mb1" %>
+            <%# form.button, not form.submit: a submit tag's label IS its value, so
+                three submits named "status" would post status=Approve. A button
+                carries a value independent of the text on it. %>
+            <div class="flex gap-1 flex-wrap">
+              <% unless event.operator_vetting_approved? %>
+                <%= form.button "Approve", name: "status", value: "approved" %>
+              <% end %>
+              <% unless event.operator_vetting_suspended? %>
+                <%= form.button "Suspend", name: "status", value: "suspended" %>
+              <% end %>
+              <% unless event.operator_vetting_rejected? %>
+                <%= form.button "Reject", name: "status", value: "rejected" %>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if event.operator_vetted_at %>
+            <div class="muted mt1">
+              <%= event.operator_vetting_status.humanize %>
+              <%= "by #{event.operator_vetted_by.name}" if event.operator_vetted_by %>
+              on <%= event.operator_vetted_at.strftime("%Y-%m-%d") %>
+            </div>
+          <% end %>
+
+          <% if event.operator_vetting_notes.present? %>
+            <details class="mt1">
+              <summary class="muted">Notes</summary>
+              <div class="muted" style="white-space: pre-wrap;"><%= event.operator_vetting_notes %></div>
+            </details>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<%= paginate @events %>

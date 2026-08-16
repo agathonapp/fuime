@@ -2,9 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe AchTransfer, type: :model do
+# :sponsor_banking — ACH origination is a sponsor-banking module, and every
+# example here funds its event with FRONTED money: credit the platform advances
+# against sales that have not settled. Fuime does not front (Event#can_front_balance?
+# is false while custody is off, and the column now defaults to false), so without
+# both of these the event has a $0 balance and every transfer fails validation
+# before reaching what it means to test. See spec/support/sponsor_banking.rb.
+RSpec.describe AchTransfer, :sponsor_banking, type: :model do
   let(:event) {
-    event = create(:event)
+    event = create(:event, can_front_balance: true)
     create(:canonical_pending_transaction, amount_cents: 1000, event:, fronted: true)
     event
   }

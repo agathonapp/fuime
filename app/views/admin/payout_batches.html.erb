@@ -1,0 +1,90 @@
+<% title "Payout runs (Fuime)" %>
+
+<%# FUIME: every weekly payout run, newest first.
+
+    The second half of the manual-approval control. admin/operator_vetting decides
+    who may sell; this decides what Fuime actually pays them, and nothing goes out
+    without a human opening a run and reading it.
+
+    See Fuime::PayoutBatchService for the lifecycle and Fuime::PayoutPolicy for the
+    four dials each run is generated under. %>
+
+<% unless @merchant_of_record %>
+  <%# Not an error state. The flag is off on every environment that exists today
+      and cannot be switched on without a counsel-memo reference at boot, so the
+      honest thing is to say so here rather than let somebody click Generate and
+      read a raised exception as a bug. %>
+  <div class="card bg-warning mb2">
+    <strong>Merchant of record is off.</strong>
+    Fuime is not the seller of record, so it has no money of its own to pay out and
+    runs cannot be generated. Operators are paid on the Connect path instead — money
+    sits in the family's own Stripe account and a guardian approves each payout —
+    until <code>FEATURE_MERCHANT_OF_RECORD</code> is enabled, which requires
+    <code>FUIME_MOR_COUNSEL_MEMO</code> to cite a real memo at boot.
+  </div>
+<% end %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <% %w[draft approved paid cancelled].each do |state| %>
+    <span class="badge <%= state == "draft" ? "bg-warning" : "bg-muted" %>">
+      <%= state.humanize %>: <%= @counts[state] || 0 %>
+    </span>
+  <% end %>
+</div>
+
+<%= form_with url: payout_batch_generate_admin_index_path, method: :post, local: true, class: "card mb2" do |form| %>
+  <p class="muted mt0">
+    Runs are generated automatically each Wednesday for the Friday payout
+    (<code>Fuime::GeneratePayoutBatchJob</code>). Generate one by hand only to
+    replace a run that was cancelled, or to catch up a missed week — and set the
+    period end to the week it settles, not to today.
+  </p>
+  <div class="flex items-center gap-2 flex-wrap">
+    <%= form.label :period_end, "Period ends" %>
+    <%= form.date_field :period_end, value: Date.current %>
+    <%= form.submit "Generate run", disabled: !@merchant_of_record %>
+  </div>
+<% end %>
+
+<div class="flex items-center mb2 flex-col sm:flex-row">
+  <div class="flex-grow">
+    <%= page_entries_info @batches, entry_name: "runs" %>
+  </div>
+  <%= paginate @batches %>
+</div>
+
+<table class="min-w-0">
+  <thead>
+    <tr>
+      <th class="w-24">ID</th>
+      <th>Pays on</th>
+      <th>Period</th>
+      <th>Operators</th>
+      <th>Total</th>
+      <th>Held as reserve</th>
+      <th>State</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @batches.each do |batch| %>
+      <tr class="<%= "admin-bg-pending" if batch.draft? %>">
+        <td><%= link_to batch.id, payout_batch_admin_index_path(id: batch.id) %></td>
+        <td><%= batch.payout_on.strftime("%a %-d %b %Y") %></td>
+        <td class="muted">
+          <%= batch.period_start.strftime("%-d %b") %> – <%= batch.period_end.strftime("%-d %b") %>
+        </td>
+        <td><%= batch.operator_count %></td>
+        <td><%= render_money batch.total_cents %></td>
+        <td class="muted"><%= render_money batch.reserve_held_cents %></td>
+        <td>
+          <%= batch.aasm_state.humanize %>
+          <% if batch.approved_by %>
+            <div class="muted">by <%= batch.approved_by.name %></div>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<%= paginate @batches %>

@@ -1,7 +1,13 @@
+<%# Fuime: what Fuime owes this operator, lazily loaded into the dashboard.
+
+    Reads Fuime::PayablesLedger rather than Event#balance_available_v2_cents so this
+    number cannot disagree with the one on the payouts page — see
+    app/helpers/fuime_helper.rb#payables_for. This frame carries no label of its
+    own; the surrounding card supplies "Owed to you". %>
 <%= turbo_frame_tag "event_balance_#{@event.public_id}" do %>
   <% if params[:symbol] == "true" %>
-    <%= render_money(@event.balance_available_v2_cents) %>
+    <%= render_money(payables_for(@event).net_payable_cents) %>
   <% else %>
-    <%= render_money_amount(@event.balance_available_v2_cents) %>
+    <%= render_money_amount(payables_for(@event).net_payable_cents) %>
   <% end %>
 <% end %>

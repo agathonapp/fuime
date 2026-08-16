@@ -3,8 +3,8 @@
 class Event
   class ApplicationsController < ApplicationController
     before_action :set_application, except: [:apply, :new, :create, :index]
-    before_action :prevent_access_after_submission, only: [:project_info, :personal_info, :review]
-    before_action :prevent_access_if_archived, only: [:project_info, :personal_info, :review, :videos, :agreement]
+    before_action :prevent_access_after_submission, only: [:business_type, :project_info, :personal_info, :review]
+    before_action :prevent_access_if_archived, only: [:business_type, :project_info, :personal_info, :review, :videos, :agreement]
     after_action :record_pageview
     skip_before_action :signed_in_user, only: [:new, :apply, :create]
     skip_after_action :verify_authorized, only: :create
@@ -143,15 +143,38 @@ class Event
       authorize(@application = Event::Application.new(user: current_user, teen_led: teen_led_param == "true", referral_code: params[:referral_code] || params.dig(:event_application, :referral_code)))
       @application.save!
 
-      redirect_to project_info_application_path(@application)
+      # Fuime: the business-type fork is the first real question now — see
+      # Fuime::ServiceCatalog.
+      redirect_to business_type_application_path(@application)
     end
 
     def personal_info
       authorize @application
     end
 
+    # Fuime: the three-card fork and the service picker, ahead of project_info.
+    #
+    # Both questions on one page rather than two steps: "how are you starting" and
+    # "what do you do" are answered in the same breath by anybody who knows, and
+    # splitting them would add a click for the majority to help the minority who
+    # picked the template card.
+    def business_type
+      authorize @application
+
+      @starting_points = Fuime::ServiceCatalog::STARTING_POINTS
+      @services = Fuime::ServiceCatalog.sellable
+    end
+
     def project_info
       authorize @application
+
+      # A template's outline is offered as a PLACEHOLDER, never written into the
+      # record on the operator's behalf. Two reasons, and the second is the one
+      # that matters: a description Fuime wrote is a description Fuime is the
+      # author of, and under merchant-of-record Fuime is already the seller of
+      # record for whatever it describes. The operator's own words are the only
+      # ones that should reach a buyer.
+      @template = @application.service if @application.started_from_template?
     end
 
     def videos
@@ -224,7 +247,14 @@ class Event
 
         return redirect_to @return_to if @return_to.present?
 
-        redirect_back_or_to application_path(@application)
+        # `return`, which was missing. `redirect_back_or_to` does not end the
+        # action, so a non-autosave update that arrived without a `return_to`
+        # fell through to `head :no_content` below and raised
+        # AbstractController::DoubleRenderError. Latent until now only because
+        # every step view passes `return_to` — surfaced by a spec that posts
+        # without one, which is also what any hand-rolled or replayed request
+        # does.
+        return redirect_back_or_to application_path(@application)
       end
 
       head :no_content
@@ -295,7 +325,7 @@ class Event
     end
 
     def application_params
-      params.require(:event_application).permit(:name, :description, :political_description, :website_url, :address_line1, :address_line2, :address_city, :address_state, :address_postal_code, :address_country, :referrer, :referral_code, :accessibility_notes, :cosigner_email, :teen_led, :annual_budget, :committed_amount, :planning_duration, :team_size, :funding_source, :previously_applied)
+      params.require(:event_application).permit(:name, :description, :political_description, :website_url, :address_line1, :address_line2, :address_city, :address_state, :address_postal_code, :address_country, :referrer, :referral_code, :accessibility_notes, :cosigner_email, :teen_led, :annual_budget, :committed_amount, :planning_duration, :team_size, :funding_source, :previously_applied, :starting_point, :service_type)
     end
 
     def user_params

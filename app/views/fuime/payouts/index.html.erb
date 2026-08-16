@@ -4,6 +4,10 @@
 
 <h1 class="heading">Payouts</h1>
 
+<%# Fuime: above everything, because a venture that cannot sell has a more
+    urgent problem than how it gets paid. Renders nothing when clear. %>
+<%= render "fuime/selling_blockers", event: @event %>
+
 <%# Fuime: moving money out of the venture.
 
     Two audiences on one page, deliberately. The teen sees what they have and can
@@ -50,33 +54,130 @@
   <% end %>
 <% end %>
 
-<h2 class="mt2">Available to pay out</h2>
+<%# ── Earnings, not a balance ─────────────────────────────────────────────────
 
-<p class="h1 mt0 mb1">
-  <% if @available_cents.nil? %>
+    This heading and the figure under it carry the legal distinction the
+    merchant-of-record model rests on, so neither is free to be reworded casually.
+
+    Fuime LLC is the seller of record: a customer pays Fuime for a sale Fuime made,
+    that money is Fuime's own revenue, and this operator is a vendor Fuime pays on a
+    fixed cadence. What they hold is a RECEIVABLE — an amount owed, payable on a
+    stated date. What they do not hold is a balance on deposit, because a stored
+    balance its holder withdraws at will is a deposit, and taking deposits without a
+    charter is the one thing Fuime cannot do (CLAUDE.md L1/L5).
+
+    So: "Fuime owes you $84.20, paid on Friday 14 August." Never "your balance",
+    and never a Withdraw button against a sum held indefinitely. Every figure below
+    comes from Fuime::PayablesLedger, which is the only thing an operator-facing
+    view may ask — spec/views/fuime/payables_copy_spec.rb enforces that. %>
+
+<h2 class="mt2">Your earnings</h2>
+
+<p class="h1 mt0 mb1"><%= render_money(@payables.amount_owed_cents) %></p>
+
+<p class="secondary mt0"><%= @payables.owed_sentence %></p>
+
+<% if @payables.pending_sales_cents.positive? %>
+  <p class="secondary mt0">
+    <%# Deliberately a separate sentence from the figure above, and never added to
+        it. Money Stripe has taken but not released is coming, not owed today —
+        merging the two is how a reader concludes Fuime is holding a balance for
+        them. %>
+    A further <strong><%= render_money(@payables.pending_sales_cents) %></strong>
+    from recent sales hasn't been released by Stripe yet. It usually takes a couple
+    of days, and it'll be included once it lands.
+  </p>
+<% end %>
+
+<%# The breakdown. Present on the page rather than behind a link because "why is
+    this smaller than my sales?" is the first question anyone asks, and the answer
+    involves two different companies taking two different cuts.
+
+    #breakdown always sums to the net payable by construction — the last row is a
+    residual, not a category — so these figures cannot fail to add up. %>
+<details class="mb2">
+  <summary class="pointer">How this is worked out</summary>
+
+  <table class="table--autosize mt1">
+    <tbody>
+      <tr>
+        <td>Sales</td>
+        <td class="right-align"><%= render_money(@payables.gross_sales_cents) %></td>
+      </tr>
+      <tr>
+        <td>Fuime's fee</td>
+        <td class="right-align">&minus;<%= render_money(@payables.fuime_fee_cents) %></td>
+      </tr>
+      <tr>
+        <%# Stripe's cut is itemised separately from Fuime's on purpose: they are
+            two different companies taking two different amounts, and a family
+            reconciling their books needs to see which is which. %>
+        <td>Card processing (Stripe)</td>
+        <td class="right-align">&minus;<%= render_money(@payables.processing_fee_cents) %></td>
+      </tr>
+      <% if @payables.refunds_cents.positive? %>
+        <tr>
+          <td>Refunds and disputes</td>
+          <td class="right-align">&minus;<%= render_money(@payables.refunds_cents) %></td>
+        </tr>
+      <% end %>
+      <% if @payables.card_spend_cents.positive? %>
+        <tr>
+          <td>Spent on your Fuime card</td>
+          <td class="right-align">&minus;<%= render_money(@payables.card_spend_cents) %></td>
+        </tr>
+      <% end %>
+      <% if @payables.committed_cents.positive? %>
+        <tr>
+          <td>Pending card holds</td>
+          <td class="right-align">&minus;<%= render_money(@payables.committed_cents) %></td>
+        </tr>
+      <% end %>
+      <% if @payables.paid_out_cents.positive? %>
+        <tr>
+          <td>Already paid to you</td>
+          <td class="right-align">&minus;<%= render_money(@payables.paid_out_cents) %></td>
+        </tr>
+      <% end %>
+      <% unless @payables.other_adjustments_cents.zero? %>
+        <tr>
+          <%# The residual. Named vaguely because it genuinely is "everything else"
+              — school awards, corrections, anything posted by a path that predates
+              the ledger key scheme. Shown rather than hidden so the rows always
+              reconcile to the total. %>
+          <td>Other adjustments</td>
+          <td class="right-align"><%= render_money(@payables.other_adjustments_cents) %></td>
+        </tr>
+      <% end %>
+      <tr>
+        <td><strong>Owed to you</strong></td>
+        <td class="right-align"><strong><%= render_money(@payables.net_payable_cents) %></strong></td>
+      </tr>
+    </tbody>
+  </table>
+</details>
+
+<p class="secondary mt0"><em><%= @payables.disclosure %></em></p>
+
+<%# What Stripe can move TODAY, which is a different question from what is owed.
+    Shown only when it disagrees with the payables figure or cannot be read at all,
+    because on the ordinary day the two match and a second number would just invite
+    the reader to wonder which one is theirs. %>
+<% if @available_cents.nil? %>
+  <p class="secondary mt0">
     <%# Not the same as zero, and must not be shown as zero. A teen told they have
         $0 when Fuime simply could not reach Stripe will conclude their money is
-        gone. %>
-    <span class="muted">Unavailable right now</span>
-  <% else %>
-    <%= number_to_currency(@available_cents / 100.0) %>
-  <% end %>
-</p>
-
-<p class="secondary mt0">
-  <% if @school_settled %>
-    <%# On a shared account this figure is NOT Stripe's balance — it is this
-        venture's own ledger balance, capped by what Stripe has available. Saying
-        "what Stripe says" here would be false, and would also imply the whole
-        programme's money is this student's to ask for. %>
-    This is what <%= @event.name %> has earned and not yet spent. Money from a sale
-    takes a couple of days to become available, so a recent payment may not be
-    included yet.
-  <% else %>
-    This is what Stripe says can be sent today. Money from a sale takes a couple of
-    days to become available, so a recent payment may not be included yet.
-  <% end %>
-</p>
+        gone. The figure above still stands — what Fuime owes does not depend on
+        Stripe answering. %>
+    We can't reach Stripe right now, so we can't confirm what can be sent today.
+    This doesn't change what you're owed.
+  </p>
+<% elsif @available_cents < @payables.amount_owed_cents %>
+  <p class="secondary mt0">
+    Of that, <strong><%= render_money(@available_cents) %></strong> can be sent
+    today — money from a sale takes a couple of days to clear before it can move.
+  </p>
+<% end %>
 
 <% if @pending_request.present? %>
   <%= render "application/callout", type: "info",
@@ -203,7 +304,7 @@
 
   <%# The business office's to-do list. Distinct from History because the ledger has
       NOT been debited yet: the debit waits for someone to assert the money actually
-      went, so an approved-but-unpaid transfer is still spendable balance. %>
+      went, so an approved-but-unpaid transfer is still owed to the operator. %>
   <table class="table--autosize">
     <thead>
       <tr>
@@ -233,7 +334,7 @@
                             data: { turbo_confirm: "Confirm the school has sent " \
                                                    "#{number_to_currency(request.amount)} to " \
                                                    "#{request.requested_by.first_name}? " \
-                                                   "This takes it off the venture's balance."
+                                                   "This takes it off what Fuime owes them."
 } %>
             </td>
           <% end %>
@@ -292,7 +393,7 @@
               <span class="badge bg-error">Didn't go through</span>
               <span class="secondary">
                 — <%= request.failure_message.presence || "Stripe couldn't send it." %>
-                The money went back to the venture's balance.
+                It's been added back to what you're owed.
               </span>
             <% end %>
           </td>

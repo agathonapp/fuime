@@ -102,6 +102,19 @@ Rails.application.routes.draw do
   get "/:event_slug/payments/return", to: "fuime/payment_setups#return", as: :fuime_payment_setup_return
   get "/:event_slug/payments/refresh", to: "fuime/payment_setups#refresh", as: :fuime_payment_setup_refresh
 
+  # Fuime: the embedded replacement for the Stripe Dashboard.
+  #
+  # Accounts are created with `stripe_dashboard.type = none`, so a guardian has
+  # nowhere else to change a bank account, clear a document Stripe has flagged, or
+  # download a 1099. `/manage` mounts Stripe's own components for all of that
+  # inside Fuime; `/session` is the JSON endpoint their `fetchClientSecret`
+  # callback calls, which is why it is a separate path rather than a value
+  # rendered into the page — an Account Session expires while a management page
+  # sits open, and refetching is the difference between a self-healing page and a
+  # stale-secret error.
+  get "/:event_slug/payments/manage", to: "fuime/payment_setups#manage", as: :fuime_payment_setup_manage
+  get "/:event_slug/payments/session", to: "fuime/payment_setups#manage_session", as: :fuime_payment_setup_session
+
   # Fuime: the guardian supplying their own identity details, for `:cards_enabled`
   # ventures where `requirement_collection = application` makes that Fuime's job.
   # Payments-only ventures never reach here — Stripe collects from them directly via the
@@ -120,6 +133,17 @@ Rails.application.routes.draw do
   #
   # All four are POSTs on a member route rather than a PATCH on the request, because
   # each is a distinct decision being recorded, not an edit to a field.
+  # FUIME: what the venture sells. See Fuime::Offer — the object that makes a
+  # storefront a store rather than a tip jar.
+  get "/:event_slug/offers", to: "fuime/offers#index", as: :fuime_offers
+  post "/:event_slug/offers", to: "fuime/offers#create", as: :fuime_offers_create
+  patch "/:event_slug/storefront", to: "fuime/offers#update_storefront", as: :fuime_storefront_settings
+  patch "/:event_slug/offers/:id", to: "fuime/offers#update", as: :fuime_offer
+  post "/:event_slug/offers/:id/publish", to: "fuime/offers#publish", as: :fuime_offer_publish
+  post "/:event_slug/offers/:id/unpublish", to: "fuime/offers#unpublish", as: :fuime_offer_unpublish
+  post "/:event_slug/offers/:id/archive", to: "fuime/offers#archive", as: :fuime_offer_archive
+  post "/:event_slug/offers/:id/restore", to: "fuime/offers#restore", as: :fuime_offer_restore
+
   get "/:event_slug/payouts", to: "fuime/payouts#index", as: :fuime_payouts
   post "/:event_slug/payouts", to: "fuime/payouts#create", as: :fuime_payouts_create
   post "/:event_slug/payouts/:id/approve", to: "fuime/payouts#approve", as: :fuime_payout_approve
@@ -153,7 +177,30 @@ Rails.application.routes.draw do
   post "/:event_slug/cards/:id/unfreeze", to: "fuime/cards#unfreeze", as: :fuime_card_unfreeze
   delete "/:event_slug/cards/:id", to: "fuime/cards#destroy", as: :fuime_card_cancel
 
+  # Fuime: the public directory of teen-run businesses. A listing, never a
+  # dispatch — see Fuime::DirectoryController for why that distinction is
+  # load-bearing rather than stylistic.
+  get "/directory", to: "fuime/directory#index", as: :fuime_directory
+
   # Fuime: Public storefront
+  # FUIME: a hosted payment page for one offer — the link an operator pastes into
+  # a Replit site, an Instagram bio or a DM.
+  #
+  #   /pay/sunset-lawn-care/mow
+  #
+  # **Direct, never a browse step.** A payment link lands the buyer on the thing
+  # they are paying for; if they wanted to look around they would be on the
+  # storefront (`/b/:slug`), which is what that page is for. So there is
+  # deliberately no `/pay/:event_slug` index — a link that makes a customer
+  # choose is a link that loses the sale a teenager already earned.
+  #
+  # Two segments so the offer identifier is namespaced by the venture: two
+  # businesses may both sell "mow" without one of them having to find out the
+  # other got there first. `:offer` resolves as a slug or as the permanent token
+  # (Fuime::Offer.find_public), so renaming an offer never breaks a link somebody
+  # already printed.
+  get "/pay/:event_slug/:offer", to: "fuime/payment_pages#show", as: :fuime_payment_page
+
   get "/b/:slug", to: "fuime/storefronts#show", as: :fuime_storefront
   post "/b/:slug/pay", to: "fuime/checkouts#create", as: :fuime_storefront_pay
 
@@ -388,6 +435,18 @@ Rails.application.routes.draw do
       get "checks", to: "admin#checks"
       get "increase_checks", to: "admin#increase_checks"
       get "applications", to: "admin#applications"
+      # FUIME: the operator vetting queue. A human approves every operator before
+      # they can sell — see Fuime::OperatorEligibility.
+      get "operator_vetting", to: "admin#operator_vetting"
+      post "operator_vetting/:id", to: "admin#operator_vetting_decide", as: "operator_vetting_decide"
+      # FUIME: the weekly payout runs. A human reads every line before Fuime pays
+      # anybody — see Fuime::PayoutBatchService.
+      get "payout_batches", to: "admin#payout_batches"
+      get "payout_batches/:id", to: "admin#payout_batch", as: "payout_batch"
+      post "payout_batches", to: "admin#payout_batch_generate", as: "payout_batch_generate"
+      post "payout_batches/:id/approve", to: "admin#payout_batch_approve", as: "payout_batch_approve"
+      post "payout_batches/:id/mark_paid", to: "admin#payout_batch_mark_paid", as: "payout_batch_mark_paid"
+      post "payout_batches/:id/cancel", to: "admin#payout_batch_cancel", as: "payout_batch_cancel"
       get "paypal_transfers", to: "admin#paypal_transfers"
       get "wires", to: "admin#wires"
       get "wise_transfers", to: "admin#wise_transfers"
@@ -1074,6 +1133,9 @@ Rails.application.routes.draw do
       end
 
       member do
+        # Fuime: what kind of business, ahead of describing it. See
+        # Fuime::ServiceCatalog.
+        get "business_type"
         get "personal_info"
         get "project_info"
         get "videos"

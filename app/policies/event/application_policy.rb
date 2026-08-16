@@ -45,6 +45,9 @@ class Event
       record.contract.party(:cosigner).pending? && (record.user == user || user.admin?)
     end
 
+    # Fuime: the business-type step. Same audience as every other step of the
+    # applicant's own application.
+    alias_method :business_type?, :show?
     alias_method :personal_info?, :show?
     alias_method :project_info?, :show?
     alias_method :videos?, :show?

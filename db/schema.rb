@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1025,6 +1025,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.integer "annual_budget_cents"
     t.datetime "approved_at"
     t.datetime "archived_at"
+    t.string "business_category"
     t.integer "committed_amount_cents"
     t.string "cosigner_email"
     t.datetime "created_at", null: false
@@ -1042,6 +1043,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.string "referral_code"
     t.string "referrer"
     t.datetime "rejected_at"
+    t.string "service_type"
+    t.string "starting_point"
     t.datetime "submitted_at"
     t.integer "team_size"
     t.boolean "teen_led"
@@ -1051,7 +1054,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.boolean "videos_watched", default: false
     t.string "website_url"
     t.index ["event_id"], name: "index_event_applications_on_event_id"
+    t.index ["service_type"], name: "index_event_applications_on_service_type", where: "(service_type IS NOT NULL)"
     t.index ["user_id"], name: "index_event_applications_on_user_id"
+    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[]))", name: "event_applications_starting_point_known"
   end
 
   create_table "event_configurations", force: :cascade do |t|
@@ -1144,7 +1149,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.datetime "activated_at"
     t.text "address"
     t.string "business_category"
-    t.boolean "can_front_balance", default: true, null: false
+    t.boolean "can_front_balance", default: false, null: false
     t.integer "country"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "deleted_at", precision: nil
@@ -1168,6 +1173,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.boolean "is_public", default: true
     t.datetime "last_fee_processed_at", precision: nil
     t.text "name", null: false
+    t.datetime "operator_vetted_at"
+    t.bigint "operator_vetted_by_id"
+    t.text "operator_vetting_notes"
+    t.integer "operator_vetting_status", default: 0, null: false
     t.bigint "parent_id"
     t.bigint "point_of_contact_id"
     t.string "postal_code"
@@ -1186,6 +1195,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.string "website"
     t.index ["discord_channel_id"], name: "index_events_on_discord_channel_id", unique: true
     t.index ["discord_guild_id"], name: "index_events_on_discord_guild_id", unique: true
+    t.index ["operator_vetting_status"], name: "index_events_on_operator_vetting_status"
     t.index ["parent_id"], name: "index_events_on_parent_id"
     t.index ["point_of_contact_id"], name: "index_events_on_point_of_contact_id"
   end
@@ -1268,6 +1278,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_id"
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
+  end
+
+  create_table "fuime_offers", force: :cascade do |t|
+    t.string "aasm_state", default: "draft", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "event_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "price_cents", null: false
+    t.string "public_token"
+    t.string "slug"
+    t.string "unit_label"
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "position"], name: "index_published_fuime_offers_on_event_and_position", where: "((aasm_state)::text = 'published'::text)"
+    t.index ["event_id", "slug"], name: "index_fuime_offers_on_event_and_slug", unique: true, where: "(slug IS NOT NULL)"
+    t.index ["event_id"], name: "index_fuime_offers_on_event_id"
+    t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
+    t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
+  end
+
+  create_table "fuime_payout_batches", force: :cascade do |t|
+    t.string "aasm_state", default: "draft", null: false
+    t.datetime "approved_at"
+    t.bigint "approved_by_id"
+    t.text "cancellation_reason"
+    t.datetime "cancelled_at"
+    t.datetime "created_at", null: false
+    t.integer "hold_days", null: false
+    t.integer "maximum_cents", null: false
+    t.integer "minimum_cents", null: false
+    t.text "notes"
+    t.datetime "paid_at"
+    t.bigint "paid_by_id"
+    t.date "payout_on", null: false
+    t.date "period_end", null: false
+    t.date "period_start", null: false
+    t.integer "reserve_basis_points", null: false
+    t.integer "reserve_window_days", null: false
+    t.datetime "updated_at", null: false
+    t.index ["aasm_state"], name: "index_fuime_payout_batches_on_aasm_state"
+    t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
+    t.index ["paid_by_id"], name: "index_fuime_payout_batches_on_paid_by_id"
+    t.index ["period_end"], name: "index_live_fuime_payout_batches_on_period_end", unique: true, where: "((aasm_state)::text <> 'cancelled'::text)"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[])", name: "fuime_payout_batches_state_known"
+    t.check_constraint "period_end >= period_start", name: "fuime_payout_batches_period_ordered"
   end
 
   create_table "fuime_subscriptions", force: :cascade do |t|
@@ -2089,13 +2146,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.datetime "created_at", null: false
     t.string "destination", default: "account_owner_bank", null: false
     t.text "destination_note"
+    t.integer "eligible_cents"
     t.bigint "event_id", null: false
     t.string "failure_code"
     t.text "failure_message"
     t.datetime "paid_at"
+    t.bigint "payout_batch_id"
     t.datetime "rejected_at"
     t.text "rejection_reason"
-    t.bigint "requested_by_id", null: false
+    t.bigint "requested_by_id"
+    t.integer "reserve_held_cents", default: 0, null: false
     t.datetime "settled_at"
     t.bigint "settled_by_id"
     t.text "stripe_payout_id"
@@ -2103,10 +2163,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
     t.index ["approved_by_id"], name: "index_payout_requests_on_approved_by_id"
     t.index ["event_id", "created_at"], name: "index_pending_payout_requests_on_event", where: "((aasm_state)::text = 'pending'::text)"
     t.index ["event_id"], name: "index_payout_requests_on_event_id"
+    t.index ["payout_batch_id", "event_id"], name: "index_payout_requests_on_batch_and_event", unique: true, where: "(payout_batch_id IS NOT NULL)"
+    t.index ["payout_batch_id"], name: "index_payout_requests_on_payout_batch_id"
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
     t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
-    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying]::text[])", name: "payout_requests_destination_known"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying, 'fuime_vendor_payment'::character varying]::text[])", name: "payout_requests_destination_known"
+    t.check_constraint "reserve_held_cents >= 0", name: "payout_requests_reserve_not_negative"
   end
 
   create_table "paypal_transfers", force: :cascade do |t|
@@ -3312,10 +3375,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
   add_foreign_key "event_scoped_tags", "events", column: "parent_event_id"
   add_foreign_key "event_scoped_tags_events", "event_scoped_tags"
   add_foreign_key "event_scoped_tags_events", "events"
+  add_foreign_key "events", "users", column: "operator_vetted_by_id"
   add_foreign_key "events", "users", column: "point_of_contact_id"
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"
   add_foreign_key "fees", "canonical_event_mappings"
+  add_foreign_key "fuime_offers", "events"
+  add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
+  add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "g_suite_accounts", "g_suites"
@@ -3387,6 +3454,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_200000) do
   add_foreign_key "organizer_positions", "users"
   add_foreign_key "payment_recipients", "events"
   add_foreign_key "payout_requests", "events"
+  add_foreign_key "payout_requests", "fuime_payout_batches", column: "payout_batch_id"
   add_foreign_key "payout_requests", "users", column: "approved_by_id"
   add_foreign_key "payout_requests", "users", column: "requested_by_id"
   add_foreign_key "payout_requests", "users", column: "settled_by_id"

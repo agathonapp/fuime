@@ -103,6 +103,22 @@ module Fuime
       "fuime_schoolpaid_#{payout_request_id}"
     end
 
+    # Money Fuime paid an operator in a weekly run, out of Fuime's own account.
+    #
+    # Keyed on the PayoutRequest for the same reason .personal_transfer_key is, and
+    # it is the same reason both times: on this path no Stripe object exists to key
+    # on, because Fuime is not instructing Stripe — it is paying its own vendor
+    # through its own accounts payable (MOR_MIGRATION_PLAN §4.3). The batch line IS
+    # the authority for the payment and for the approval behind it.
+    #
+    # Distinct from .payout_key rather than sharing it: "Stripe moved a family's
+    # money out of the family's account" and "Fuime paid a vendor" are different
+    # events with different payers, and Fuime::PayablesLedger has to be able to
+    # tell an operator which one their money arrived by.
+    def self.batch_payout_key(payout_request_id)
+      "fuime_batchpayout_#{payout_request_id}"
+    end
+
     # A school adding its own money to its own Stripe balance, so it has something to
     # award. Keyed on the Stripe Topup id for the same reason payouts key on the payout:
     # a top-up can be created from the Stripe Dashboard with no Fuime row behind it, and
@@ -203,6 +219,56 @@ module Fuime
 
     def self.settled_memo(key, memo)
       "#{memo} [#{key}]"
+    end
+
+    # Does this settled line's memo carry a Fuime ledger key?
+    #
+    # Every settled line Fuime posts ends "… [fuime_something]", written by
+    # `.settled_memo` and by Fuime::ConnectSettlementSweep. That bracketed suffix is
+    # the reliable way to ask "did Fuime put this here?", which two callers need:
+    #
+    #   * Fuime::PayablesLedger, to classify a line into the breakdown.
+    #   * FeeEngine::Create, to NOT charge Fuime's fee a second time — see its
+    #     `revenue_waived` branch, which is the load-bearing one.
+    #
+    # Anchored on "[fuime_" plus a letter so an ordinary memo that happens to
+    # contain a bracket cannot match.
+    MEMO_KEY_PATTERN = /\[fuime_[a-z]/
+
+    def self.memo_carries_key?(memo)
+      memo.to_s.match?(MEMO_KEY_PATTERN)
+    end
+
+    # Strip anything that could be mistaken for a Fuime ledger key.
+    #
+    # ── Why this exists ─────────────────────────────────────────────────────
+    #
+    # The bracketed key is how a settled line says what it IS: Fuime::PayablesLedger
+    # classifies the whole breakdown by matching `memo LIKE '%[fuime_fee_%'` and
+    # friends, and FeeEngine::Create reads `.memo_carries_key?` to decide whether
+    # a transaction has already had Fuime's fee taken.
+    #
+    # Two paths put human text into those memos, and both are attacker-adjacent:
+    #
+    #   * `Fuime::Offer#payment_description` — the OPERATOR names their own offer.
+    #   * `Fuime::CheckoutsController#payment_description` — an anonymous BUYER
+    #     types "what's this for?" on a public, unauthenticated page.
+    #
+    # So an offer named "Mow [fuime_fee_x", or a stranger typing it into a
+    # teenager's checkout, produces a sale whose memo classifies as Fuime's fee —
+    # and the operator's earnings page then reports a $35 sale as a $35 platform
+    # fee. The breakdown still reconciles (`#other_adjustments_cents` is a
+    # residual by construction, which is exactly why that design was worth
+    # having), but the figures a teenager reads are wrong and a stranger chose
+    # them.
+    #
+    # Stripping rather than refusing, because the two callers cannot both refuse:
+    # a buyer typing a square bracket into a free-text box is not doing anything
+    # wrong and must not get a validation error. `Fuime::Offer` additionally
+    # *validates* against the pattern, so an operator gets told rather than
+    # silently edited — defence in depth on the path where a person can be told.
+    def self.sanitize_memo_text(text)
+      text.to_s.gsub(/[\[\]]/, "")
     end
 
     def self.find_settled_row(key, memo)

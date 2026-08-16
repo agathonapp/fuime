@@ -279,6 +279,15 @@ module Admin
             count: ->{ Event::Application.under_review.count },
             count_type: :tasks
           ),
+          # FUIME: ventures waiting on a human to decide whether they may sell.
+          # :tasks rather than :records because an unvetted venture cannot take a
+          # payment — this count is work owed to an operator, not a statistic.
+          make_item(
+            name: "Operator vetting (Fuime)",
+            path: operator_vetting_admin_index_path,
+            count: ->{ Event.not_hidden.operator_vetting_unvetted.count },
+            count_type: :tasks
+          ),
           make_item(
             name: "Organizations",
             path: events_admin_index_path,

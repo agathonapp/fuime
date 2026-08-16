@@ -40,7 +40,28 @@ module Fuime
         return
       end
 
-      amount_cents = parse_amount(params[:amount])
+      # ── Buying an offer, or paying an amount ──────────────────────────────
+      #
+      # Two shapes, and the difference is who chose the number.
+      #
+      # With an offer, the operator set the price and the buyer is agreeing to
+      # it: the amount comes off the record and the buyer's input is ignored
+      # entirely. That is not a UI nicety — a posted `amount` alongside an
+      # `offer_id` would let a stranger buy a $35 lawn mow for $1, and reading
+      # the price from the record is the only version of this that cannot be
+      # rewritten in a form.
+      #
+      # Without one, the old free-amount path stands. It is still the right thing
+      # for a venture that has not listed anything yet, and for the customer who
+      # was told a price in person.
+      offer = find_offer(event)
+      if params[:offer_token].present? && offer.nil?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "That isn't for sale right now."
+        return
+      end
+
+      amount_cents = offer&.price_cents || parse_amount(params[:amount])
       if amount_cents.nil?
         redirect_to fuime_storefront_path(slug: event.slug),
                     alert: "Enter an amount between $1 and $10,000."
@@ -50,10 +71,10 @@ module Fuime
       session = ::Fuime::PaymentLinkService.new(
         event:,
         amount_cents:,
-        description: payment_description(event)
+        description: offer&.payment_description || payment_description(event)
       ).create_checkout_session(
-        success_url: fuime_storefront_url(slug: event.slug, paid: 1),
-        cancel_url: fuime_storefront_url(slug: event.slug)
+        success_url: return_url(event, offer, paid: true),
+        cancel_url: return_url(event, offer)
       )
 
       redirect_to session.url, allow_other_host: true
@@ -74,8 +95,56 @@ module Fuime
     # child's ledger.
     MAX_DESCRIPTION_LENGTH = 120
 
+    # The offer being bought, if one was named.
+    #
+    # Never by id, so the primary key does not appear in public HTML. The
+    # storefront's Buy buttons and the payment page both post `offer.to_param` —
+    # the operator's slug when they have chosen one, the permanent token when
+    # they have not. See Fuime::Offer.find_public and AddSlugToFuimeOffers.
+    #
+    # Scoped to this venture's PUBLISHED offers. Both halves matter: a token from
+    # another venture would charge this buyer for something this business does
+    # not sell and credit the wrong operator's ledger, and a draft or archived
+    # offer is one the operator has deliberately taken off sale — a stale link
+    # must not still be able to buy it.
+    def find_offer(event)
+      return nil if params[:offer_token].blank?
+
+      # Slug or token — see Fuime::Offer.find_public. Scoped to this venture's
+      # published offers either way.
+      ::Fuime::Offer.find_public(event.fuime_offers.published, params[:offer_token])
+    end
+
+    # Where Stripe sends the buyer back to.
+    #
+    # The page they came from, which for a payment link is the payment page
+    # itself. Bouncing a customer who followed a direct link into a storefront
+    # they never asked to see is the browse step the link exists to avoid — and
+    # it hands them a shop when what they wanted was a receipt.
+    def return_url(event, offer, paid: false)
+      if offer.present?
+        return fuime_payment_page_url(event_slug: event.slug, offer: offer.to_param,
+                                      **(paid ? { paid: 1 } : {}))
+      end
+
+      fuime_storefront_url(slug: event.slug, **(paid ? { paid: 1 } : {}))
+    end
+
     def payment_description(event)
-      supplied = params[:description].to_s.gsub(/[[:cntrl:]]/, "").strip
+      # Control characters, and now square brackets.
+      #
+      # A bracketed "[fuime_…]" in a memo is how Fuime::PayablesLedger classifies
+      # a ledger line, so an anonymous stranger typing "[fuime_fee_x" into this
+      # box on a public page could make a teenager's $35 sale appear on their own
+      # earnings page as a $35 platform fee. Unauthenticated free text that
+      # reaches a ledger is exactly the input that has to be assumed hostile.
+      #
+      # See Fuime::VentureLedger.sanitize_memo_text. Stripped rather than refused
+      # because there is nobody here to tell — the payer is a customer, not a
+      # Fuime user, and a validation error on a checkout is a lost sale for a
+      # child over a character they had no reason to avoid.
+      supplied = ::Fuime::VentureLedger.sanitize_memo_text(params[:description])
+                                       .gsub(/[[:cntrl:]]/, "").strip
       return "Payment to #{event.name}" if supplied.blank?
 
       supplied.truncate(MAX_DESCRIPTION_LENGTH)

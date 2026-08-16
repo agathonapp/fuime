@@ -2,6 +2,188 @@
 
 ## Handoff (most recent first)
 
+**2026-08-15 — Phase 7a: the business-type step, and the venture-born-blocked bug it fixes.**
+
+New `business_type` step between the intro screen and `project_info`, plus
+`Fuime::ServiceCatalog` — ten services, each with a checklist, and Whop's three-card fork with
+its third card changed from "clone a proven business" to "start from a template".
+
+**The bug is older than the UI and worth knowing about: nothing ever set
+`Event#business_category` from an application.** `activate_event!` did not carry it, so every
+venture the funnel produced started blank — and `OperatorEligibility::ELIGIBLE_CATEGORIES` is
+`%w[services]`, which a blank does not satisfy. Ventures were created already unable to sell
+and the vetting queue was where anybody found out.
+
+**Two constraints in the catalog are asserted, not commented, because both are under constant
+pressure to "just be helpful".** No template may suggest a price (§8.3 D2 — a suggested rate is
+a set rate with a softer verb) and the checklists must positively say the rate is the
+operator's. And babysitting, childcare and coaching children are deliberately absent: under MoR
+Fuime is the legal seller, and for childcare the foreseeable failure is injury to a child. That
+is a launch-scope judgement for the §7 Q1 counsel conversation, not a permanent rule.
+
+**Two bugs found on the way.** `Event::ApplicationsController#update` raised
+`DoubleRenderError` on any non-autosave update with no `return_to` — `redirect_back_or_to` does
+not end the action and it fell through to `head :no_content`. And validating `service_type`
+inclusion on every save would have bricked every existing application the day a catalog key was
+retired; it is now `if: :service_type_changed?`.
+
+**Whop as the whole substrate is open, not chosen** — see MOR_MIGRATION_PLAN §9. Better rails,
+same L5 vocabulary. Blocking unknown is Q9 (guardian as verified principal), which should be
+asked in the same conversation already owed to Stripe.
+
+
+**2026-08-15 — Phase 6: the weekly payout run exists, and it deliberately cannot send money.**
+
+`Fuime::PayoutBatchService` generates a run every Wednesday for a Friday payout, an admin reads
+every line at **/admin/payout_batches**, and `mark_paid!` is the only thing that debits an
+operator's ledger. Approving posts nothing — the page's copy says so and a spec asserts it.
+
+**The thing to hold onto: a run's terminal step is a human assertion, not a transfer.** The
+originator is still an open decision (MOR_MIGRATION_PLAN §4.3 — Mercury's ToS on programmatic
+ACH to hundreds of third parties, Slash as the API-native alternative, Plaid behind either).
+When it lands it becomes a `LegalEntity::PayoutMethod::BankAccount` behind the same transition
+and nothing in phase 6 changes.
+
+**Four new env dials, all defaulted and all frozen onto each batch row at generation:**
+`FUIME_PAYOUT_HOLD_DAYS` 7 · `FUIME_PAYOUT_RESERVE_BASIS_POINTS` 1000 ·
+`FUIME_PAYOUT_RESERVE_WINDOW_DAYS` 90 · `FUIME_PAYOUT_MAXIMUM_CENTS` 250000 ·
+`FUIME_PAYOUT_MINIMUM_CENTS` 1000. Frozen rather than read live because a run that floats with
+the configuration is a run nobody can explain to an operator afterwards. **The numbers are the
+founder's call** — they answer §8.4 item 1 defensibly, not finally. A steady $100/week operator
+ends up with a standing $130 reserve (~1.3 weeks of earnings) and is then paid in full weekly.
+
+**Two traps worth carrying forward.** `Fuime::VentureLedger#post!` writes a PENDING line that
+something must later promote, and `ConnectSettlementSweep` only promotes payment- and
+refund-shaped keys — so any new Fuime money path that has no Stripe settlement event must use
+`post_settled!` or its debit sits in `committed_cents` forever. And `PayoutRequest#reject`
+cannot leave `approved` by design (on the Connect paths approval IS the money moving), so
+cancelling a batch line needed a separate `cancel_from_run` event guarded on `scheduled?`.
+
+**Verification: 3091 examples, 8 failures — the eight pre-existing ones and nothing else.** One
+seed; see `known-failures.md` for why that is recorded as weaker evidence than the phase-3 run.
+
+
+**2026-08-14 — Phase 3: vetting is live in every model, and the launch scope is a gate.**
+Read `docs/fuime/MOR_MIGRATION_PLAN.md` **§8** first — it is new, it supersedes §5's
+sequencing, and it records what the revised brief settles versus what it only assumes.
+
+**The single most important thing in this handoff: `Event#accepts_payments?` now returns
+false for any venture nobody has approved.** The column defaults to `unvetted`, so *every
+existing venture is blocked from selling until an admin approves it* at **/admin/operator_vetting**.
+That is intended — manual approval is the control the whole model rests on — but it means a
+production deploy needs someone to work that queue before anyone can sell. The nav item shows
+the outstanding count. There is no bulk-approve and deliberately so; if you want one for
+existing ventures, write it as a one-off task with a recorded reason, not as a migration.
+
+The spec factory defaults ventures to **approved** (`:unvetted` / `:rejected` / `:suspended`
+traits exist), for the same reason users default to adults — otherwise every storefront,
+checkout and payout spec silently becomes a test of this gate.
+
+**Two flags now, and they are near-opposites.** `FEATURE_SPONSOR_BANKING` = "Fuime holds YOUR
+money" (needs a named partner bank to boot). `FEATURE_MERCHANT_OF_RECORD` = "the money is
+Fuime's own and we owe you a payable" (needs `FUIME_MOR_COUNSEL_MEMO` to boot). Neither implies
+the other. Both default off, and with MoR off the app still runs the **guardian-owned Stripe
+Connect model exactly as before** — the pivot is additive, not a replacement.
+
+**What binds when.** Vetting binds always. Services-only, the 16+ operator floor and
+per-operator guardianship bind *only* under MoR, because they bound liability Fuime carries as
+seller of record — under Connect that risk sits with the family, and enforcing them anyway
+would block school ventures that `Event#institutionally_sponsored?` already covers. Tag a spec
+`:merchant_of_record` to exercise that half (sibling of `:sponsor_banking`).
+
+**Never render `Event#selling_blockers` on a public page.** Those strings name operators and
+state their ages. `app/views/fuime/_selling_blockers.html.erb` is the authenticated-only
+partial; `spec/controllers/fuime/storefront_blocker_privacy_spec.rb` asserts none of them
+appear verbatim on the storefront, so the guarantee survives rewording.
+
+**Two bugs the new specs caught, both invisible to a status-code test:** the admin queue's
+`group(...).count` raised `PG::GroupingError` because `Event`'s `default_scope` orders by id
+(`unscope(:order)`), and the three decision buttons were `form.submit`, whose label *is* its
+value — they posted `status=Approve`. Use `form.button` when several buttons share a param.
+
+**The Stripe pass is half done, and the second half has a specific blocker.** Test keys *are*
+present — they resolve through `Credentials.fetch(:STRIPE, mode, :SECRET_KEY)`, i.e.
+`STRIPE__TEST__SECRET_KEY`, **not** the flat `STRIPE_SECRET_KEY` you might grep for. Money-in
+is verified against real Stripe: the direct-charge shape is accepted and
+`application_fee_amount` stores correctly. Webhooks, onboarding, embedded components and
+ledger posting are all still untested — see `EMBEDDED_CONNECT.md` §7 for exactly what was and
+was not run.
+
+**Before continuing: `stripe login` against the Fuime account.** The CLI is authenticated to
+`acct_1TmdhsGRzfgn1FN5` ("Hack Club Shop testing") while the app key is
+`acct_1TznaN2Uz4P3wrXO`. `stripe listen` would forward events from an account this app knows
+nothing about, and every handler would no-op while looking like it ran. Also
+`FUIME_STRIPE_WEBHOOK_SECRET` is empty, and `StripeService.construct_webhook_event` skips
+signature verification entirely when it is blank.
+
+**Verification: 2969 examples, 8 failures — the 8 pre-existing ones and nothing else.** Three
+full-suite runs at different seeds, because adding ~75 examples reshuffles RSpec's random order
+and a single run cannot tell a regression from an order-dependent spec. Run A surfaced
+`spec/initializers/flipper_groups_spec.rb:25`, which passes in isolation and passed at another
+seed — order-dependent Flipper state, not the diff. Run B surfaced two real failures in a spec
+written after A, both fixed. All three runs and the attribution are in `known-failures.md`.
+
+---
+
+**2026-08-13 — The merchant-of-record pivot starts; custody is now a flag.** Read
+`docs/fuime/MOR_MIGRATION_PLAN.md` first — it is the plan of record for this work and its §0
+explains why the brief that started it was aimed at a codebase that no longer exists. Phases 1
+and 2 are done on `fuime/mor-pivot-phase1`; phases 3–7 are blocked on the four questions in
+its §7, two of which are for counsel and one for Stripe.
+
+**⏪ There is a restore point.** The complete working tree from immediately before the pivot,
+including the 20 uncommitted Connect files, is in the tag **`pre-mor-pivot`** (`859fc5018`).
+`git checkout -b rescue pre-mor-pivot` recovers all of it. Do not delete that tag until the
+pivot merges — MOR_MIGRATION_PLAN §0.2 explains why the Connect work may need to come back.
+
+What landed: `Fuime::Features` (`app/lib/fuime/features.rb`) with `FEATURE_SPONSOR_BANKING`,
+default off, ENV-only and deliberately **not** Flipper — a Flipper flag is a checkbox any
+admin can tick, and the failure mode here is unlicensed money transmission rather than a bad
+rollout. `Fuime::DisabledModules` went from one hardcoded list to three, so the custody
+modules (ACH, checks, wires, disbursements, Emburse) come back by configuration rather than
+by editing a concern. Plus `Fuime::PayablesLedger`, which reframes `Event#balance_*` as "what
+Fuime owes you, paid Friday" without touching the ledger engine.
+
+**Two gotchas that will bite the next session.**
+
+- **Fronting is off, and it breaks any spec that funds an event with `fronted: true`.**
+  `Event#can_front_balance?` returns false while custody is off, *and* the column now defaults
+  to false — so a spec needs BOTH the `:sponsor_banking` tag and an explicit
+  `can_front_balance: true` to spend fronted money. Three upstream spec files already needed
+  this (see `known-failures.md`). If you see `inadequate_balance` where you expected something
+  specific, this is why.
+- **Cards are now blocked in LIVE mode, not test.** `Fuime::Features.card_issuing_permitted?`
+  keeps test-mode Issuing demonstrable and refuses it against live keys — finally implementing
+  a promise the 2026-08-02 card note made in a comment and nothing enforced. Blocked at the
+  controller *and* at `StripeCard#balance_available`, because blocking controllers alone would
+  leave an already-issued card authorising swipes.
+
+**Verification: the first full-suite baseline exists.** 2896 examples, 8 failures, all
+pre-existing and attributed in `known-failures.md`. ~14 minutes; local `bundle exec rspec`
+still does not work (Ruby 4.0.6 vs the Gemfile's 3.4.9) so it must run in Docker — the exact
+command is further down this file.
+
+**Phase 2 is now finished.** Operator-facing pages read `Fuime::PayablesLedger`
+("Owed to you", never "Account balance"), and `spec/views/fuime/payables_copy_spec.rb` keeps
+them there by reading template source for forbidden nouns and forbidden method calls.
+
+**A live money bug fell out of it, and it is the most important thing in this handoff.**
+`FeeEngine::Create` was charging Fuime's `revenue_fee` a SECOND time. Upstream that engine is
+how HCB takes its cut, but under Connect the fee is already deducted by Stripe
+(`application_fee_amount`) and posted as its own ledger line — so a $100 sale arrived as +$100
+/ −$4 / −$3.20 and the hourly job accrued another $4. That is **8% charged for a 4% product**,
+and it is exactly why the dashboard and the payouts page disagreed. Fixed by waiving the
+accrual on any line carrying a Fuime ledger key. **If a real database ever accrues `Fee` rows,
+audit `fee_balance` before launch** — nothing has run against production money, so there is
+probably nothing to correct, but nobody has checked.
+
+**Next task:** Phase 3+ are blocked on MOR_MIGRATION_PLAN §7. The one engineering decision now
+open is the payout rail — see its **§4.3**, added after the Slash/Mercury/Plaid question. Short
+version: MoR decouples money-in from money-out, so Connect is no longer needed for collection,
+and a business-banking rail is legitimate *because* the balance is Fuime's own revenue rather
+than customer funds. The cost of leaving Connect is 1099-NEC filing, which Connect does and
+Slash/Mercury do not.
+
 **2026-08-07 — The waitlist runs on Render only; Upstash is gone.** Storage moved
 from Upstash REST to a Render Key Value instance, so the site now speaks the
 Redis protocol (`ioredis`, `npm ci --omit=dev` at build) and Rails reads through

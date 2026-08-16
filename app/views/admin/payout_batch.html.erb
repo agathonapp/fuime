@@ -1,0 +1,150 @@
+<% title "Payout run ##{@batch.id} (Fuime)" %>
+
+<%# FUIME: one weekly run, and the page where a human decides whether Fuime pays it.
+
+    Every figure that produced a line is shown, because approving a list of amounts
+    is not a review — the reviewer needs to see that a $2,400 line came from $2,400
+    of aged sales and not from a reserve that failed to apply. See
+    Fuime::PayableAssessment for the arithmetic and the order it applies in. %>
+
+<h1>Payout run #<%= @batch.id %></h1>
+
+<div class="card mb2">
+  <div class="flex flex-wrap gap-3">
+    <div>
+      <div class="muted">Pays on</div>
+      <strong><%= @batch.payout_on.strftime("%A %-d %B %Y") %></strong>
+    </div>
+    <div>
+      <div class="muted">Period</div>
+      <strong><%= @batch.period_start.strftime("%-d %b") %> – <%= @batch.period_end.strftime("%-d %b %Y") %></strong>
+    </div>
+    <div>
+      <div class="muted">Operators</div>
+      <strong><%= @batch.operator_count %></strong>
+    </div>
+    <div>
+      <div class="muted">Total</div>
+      <strong><%= render_money @batch.total_cents %></strong>
+    </div>
+    <div>
+      <div class="muted">Held as reserve</div>
+      <strong><%= render_money @batch.reserve_held_cents %></strong>
+    </div>
+    <div>
+      <div class="muted">State</div>
+      <strong><%= @batch.aasm_state.humanize %></strong>
+    </div>
+  </div>
+
+  <%# The policy this run was generated under, read off the row rather than the
+      env — see CreateFuimePayoutBatches for why a run that floats with the
+      configuration is a run nobody can explain afterwards. %>
+  <hr>
+  <div class="muted">
+    Generated under: <%= @batch.hold_days %>-day hold ·
+    <%= number_with_precision(@batch.policy.reserve_percentage, precision: 2, strip_insignificant_zeros: true) %>%
+    reserve on <%= @batch.reserve_window_days %> days of trailing sales ·
+    <%= render_money @batch.maximum_cents %> per-operator cap ·
+    <%= render_money @batch.minimum_cents %> minimum.
+    These are the values as at generation and do not change if the configuration does.
+  </div>
+</div>
+
+<%# ── The decisions ──────────────────────────────────────────────────────── %>
+
+<div class="card mb2">
+  <% if @batch.draft? %>
+    <p class="mt0">
+      Nothing has moved. Approving marks every line released; it does
+      <strong>not</strong> send money — Fuime has no payment rail wired here yet
+      (<code>docs/fuime/MOR_MIGRATION_PLAN.md</code> §4.3), so the transfers go out
+      by whatever means Fuime actually has and then somebody marks the run paid.
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <%= button_to "Approve this run", payout_batch_approve_admin_index_path(id: @batch.id),
+                    method: :post, class: "btn",
+                    form: { data: { turbo_confirm: "Approve #{@batch.summary}?" } } %>
+      <%= button_to "Cancel this run", payout_batch_cancel_admin_index_path(id: @batch.id),
+                    method: :post, class: "btn bg-muted",
+                    form: { data: { turbo_confirm: "Cancel this run and decline every line on it?" } } %>
+    </div>
+  <% elsif @batch.approved? %>
+    <p class="mt0">
+      Approved by <%= @batch.approved_by&.name || "an admin" %>
+      on <%= @batch.approved_at&.strftime("%-d %b %Y") %>.
+      <strong>No ledger line has been posted.</strong> Mark the run as paid once the
+      transfers have actually gone out — that is what debits each operator's ledger.
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <%= button_to "Mark as paid", payout_batch_mark_paid_admin_index_path(id: @batch.id),
+                    method: :post, class: "btn",
+                    form: { data: { turbo_confirm: "Confirm that #{render_money @batch.total_cents} has been sent to #{@batch.operator_count} operator(s)? This debits their ledgers." } } %>
+      <%= button_to "Cancel this run", payout_batch_cancel_admin_index_path(id: @batch.id),
+                    method: :post, class: "btn bg-muted",
+                    form: { data: { turbo_confirm: "Cancel this approved run and decline every line on it?" } } %>
+    </div>
+  <% elsif @batch.paid? %>
+    <p class="mt0 mb0">
+      Marked paid by <%= @batch.paid_by&.name || "an admin" %>
+      on <%= @batch.paid_at&.strftime("%-d %b %Y") %>. Each line below has been
+      debited from its operator's ledger.
+    </p>
+  <% else %>
+    <p class="mt0 mb0">
+      Cancelled on <%= @batch.cancelled_at&.strftime("%-d %b %Y") %>.
+      <%= @batch.cancellation_reason.presence %>
+      Every line on it was declined; the money remains payable and will appear in a
+      later run.
+    </p>
+  <% end %>
+</div>
+
+<%# ── The lines ──────────────────────────────────────────────────────────── %>
+
+<table class="min-w-0">
+  <thead>
+    <tr>
+      <%# Only the figures actually persisted on the line. The trailing-sales and
+          aged-balance terms behind them are recomputable from the ledger but are
+          not stored, so they are not claimed here — a column of em-dashes reads
+          as missing data rather than as an explanation. %>
+      <th>Operator</th>
+      <th>Cleared the hold, less commitments</th>
+      <th>Reserve held</th>
+      <th>Eligible</th>
+      <th>Paid</th>
+      <th>State</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @lines.each do |line| %>
+      <tr>
+        <td><%= link_to line.event.name, event_path(line.event) %></td>
+        <td class="muted"><%= render_money line.eligible_cents.to_i + line.reserve_held_cents.to_i %></td>
+        <td><%= render_money line.reserve_held_cents %></td>
+        <td><%= render_money line.eligible_cents %></td>
+        <td>
+          <strong><%= render_money line.amount_cents %></strong>
+          <% if line.eligible_cents.to_i > line.amount_cents %>
+            <div class="muted">capped — <%= render_money(line.eligible_cents.to_i - line.amount_cents) %> rolls forward</div>
+          <% end %>
+        </td>
+        <td><%= line.aasm_state.humanize %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @lines.empty? %>
+  <p class="muted">No operator produced a payable line in this run.</p>
+<% end %>
+
+<%# Why the operators who are not here are not here. Written onto the batch at
+    generation — "38 ventures, 6 lines" is either correct or a serious bug, and a
+    reviewer cannot tell which without the reasons. %>
+<% if @batch.notes.present? %>
+  <div class="card mt2">
+    <div class="muted" style="white-space: pre-wrap;"><%= @batch.notes %></div>
+  </div>
+<% end %>

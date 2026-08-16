@@ -5,9 +5,21 @@ require "rails_helper"
 describe AchTransfersController do
   include SessionSupport
 
-  describe "show" do
+  # :sponsor_banking — this example funds the event with a FRONTED pending
+  # transaction, and fronting is credit Fuime extends against unsettled money.
+  # `Event#can_front_balance?` is false while custody is off, so the event would
+  # otherwise have a $0 balance and the transfer would fail validation before the
+  # redirect under test ever happened. ACH origination is itself a
+  # sponsor-banking module, so this runs it in the only world where it exists.
+  # See spec/support/sponsor_banking.rb.
+  describe "show", :sponsor_banking do
     it "redirects to hcb code" do
-      event = create(:event)
+      # Both halves are now explicit, and both are load-bearing: the flag (via the
+      # tag above) decides whether Fuime fronts at all, and the column decides
+      # whether it fronts for THIS venture. `can_front_balance` used to default to
+      # true from upstream and now defaults to false, so a spec that spends
+      # fronted money has to ask for it.
+      event = create(:event, can_front_balance: true)
       create(:canonical_pending_transaction, amount_cents: 1000, event:, fronted: true)
       ach_transfer = create(:ach_transfer, event:)
       get :show, params: { id: ach_transfer.id }

@@ -3,6 +3,20 @@
 FactoryBot.define do
   factory :event do
     name { Faker::Name.unique.name }
+
+    # Fuime: ventures default to vetted, for the same reason users default to
+    # adults — see spec/factories/user_factory.rb.
+    #
+    # The COLUMN defaults to `unvetted`, which is the correct production
+    # behaviour: a venture nobody has reviewed cannot sell, and that is exactly
+    # the population the control exists for. But Event#accepts_payments? folds
+    # vetting in, so a factory that inherited the column default would turn every
+    # storefront, checkout and payout spec into a test of the vetting gate
+    # instead of a test of the thing it means to exercise.
+    #
+    # Use :unvetted / :rejected / :suspended to test that gate directly.
+    operator_vetting_status { :approved }
+
     transient do
       plan_type { Event::Plan::FeeWaived }
       organizers { [] }
@@ -35,6 +49,21 @@ FactoryBot.define do
 
     trait :demo_mode do
       demo_mode { true }
+    end
+
+    # The three states a venture can be in that stop it selling. `unvetted` is
+    # what every real venture starts as, so it is the one worth reaching for
+    # when testing the queue rather than the refusal.
+    trait :unvetted do
+      operator_vetting_status { :unvetted }
+    end
+
+    trait :rejected do
+      operator_vetting_status { :rejected }
+    end
+
+    trait :suspended do
+      operator_vetting_status { :suspended }
     end
 
     trait :card_grant_event do
