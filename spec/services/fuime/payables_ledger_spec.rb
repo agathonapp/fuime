@@ -17,15 +17,19 @@ RSpec.describe Fuime::PayablesLedger do
   # written by VentureLedger.settled_memo and by ConnectSettlementSweep. Building
   # them directly rather than driving the sweep keeps these examples about
   # classification instead of about the import pipeline.
-  def post(key, amount_cents, memo: "Line")
+  # `post_line`, not `post`: Rails/HttpPositionalArguments assumes any `post(...)`
+  # is an HTTP request and "corrects" the arguments into params:/session:, which
+  # silently rewrote every line in this file into a request spec that tests
+  # nothing. Renamed so the cop cannot mistake a ledger helper for a route.
+  def post_line(key, amount_cents, memo: "Line")
     create(:canonical_transaction, amount_cents:, memo: "#{memo} [#{key}]", event:)
   end
 
   # One realistic sale: $100 in, Fuime's 4% out, Stripe's ~2.9%+30¢ out.
   def sale(intent: "pi_1", gross: 100_00, fee: 4_00, processing: 3_20)
-    post("fuime_#{intent}", gross, memo: "Payment from a customer")
-    post("fuime_fee_#{intent}", -fee, memo: "Fuime platform fee (4%)")
-    post("fuime_stripefee_#{intent}", -processing, memo: "Stripe processing fee")
+    post_line("fuime_#{intent}", gross, memo: "Payment from a customer")
+    post_line("fuime_fee_#{intent}", -fee, memo: "Fuime platform fee (4%)")
+    post_line("fuime_stripefee_#{intent}", -processing, memo: "Stripe processing fee")
   end
 
   describe "the breakdown" do
@@ -68,10 +72,10 @@ RSpec.describe Fuime::PayablesLedger do
 
     it "sums to the net payable after a refund, a card purchase and a payout" do
       sale
-      post("fuime_rev_pi_1_refund_re_1_2000", -20_00, memo: "Refunded payment")
-      post("fuime_feerev_pi_1_fr_1_80", 80, memo: "Fuime platform fee refunded")
-      post("fuime_card_ipi_1", -15_00, memo: "Card purchase")
-      post("fuime_payout_po_1", -30_00, memo: "Payout to bank")
+      post_line("fuime_rev_pi_1_refund_re_1_2000", -20_00, memo: "Refunded payment")
+      post_line("fuime_feerev_pi_1_fr_1_80", 80, memo: "Fuime platform fee refunded")
+      post_line("fuime_card_ipi_1", -15_00, memo: "Card purchase")
+      post_line("fuime_payout_po_1", -30_00, memo: "Payout to bank")
 
       expect(reconciled(payables)).to eq(payables.net_payable_cents)
     end
@@ -104,7 +108,7 @@ RSpec.describe Fuime::PayablesLedger do
   describe "agreement with the payout cap" do
     it "reads the same figure Event#balance_v2_cents reports" do
       sale
-      post("fuime_payout_po_1", -30_00)
+      post_line("fuime_payout_po_1", -30_00)
 
       expect(payables.net_payable_cents).to eq(event.balance_v2_cents)
     end
@@ -130,14 +134,14 @@ RSpec.describe Fuime::PayablesLedger do
     end
 
     it "never shows a negative amount owed" do
-      post("fuime_rev_pi_9_refund_re_9_1000", -10_00)
+      post_line("fuime_rev_pi_9_refund_re_9_1000", -10_00)
 
       expect(payables.net_payable_cents).to eq(-10_00)
       expect(payables.amount_owed_cents).to eq(0)
     end
 
     it "reports arrears separately so a debt can be explained rather than negated" do
-      post("fuime_rev_pi_9_refund_re_9_1000", -10_00)
+      post_line("fuime_rev_pi_9_refund_re_9_1000", -10_00)
 
       expect(payables).to be_in_arrears
       expect(payables.arrears_cents).to eq(10_00)
@@ -199,7 +203,7 @@ RSpec.describe Fuime::PayablesLedger do
     end
 
     it "explains an arrears position instead of showing a negative" do
-      post("fuime_rev_pi_9_refund_re_9_1000", -10_00)
+      post_line("fuime_rev_pi_9_refund_re_9_1000", -10_00)
 
       expect(payables.owed_sentence).to match(/taken off your next payouts/)
     end

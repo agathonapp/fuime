@@ -27,7 +27,8 @@ RSpec.describe Fuime::OffersController, type: :controller do
       create_session(teen, verified: true)
 
       post :create, params: { event_slug: event.slug,
-                              fuime_offer: { name: "Lawn mow", price: "35" } }
+                              fuime_offer: { name: "Lawn mow", price: "35" }
+}
 
       expect(event.fuime_offers.count).to eq(1)
       expect(event.fuime_offers.first.price_cents).to eq(35_00)
@@ -42,7 +43,8 @@ RSpec.describe Fuime::OffersController, type: :controller do
       create_session(guardian, verified: true)
 
       post :create, params: { event_slug: event.slug,
-                              fuime_offer: { name: "Lawn mow", price: "35" } }
+                              fuime_offer: { name: "Lawn mow", price: "35" }
+}
 
       expect(event.fuime_offers.count).to eq(0)
     end
@@ -72,7 +74,7 @@ RSpec.describe Fuime::OffersController, type: :controller do
 
       expect(price_field).to be_present, "the price field should render"
       expect(price_field).not_to match(/placeholder="[^"]*\d/),
-                                "the price placeholder must not contain a number"
+                                 "the price placeholder must not contain a number"
     end
 
     it "says the price is the operator's" do

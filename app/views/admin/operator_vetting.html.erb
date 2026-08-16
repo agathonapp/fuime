@@ -70,7 +70,7 @@
           <% event.users.each do |user| %>
             <div>
               <%= user_mention(user) %>
-              <span class="muted"><%= user.age ? "#{user.age}" : "age unknown" %></span>
+              <span class="muted"><%= user.age ? user.age.to_s : "age unknown" %></span>
             </div>
           <% end %>
         </td>

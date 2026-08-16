@@ -154,7 +154,7 @@ RSpec.describe Fuime::Features do
       with_env("FEATURE_SPONSOR_BANKING", nil) do
         with_env("FEATURE_MERCHANT_OF_RECORD", nil) do
           expect(described_class.to_h).to eq(
-            "FEATURE_SPONSOR_BANKING" => false,
+            "FEATURE_SPONSOR_BANKING"    => false,
             "FEATURE_MERCHANT_OF_RECORD" => false
           )
         end

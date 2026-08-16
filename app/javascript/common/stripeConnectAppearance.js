@@ -22,7 +22,9 @@ export function connectAppearanceVariables() {
   const transparent = /rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/
 
   return {
-    colorBackground: transparent.test(bodyBackground) ? '#ffffff' : bodyBackground,
+    colorBackground: transparent.test(bodyBackground)
+      ? '#ffffff'
+      : bodyBackground,
     colorText: styles.color,
     // --primary is $fuime-blue from _variables.scss; the fallback is the same
     // value so a missing custom property degrades to the identical color.

@@ -53,7 +53,8 @@
         <%= form.radio_button :starting_point, point.key,
                               { checked: @application.starting_point == point.key,
                                 required: true,
-                                class: "absolute !block opacity-0" } %>
+                                class: "absolute !block opacity-0"
+} %>
         <%= form.label :starting_point, value: point.key do %>
           <strong><%= point.name %></strong>
           <small><%= point.blurb %></small>

@@ -52,7 +52,7 @@ export default class extends Controller {
         appearance: connectAppearance(),
       })
 
-      this.mountTargets.forEach((target) => this.mountInto(instance, target))
+      this.mountTargets.forEach(target => this.mountInto(instance, target))
       this.hideFallback()
     } catch (error) {
       // Never fail silently. A blank rectangle on the page a parent was sent to
@@ -72,7 +72,8 @@ export default class extends Controller {
     })
     if (!response.ok) throw new Error('Could not start a Stripe session')
     const body = await response.json()
-    if (!body.client_secret) throw new Error('Stripe session had no client secret')
+    if (!body.client_secret)
+      throw new Error('Stripe session had no client secret')
     return body.client_secret
   }
 

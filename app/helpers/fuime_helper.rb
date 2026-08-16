@@ -35,8 +35,10 @@ module FuimeHelper
   # Memoised per event per request: the presenter runs several aggregate queries
   # and the dashboard renders it more than once (the figure, and the hidden sizing
   # element the balance-graph controller measures against).
+  # rubocop:disable Rails/HelperInstanceVariable -- a per-request memo, not state
   def payables_for(event)
     @payables_by_event ||= {}
     @payables_by_event[event.id] ||= Fuime::PayablesLedger.new(event:)
   end
+  # rubocop:enable Rails/HelperInstanceVariable
 end

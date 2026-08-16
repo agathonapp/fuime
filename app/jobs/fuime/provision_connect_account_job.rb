@@ -60,7 +60,7 @@ module Fuime
       Rails.logger.info(
         "[Fuime] provisioned connected account for event #{event.id} on guardianship activation"
       )
-    rescue StandardError => e
+    rescue => e
       # Deliberately swallowed, and deliberately StandardError rather than a
       # narrow list. Nothing downstream depends on this job: the guardian can
       # still reach the payments page and create the account themselves through

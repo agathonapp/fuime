@@ -178,6 +178,7 @@ module Fuime
       def to_h
         ALL.index_with { |name| enabled?(name) }
       end
+
     end
 
     class Disabled < StandardError; end

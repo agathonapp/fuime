@@ -48,7 +48,7 @@
 # Check Constraints
 #
 #  fuime_offers_price_in_range  (price_cents > 0 AND price_cents <= 1000000)
-#  fuime_offers_state_known     (aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[]))
+#  fuime_offers_state_known     (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text]))
 #
 module Fuime
   class Offer < ApplicationRecord

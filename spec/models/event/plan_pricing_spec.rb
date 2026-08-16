@@ -15,12 +15,17 @@ require "rails_helper"
 #     Free      $0.00/mo  +  7%
 #     Standard  $15.00/mo +  5%
 #     Pro       $19.99/mo +  3%
+# Stripe's own rate. At the top level rather than inside the describe block for
+# two reasons that pull the same way: `def margin_cents` below cannot close over
+# a local, and Lint/ConstantDefinitionInBlock refuses a constant assigned inside
+# a block.
+STRIPE_PERCENT = 0.029
+STRIPE_FIXED_CENTS = 30
+
 RSpec.describe Event::Plan, "pricing" do
   # Stripe's US card rate. Not read from config because nothing in the app stores
   # it — it is Stripe's price, and it is here so the margin assertions below say
   # what they mean.
-  STRIPE_PERCENT = 0.029
-  STRIPE_FIXED_CENTS = 30
 
   def margin_cents(rate, amount_cents)
     (rate * amount_cents) - (STRIPE_PERCENT * amount_cents) - STRIPE_FIXED_CENTS
@@ -59,14 +64,14 @@ RSpec.describe Event::Plan, "pricing" do
   # not paying the standard price.
   describe "plans that must never be billed a subscription" do
     {
-      "Event::Plan::FeeWaived" => "a fee waiver that still charged $15/mo is not a waiver",
-      "Event::Plan::Terminated" => "billing a terminated plan is billing an ex-customer",
-      "Event::Plan::SpendOnly" => "no money comes in, so there is nothing to subscribe to",
-      "Event::Plan::CardsOnly" => "same",
-      "Event::Plan::ScGoogleGrant" => "a grant-funded plan",
-      "Event::Plan::FivePercent" => "legacy HCB fiscal sponsorship rate",
-      "Event::Plan::TenPercent" => "legacy HCB fiscal sponsorship rate",
-      "Event::Plan::ThreePointFive" => "legacy HCB fiscal sponsorship rate",
+      "Event::Plan::FeeWaived"           => "a fee waiver that still charged $15/mo is not a waiver",
+      "Event::Plan::Terminated"          => "billing a terminated plan is billing an ex-customer",
+      "Event::Plan::SpendOnly"           => "no money comes in, so there is nothing to subscribe to",
+      "Event::Plan::CardsOnly"           => "same",
+      "Event::Plan::ScGoogleGrant"       => "a grant-funded plan",
+      "Event::Plan::FivePercent"         => "legacy HCB fiscal sponsorship rate",
+      "Event::Plan::TenPercent"          => "legacy HCB fiscal sponsorship rate",
+      "Event::Plan::ThreePointFive"      => "legacy HCB fiscal sponsorship rate",
       "Event::Plan::TwoPointNinePercent" => "legacy HCB fiscal sponsorship rate",
     }.each do |class_name, why|
       it "does not charge #{class_name.demodulize} a monthly fee — #{why}" do

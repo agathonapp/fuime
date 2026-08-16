@@ -385,7 +385,7 @@ module EventsHelper
         },
         {
           name: "Donations",
-      module_prefix: "donations",
+          module_prefix: "donations",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "donations") },
           tooltip: "Edit donation page, goals, and tiers",
           symbol: :settings_donations,

@@ -31,7 +31,7 @@ require "rails_helper"
 # See docs/fuime/MOR_MIGRATION_PLAN.md §3.4 and §3.9.
 RSpec.describe "operator-facing payables copy" do
   # Templates an operator or guardian reaches, that display money owed.
-  OPERATOR_TEMPLATES = %w[
+  operator_templates = %w[
     app/views/fuime/payouts/index.html.erb
     app/views/events/home/_balance.html.erb
     app/views/events/stats.html.erb
@@ -48,7 +48,7 @@ RSpec.describe "operator-facing payables copy" do
        .gsub(/^\s*#.*$/, "")        # Ruby comments inside ERB blocks
   end
 
-  OPERATOR_TEMPLATES.each do |path|
+  operator_templates.each do |path|
     describe path do
       let(:source) { visible_source(path) }
 
@@ -115,7 +115,7 @@ RSpec.describe "operator-facing payables copy" do
   # examples above would silently pass over a file that no longer exists.
   describe "the template list" do
     it "names only templates that are on disk" do
-      missing = OPERATOR_TEMPLATES.reject { |p| Rails.root.join(p).exist? }
+      missing = operator_templates.reject { |p| Rails.root.join(p).exist? }
 
       expect(missing).to be_empty, "listed but missing: #{missing.join(', ')}"
     end

@@ -21,7 +21,7 @@
       ages — see app/views/fuime/_selling_blockers.html.erb and the privacy spec
       that keeps them off the storefront. %>
   <%= render "fuime/selling_blockers", event: @event,
-             title: "You can't publish offers yet" %>
+                                       title: "You can't publish offers yet" %>
 <% end %>
 
 <%# ── Your storefront ──────────────────────────────────────────────────── %>
@@ -100,8 +100,8 @@
         <div class="field">
           <%= form.label :unit_label, "Per what? (optional)" %>
           <%= form.text_field :unit_label, class: "w-full",
-                              maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
-                              placeholder: "per lawn" %>
+                                           maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
+                                           placeholder: "per lawn" %>
         </div>
       </div>
 

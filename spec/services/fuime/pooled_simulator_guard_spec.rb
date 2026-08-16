@@ -21,7 +21,8 @@ RSpec.describe Fuime::PaymentWebhookHandler, "live-mode refusal" do
 
   def payment_intent
     { id: "pi_live_guard", amount_received: 10_00, created: Time.current.to_i,
-      metadata: { "fuime_event_id" => venture.id.to_s } }
+      metadata: { "fuime_event_id" => venture.id.to_s }
+}
   end
 
   def stripe_event(livemode:)

@@ -66,7 +66,7 @@
         <div class="field">
           <%= form.label :description, "Anything they should know? (optional)", class: "text-left block" %>
           <%= form.text_field :description, class: "w-full max-w-full",
-                              placeholder: "Address, date, or a note" %>
+                                            placeholder: "Address, date, or a note" %>
         </div>
 
         <%= form.submit "Pay #{number_to_currency(@offer.price)}", class: "btn btn--lg btn--primary" %>

@@ -48,7 +48,7 @@ module Fuime
 
     ORDERINGS = {
       "newest" => "Newest first",
-      "name" => "A–Z",
+      "name"   => "A–Z",
     }.freeze
 
     def index
