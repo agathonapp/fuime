@@ -2,6 +2,56 @@
 
 ## Handoff (most recent first)
 
+**2026-08-16 — PR #68 merged and deployed; payout methods started; MoR has one gate left.**
+
+**Read `docs/fuime/PLATFORM_REVIEW.md` first** — it is the honest audit of what Fuime is and
+is not, written today, and it names the one gap that can lose money (disputes and clawback,
+§8.5 phase 7 — still unbuilt).
+
+**What landed on main (`5d763097c`, PR #68):** MoR phase 6 payout runs · the business-type
+onboarding step · `Fuime::Offer` and the storefront that stops being a tip jar ·
+`/pay/business/thing` payment links · the substrate decision (stay on Stripe, `WHOP_EVALUATION.md`
+§11) · a ledger memo-injection fix. **`fuime-web` autoDeploys from main**, so this is live at
+app.fuime.com. Both Stripe webhook secrets are set.
+
+**Uncommitted-to-main work sits on `fuime/vetting-from-application`** — four commits: vetting
+reads the application, LLC recorded, `Fuime::PayoutMethod`, and the batch/nav wiring. Not yet a
+PR.
+
+**🔑 The single most important state change: Fuime LLC exists.** That clears one of the two
+merchant-of-record gates. The other is unchanged and is now the ONLY thing between here and
+flipping `FEATURE_MERCHANT_OF_RECORD`: `FUIME_MOR_COUNSEL_MEMO` must cite a memo answering
+§7 Q1, Q2 and Q4. Adding code does not move it. That counsel conversation is the highest-leverage
+item on the list.
+
+**Next task, already shaped:** the Plaid Link flow and the operator page for
+`Fuime::PayoutMethod`. The model, its no-credentials-stored guarantees, the batch gate and the
+nav swap are done and tested; what is missing is `Fuime::PlaidLinkService` (create link token →
+exchange public token → write `provider_reference` → `mark_verified!`) plus the page. **It needs
+`PLAID_CLIENT_ID` and `PLAID_SECRET` in the environment** — sandbox is fine, and without them the
+integration cannot be run even once, which this session twice showed is not good enough.
+
+**Two traps this session paid for, both worth carrying:**
+
+1. **`bin/lint` is not safe without a full suite after it.** `rubocop -a` took the suite from 8
+   failures to 26: `Rails/HttpPositionalArguments` saw a spec's local `post(...)` ledger helper,
+   assumed it was an HTTP request, and rewrote every call into a request spec that tested
+   nothing — while satisfying the linter. Rename such helpers (`post_line`) rather than trusting
+   the autocorrect.
+2. **AASM is not whiny by default.** A transition whose save fails validation reverts the state
+   and returns `false` rather than raising. Check the return value or you will tell a user
+   something happened that did not.
+
+**Verification at handoff: 3189 examples, 8 failures** on main — the standing eight in
+`known-failures.md`. CI's RSpec shards are red on main for the same reason and were before this
+work; all twelve non-RSpec checks pass.
+
+**Still never done, and now the biggest gap: no webhook has ever run against Stripe.** The
+secrets are set, so a test-mode payment landing on a ledger is finally testable and is the one
+thing that proves the money path. `stripe login` against the Fuime account first — the CLI is on
+`acct_1Tmdhs…` ("Hack Club Shop testing") while the app key is `acct_1Tzna…`.
+
+
 **2026-08-15 — Phase 7a: the business-type step, and the venture-born-blocked bug it fixes.**
 
 New `business_type` step between the intro screen and `project_info`, plus
