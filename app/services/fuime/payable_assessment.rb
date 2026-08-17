@@ -141,6 +141,18 @@ module Fuime
 
       return "Payments are frozen on this venture." if event.financially_frozen?
 
+      # Under merchant-of-record Fuime owes this operator money and needs
+      # somewhere to send it. Generating a line for a venture with no verified
+      # destination would put an amount in an approved run that nobody can
+      # actually pay — and the batch's whole value is that a human reads it and
+      # every line on it is actionable.
+      #
+      # Only under MoR: on the Connect path the money is already in the family's
+      # own Stripe account and the destination is Stripe's business, not Fuime's.
+      if ::Fuime::Features.merchant_of_record? && event.fuime_payout_methods.usable.none?
+        return "No payout destination set up yet."
+      end
+
       nil
     end
 

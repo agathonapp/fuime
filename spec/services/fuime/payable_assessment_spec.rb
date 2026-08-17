@@ -157,6 +157,9 @@ RSpec.describe Fuime::PayableAssessment do
     # unique index stops a venture appearing twice in ONE run; this is what stops
     # it being paid twice across two.
     it "deducts a line already sitting in an earlier run" do
+      # A destination, because under MoR an operator without one is skipped
+      # before any arithmetic runs — see #structural_skip_reason.
+      create(:fuime_payout_method, :verified, event:)
       sale(intent: "pi_1", gross: 100_00)
       batch = create(:fuime_payout_batch)
       create(:payout_request, event:, payout_batch: batch, requested_by: nil,
@@ -169,6 +172,7 @@ RSpec.describe Fuime::PayableAssessment do
     # A paid line has already had its ledger debit posted, so it is inside
     # `payable_cents` and counting it again would deduct it twice.
     it "does not double-count a run that has already paid" do
+      create(:fuime_payout_method, :verified, event:)
       sale(intent: "pi_1", gross: 100_00)
       batch = create(:fuime_payout_batch, :paid)
       create(:payout_request, :paid, event:, payout_batch: batch, requested_by: nil,

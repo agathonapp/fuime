@@ -530,6 +530,10 @@ class Event < ApplicationRecord
   # not disappear.
   has_many :fuime_offers, class_name: "Fuime::Offer", dependent: :restrict_with_error
 
+  # Fuime: where this venture's money goes under merchant-of-record. See
+  # Fuime::PayoutMethod — a destination, not a merchant account.
+  has_many :fuime_payout_methods, class_name: "Fuime::PayoutMethod", dependent: :restrict_with_error
+
   # Fuime: top-ups this school made into its own Stripe balance. Restricted rather
   # than dependent-destroy for the same reason as payout_requests — these are the
   # record of real money movements a business office reconciles against, and they

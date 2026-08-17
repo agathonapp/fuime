@@ -117,9 +117,28 @@ module Fuime
     # exactly nine. Anything that long and all-numeric in these fields is a
     # credential, not a label.
     def must_not_hold_an_account_number
-      [:provider_reference, :institution_name, :account_holder_name].each do |field|
+      # Two rules, because the fields are different kinds of thing.
+      #
+      # `provider_reference` is a machine token and legitimately carries a long
+      # digit run — `ba_1QxYz0123456789` is an ordinary Stripe id. Rejecting a
+      # digit run there would break real integrations to catch a case that does
+      # not look like that, so it is refused only when it is ENTIRELY digits,
+      # which is what a bare account or routing number is.
+      #
+      # `institution_name` and `account_holder_name` are human labels. A bank is
+      # not called "Chase 000123456789" and nobody is named "Vansh Jain
+      # 021000021", so an embedded nine-digit run there is a credential somebody
+      # pasted into the nearest available box — which is the realistic failure
+      # this validation exists for.
+      token = provider_reference.to_s.strip.gsub(/[\s-]/, "")
+      if token.match?(/\A\d{9,}\z/)
+        errors.add(:provider_reference,
+                   "looks like an account or routing number — Fuime stores a token, never the digits")
+      end
+
+      [:institution_name, :account_holder_name].each do |field|
         value = self[field].to_s
-        next unless value.gsub(/\D/, "").length >= 9 && value.match?(/\d{9,}/)
+        next unless value.match?(/\d{9,}/)
 
         errors.add(field, "looks like an account or routing number — Fuime stores a token, never the digits")
       end

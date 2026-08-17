@@ -81,7 +81,21 @@ module EventsHelper
       tooltip: "Set up and check how this venture gets paid",
       icon: "bank-account",
       symbol: :payments,
-      available_proc: ->(event) { policy(event).payment_setup_status? && organizer_signed_in? }
+      # Fuime: hidden under merchant-of-record, because there is nothing to set up.
+      #
+      # This screen is the Connect path: Stripe asks the guardian for an SSN
+      # last-4, a home address, a phone number, an MCC, a business URL and ToS
+      # acceptance BEFORE a teenager can sell anything. Under MoR the money is
+      # Fuime's own revenue from Fuime's own sale, so no merchant account exists
+      # for the operator to open — the only thing they need is a payout
+      # destination, and that is asked when they have money to send.
+      #
+      # Reads the flag rather than being deleted, so the two models swap cleanly
+      # in either direction (Rule 2).
+      available_proc: lambda { |event|
+        !::Fuime::Features.merchant_of_record? &&
+          policy(event).payment_setup_status? && organizer_signed_in?
+      }
     },
     # Fuime: what the venture sells.
     #
