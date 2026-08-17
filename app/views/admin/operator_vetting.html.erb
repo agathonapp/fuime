@@ -74,7 +74,49 @@
             </div>
           <% end %>
         </td>
-        <td><%= event.business_category.presence || content_tag(:span, "not set", class: "muted") %></td>
+        <%# FUIME: what the applicant actually said.
+
+            This page decides whether a venture may sell, and until now it showed
+            a category and nothing else — so the only way to review an
+            application was to open it in another tab, which is how a queue stops
+            being read and starts being cleared.
+
+            Everything here is the applicant's own words. Nothing is Fuime's
+            assessment; the reviewer supplies that in the notes field. %>
+        <td>
+          <% app = event.application %>
+          <strong><%= app&.service&.name || event.business_category.presence&.titleize ||
+                        content_tag(:span, "not set", class: "muted") %></strong>
+
+          <% if app&.description.present? %>
+            <div class="muted mt1" style="white-space: pre-wrap; max-width: 22rem;"><%= app.description %></div>
+          <% end %>
+
+          <% if app&.website_url.present? %>
+            <div class="mt1">
+              <%# rel="noopener nofollow" and a new tab: this is an unvetted URL
+                  a stranger typed, being opened by a Fuime admin. %>
+              <%= link_to app.website_url, app.website_url, target: "_blank",
+                          rel: "noopener nofollow", class: "text-sm" %>
+            </div>
+          <% end %>
+
+          <% if app&.starting_point.present? %>
+            <div class="muted text-sm mt1">
+              <%= Fuime::ServiceCatalog.starting_point(app.starting_point)&.name %>
+            </div>
+          <% end %>
+
+          <%# Surfaced rather than buried: a political declaration is the one
+              answer on the application that changes what a reviewer should be
+              looking for. %>
+          <% if app&.political? %>
+            <details class="mt1">
+              <summary class="badge bg-warning">Political activity declared</summary>
+              <div class="muted text-sm" style="white-space: pre-wrap;"><%= app.political_description %></div>
+            </details>
+          <% end %>
+        </td>
         <td><%= event.operator_vetting_status.humanize %></td>
         <td>
           <%# Empty here means "nothing is stopping them", which under Connect is a
@@ -93,7 +135,19 @@
         </td>
         <td>
           <%= form_with url: operator_vetting_decide_admin_index_path(id: event.slug), method: :post, local: true do |form| %>
-            <%= form.text_field :notes, placeholder: "Why (kept on the record)", class: "w-full mb1" %>
+            <%# Prefilled with FACTS from the application, never a judgement.
+
+                `record_vetting_decision!` stamps this with the time and the
+                reviewer's name, so whatever is in this box becomes something a
+                named human is on record as having written. Prefilling "looks
+                legitimate" would put words in their mouth on the one control the
+                whole model rests on — and somebody clearing a queue would sign
+                them unread. The trailing "— " is an open clause inviting the
+                sentence that actually matters. See Event::Application#vetting_summary. %>
+            <%= form.text_field :notes,
+                                value: event.application&.vetting_summary,
+                                placeholder: "Why (kept on the record)",
+                                class: "w-full mb1" %>
             <%# form.button, not form.submit: a submit tag's label IS its value, so
                 three submits named "status" would post status=Approve. A button
                 carries a value independent of the text on it. %>

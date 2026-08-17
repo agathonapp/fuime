@@ -342,6 +342,32 @@ class Event
       starting_point == "from_template"
     end
 
+    # Fuime: the facts a vetting reviewer would otherwise retype, as a starting
+    # line for their decision note.
+    #
+    # ── Facts, never a conclusion ───────────────────────────────────────────
+    #
+    # `Event#record_vetting_decision!` stamps a note with the time and the
+    # reviewer's name, so whatever is in that box becomes something a named human
+    # is on record as having written. Prefilling it with a *judgement* — "looks
+    # legitimate", "low risk" — would put words in their mouth on the one control
+    # the whole model rests on, and an admin clearing a queue would sign them
+    # without reading.
+    #
+    # So this is only what the applicant themselves said: category, age, website,
+    # political activity. The reviewer supplies the sentence that matters, and
+    # the trailing "— " is deliberately an open clause inviting it.
+    def vetting_summary
+      bits = []
+      bits << (service&.name || business_category.presence&.titleize)
+      bits << "operator #{user.age}" if user&.age
+      bits << (website_url.presence ? "site #{website_url}" : "no site")
+      bits << "POLITICAL ACTIVITY DECLARED" if political?
+      bits << "adult applicant" if teen_led == false
+
+      "#{bits.compact.join(' · ')} — "
+    end
+
     def next_step
       return "Choose what kind of business" if business_category.blank?
       return "Tell us about your project" if name.blank? || description.blank?

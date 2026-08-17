@@ -881,7 +881,9 @@ class AdminController < Admin::BaseController
     @q = params[:q].presence
     @status = params[:status].presence
 
-    @events = Event.not_hidden.includes(:users, :plan)
+    # `:application` because the whole page is a review of what the applicant
+    # said, and without it every row fires its own query for the answers.
+    @events = Event.not_hidden.includes(:users, :plan, :application)
     @events = @events.where(operator_vetting_status: @status) if Event.operator_vetting_statuses.key?(@status)
     @events = @events.search_name(@q) if @q
 
