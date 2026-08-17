@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1326,6 +1326,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_170000) do
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[])", name: "fuime_payout_batches_state_known"
     t.check_constraint "period_end >= period_start", name: "fuime_payout_batches_period_ordered"
   end
+
+  create_table "fuime_payout_methods", force: :cascade do |t|
+    t.string "aasm_state", default: "pending", null: false
+    t.string "account_holder_name"
+    t.bigint "added_by_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.text "failure_reason"
+    t.string "institution_name"
+    t.string "last4"
+    t.string "provider", null: false
+    t.string "provider_reference"
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.index ["added_by_id"], name: "index_fuime_payout_methods_on_added_by_id"
+    t.index ["event_id"], name: "index_fuime_payout_methods_on_event_id"
+    t.index ["event_id"], name: "index_live_fuime_payout_methods_on_event", unique: true, where: "((aasm_state)::text <> 'removed'::text)"
+  end
+
+  add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'failed'::character varying, 'removed'::character varying]::text[])", name: "fuime_payout_methods_state_known", validate: false
+  add_check_constraint "fuime_payout_methods", "last4 IS NULL OR length(last4::text) <= 4", name: "fuime_payout_methods_last4_is_last4", validate: false
+  add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])", name: "fuime_payout_methods_provider_known", validate: false
 
   create_table "fuime_subscriptions", force: :cascade do |t|
     t.bigint "billed_to_id", null: false
@@ -3383,6 +3405,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_170000) do
   add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
+  add_foreign_key "fuime_payout_methods", "events", validate: false
+  add_foreign_key "fuime_payout_methods", "users", column: "added_by_id", validate: false
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "g_suite_accounts", "g_suites"
