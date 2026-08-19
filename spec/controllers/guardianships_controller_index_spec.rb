@@ -17,7 +17,24 @@ RSpec.describe GuardianshipsController do
   render_views
 
   let(:guardian) { create(:user) }
-  let(:minor) { create(:user, :minor) }
+  # The apostrophe is deliberate and load-bearing. Faker produces one every dozen
+  # runs or so, which is how the escaping bug below reached CI as a one-shard
+  # flake. Pinned, the escaped path is exercised on every run instead.
+  let(:minor) { create(:user, :minor, full_name: "Claudio O'Reilly") }
+
+  # Fuime: assert against the name as the PAGE carries it, not as the database
+  # does. Faker generates names with apostrophes ("Claudio O'Reilly"), ERB escapes
+  # them to `&#39;`, and a raw `include(minor.name)` then fails for one run in
+  # roughly a dozen — which is exactly how it presented: green locally, red on one
+  # CI shard, passing again on re-run.
+  #
+  # The negative assertion is the one that mattered. `not_to include(minor.name)`
+  # PASSES whenever the name contains an apostrophe, because the raw string is
+  # absent from the body whether or not the page shows the ward. So the check that
+  # a withdrawn-consent page does not name the minor was, for those names, a test
+  # that asserted nothing — a privacy guarantee quietly not being measured.
+  def rendered(name) = ERB::Util.html_escape(name).to_s
+
   let(:event) { create(:event, name: "Sunset Cookies") }
 
   # The minor runs the venture; that is what brings it into the guardian's view.
@@ -33,7 +50,7 @@ RSpec.describe GuardianshipsController do
       get :index
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(minor.name)
+      expect(response.body).to include(rendered(minor.name))
       expect(response.body).to include("Sunset Cookies")
     end
 
@@ -59,7 +76,7 @@ RSpec.describe GuardianshipsController do
       get :index
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(minor.name)
+      expect(response.body).to include(rendered(minor.name))
       expect(response.body).not_to include("Sunset Cookies")
     end
   end
@@ -94,7 +111,7 @@ RSpec.describe GuardianshipsController do
       expect(response).to have_http_status(:ok)
       # The page names the guardian (email only when they have no name),
       # matching every other guardianship surface.
-      expect(response.body).to include(guardian.name)
+      expect(response.body).to include(rendered(guardian.name))
     end
   end
 
@@ -113,7 +130,7 @@ RSpec.describe GuardianshipsController do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("Sunset Cookies")
-      expect(response.body).not_to include(minor.name)
+      expect(response.body).not_to include(rendered(minor.name))
     end
   end
 end
