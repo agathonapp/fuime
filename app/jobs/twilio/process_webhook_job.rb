@@ -13,9 +13,7 @@ module Twilio
     # string with OpenURI (it follows redirects to any host).
     TWILIO_MEDIA_HOSTS = %w[api.twilio.com media.twilio.com twilio.com].freeze
     TWILIO_MEDIA_HOST_SUFFIX = ".twilio.com"
-    # Twilio serves the bytes via a single 307 to a short-lived signed S3 URL.
-    # Allowed as a redirect target only — never as the original MediaUrl.
-    S3_REDIRECT_HOST_PATTERN = /\A(?:.+\.)?s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com\z/i
+    S3_REDIRECT_HOST_SUFFIX = ".amazonaws.com"
 
     def perform(webhook_params:)
       @params = webhook_params.with_indifferent_access
@@ -160,8 +158,27 @@ module Twilio
       twilio_media_host?(host) || s3_redirect_host?(host)
     end
 
+    # Twilio 307s media to a short-lived signed S3 URL. Allowed as a
+    # redirect target only — never as the original MediaUrl.
+    # Label checks stay linear (no nested regex quantifiers).
     def s3_redirect_host?(host)
-      host.to_s.match?(S3_REDIRECT_HOST_PATTERN)
+      normalized = host.to_s.downcase
+      return false unless normalized.end_with?(S3_REDIRECT_HOST_SUFFIX)
+
+      prefix = normalized.delete_suffix(S3_REDIRECT_HOST_SUFFIX)
+      labels = prefix.split(".")
+      return false if labels.empty? || labels.any?(&:blank?)
+
+      labels.any? { |label| s3_service_label?(label) }
+    end
+
+    def s3_service_label?(label)
+      return true if label == "s3"
+      return false unless label.start_with?("s3-")
+
+      # s3-us-east-1, s3-external-1 — each hyphen-separated part is alphanumeric.
+      parts = label.split("-")
+      parts.first == "s3" && parts.size > 1 && parts.all? { |part| part.match?(/\A[a-z0-9]+\z/) }
     end
 
     def http_get(uri, authenticate:)
