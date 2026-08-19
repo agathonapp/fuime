@@ -4734,3 +4734,52 @@ type produces a venture with a blank `business_category`, which fails
 `Fuime::OperatorEligibility` closed and blocks selling **before any other check runs**. A cohort
 admits such a founder perfectly happily and they still cannot sell. The business-type step is not
 optional in practice, and the roster's next-action column is what surfaces it.
+
+---
+
+## 2026-08-18 — `business_category` was required by nothing and writable nowhere
+
+**What:** `business_category` joins `Event::Application#required_submission_fields` (with the
+label "What kind of business this is"), and a new admin action
+`POST /admin/operator_vetting/:id/category` sets it on an already-activated venture from the
+vetting queue.
+
+**Why:** the previous entry closed with the observation that a blank `business_category` blocks
+selling before any other check. Checking how a founder recovers from that turned up the real
+defect: they cannot, and neither can an admin.
+
+`Fuime::OperatorEligibility#category_blocker` fails closed on blank — correct, and unchanged
+here, because treating "not answered" as "allowed" would exempt every venture created before the
+control existed. The hole was on both sides of it:
+
+- **Nothing required the field.** `allow_blank: true` on both `Event::Application` and `Event`,
+  absent from `required_submission_fields`, and only ever derived from `service_type`. A blank
+  category submitted, approved and activated in silence.
+- **Nothing could write it.** Outside `activate_event!`, `business_category` appears in no form,
+  no strong-params list and no admin screen. A grep of every controller and view finds only
+  reads — the directory, the storefront header, the vetting queue.
+
+So the failure mode was a founder who did everything right reaching "Choose what this venture
+sells before accepting payments" with nowhere to choose it. Found three days before Founders
+Weekend rather than during it.
+
+**The admin control is deliberately not operator-facing.** The category is what Fuime vets
+against and, under merchant-of-record, what Fuime legally sells as. Letting an operator re-answer
+it after approval would let a venture vetted as a service business become something else without
+a human re-reading it. An unrecognised value is refused rather than stored: a junk category that
+looks set is worse than one honestly missing, because the blocker stops naming it.
+
+**Files:** `app/models/event/application.rb`, `app/controllers/admin_controller.rb`,
+`app/views/admin/operator_vetting.html.erb`, `config/routes.rb`,
+`spec/requests/fuime_business_category_spec.rb` (new).
+
+### Verification
+
+7 examples green, covering both halves — including that an invalid category, a blank one and a
+non-admin are each refused. The admin half is tagged `:merchant_of_record`; `category_blocker` is
+an `umbrella_scope_blocker`, so untagged the blocker never fires and the spec would assert
+nothing.
+
+Full repo suite before this change: **3357 examples, 8 failures, 17 pending** — all 8 the
+documented baseline. Re-run after it, because a change to a *gate* has a blast radius wider than
+the files it edits (the lesson `20fee1cd5` taught by silently reddening two request specs).

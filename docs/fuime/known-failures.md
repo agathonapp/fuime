@@ -643,3 +643,24 @@ full suite for even when the targeted specs are green.
 Confirmed by bisect rather than assumed: disabling the destination check alone took both files
 from 2 failures to 8 examples / 0 failures, and re-enabling it with a `:verified` payout method
 in each spec's setup does the same with the gate intact.
+
+---
+
+## 2026-08-18 — `fuime/vetting-from-application` @ `c25351286`
+
+**3357 examples, 8 failures, 17 pending.** The largest run recorded in this file, and the first
+taken on this branch. All 8 are already accounted for above — no new failure was introduced by
+the ~460 examples this branch adds:
+
+| Spec | Cause |
+|---|---|
+| `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — Apple Silicon `wkhtmltopdf` |
+| `event/plan_spec.rb:32` | Pre-existing — the `School` plan lineup contradiction |
+| `event_spec.rb:296` | Pre-existing — same `School` lineup family (`Free` where `Standard` expected) |
+| `stripe_connected_account_spec.rb:134` | Pre-existing — `mirrors livemode` expects true, gets false |
+| `guardianships_controller_index_spec.rb:91` | Pre-existing (`e6691c7ac`) |
+
+**Method note, because the count moved a lot.** Earlier sessions reported "1267 green" and "1327
+green" — those were *subsets* (`spec/models/fuime`, `spec/services/fuime`, and friends), not the
+repository. Two of this branch's own request specs were red for a day precisely because a subset
+run cannot see a gate's blast radius. When the change touches a gate, run the whole thing.

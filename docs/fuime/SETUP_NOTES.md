@@ -2,6 +2,56 @@
 
 ## Handoff (most recent first)
 
+**2026-08-18 — The branch is on GitHub as PR #70. Nothing of Friday's work was deployed.**
+
+The state that mattered most and was not visible from any doc: **five unpushed commits and 28
+uncommitted files** sat on this laptop while `fuime-web` auto-deploys from `main`. Among them was
+the one-line `Event#accepts_payments?` fix — so **app.fuime.com could not let a single
+merchant-of-record venture sell**, and no amount of live-mode configuration would have changed
+that. Now committed (`b435ba4e2`, `c25351286`), pushed, and open as **PR #70**. Not merged: a
+merge auto-deploys, and that is a decision to take deliberately.
+
+**First full-repository suite run in this repo's history: 3357 examples, 8 failures, 17 pending.**
+All 8 are the documented baseline in `known-failures.md` (Apple-Silicon `wkhtmltopdf` ×4, the
+`School` plan-lineup contradiction ×2, `stripe_connected_account` livemode, guardianships index).
+The branch adds ~460 examples and introduces **zero** new failures. Previous sessions reported
+1267/1327 green across *subsets*; this is the whole thing.
+
+**`business_category` was a dead end, not the trap the last handoff called it.** The last entry
+noted a blank category blocks selling. Checking how anyone recovers found the real defect: nobody
+can. The column was required by nothing (`allow_blank: true` both sides, absent from
+`required_submission_fields`, derived only from `service_type`) **and writable nowhere** — outside
+`activate_event!` it appears in no form, no strong-params list, no admin screen. A founder who did
+everything right reached "Choose what this venture sells" with nowhere to choose it. Both halves
+fixed; see UPSTREAM_DIVERGENCE 2026-08-18.
+
+**Scope decided by the founder today:** payouts ship the week of Aug 24, not Friday — the 7-day
+hold plus 10% reserve means nobody is payable before ~Aug 28 anyway, and `mark_paid!` is already a
+human assertion, so the open originator decision (§4.3) is **not** on the launch critical path.
+Identity/KYC moves to payout-request time, which is also when the W-9/1099-NEC obligation attaches.
+
+**Operator age floor for Friday is 13** (`FUIME_MINIMUM_OPERATOR_AGE=13`, set in
+`.env.development`; **still to set on Render**). A 7–12 tier was asked for and is not a config
+change: under MoR Stripe's 13-floor no longer binds (the operator holds no Stripe account — that
+obstacle is genuinely gone), but COPPA and child-labor both remain, and both point at the same
+structure — **parent as the operator and vendor, child as a named participant holding no account
+and signing nothing**. That is LEGAL_RESEARCH's "parent is the merchant", P3 item 7. An
+auto-linked parent email is **not** verifiable parental consent (16 CFR 312.5(b)), and a public
+storefront naming a child is exactly the disclosure case email-plus cannot cover.
+
+**Three things stand between this branch and real money, and none of them are code:**
+(1) Stripe live account approved, in Fuime LLC's name, with the MoR structure described
+accurately — under-describing it to get approved is worse than a rejection, because it gets
+revoked mid-event. (2) `FUIME_MOR_COUNSEL_MEMO`, unchanged and still the top item.
+(3) **Register the live webhook endpoint** and put *its* signing secret in
+`FUIME_STRIPE_WEBHOOK_SECRET` — live endpoints have their own, nothing in code checks it, and
+without it every sale succeeds on the card and is invisible in the ledger.
+
+**Still true and still worth saying: nobody has driven this in a browser end to end.** Everything
+is asserted at the request and model layer. A click-through on app.fuime.com from signup to a
+completed payment has not happened.
+
+
 **2026-08-16 (late) — Cohorts: one person vouches for a group, and the roster board.**
 
 Founders Weekend needed ~50 teens through signup → first sale in one sitting, past three human
