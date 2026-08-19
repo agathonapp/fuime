@@ -16,8 +16,8 @@ RSpec.describe Twilio::ProcessWebhookJob do
     job.instance_variable_set(
       :@params,
       {
-        "NumMedia" => "1",
-        "MediaUrl0" => url,
+        "NumMedia"          => "1",
+        "MediaUrl0"         => url,
         "MediaContentType0" => "image/jpeg"
       }
     )
