@@ -105,6 +105,47 @@ services:
       # Set to "live" ONLY alongside STRIPE__LIVE__* credentials.
       - key: STRIPE_MODE
         value: test
+      # --- Live money, Founders Weekend 2026-08-21 ----------------------------
+      # Declared here rather than left dashboard-only so that "what does going
+      # live require?" is answerable from the repository. All sync: false — every
+      # one is a secret or a decision, and none may be inherited from a preview.
+      #
+      # STRIPE_MODE=live is refused at boot without these two
+      # (config/initializers/fuime_safety_check.rb check 2), and a live key
+      # present while STRIPE_MODE is NOT live is refused as well — the cutover is
+      # deliberately atomic rather than half-applied.
+      - key: STRIPE__LIVE__PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE__LIVE__SECRET_KEY
+        sync: false
+      # The umbrella merchant-of-record model: customer money lands in Fuime's own
+      # Stripe balance and operators are paid afterwards as vendors. Lawful only
+      # because it is Fuime's OWN revenue from a sale Fuime made — which is a fact
+      # about contracts, not about code. Hence the memo below, without which the
+      # app refuses to boot with this flag on (safety check 6).
+      - key: FEATURE_MERCHANT_OF_RECORD
+        sync: false
+      # A reference to the counsel advice that says the MoR structure holds.
+      # Must answer MOR_MIGRATION_PLAN §7 Q1 (does it take the collection leg
+      # outside 18 U.S.C. § 1960 and state MTL), Q2 (does umbrella MoR break the
+      # independent-contractor characterisation) and Q4 (will Stripe permit one
+      # account as MoR for N third-party operators).
+      - key: FUIME_MOR_COUNSEL_MEMO
+        sync: false
+      # Minimum operator age. Default 16, HARD-CLAMPED AT 13 — a lower value
+      # clamps up rather than being honoured, because under-13 is COPPA (L6) and
+      # not a business decision. Founders Weekend runs at 13.
+      - key: FUIME_MINIMUM_OPERATOR_AGE
+        sync: false
+      # Plaid, for verifying an operator's payout destination. Plaid VERIFIES; it
+      # never moves money — an originator is still an open decision
+      # (MOR_MIGRATION_PLAN §4.3). PLAID_ENV is "sandbox" or "production".
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: PLAID_ENV
+        sync: false
       # Signing secret for the Fuime payment webhook endpoint. Without it every
       # Stripe webhook is rejected and payments never reach a ledger.
       - key: FUIME_STRIPE_WEBHOOK_SECRET
@@ -327,6 +368,47 @@ services:
         sync: false
       - key: STRIPE_MODE
         value: test
+      # --- Live money, Founders Weekend 2026-08-21 ----------------------------
+      # Declared here rather than left dashboard-only so that "what does going
+      # live require?" is answerable from the repository. All sync: false — every
+      # one is a secret or a decision, and none may be inherited from a preview.
+      #
+      # STRIPE_MODE=live is refused at boot without these two
+      # (config/initializers/fuime_safety_check.rb check 2), and a live key
+      # present while STRIPE_MODE is NOT live is refused as well — the cutover is
+      # deliberately atomic rather than half-applied.
+      - key: STRIPE__LIVE__PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE__LIVE__SECRET_KEY
+        sync: false
+      # The umbrella merchant-of-record model: customer money lands in Fuime's own
+      # Stripe balance and operators are paid afterwards as vendors. Lawful only
+      # because it is Fuime's OWN revenue from a sale Fuime made — which is a fact
+      # about contracts, not about code. Hence the memo below, without which the
+      # app refuses to boot with this flag on (safety check 6).
+      - key: FEATURE_MERCHANT_OF_RECORD
+        sync: false
+      # A reference to the counsel advice that says the MoR structure holds.
+      # Must answer MOR_MIGRATION_PLAN §7 Q1 (does it take the collection leg
+      # outside 18 U.S.C. § 1960 and state MTL), Q2 (does umbrella MoR break the
+      # independent-contractor characterisation) and Q4 (will Stripe permit one
+      # account as MoR for N third-party operators).
+      - key: FUIME_MOR_COUNSEL_MEMO
+        sync: false
+      # Minimum operator age. Default 16, HARD-CLAMPED AT 13 — a lower value
+      # clamps up rather than being honoured, because under-13 is COPPA (L6) and
+      # not a business decision. Founders Weekend runs at 13.
+      - key: FUIME_MINIMUM_OPERATOR_AGE
+        sync: false
+      # Plaid, for verifying an operator's payout destination. Plaid VERIFIES; it
+      # never moves money — an originator is still an open decision
+      # (MOR_MIGRATION_PLAN §4.3). PLAID_ENV is "sandbox" or "production".
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: PLAID_ENV
+        sync: false
       - key: FUIME_STRIPE_WEBHOOK_SECRET
         sync: false
       # Connect webhooks arrive on a separately-scoped Stripe endpoint with its

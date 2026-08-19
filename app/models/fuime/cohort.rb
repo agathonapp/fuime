@@ -66,9 +66,10 @@ module Fuime
     validates :code,
               presence: true,
               length: { minimum: MIN_CODE_LENGTH, maximum: MAX_CODE_LENGTH },
-              format: { with: CODE_FORMAT,
-                        message: "can use letters and numbers only — no spaces or dashes"
-}
+              format: {
+                with: CODE_FORMAT,
+                message: "can use letters and numbers only — no spaces or dashes"
+              }
     validates :risk_level, inclusion: { in: ::Event.risk_levels.keys }
 
     before_validation :normalise_code
