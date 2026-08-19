@@ -23,7 +23,7 @@ FactoryBot.define do
     end
 
     # Set the plan type up front. `Event#before_validation` builds a
-    # plan with the fallback type (Event::Plan::Standard) when none is
+    # plan with the fallback type (Event::Plan::Free) when none is
     # set, so building the plan here saves an UPDATE + reload per
     # `create(:event)` — hit on ~250 event creations per suite run.
     after(:build) do |event, context|

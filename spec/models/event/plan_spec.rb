@@ -31,8 +31,10 @@ RSpec.describe Event::Plan, type: :model do
   describe ".selectable_plans" do
     it "is exactly the lineup Fuime offers" do
       expect(Event::Plan.selectable_plans).to contain_exactly(
+        Event::Plan::Free,
         Event::Plan::Standard,
         Event::Plan::Founders,
+        Event::Plan::School,
         Event::Plan::SpendOnly,
         Event::Plan::CardsOnly,
         Event::Plan::Terminated,
