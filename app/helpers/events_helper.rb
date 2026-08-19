@@ -173,6 +173,7 @@ module EventsHelper
       symbol: :payout_method,
       available_proc: lambda { |event|
         ::Fuime::Features.merchant_of_record? &&
+          ::Fuime::PlaidLinkService.collectable? &&
           policy(event).payout_method? && organizer_signed_in?
       }
     },

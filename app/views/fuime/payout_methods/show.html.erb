@@ -38,7 +38,24 @@
   <p class="secondary mt0"><%= @payables.owed_sentence %></p>
 <% end %>
 
-<% if !@configured %>
+<% if @configured && !@collectable %>
+  <%# Plaid is configured, but in SANDBOX while Stripe is LIVE. Connecting now
+      would store a fictional account that reads as verified and becomes
+      indistinguishable from a real one once PLAID_ENV is promoted — see
+      Fuime::PlaidLinkService.collectable?.
+
+      Said plainly and without alarm: from the founder's side nothing is wrong,
+      nothing they have earned is at risk, and the only fact they need is that
+      this step opens later. Naming the amount they are owed above this callout
+      is the reassurance; repeating it here would read as a warning about their
+      money. %>
+  <%= render "application/callout", type: "info", title: "Payouts open a little later" do %>
+    <p class="mb-0">
+      You don't need to do anything yet. When payouts open you'll connect a bank
+      account here, and everything you've earned will still be waiting.
+    </p>
+  <% end %>
+<% elsif !@configured %>
   <%# Fuime has no Plaid keys. An operator problem and not the family's, so it
       says so plainly rather than blaming the bank — telling a teenager their
       bank refused them when Fuime never had an API key is a lie with a support
@@ -135,7 +152,7 @@
     Adult only. A teen sees everything above and is told who to ask, rather than
     being shown a button that would refuse them — a disabled control with no
     explanation reads as a broken page to the person it is aimed at. %>
-<% if @can_connect && @configured %>
+<% if @can_connect && @configured && @collectable %>
   <div data-controller="plaid-link"
        data-plaid-link-token-url-value="<%= fuime_payout_method_link_token_path(event_slug: @event.slug) %>">
     <button class="btn bg-accent"

@@ -106,6 +106,29 @@ module Fuime
         env == SANDBOX
       end
 
+      # Whether a destination may be COLLECTED right now, as distinct from
+      # whether Plaid is reachable.
+      #
+      # A sandbox Item accepts fake bank logins and still produces a
+      # Fuime::PayoutMethod in state `verified` — and `usable?` is just
+      # `verified?`, with nothing on the row recording which Plaid environment
+      # created it. So once PLAID_ENV is promoted to production, a fictional
+      # destination is indistinguishable from a real one, and the payout run
+      # reads both the same way.
+      #
+      # Keyed on live Stripe rather than on Rails.env, because the hazard is real
+      # money existing alongside fake bank details, not the name of the
+      # environment. In development — test-mode Stripe, sandbox Plaid — this is
+      # exactly the combination you want, and it stays allowed. It also
+      # self-resolves: setting PLAID_ENV=production lifts the refusal with no
+      # code change.
+      #
+      # Payouts are deliberately later than the first real sales (founder's call,
+      # 2026-08-18), so collecting nothing yet costs nothing.
+      def collectable?
+        configured? && !(sandbox? && ::StripeService.live?)
+      end
+
       def configured?
         client_id.present? && secret.present?
       end
