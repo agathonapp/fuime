@@ -36,8 +36,8 @@ class TwilioController < ActionController::Base
     end
   end
 
-  # Local `stripe listen`-style development only. Production and test fail
-  # closed when the validator cannot be configured.
+  # Local development only, when Twilio credentials are not configured.
+  # Production, staging, and test fail closed.
   def allow_unsigned_twilio_webhooks?
     Rails.env.development?
   end
