@@ -77,6 +77,11 @@
 
 <p class="secondary mt0"><%= @payables.owed_sentence %></p>
 
+<%# Repeated here, not only on the offers page. This is the screen an operator
+    opens when a number has changed, and "Refunds and disputes" below is a row that
+    needs an explanation next to it rather than in another tab. %>
+<%= render "fuime/operator_sale_terms" %>
+
 <% if @payables.pending_sales_cents.positive? %>
   <p class="secondary mt0">
     <%# Deliberately a separate sentence from the figure above, and never added to

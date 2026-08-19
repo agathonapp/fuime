@@ -120,6 +120,8 @@ week of 2026-08-24.
 | No "bank/banking/FDIC" vocabulary | L5, enforced by a spec sweeping mailers and helpers |
 | Standing "not a bank" disclosure on every page | `app/views/application/_footer.html.erb` |
 | Fuime named as seller to the buyer | storefront, payment page, terms §8 — **new 2026-08-19** |
+| Fuime named as seller to the OPERATOR, in plain language | offers page and payouts page — **new 2026-08-19**. Covers: you set your own price, Fuime is the legal seller, 14-day refunds, a refund debits your payable, chargebacks are Fuime's, payment problems go to support@fuime.com |
+| Refund window | **14 days, confirmed by the founder 2026-08-19.** Stated in terms §8 and in the operator disclosure. No code reads it |
 
 ## 5. What would change this document
 
@@ -136,3 +138,20 @@ When (1) happens, replace `FUIME_MOR_COUNSEL_MEMO` with the real reference.
 The founder has read the above, understands that Q2 in particular is unreviewed and carries
 FLSA child-labor exposure at a 13-year floor, and is proceeding for Founders Weekend
 (2026-08-21) on that basis. Recorded 2026-08-19.
+
+**Confirmed by the founder on 2026-08-19, in order:** the 14-day refund window; that the
+arrangement must be disclosed to the teen seller in plain language, not only in the terms
+(built the same day); and the instruction to enable `FEATURE_MERCHANT_OF_RECORD` in production
+so the platform can be tested end to end. `FUIME_MOR_COUNSEL_MEMO` was set to cite this file
+at the same time.
+
+**Declined, deliberately:** a Whop-style spendable "Fuime balance". `WHOP_EVALUATION.md` §3
+establishes that Whop's balance is a **USDT stablecoin position in a self-custodial wallet**,
+not dollars — which would put a crypto-custody problem under a product for minors and make
+"deposit", "insured" and "your money is safe" affirmatively false rather than merely
+unlicensed (L5). Fuime keeps a **payable** — an amount owed, paid on a stated date — which is
+ordinary vendor debt and needs no licence. The line that must not be crossed: indefinite
+holding, spending directly from the figure, transfers between users, or issuing a card against
+it. Any of those is stored value whatever the label says.
+
+**The next thing to do is still one hour with a payments attorney on Q2**, not more code.
