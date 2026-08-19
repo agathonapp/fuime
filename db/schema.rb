@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1032,6 +1032,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.boolean "currently_fiscally_sponsored"
     t.text "description"
     t.bigint "event_id"
+    t.bigint "fuime_cohort_id"
     t.string "funding_source"
     t.string "last_page_viewed"
     t.datetime "last_viewed_at"
@@ -1054,6 +1055,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.boolean "videos_watched", default: false
     t.string "website_url"
     t.index ["event_id"], name: "index_event_applications_on_event_id"
+    t.index ["fuime_cohort_id"], name: "index_event_applications_on_fuime_cohort_id"
     t.index ["service_type"], name: "index_event_applications_on_service_type", where: "(service_type IS NOT NULL)"
     t.index ["user_id"], name: "index_event_applications_on_user_id"
     t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[]))", name: "event_applications_starting_point_known"
@@ -1166,6 +1168,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.boolean "fee_waiver_applied", default: false, null: false
     t.boolean "fee_waiver_eligible", default: false, null: false
     t.boolean "financially_frozen", default: false, null: false
+    t.bigint "fuime_cohort_id"
     t.datetime "hidden_at", precision: nil
     t.boolean "holiday_features", default: true, null: false
     t.string "increase_account_id", null: false
@@ -1195,6 +1198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.string "website"
     t.index ["discord_channel_id"], name: "index_events_on_discord_channel_id", unique: true
     t.index ["discord_guild_id"], name: "index_events_on_discord_guild_id", unique: true
+    t.index ["fuime_cohort_id"], name: "index_events_on_fuime_cohort_id"
     t.index ["operator_vetting_status"], name: "index_events_on_operator_vetting_status"
     t.index ["parent_id"], name: "index_events_on_parent_id"
     t.index ["point_of_contact_id"], name: "index_events_on_point_of_contact_id"
@@ -1280,11 +1284,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.index ["sluggable_type"], name: "index_friendly_id_slugs_on_sluggable_type"
   end
 
+  create_table "fuime_api_keys", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id", null: false
+    t.bigint "event_id", null: false
+    t.string "last4", null: false
+    t.datetime "last_used_at"
+    t.string "name", null: false
+    t.integer "request_count", default: 0, null: false
+    t.datetime "revoked_at"
+    t.string "token_bidx", null: false
+    t.text "token_ciphertext", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_fuime_api_keys_on_created_by_id"
+    t.index ["event_id"], name: "index_fuime_api_keys_on_event_id"
+    t.index ["token_bidx"], name: "index_fuime_api_keys_on_token_bidx", unique: true
+  end
+
+  create_table "fuime_cohorts", force: :cascade do |t|
+    t.datetime "archived_at"
+    t.boolean "auto_approve", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id", null: false
+    t.datetime "expires_at", null: false
+    t.integer "max_members", null: false
+    t.string "name", null: false
+    t.text "rationale", null: false
+    t.string "risk_level", default: "slight", null: false
+    t.datetime "updated_at", null: false
+    t.index "upper((code)::text)", name: "index_fuime_cohorts_on_upper_code", unique: true
+    t.index ["created_by_id"], name: "index_fuime_cohorts_on_created_by_id"
+  end
+
+  add_check_constraint "fuime_cohorts", "max_members > 0", name: "fuime_cohorts_capped", validate: false
+
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
     t.datetime "created_at", null: false
+    t.string "created_via", default: "operator", null: false
     t.text "description"
     t.bigint "event_id", null: false
+    t.bigint "fuime_api_key_id"
+    t.boolean "listed", default: true, null: false
     t.string "name", null: false
     t.integer "position", default: 0, null: false
     t.integer "price_cents", null: false
@@ -1292,13 +1334,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.string "slug"
     t.string "unit_label"
     t.datetime "updated_at", null: false
+    t.index ["event_id", "position"], name: "index_listed_fuime_offers_on_event_and_position", where: "(((aasm_state)::text = 'published'::text) AND (listed = true))"
     t.index ["event_id", "position"], name: "index_published_fuime_offers_on_event_and_position", where: "((aasm_state)::text = 'published'::text)"
     t.index ["event_id", "slug"], name: "index_fuime_offers_on_event_and_slug", unique: true, where: "(slug IS NOT NULL)"
     t.index ["event_id"], name: "index_fuime_offers_on_event_id"
+    t.index ["fuime_api_key_id"], name: "index_fuime_offers_on_fuime_api_key_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
   end
+
+  add_check_constraint "fuime_offers", "created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL", name: "fuime_offers_api_offers_name_their_key", validate: false
+  add_check_constraint "fuime_offers", "created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])", name: "fuime_offers_created_via_known", validate: false
 
   create_table "fuime_payout_batches", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
@@ -1337,6 +1384,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
     t.string "institution_name"
     t.string "last4"
     t.string "provider", null: false
+    t.text "provider_access_token_ciphertext"
+    t.string "provider_account_id"
     t.string "provider_reference"
     t.datetime "updated_at", null: false
     t.datetime "verified_at"
@@ -3386,6 +3435,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
   add_foreign_key "employee_payments", "employees"
   add_foreign_key "employees", "events"
   add_foreign_key "event_applications", "events"
+  add_foreign_key "event_applications", "fuime_cohorts", validate: false
   add_foreign_key "event_applications", "users"
   add_foreign_key "event_configurations", "events"
   add_foreign_key "event_follows", "events"
@@ -3397,12 +3447,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_200000) do
   add_foreign_key "event_scoped_tags", "events", column: "parent_event_id"
   add_foreign_key "event_scoped_tags_events", "event_scoped_tags"
   add_foreign_key "event_scoped_tags_events", "events"
+  add_foreign_key "events", "fuime_cohorts", validate: false
   add_foreign_key "events", "users", column: "operator_vetted_by_id"
   add_foreign_key "events", "users", column: "point_of_contact_id"
   add_foreign_key "exports", "users", column: "requested_by_id"
   add_foreign_key "fee_relationships", "events"
   add_foreign_key "fees", "canonical_event_mappings"
+  add_foreign_key "fuime_api_keys", "events", validate: false
+  add_foreign_key "fuime_api_keys", "users", column: "created_by_id", validate: false
+  add_foreign_key "fuime_cohorts", "users", column: "created_by_id", validate: false
   add_foreign_key "fuime_offers", "events"
+  add_foreign_key "fuime_offers", "fuime_api_keys", validate: false
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_payout_methods", "events", validate: false

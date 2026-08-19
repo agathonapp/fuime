@@ -613,3 +613,33 @@ One failure during the run was **new and correct**: `applications_spec.rb:37` "r
 project info step" encoded the pre-phase-7 flow, where `#create` sent an applicant straight to
 `project_info`. The business-type fork now comes first. The spec was updated to assert the new
 destination rather than the behaviour being reverted — the redirect change is the feature.
+
+### Baseline after the Plaid Link flow (2026-08-16)
+
+**3254 examples, 8 failures, 17 pending** — the same standing eight, unchanged. +139 examples
+over the phase-7a run (the Plaid service, the payout-method controller, the nav complement, and
+the examples added by the two commits earlier the same day).
+
+**An intermediate run of this branch showed 10, and both extras were real.** They are recorded
+here because of how they were missed rather than because they lasted:
+
+| Spec | Cause |
+|---|---|
+| `fuime_full_business_flow_spec.rb:34` | needed a verified payout destination |
+| `fuime_payout_batches_admin_spec.rb:93` | needed a verified payout destination |
+
+Both were broken by **`20fee1cd5`** ("Wire the payout destination in"), which taught
+`Fuime::PayableAssessment` to skip a merchant-of-record venture that has nowhere to be paid.
+That is correct behaviour and the gate was left in place; the two request specs simply predated
+it and generated a run for a venture with no destination, so the batch came out empty and their
+ledger assertions measured nothing.
+
+**Neither was caught when that commit shipped, because it verified "505 examples across the
+touched suites".** The suites it touched were the ones it edited — and these two are request
+specs that exercise the same code path from further away. A change to a *gate* is exactly the
+shape of change whose blast radius is wider than the files it edits, and it is worth running the
+full suite for even when the targeted specs are green.
+
+Confirmed by bisect rather than assumed: disabling the destination check alone took both files
+from 2 failures to 8 examples / 0 failures, and re-enabling it with a `:verified` payout method
+in each spec's setup does the same with the gate intact.

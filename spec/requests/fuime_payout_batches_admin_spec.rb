@@ -60,6 +60,16 @@ RSpec.describe "admin payout batches", type: :request do
 
   describe "reviewing a run", :merchant_of_record do
     let(:event) { create(:event) }
+
+    # Under merchant-of-record a venture with no verified destination is skipped
+    # from the run entirely (Fuime::PayableAssessment), so without this the batch
+    # generates with no lines and the ledger assertions below measure nothing.
+    # `let!` rather than `let`, because it has to exist before `batch` generates.
+    let!(:destination) do
+      create(:fuime_payout_method, :verified, event:,
+                                              added_by: create(:user, birthday: 40.years.ago.to_date))
+    end
+
     let(:batch) do
       create(:canonical_transaction, amount_cents: 100_00, event:, date: 30.days.ago.to_date,
                                      memo: "Payment from a customer [fuime_pi_1]")

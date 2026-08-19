@@ -141,11 +141,66 @@ RSpec.describe Fuime::OperatorEligibility do
       end
     end
 
-    # The floor on operators is stricter than the platform's floor on users,
-    # which stays at 13 per L6. A 14-year-old may hold an account and may not
-    # sell — so this is a gate on the venture, never on the signup.
-    it "is stricter than the platform's own age floor" do
-      expect(described_class::MINIMUM_OPERATOR_AGE).to be > 13
+    # The floor on operators defaults stricter than the platform's floor on
+    # users, which stays at 13 per L6. A 14-year-old may hold an account and by
+    # default may not sell — so this is a gate on the venture, never on signup.
+    it "defaults stricter than the platform's own age floor" do
+      expect(described_class::DEFAULT_MINIMUM_OPERATOR_AGE).to be > 13
+    end
+
+    # `FUIME_MINIMUM_OPERATOR_AGE` lets the person accountable for the risk widen
+    # the bracket without a code change (see the constant's comment). These are
+    # the guardrails on that dial — and the third is the one that matters:
+    # under-13 is COPPA (L6), not a business decision, so no configured value can
+    # reach it.
+    describe "the configured floor" do
+      around do |example|
+        old = ENV["FUIME_MINIMUM_OPERATOR_AGE"]
+        example.run
+        old.nil? ? ENV.delete("FUIME_MINIMUM_OPERATOR_AGE") : ENV["FUIME_MINIMUM_OPERATOR_AGE"] = old
+      end
+
+      it "honours a lowered floor" do
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "14"
+
+        expect(described_class.minimum_operator_age).to eq(14)
+      end
+
+      it "honours a raised floor, because raising is always safe" do
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "18"
+
+        expect(described_class.minimum_operator_age).to eq(18)
+      end
+
+      it "clamps to 13 rather than honouring anything lower" do
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "8"
+
+        expect(described_class.minimum_operator_age).to eq(13)
+      end
+
+      it "clamps a zero, which is the spelling of 'no floor at all'" do
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "0"
+
+        expect(described_class.minimum_operator_age).to eq(13)
+      end
+
+      # A misconfigured value must read as the default, never as no floor.
+      it "falls back to the default on a value it cannot parse" do
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "sixteen"
+
+        expect(described_class.minimum_operator_age)
+          .to eq(described_class::DEFAULT_MINIMUM_OPERATOR_AGE)
+      end
+
+      it "actually blocks a 14-year-old at the default and clears them at 14" do
+        young = create(:user, :minor_with_guardian, birthday: 14.years.ago.to_date)
+        create(:organizer_position, event:, user: young)
+
+        expect(described_class.new(event:).blockers).to include(/is 14/)
+
+        ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "14"
+        expect(described_class.new(event:).blockers).to be_empty
+      end
     end
 
     # The one that matters most. A missing birthday must not be the way past a
@@ -160,32 +215,44 @@ RSpec.describe Fuime::OperatorEligibility do
     end
   end
 
+  # The guardian requirement MOVED on 2026-08-16; it was not removed.
+  #
+  # It used to block selling from here. Under merchant-of-record a teenager
+  # selling holds no account and incurs no obligation, so the adult is not the
+  # legal party yet — they become one when money leaves. The gate now lives in
+  # Fuime::PayableAssessment#compute_structural_skip_reason, and
+  # spec/services/fuime/payable_assessment_spec.rb is where it is proven.
+  #
+  # These specs stay, inverted, because "a minor with no guardian may sell" is a
+  # deliberate decision with a cost attached (MOR_MIGRATION_PLAN §7 Q3: no adult
+  # obligor behind a clawback during the selling window). A decision that costs
+  # something should fail loudly if somebody reinstates the old gate without
+  # reading why it moved.
   describe "guardianship", :merchant_of_record do
-    it "blocks a minor with no guardian" do
+    it "does not block a minor with no guardian — that gate is at payout now" do
       alone = create(:user, :minor, birthday: 16.years.ago.to_date)
       create(:organizer_position, event:, user: alone)
 
-      expect(described_class.new(event:).blockers)
-        .to contain_exactly(/#{Regexp.escape(alone.name)} needs a parent or guardian/)
+      expect(described_class.new(event:).blockers).to be_empty
     end
 
-    it "blocks when the guardianship is still only an invite" do
+    it "does not block when the guardianship is still only an invite" do
       pending_teen = create(:user, :minor, birthday: 16.years.ago.to_date)
       create(:guardianship, minor: pending_teen) # status: :pending
       create(:organizer_position, event:, user: pending_teen)
 
-      expect(described_class.new(event:)).not_to be_eligible
+      expect(described_class.new(event:)).to be_eligible
     end
 
-    # Event#has_overseeing_guardian? is satisfied by ONE guardian anywhere on the
-    # venture. Eligibility has to be true of every operator individually, or a
-    # teen with no parent on file could sell behind a co-founder who has one.
-    it "is not satisfied by a co-founder's guardian" do
-      unguarded = create(:user, :minor, birthday: 16.years.ago.to_date)
-      create(:organizer_position, event:, user: unguarded)
+    # The age floor is NOT what moved. A 14-year-old still cannot sell under the
+    # umbrella whether or not a parent is attached, because that bracket exists
+    # for the FLSA question (§7 Q2) rather than for consent.
+    it "still applies the age floor to a minor with no guardian" do
+      too_young = create(:user, :minor, birthday: 14.years.ago.to_date)
+      create(:organizer_position, event:, user: too_young)
 
-      expect(event.has_overseeing_guardian?).to be(true)
-      expect(described_class.new(event:)).not_to be_eligible
+      expect(described_class.new(event:).blockers)
+        .to contain_exactly(/#{Regexp.escape(too_young.name)} is 14/)
     end
   end
 
@@ -206,21 +273,22 @@ RSpec.describe Fuime::OperatorEligibility do
   describe "reporting more than one problem", :merchant_of_record do
     it "names each person, because the fix is per-person" do
       young = create(:user, :minor_with_guardian, birthday: 14.years.ago.to_date)
-      alone = create(:user, :minor, birthday: 17.years.ago.to_date)
+      younger = create(:user, :minor, birthday: 13.years.ago.to_date)
       create(:organizer_position, event:, user: young)
-      create(:organizer_position, event:, user: alone)
+      create(:organizer_position, event:, user: younger)
 
       blockers = described_class.new(event:).blockers
 
       expect(blockers).to include(/#{Regexp.escape(young.name)} is 14/)
-      expect(blockers).to include(/#{Regexp.escape(alone.name)} needs a parent or guardian/)
+      expect(blockers).to include(/#{Regexp.escape(younger.name)} is 13/)
     end
 
     it "reports venture-level and person-level problems together" do
       event.update!(operator_vetting_status: :unvetted, business_category: "crafts")
-      alone = create(:user, :minor, birthday: 16.years.ago.to_date)
-      create(:organizer_position, event:, user: alone)
+      too_young = create(:user, :minor, birthday: 14.years.ago.to_date)
+      create(:organizer_position, event:, user: too_young)
 
+      # Unvetted, wrong category, and one operator under the floor.
       expect(described_class.new(event:).blockers.size).to eq(3)
     end
   end

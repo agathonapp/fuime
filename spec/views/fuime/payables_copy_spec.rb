@@ -33,6 +33,7 @@ RSpec.describe "operator-facing payables copy" do
   # Templates an operator or guardian reaches, that display money owed.
   operator_templates = %w[
     app/views/fuime/payouts/index.html.erb
+    app/views/fuime/payout_methods/show.html.erb
     app/views/events/home/_balance.html.erb
     app/views/events/stats.html.erb
     app/views/events/async_balance.html.erb

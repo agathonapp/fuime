@@ -865,6 +865,52 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: cohorts — a group somebody vouched for in advance.
+  #
+  # See Fuime::Cohort for why one decision made ahead of time is a better control
+  # than fifty made under time pressure during an event, not a weaker one.
+  def cohorts
+    @cohorts = Fuime::Cohort.includes(:created_by).order(created_at: :desc)
+    @cohort = Fuime::Cohort.new(expires_at: 3.days.from_now, max_members: 60)
+  end
+
+  def cohort_create
+    @cohort = Fuime::Cohort.new(cohort_params.merge(created_by: current_user))
+
+    if @cohort.save
+      redirect_to cohort_admin_index_path(@cohort),
+                  flash: { success: "#{@cohort.name} is live. Code: #{@cohort.code}" }
+    else
+      @cohorts = Fuime::Cohort.includes(:created_by).order(created_at: :desc)
+      render :cohorts, status: :unprocessable_entity
+    end
+  end
+
+  # FUIME: the roster board — the one screen to watch during an event.
+  #
+  # Its job is to answer "who is stuck, and on what?" for everybody at once. That
+  # is a different question from either existing queue: #applications asks whether
+  # a venture should exist and #operator_vetting whether it may sell, both one row
+  # at a time. During an event nobody is working a queue — they are walking the
+  # room looking for the four people who cannot get past something.
+  #
+  # `includes` covers exactly what the board reads per row. Without it fifty
+  # founders is a few hundred queries on a page somebody refreshes constantly.
+  def cohort
+    @cohort = Fuime::Cohort.find(params[:id])
+    @applications = @cohort.applications
+                           .includes(:user, event: [:organizer_positions, :users])
+                           .order(created_at: :desc)
+  end
+
+  def cohort_archive
+    @cohort = Fuime::Cohort.find(params[:id])
+    @cohort.archive!
+
+    redirect_to cohort_admin_index_path(@cohort),
+                flash: { success: "Code #{@cohort.code} is off. Nobody new can join." }
+  end
+
   # FUIME: the operator vetting queue.
   #
   # Manual approval on every operator is the compensating control for letting
@@ -1748,6 +1794,17 @@ class AdminController < Admin::BaseController
   end
 
   private
+
+  # FUIME: `created_by` is NOT permitted, and must not be.
+  #
+  # It is the accountable human every vetting decision this cohort makes gets
+  # recorded against, so it is set from `current_user` in the action. Permitting
+  # it would let one admin create a cohort that signs another admin's name to
+  # fifty approvals.
+  def cohort_params
+    params.require(:fuime_cohort).permit(:name, :code, :rationale, :expires_at,
+                                         :max_members, :auto_approve, :risk_level)
+  end
 
   def payout_batch_service
     @payout_batch_service ||= Fuime::PayoutBatchService.new

@@ -14,19 +14,21 @@
 #
 # Table name: fuime_payout_methods
 #
-#  id                  :bigint           not null, primary key
-#  aasm_state          :string           default("pending"), not null
-#  account_holder_name :string
-#  failure_reason      :text
-#  institution_name    :string
-#  last4               :string
-#  provider            :string           not null
-#  provider_reference  :string
-#  verified_at         :datetime
-#  created_at          :datetime         not null
-#  updated_at          :datetime         not null
-#  added_by_id         :bigint           not null
-#  event_id            :bigint           not null
+#  id                               :bigint           not null, primary key
+#  aasm_state                       :string           default("pending"), not null
+#  account_holder_name              :string
+#  failure_reason                   :text
+#  institution_name                 :string
+#  last4                            :string
+#  provider                         :string           not null
+#  provider_access_token_ciphertext :text
+#  provider_reference               :string
+#  verified_at                      :datetime
+#  created_at                       :datetime         not null
+#  updated_at                       :datetime         not null
+#  added_by_id                      :bigint           not null
+#  event_id                         :bigint           not null
+#  provider_account_id              :string
 #
 # Indexes
 #
@@ -50,6 +52,14 @@ module Fuime
     include AASM
 
     self.table_name = "fuime_payout_methods"
+
+    # The Plaid access token for this Item. Encrypted at rest rather than stored
+    # in the clear, because with the `auth` product on the Item it can be
+    # exchanged for the account and routing numbers this table exists not to
+    # hold — see AddPlaidItemToFuimePayoutMethods. Fuime never makes that call
+    # itself; the token is kept so an originator can be handed the account once
+    # MOR_MIGRATION_PLAN §4.3 picks one, without every operator re-linking.
+    has_encrypted :provider_access_token
 
     belongs_to :event
     belongs_to :added_by, class_name: "User"
@@ -103,6 +113,21 @@ module Fuime
       verified?
     end
 
+    def plaid?
+      provider == PLAID
+    end
+
+    # Whether this row still carries everything an originator would need to be
+    # handed the account: the Item token and which account inside it. False for
+    # a row written before the pair existed, and for `manual`.
+    #
+    # Read by the operator page rather than assumed, because "connected" and
+    # "connected in a way we can act on" are different claims and only one of
+    # them should be made to somebody waiting on money.
+    def actionable_reference?
+      plaid? && provider_access_token.present? && provider_account_id.present?
+    end
+
     private
 
     # The belt to the migration's braces.
@@ -119,20 +144,22 @@ module Fuime
     def must_not_hold_an_account_number
       # Two rules, because the fields are different kinds of thing.
       #
-      # `provider_reference` is a machine token and legitimately carries a long
-      # digit run — `ba_1QxYz0123456789` is an ordinary Stripe id. Rejecting a
-      # digit run there would break real integrations to catch a case that does
-      # not look like that, so it is refused only when it is ENTIRELY digits,
-      # which is what a bare account or routing number is.
+      # `provider_reference` and `provider_account_id` are machine tokens and
+      # legitimately carry a long digit run — `ba_1QxYz0123456789` is an ordinary
+      # Stripe id. Rejecting a digit run there would break real integrations to
+      # catch a case that does not look like that, so they are refused only when
+      # ENTIRELY digits, which is what a bare account or routing number is.
       #
       # `institution_name` and `account_holder_name` are human labels. A bank is
       # not called "Chase 000123456789" and nobody is named "Vansh Jain
       # 021000021", so an embedded nine-digit run there is a credential somebody
       # pasted into the nearest available box — which is the realistic failure
       # this validation exists for.
-      token = provider_reference.to_s.strip.gsub(/[\s-]/, "")
-      if token.match?(/\A\d{9,}\z/)
-        errors.add(:provider_reference,
+      [:provider_reference, :provider_account_id].each do |field|
+        token = self[field].to_s.strip.gsub(/[\s-]/, "")
+        next unless token.match?(/\A\d{9,}\z/)
+
+        errors.add(field,
                    "looks like an account or routing number — Fuime stores a token, never the digits")
       end
 

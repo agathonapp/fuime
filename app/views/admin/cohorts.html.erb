@@ -1,0 +1,162 @@
+<% title "Cohorts (Fuime)" %>
+
+<%# FUIME: where one person vouches for a group in advance.
+
+    See Fuime::Cohort and CreateFuimeCohorts. The short version of why this is
+    not a bypass: the decision still happens and a named human still makes it —
+    once, ahead of time, with more information than a queue would ever have given
+    them — instead of fifty times under time pressure during an event, which is
+    how you get a signed record of a judgement nobody made. %>
+
+<h1>Cohorts</h1>
+
+<p class="muted">
+  A cohort is a group you vouch for in advance. Founders who enter its code get
+  their application approved, their business created and their operator vetting
+  recorded automatically — each one attributed to you, with your stated reason.
+</p>
+
+<%# The scope of what a code does and does not buy, said plainly on the page
+    where somebody creates one. A person about to vouch for fifty strangers
+    should not have to read a service object to find out what they are agreeing
+    to — and the second half is the part that is easy to assume wrongly. %>
+<div class="card mb2">
+  <h2 class="mt0 text-lg">What a code does</h2>
+  <p class="mb0"><strong>It does:</strong> approve the application, create the
+    business, and record operator vetting as approved — in your name, with your
+    reason attached to every one.</p>
+  <p class="mb0 mt1"><strong>It does not:</strong> exempt anybody from the rules.
+    The services-only scope and the operator age floor still apply and can still
+    refuse a venture. It also never stands in for a parent — under
+    merchant-of-record a guardian is required before any money is paid out, and
+    a cohort cannot change that.</p>
+</div>
+
+<%# ── Live and past cohorts ─────────────────────────────────────────────── %>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Cohorts</h2>
+
+  <% if @cohorts.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Code</th>
+          <th>Founders</th>
+          <th>Status</th>
+          <th>Created by</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @cohorts.each do |cohort| %>
+          <tr>
+            <td><%= link_to cohort.name, cohort_admin_index_path(cohort) %></td>
+            <td><code><%= cohort.code %></code></td>
+            <td><%= cohort.member_count %> / <%= cohort.max_members %></td>
+            <td>
+              <%# The reason it is not admitting, not just that it is not. This is
+                  the cell somebody reads at 9am on the day the code stops
+                  working. %>
+              <% if cohort.admitting? %>
+                <span class="success">Admitting</span>
+              <% else %>
+                <span class="muted"><%= cohort.admission_blocker %></span>
+              <% end %>
+            </td>
+            <td class="muted"><%= cohort.created_by.name %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="muted">None yet.</p>
+  <% end %>
+</div>
+
+<%# ── Creating one ──────────────────────────────────────────────────────── %>
+
+<div class="card">
+  <h2 class="mt0 text-lg">New cohort</h2>
+
+  <%= form_with model: @cohort, url: cohort_create_admin_index_path, method: :post, local: true do |form| %>
+    <% if @cohort.errors.any? %>
+      <div class="error mb2">
+        <ul class="mb0">
+          <% @cohort.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="field">
+      <%= form.label :name, "What's the event or group called?" %>
+      <%= form.text_field :name, placeholder: "Founders Weekend, August 2026",
+                          maxlength: Fuime::Cohort::MAX_NAME_LENGTH, required: true %>
+    </div>
+
+    <div class="field">
+      <%= form.label :code, "The code founders will type" %>
+      <p class="muted text-sm mt-0">
+        Letters and numbers only — it gets read aloud and typed by everyone at
+        once, so no spaces or dashes.
+      </p>
+      <%= form.text_field :code, placeholder: "FOUNDERS26",
+                          maxlength: Fuime::Cohort::MAX_CODE_LENGTH,
+                          autocapitalize: "characters", autocomplete: "off", required: true %>
+    </div>
+
+    <%# Required, and the reason it is required is the whole design. This
+        sentence is copied verbatim into every vetting note the cohort produces,
+        so it has to be something the author is willing to have attached to fifty
+        approvals with their name on them. %>
+    <div class="field">
+      <%= form.label :rationale, "Why can you vouch for these founders?" %>
+      <p class="muted text-sm mt-0">
+        This is recorded on every business the code admits, next to your name.
+        Say what you actually know — "I'm running this event and I know everyone
+        attending" is a real answer.
+      </p>
+      <%= form.text_area :rationale, rows: 3, required: true %>
+    </div>
+
+    <div class="field">
+      <%= form.label :expires_at, "The code stops working at" %>
+      <p class="muted text-sm mt-0">
+        A code with no end date is a permanent way around vetting for anyone who
+        gets hold of it. Set it to just after your event.
+      </p>
+      <%= form.datetime_field :expires_at, required: true %>
+    </div>
+
+    <div class="field">
+      <%= form.label :max_members, "Most founders it will admit" %>
+      <p class="muted text-sm mt-0">
+        What turns a leaked code into a bounded problem. A little above your
+        actual headcount.
+      </p>
+      <%= form.number_field :max_members, min: 1, required: true %>
+    </div>
+
+    <div class="field">
+      <%= form.label :risk_level, "Risk level for these businesses" %>
+      <%= form.select :risk_level,
+                      options_for_select(Event.risk_levels.keys.map { |r| [r.humanize, r] },
+                                         @cohort.risk_level) %>
+    </div>
+
+    <div class="field">
+      <%= form.label :auto_approve do %>
+        <%= form.check_box :auto_approve %>
+        Set businesses up automatically
+      <% end %>
+      <p class="muted text-sm mt-0">
+        Off makes this a label you can watch without it admitting anybody — the
+        three gates stay manual.
+      </p>
+    </div>
+
+    <%= form.submit "Create cohort" %>
+  <% end %>
+</div>

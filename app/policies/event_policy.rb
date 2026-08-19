@@ -416,17 +416,84 @@ class EventPolicy < ApplicationPolicy
     auditor_or_reader?
   end
 
+  # Fuime: the payout destination under merchant-of-record — the page, and the
+  # act of connecting a bank to it.
+  #
+  # Public for the same reason as #setup_payments? above: Pundit resolves a query
+  # with `public_send`, and Fuime::PayoutMethodsController reads both of these
+  # directly off `policy(@event)`.
+  #
+  # ── Why the split mirrors payments rather than payouts ──────────────────────
+  #
+  # Reading is team-wide: a teen needs to see whether their venture can be paid
+  # and whose action is outstanding, exactly as on the Connect status page.
+  #
+  # Connecting is the responsible adult's alone, and that is not a courtesy — a
+  # minor generally cannot open a bank account, so the destination is a
+  # guardian-owned one (MOR_MIGRATION_PLAN §4.3 diligence item 2) and the adult
+  # is the person who can actually log into it. It is also the same control as
+  # #decide_payout?: the party who decides money leaves is the party who says
+  # where it goes. A teen who could repoint the destination could route their own
+  # earnings past the approval that makes the ownership structure real (L2).
+  def payout_method?
+    auditor_or_reader?
+  end
+
+  def connect_payout_method?
+    return false if user.blank?
+    return true if user.admin?
+
+    # Fuime: a school programme has no guardian by design — the school is in
+    # loco parentis — so the responsible party is a manager (the business
+    # office), exactly as in #setup_payments? and #decide_payout?. Without this
+    # branch a school venture could never connect a destination and every one of
+    # its students would be skipped from every payout run.
+    return manager? if record.institutionally_sponsored?
+
+    guardian_reader?
+  end
+
   # Fuime: who may ask to move money out, and who may decide.
   #
   # Requesting is a member action (the teen running the venture). Deciding is the
   # guardian's alone, because they own the account and the funds — see
   # PayoutRequest and CLAUDE.md L2. Admins can decide too, for support on stuck
   # payouts.
+  # Fuime: asking to be paid.
+  #
+  # ── Why this re-asks for the guardian that #member? no longer asks for ─────
+  #
+  # Under merchant-of-record a minor may run a venture without a guardian —
+  # User#permitted_to_operate_business? explains why, and #member? passes them
+  # through as a result. Money leaving is where that stops, and this predicate is
+  # where a teenager meets that fact.
+  #
+  # Without this branch the failure is not a locked door but the same trap the
+  # school carve-out in #decide_payout? was written for, and worse. A parentless
+  # operator would file a request; `decide_payout?` requires a guardian, so no
+  # human except a Fuime admin could ever action it; and
+  # `one_pending_request_per_venture` would then refuse them a second request
+  # forever. One click, permanently wedged, with their money on the far side.
+  #
+  # So the request is refused up front, while it is still recoverable and while
+  # there is a sentence to show them: invite your parent. That ask now lands at
+  # the moment it means something — a teenager with money waiting is a teenager
+  # whose parent has a reason to say yes — which is the whole point of moving the
+  # gate here rather than in front of selling.
+  #
+  # Belt and braces with Fuime::PayableAssessment#compute_structural_skip_reason,
+  # which independently refuses to put an unguardianed operator in a payout run.
+  # That one covers the batch path, where no policy is consulted at all.
   def request_payout?
     return false if user.blank?
     return true if user.admin?
+    return false unless member?
 
-    member?
+    if ::Fuime::Features.merchant_of_record? && !record.institutionally_sponsored?
+      return false if user.minor_or_unknown_age? && !user.has_active_guardian?
+    end
+
+    true
   end
 
   def decide_payout?

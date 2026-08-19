@@ -153,6 +153,33 @@ module Fuime
         return "No payout destination set up yet."
       end
 
+      # THE guardian gate under merchant-of-record (L2).
+      #
+      # It used to sit in Fuime::OperatorEligibility, blocking a minor from
+      # selling at all. It was moved here on 2026-08-16 — read that class's
+      # #umbrella_scope_blockers for the full argument, including what the move
+      # costs. The short version: under MoR a teenager selling incurs no
+      # obligation and holds no account, so the adult is not needed yet; a
+      # teenager being PAID has a payee, a tax consequence and a debt that can run
+      # negative, so the adult is needed now.
+      #
+      # Deliberately the last structural check, so a venture missing both a parent
+      # and a destination is told about the destination first — that is the one
+      # the operator can fix themselves, and a run that reports the unfixable
+      # blocker first reads as a wall.
+      #
+      # Checked per operator rather than via Event#has_overseeing_guardian?, which
+      # is satisfied by ONE guardian even when a second co-founder has none. Money
+      # is about to be sent on behalf of every one of them.
+      if ::Fuime::Features.merchant_of_record?
+        unguarded = event.users.select { |u| u.minor_or_unknown_age? && !u.has_active_guardian? }
+
+        if unguarded.any? && !event.institutionally_sponsored?
+          return "Needs a parent or guardian on the account before money can be sent " \
+                 "(#{unguarded.map(&:name).join(', ')})."
+        end
+      end
+
       nil
     end
 

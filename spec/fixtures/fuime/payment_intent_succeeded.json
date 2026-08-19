@@ -1,0 +1,88 @@
+{
+  "id": "evt_3U5Idz2Uz4P3wrXO1fesfeKS",
+  "object": "event",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1786942771,
+  "data": {
+    "object": {
+      "id": "pi_3U5Idz2Uz4P3wrXO1x6YFNNL",
+      "object": "payment_intent",
+      "allowed_payment_method_types": null,
+      "amount": 4500,
+      "amount_capturable": 0,
+      "amount_details": {
+        "tip": {}
+      },
+      "amount_received": 4500,
+      "application": null,
+      "application_fee_amount": null,
+      "automatic_payment_methods": {
+        "allow_redirects": "never",
+        "enabled": true
+      },
+      "canceled_at": null,
+      "cancellation_reason": null,
+      "capture_method": "automatic_async",
+      "client_secret": "pi_REDACTED_secret_REDACTED",
+      "confirmation_method": "automatic",
+      "created": 1786942771,
+      "currency": "usd",
+      "customer": null,
+      "customer_account": null,
+      "description": "Tutoring session",
+      "excluded_payment_method_types": null,
+      "last_payment_error": null,
+      "latest_charge": "ch_3U5Idz2Uz4P3wrXO1Jez4PtM",
+      "livemode": false,
+      "managed_payments": {
+        "enabled": false
+      },
+      "metadata": {
+        "fuime_event_id": "1",
+        "fuime_event_name": "DevHacks (Demo Event)",
+        "fuime_fee_cents": "225"
+      },
+      "next_action": null,
+      "on_behalf_of": null,
+      "payment_method": "pm_1U5Idy2Uz4P3wrXOck9fGFuX",
+      "payment_method_configuration_details": {
+        "id": "pmc_1Tznav2Uz4P3wrXODTDA59DA",
+        "parent": null
+      },
+      "payment_method_options": {
+        "card": {
+          "installments": null,
+          "mandate_options": null,
+          "network": null,
+          "request_three_d_secure": "automatic"
+        },
+        "link": {
+          "persistent_token": null
+        }
+      },
+      "payment_method_types": [
+        "card",
+        "link"
+      ],
+      "processing": null,
+      "receipt_email": null,
+      "review": null,
+      "setup_future_usage": null,
+      "shared_payment_granted_token": null,
+      "shipping": null,
+      "source": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "succeeded",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_VIwbV4F4DlzfV5",
+    "idempotency_key": "121c33af-8849-45d1-8c1d-2127bf917277"
+  },
+  "type": "payment_intent.succeeded"
+}
