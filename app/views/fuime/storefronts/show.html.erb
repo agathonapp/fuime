@@ -157,6 +157,8 @@
           <%= number_to_percentage(@event.revenue_fee * 100, precision: 1) %>
           to run the platform.
         </p>
+
+        <%= render "fuime/seller_of_record", event: @event %>
       <% else %>
         <%# Fuime: two reasons, and only one of them is safe to state.
 

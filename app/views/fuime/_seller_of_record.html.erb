@@ -1,0 +1,26 @@
+<%# Fuime: who the buyer is actually contracting with.
+
+    This is not decoration and it is not a disclaimer. Under
+    FEATURE_MERCHANT_OF_RECORD the entire legal basis for customer money landing
+    in Fuime's own Stripe balance is that Fuime IS the seller — Fuime's terms of
+    sale, Fuime's name on the receipt, Fuime carrying the refund and chargeback
+    obligation. That is a fact about the commercial relationship, and a fact the
+    BUYER has to be able to see.
+
+    Until 2026-08-19 the seller-of-record claim appeared only in operator-facing
+    and admin copy. Every screen that said "Fuime LLC is the seller of record"
+    faced an operator or an admin; the customer handing over money was told
+    nothing. The claim was therefore asserted everywhere except to the one party
+    it is about. See docs/fuime/MOR_RISK_ACCEPTANCE.md §2 Q1.
+
+    Rendered only under merchant-of-record. Under Connect the guardian's own
+    connected account is the merchant and this would be false.
+
+    Local `event` is the venture fulfilling the order. %>
+<% if ::Fuime::Features.merchant_of_record? %>
+  <p class="text-sm muted mt-3 mb-0">
+    Sold by <strong>Fuime LLC</strong> · fulfilled by <%= event.name %>.
+    Fuime handles payment, receipts and refunds —
+    <%= link_to "terms of sale", terms_path %>.
+  </p>
+<% end %>

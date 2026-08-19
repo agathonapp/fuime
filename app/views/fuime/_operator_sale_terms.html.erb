@@ -1,0 +1,60 @@
+<%# Fuime: what the OPERATOR is agreeing to, said to the operator.
+
+    The seller-of-record framing was already reasoned about carefully in this
+    codebase — and every word of it was in ERB comments and admin screens. A
+    teenager publishing an offer was told the price was theirs and nothing else:
+    not that Fuime is the legal seller, not that a customer can refund within 14
+    days, not that a refund comes off what they are owed, not that a chargeback is
+    Fuime's to answer. They found out when a number moved.
+
+    Two reasons this has to be visible rather than filed in the terms:
+
+    1. It is their money. A refund debit on `Fuime::PayablesLedger` that arrives
+       unexplained reads as Fuime taking their earnings.
+    2. It is the contractor characterisation (MOR_RISK_ACCEPTANCE.md §2 Q2). "You
+       set your prices, you choose your customers, Fuime never assigns work" is the
+       fact that keeps an operator a vendor rather than an employee — and a fact
+       nobody has been told is a fact nobody can rely on.
+
+    Deliberately plain language and short sentences. The audience is 13.
+
+    Merchant-of-record only: under Connect the guardian's own account is the
+    merchant, the guardian carries the chargeback, and all of this would be wrong. %>
+<% if ::Fuime::Features.merchant_of_record? %>
+  <div class="card bg-snow mt-4">
+    <h2 class="mt0 mb-2 text-lg">How selling through Fuime works</h2>
+    <ul class="mb-2" style="line-height: 1.6;">
+      <li>
+        <strong>You set your own price.</strong> Nobody at Fuime sets it, suggests
+        it, or tells you which customers to take. That is yours.
+      </li>
+      <li>
+        <strong>Fuime LLC is the legal seller.</strong> Your customer buys from
+        Fuime, Fuime appears on their card statement, and Fuime pays you for the
+        work as its vendor. You are not Fuime's employee.
+      </li>
+      <li>
+        <strong>Customers can ask for a refund within 14 days.</strong> Fuime
+        handles it and pays it back to them — you never have to argue with a
+        customer about money.
+      </li>
+      <li>
+        <strong>A refund comes off what Fuime owes you</strong> for that sale. You
+        will see it on your earnings as "Refunds and disputes", so a drop is never
+        a mystery.
+      </li>
+      <li>
+        <strong>If a customer disputes a charge with their bank, that is Fuime's
+        to answer, not yours.</strong>
+      </li>
+      <li>
+        <strong>Payment problems go to
+        <a href="mailto:support@fuime.com">support@fuime.com</a></strong> — not to
+        you. Send anyone who asks straight to us.
+      </li>
+    </ul>
+    <p class="muted text-sm mb-0">
+      The full version is in the <%= link_to "terms", terms_path %>, section 8.
+    </p>
+  </div>
+<% end %>
