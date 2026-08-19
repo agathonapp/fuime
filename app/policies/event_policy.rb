@@ -489,8 +489,8 @@ class EventPolicy < ApplicationPolicy
     return true if user.admin?
     return false unless member?
 
-    if ::Fuime::Features.merchant_of_record? && !record.institutionally_sponsored?
-      return false if user.minor_or_unknown_age? && !user.has_active_guardian?
+    if ::Fuime::Features.merchant_of_record? && !record.institutionally_sponsored? && user.minor_or_unknown_age? && !user.has_active_guardian?
+      return false
     end
 
     true

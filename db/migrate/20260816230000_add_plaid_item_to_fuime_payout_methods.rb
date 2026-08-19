@@ -39,15 +39,23 @@
 # hold in a column.
 class AddPlaidItemToFuimePayoutMethods < ActiveRecord::Migration[8.0]
   def change
-    change_table :fuime_payout_methods, bulk: true do |t|
-      # Which account inside the Item. Opaque and alphanumeric — never digits,
-      # and the model's account-number validation covers it for the same reason
-      # it covers `provider_reference`.
-      t.string :provider_account_id
+    # `safety_assured`: strong_migrations cannot see inside a change_table block,
+    # so it refuses rather than guesses. What is inside is two ADD COLUMNs with no
+    # default and no NOT NULL — the one column operation Postgres does as a
+    # metadata-only catalogue update, taking no table rewrite and holding
+    # ACCESS EXCLUSIVE only for an instant. `bulk: true` is what makes it a single
+    # ALTER TABLE rather than two.
+    safety_assured do
+      change_table :fuime_payout_methods, bulk: true do |t|
+        # Which account inside the Item. Opaque and alphanumeric — never digits,
+        # and the model's account-number validation covers it for the same reason
+        # it covers `provider_reference`.
+        t.string :provider_account_id
 
-      # Lockbox ciphertext. See the header: encrypted because the plaintext
-      # could be exchanged for the numbers this table exists not to hold.
-      t.text :provider_access_token_ciphertext
+        # Lockbox ciphertext. See the header: encrypted because the plaintext
+        # could be exchanged for the numbers this table exists not to hold.
+        t.text :provider_access_token_ciphertext
+      end
     end
   end
 

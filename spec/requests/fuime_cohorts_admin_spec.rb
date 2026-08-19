@@ -30,7 +30,9 @@ RSpec.describe "admin cohorts", :merchant_of_record, type: :request do
     { fuime_cohort: { name: "Founders Weekend", code: "FOUNDERS26",
                       rationale: "I'm running this event and I know everyone attending.",
                       expires_at: 3.days.from_now, max_members: 50,
-                      risk_level: "slight", auto_approve: "1" } }
+                      risk_level: "slight", auto_approve: "1"
+}
+}
   end
 
   describe "who may see it" do

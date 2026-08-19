@@ -199,7 +199,8 @@ RSpec.describe "the payment links API", :merchant_of_record, type: :request do
     # property rather than a rejection: a caller cannot even express the request.
     it "acts only on the key's own venture, whatever the caller sends" do
       post_link({ amount: "35.00", name: "Mow", event_id: other_event.id,
-                  event_slug: other_event.slug })
+                  event_slug: other_event.slug
+})
 
       expect(json["url"]).to include("/pay/#{event.slug}/")
       expect(other_event.fuime_offers).to be_empty

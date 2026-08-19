@@ -103,7 +103,7 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       create_session(guardian, verified: true)
 
       expect { post :create, params: { event_slug: event.slug, name: "Nope" } }
-        .not_to change { event.fuime_api_keys.count }
+        .not_to(change { event.fuime_api_keys.count })
     end
 
     it "refuses more keys than the cap allows" do
@@ -111,7 +111,7 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       create_session(teen, verified: true)
 
       expect { post :create, params: { event_slug: event.slug, name: "One too many" } }
-        .not_to change { event.fuime_api_keys.live.count }
+        .not_to(change { event.fuime_api_keys.live.count })
       expect(flash[:alert]).to be_present
     end
   end

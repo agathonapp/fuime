@@ -230,6 +230,7 @@ module Fuime
       # missing birthday must not be the way past a floor that exists to keep
       # FLSA hour limits out of the picture.
       return "#{who} has no date of birth on file." if age.nil?
+
       floor = self.class.minimum_operator_age
       return nil if age >= floor
 

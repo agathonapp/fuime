@@ -57,7 +57,7 @@ RSpec.describe "the Stripe webhook endpoint", :merchant_of_record, type: :reques
     post "/fuime/webhooks/stripe",
          params: body,
          headers: {
-           "Content-Type" => "application/json",
+           "Content-Type"     => "application/json",
            "Stripe-Signature" => header || signature_header(body, at:)
          }
   end
@@ -94,8 +94,8 @@ RSpec.describe "the Stripe webhook endpoint", :merchant_of_record, type: :reques
       deliver
 
       expect(RawPendingDonationTransaction.where(
-               donation_transaction_id: Fuime::VentureLedger.payment_key(intent_id)
-             ).count).to eq(1)
+        donation_transaction_id: Fuime::VentureLedger.payment_key(intent_id)
+      ).count).to eq(1)
     end
   end
 

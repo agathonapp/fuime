@@ -39,7 +39,8 @@ module Fuime
                  elsif can_sell? then :can_sell
                  elsif vetted? then :vetted
                  elsif venture_created? then :venture_created
-                 else :applied
+                 else
+                   :applied
                  end
     end
 
