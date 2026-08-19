@@ -129,4 +129,78 @@ RSpec.describe "seller of record disclosure", type: :request do
       expect(response.body).to match(/comes off what Fuime owes you/i)
     end
   end
+
+  # Fuime: the acknowledgement gate.
+  #
+  # There is no signed vendor agreement anywhere — no DocuSeal template is
+  # configured, so Event::Application#send_contract returns nil, and the
+  # application flow has no terms checkbox. A cohort-admitted 13-year-old could
+  # therefore publish, sell as Fuime's vendor, and have agreed to nothing.
+  #
+  # This is not a contract and these specs do not treat it as one. What is asserted
+  # is that the record exists, names a person and a version, and that publishing is
+  # actually blocked without it — a gate only enforced in a view is not a gate.
+  describe "the sale-terms acknowledgement", :merchant_of_record do
+    let(:operator) { create(:user, birthday: 15.years.ago.to_date) }
+    let!(:draft) { create(:fuime_offer, event: venture, name: "Dog walking") }
+
+    before do
+      create(:organizer_position, event: venture, user: operator)
+      post logins_path, params: { email: operator.email, login: { purpose: "" } }
+      login = Login.order(:id).last
+      post email_login_path(login)
+      code = LoginCode.active.where(user: operator).order(:id).last
+      post complete_login_path(login), params: { method: "email", login_code: code.code }
+    end
+
+    it "refuses to publish before the operator has confirmed" do
+      post fuime_offer_publish_path(event_slug: venture.slug, id: draft.id)
+
+      expect(draft.reload).not_to be_published
+      expect(flash[:alert]).to match(/confirm how selling through Fuime works/i)
+    end
+
+    it "records who confirmed, when, and which version" do
+      post fuime_offers_acknowledge_sale_terms_path(event_slug: venture.slug),
+           params: { acknowledged: "1" }
+
+      venture.reload
+      expect(venture.sale_terms_acknowledged_at).to be_present
+      expect(venture.sale_terms_acknowledged_by_id).to eq(operator.id)
+      expect(venture.sale_terms_version).to eq(Event::SALE_TERMS_VERSION)
+      expect(venture.sale_terms_acknowledged?).to be(true)
+    end
+
+    it "lets them publish once confirmed" do
+      post fuime_offers_acknowledge_sale_terms_path(event_slug: venture.slug),
+           params: { acknowledged: "1" }
+      post fuime_offer_publish_path(event_slug: venture.slug, id: draft.id)
+
+      expect(draft.reload).to be_published
+    end
+
+    it "does not record anything when the box is left unticked" do
+      post fuime_offers_acknowledge_sale_terms_path(event_slug: venture.slug),
+           params: { acknowledged: "0" }
+
+      expect(venture.reload.sale_terms_acknowledged_at).to be_nil
+    end
+
+    # A substantive change to the terms re-asks rather than resting on agreement to
+    # a different document.
+    it "stops counting when the terms version moves on" do
+      venture.update_columns(sale_terms_acknowledged_at: Time.current,
+                             sale_terms_acknowledged_by_id: operator.id,
+                             sale_terms_version: "1999-01-01")
+
+      expect(venture.reload.sale_terms_acknowledged?).to be(false)
+    end
+  end
+
+  # Under Connect the guardian owns the account, signed Stripe's own terms and
+  # carries the chargeback, so there is no Fuime-as-seller relationship to
+  # acknowledge and the gate must not block anybody.
+  it "does not gate publishing under Connect" do
+    expect(venture.sale_terms_acknowledged?).to be(true)
+  end
 end

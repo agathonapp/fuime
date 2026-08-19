@@ -19,7 +19,7 @@
 <%# Placed here, before anything can be published: the obligations below attach at
     the moment an offer goes live, so this is the last point at which telling
     somebody is still telling them rather than explaining afterwards. %>
-<%= render "fuime/operator_sale_terms" %>
+<%= render "fuime/operator_sale_terms", event: @event, confirmable: @can_manage %>
 
 <% if @selling_blockers.any? %>
   <%# Authenticated page only. These strings name operators and state their

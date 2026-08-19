@@ -67,6 +67,23 @@ module Fuime
     def publish
       authorize @event, :manage_offers?
 
+      # Fuime: nobody publishes before being told what publishing means.
+      #
+      # Under merchant-of-record, going live makes Fuime the legal seller of what
+      # this offer describes and makes the operator a vendor — and there is no
+      # signed vendor agreement anywhere (no DocuSeal template is configured, so
+      # Event::Application#send_contract returns nil, and the application flow has
+      # no terms checkbox). This is the last moment where telling somebody is still
+      # telling them rather than explaining afterwards.
+      #
+      # Checked here rather than only in the view because a button is cosmetic; a
+      # bookmarked URL or a direct POST reaches this.
+      unless @event.sale_terms_acknowledged?
+        redirect_to fuime_offers_path(event_slug: @event.slug),
+                    alert: "Please read and confirm how selling through Fuime works first."
+        return
+      end
+
       # The return value is load-bearing. AASM is not whiny by default: when the
       # save behind a transition fails validation it **reverts the in-memory
       # state and returns false** rather than raising. A `publish!` followed by
@@ -137,6 +154,42 @@ module Fuime
         redirect_to fuime_offers_path(event_slug: @event.slug),
                     alert: @event.errors.full_messages.to_sentence
       end
+    end
+
+    # Fuime: record the acknowledgement — who, when, and which version.
+    #
+    # This is NOT a contract and must not be described as one. It is evidence that
+    # a specific person was shown a specific version of the terms and affirmed
+    # them, which is what MOR_RISK_ACCEPTANCE.md §2 Q2 currently rests on having.
+    #
+    # `manage_offers?` rather than a looser check: the person taking on the
+    # obligation has to be the person who can actually publish.
+    #
+    # `update_columns` for the same reason the business-category repair uses it —
+    # this records a fact about a click, and an unrelated legacy validation on a
+    # wide legacy model must not be able to swallow it.
+    def acknowledge_sale_terms
+      authorize @event, :manage_offers?
+
+      unless params[:acknowledged] == "1"
+        redirect_to fuime_offers_path(event_slug: @event.slug),
+                    alert: "Tick the box to confirm you've read it."
+        return
+      end
+
+      @event.update_columns(
+        sale_terms_acknowledged_at: Time.current,
+        sale_terms_acknowledged_by_id: current_user.id,
+        sale_terms_version: ::Event::SALE_TERMS_VERSION
+      )
+
+      Rails.logger.info(
+        "[Fuime] sale terms #{::Event::SALE_TERMS_VERSION} acknowledged for event " \
+        "#{@event.id} by user #{current_user.id}"
+      )
+
+      redirect_to fuime_offers_path(event_slug: @event.slug),
+                  notice: "Thanks — you're all set to publish."
     end
 
     private

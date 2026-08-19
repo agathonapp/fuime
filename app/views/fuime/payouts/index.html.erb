@@ -80,7 +80,7 @@
 <%# Repeated here, not only on the offers page. This is the screen an operator
     opens when a number has changed, and "Refunds and disputes" below is a row that
     needs an explanation next to it rather than in another tab. %>
-<%= render "fuime/operator_sale_terms" %>
+<%= render "fuime/operator_sale_terms", event: @event %>
 
 <% if @payables.pending_sales_cents.positive? %>
   <p class="secondary mt0">
