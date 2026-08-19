@@ -34,6 +34,9 @@ module Fuime
   class PayoutMethodsController < ApplicationController
     before_action :set_event
     before_action :authorize_connect, only: [:link_token, :create, :destroy]
+    # Not :destroy — removing a destination must always be possible, including
+    # (especially) a sandbox one somebody connected before this gate existed.
+    before_action :refuse_uncollectable, only: [:link_token, :create]
 
     def show
       authorize @event, :payout_method?
@@ -42,6 +45,9 @@ module Fuime
       @can_connect = policy(@event).connect_payout_method?
       @configured = ::Fuime::PlaidLinkService.configured?
       @sandbox = ::Fuime::PlaidLinkService.sandbox?
+      # Plaid is reachable but must not be used yet — sandbox alongside live
+      # Stripe. See Fuime::PlaidLinkService.collectable?.
+      @collectable = ::Fuime::PlaidLinkService.collectable?
 
       # What Fuime owes them, which is the reason this page is worth their time.
       # Under MoR a venture with no destination is SKIPPED from every payout run
@@ -128,6 +134,27 @@ module Fuime
 
     def authorize_connect
       authorize @event, :connect_payout_method?
+    end
+
+    # Sandbox Plaid while Stripe is live: connecting would mint a destination
+    # that reads as verified and points at a fictional account, permanently
+    # indistinguishable from a real one after PLAID_ENV is promoted.
+    #
+    # A refusal rather than a hidden button, because the nav is cosmetic and this
+    # is the money path — a bookmarked URL, a stale tab or a direct POST must all
+    # land here too.
+    def refuse_uncollectable
+      return if ::Fuime::PlaidLinkService.collectable?
+
+      message = "Connecting a bank isn't available yet — payouts open later. " \
+                "Nothing you've earned is affected."
+
+      respond_to do |format|
+        format.json { render json: { error: message }, status: :service_unavailable }
+        format.any do
+          redirect_to fuime_payout_method_path(event_slug: @event.slug), alert: message
+        end
+      end
     end
 
     def service

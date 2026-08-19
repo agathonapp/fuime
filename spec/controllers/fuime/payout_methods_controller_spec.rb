@@ -231,4 +231,59 @@ RSpec.describe Fuime::PayoutMethodsController do
       expect(other_record.reload).to be_verified
     end
   end
+
+  # Fuime: sandbox Plaid while Stripe is LIVE — the Founders Weekend configuration,
+  # because payouts were deliberately deferred past the first real sales.
+  #
+  # A sandbox Item accepts fake bank logins and still yields a payout method in
+  # state `verified`, and nothing on the row records which Plaid environment made
+  # it. Once PLAID_ENV is promoted, a fictional destination is indistinguishable
+  # from a real one and the payout run reads both the same way. So the collection
+  # is refused rather than the button merely hidden.
+  describe "collecting a destination while Plaid is sandbox and Stripe is live" do
+    before do
+      allow(StripeService).to receive(:live?).and_return(true)
+      create_session(guardian, verified: true)
+    end
+
+    it "is not collectable" do
+      expect(Fuime::PlaidLinkService.collectable?).to be(false)
+    end
+
+    it "refuses to mint a Link token, in JSON, so the browser cannot start the flow" do
+      post :link_token, params: { event_slug: venture.slug }, format: :json
+
+      expect(response).to have_http_status(:service_unavailable)
+      expect(response.parsed_body["error"]).to match(/payouts open later/i)
+    end
+
+    # The one that matters: a POST is reachable by anyone who can type a URL, and
+    # the guardian here is fully authorised — it is the environment that is wrong,
+    # not the person.
+    it "refuses #create even for the guardian, and stores nothing" do
+      expect {
+        post :create, params: { event_slug: venture.slug, public_token: "public-sandbox-x", account_id: "acc_1" }
+      }.not_to(change { Fuime::PayoutMethod.count })
+
+      expect(flash[:alert]).to match(/payouts open later/i)
+    end
+
+    # Removal is deliberately NOT gated: a sandbox destination connected before
+    # this gate existed must still be removable, and that is the safe direction.
+    it "still allows removing a destination that already exists" do
+      existing = create(:fuime_payout_method, :verified, event: venture, added_by: guardian)
+
+      delete :destroy, params: { event_slug: venture.slug, id: existing.id }
+
+      expect(existing.reload).to be_removed
+    end
+
+    # Promoting Plaid lifts the refusal with no code change — the property that
+    # makes this a configuration gate rather than a feature to remember to delete.
+    it "becomes collectable once Plaid is in production" do
+      allow(Fuime::PlaidLinkService).to receive(:sandbox?).and_return(false)
+
+      expect(Fuime::PlaidLinkService.collectable?).to be(true)
+    end
+  end
 end

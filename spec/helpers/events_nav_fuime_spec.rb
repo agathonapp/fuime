@@ -83,9 +83,30 @@ RSpec.describe EventsHelper, type: :helper do
       expect(available?("Payout account")).to be(false)
     end
 
+    # Stubbed rather than left to the environment. The nav item also consults
+    # Fuime::PlaidLinkService.collectable?, which is false without PLAID_CLIENT_ID
+    # and PLAID_SECRET — present in .env.development (and therefore in the local
+    # test container, via docker-compose's env_file) and absent on CI. Unstubbed,
+    # this example passes on a laptop and fails on a shard, which is the third
+    # time that shape of bug has appeared in this suite.
+    #
+    # What is under test here is the FLAG and the policy, not whether the machine
+    # has Plaid keys.
     it "swaps to the payout destination under merchant-of-record", :merchant_of_record do
+      allow(::Fuime::PlaidLinkService).to receive(:collectable?).and_return(true)
+
       expect(available?("Payments")).to be(false)
       expect(available?("Payout account")).to be(true)
+    end
+
+    # The Founders Weekend configuration: sandbox Plaid alongside live Stripe, so
+    # a destination must not be collected yet. The nav is cosmetic — the refusal
+    # that matters is in the controller — but showing an entry that leads to a page
+    # which refuses is how a founder concludes the product is broken.
+    it "hides the payout destination when a destination cannot be collected", :merchant_of_record do
+      allow(::Fuime::PlaidLinkService).to receive(:collectable?).and_return(false)
+
+      expect(available?("Payout account")).to be(false)
     end
   end
 
