@@ -17,7 +17,10 @@ WebAuthn.configure do |config|
       # domain exists, so the two agree.
       Credentials.fetch(:LIVE_URL_HOST, fallback: ENV["RENDER_EXTERNAL_HOSTNAME"])
     else
-      Credentials.fetch(:TEST_URL_HOST)
+      # Same fallback as config/environments/test.rb. Without it, an
+      # unset TEST_URL_HOST leaves allowed_origins empty, rp_id nil,
+      # and every FakeClient / browser ceremony raises URI::InvalidURIError.
+      Credentials.fetch(:TEST_URL_HOST, fallback: "localhost:3000")
     end
 
   scheme = Rails.env.local? ? "http" : "https"
