@@ -961,6 +961,47 @@ class AdminController < Admin::BaseController
                   flash: { success: "#{@event.name} is now #{status}." }
   end
 
+  # FUIME: the repair for a venture whose business category was never set.
+  #
+  # `business_category` decides whether a venture may sell at all
+  # (Fuime::OperatorEligibility#category_blocker, which fails closed on blank), and
+  # until now it was written exactly once — derived from the application's
+  # service_type at activation — and by nothing else, anywhere. A founder whose
+  # application carried no category therefore reached "Choose what this venture
+  # sells before accepting payments" with no way to choose it, and neither did an
+  # admin standing next to them.
+  #
+  # Requiring the field at submission (Event::Application#required_submission_fields)
+  # closes the hole going forward. This exists for the ventures already through it,
+  # and for a live event where the answer is "ask the founder and fix it in ten
+  # seconds" rather than "open a Rails console".
+  #
+  # Deliberately NOT an operator-facing form. The category is what Fuime vets and,
+  # under merchant-of-record, what Fuime sells as; letting an operator re-answer it
+  # after approval would let a venture vetted as a service business quietly become
+  # something else without anyone re-reading it.
+  def operator_vetting_category
+    @event = Event.friendly.find(params[:id])
+    category = params[:business_category].to_s
+
+    unless Event::BUSINESS_CATEGORIES.include?(category)
+      redirect_back fallback_location: operator_vetting_admin_index_path,
+                    alert: "#{category.presence || 'That'} is not a business category."
+      return
+    end
+
+    previous = @event.business_category.presence
+    @event.update!(business_category: category)
+
+    Rails.logger.info(
+      "[Fuime] business_category for event #{@event.id} set to #{category} " \
+      "(was #{previous || 'blank'}) by user #{current_user.id}"
+    )
+
+    redirect_back fallback_location: operator_vetting_admin_index_path,
+                  flash: { success: "#{@event.name} is now categorised as #{category.titleize}." }
+  end
+
   # FUIME: the weekly payout runs.
   #
   # The second half of the brief's manual-approval control — #operator_vetting

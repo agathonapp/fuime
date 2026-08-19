@@ -88,6 +88,42 @@
           <strong><%= app&.service&.name || event.business_category.presence&.titleize ||
                         content_tag(:span, "not set", class: "muted") %></strong>
 
+          <%# FUIME: the category is what decides whether this venture may sell at
+              all (Fuime::OperatorEligibility#category_blocker fails closed on
+              blank), and it is written exactly once at activation. A venture whose
+              application carried no category is stuck behind a message telling the
+              founder to choose something they cannot reach — so the choice lives
+              here, with the person who is already reading the application.
+
+              Prominent when blank, folded away when set: changing it re-answers
+              what Fuime vetted and, under merchant-of-record, what Fuime sells as.
+              That should take a deliberate click. %>
+          <% if event.business_category.blank? %>
+            <div class="mt1 pa1" style="border: 1px solid var(--warning); border-radius: 4px;">
+              <div class="text-sm bold">No category — this venture cannot sell.</div>
+              <%= form_with url: operator_vetting_category_admin_index_path(id: event.slug),
+                            method: :post, local: true do |form| %>
+                <%= form.select :business_category,
+                                Event::BUSINESS_CATEGORIES.map { |c| [c.titleize, c] },
+                                { include_blank: "Choose…" },
+                                class: "mt1" %>
+                <%= form.submit "Set category", class: "btn bg-accent mt1" %>
+              <% end %>
+            </div>
+          <% else %>
+            <details class="mt1">
+              <summary class="muted text-sm">Change category</summary>
+              <%= form_with url: operator_vetting_category_admin_index_path(id: event.slug),
+                            method: :post, local: true do |form| %>
+                <%= form.select :business_category,
+                                Event::BUSINESS_CATEGORIES.map { |c| [c.titleize, c] },
+                                { selected: event.business_category },
+                                class: "mt1" %>
+                <%= form.submit "Update", class: "btn bg-muted mt1" %>
+              <% end %>
+            </details>
+          <% end %>
+
           <% if app&.description.present? %>
             <div class="muted mt1" style="white-space: pre-wrap; max-width: 22rem;"><%= app.description %></div>
           <% end %>

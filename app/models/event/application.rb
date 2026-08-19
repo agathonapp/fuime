@@ -685,6 +685,7 @@ class Event
 
     FIELD_LABELS = {
       "name"                   => "Business name",
+      "business_category"      => "What kind of business this is",
       "description"            => "What your business does",
       "address_line1"          => "Street address",
       "address_city"           => "City",
@@ -708,7 +709,21 @@ class Event
     }.freeze
 
     def required_submission_fields
-      fields = ["name", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
+      # Fuime: `business_category` is required to SUBMIT, not merely asked for.
+      #
+      # It is the field Fuime::OperatorEligibility#category_blocker reads to decide
+      # whether a venture may sell at all, and that check correctly fails closed on
+      # blank. But nothing required it here, its validation is `allow_blank: true`
+      # on both this model and Event, and it is only ever derived from `service_type`
+      # — so an application that skipped the business-type step submitted, approved
+      # and activated in silence, and produced a venture that could never sell.
+      #
+      # The blocker that venture then shows says "Choose what this venture sells",
+      # and until the admin control added alongside this there was nowhere to choose
+      # it: `business_category` is written exactly once, at activation, and appears
+      # in no form, no strong-params list and no admin screen. A dead end reached
+      # only after a founder had done everything right.
+      fields = ["name", "business_category", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
 
       # A parent's email is required only while the guardian question is OPEN.
       # A second application from the same teen has nothing to ask — their

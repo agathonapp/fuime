@@ -487,6 +487,9 @@ Rails.application.routes.draw do
       # they can sell — see Fuime::OperatorEligibility.
       get "operator_vetting", to: "admin#operator_vetting"
       post "operator_vetting/:id", to: "admin#operator_vetting_decide", as: "operator_vetting_decide"
+      # FUIME: set a venture's business category after activation. The only writer
+      # of that column outside activation — see Admin#operator_vetting_category.
+      post "operator_vetting/:id/category", to: "admin#operator_vetting_category", as: "operator_vetting_category"
       # FUIME: the weekly payout runs. A human reads every line before Fuime pays
       # anybody — see Fuime::PayoutBatchService.
       get "payout_batches", to: "admin#payout_batches"
