@@ -102,12 +102,60 @@
 <p>
   When Fuime processes a payment for a business, it keeps
   <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of that payment
-  as a platform fee, shown as a separate line on the ledger. During the beta no
-  real payments are processed, so no real fees are charged. If we change the
+  as a platform fee, shown as a separate line on the ledger. If we change the
   fee, we will tell you before it applies to you.
 </p>
 
-<h2>8. What you may not do</h2>
+<%# Fuime: the sale-and-refunds section, added 2026-08-19.
+
+    This is the load-bearing document for FEATURE_MERCHANT_OF_RECORD. Customer
+    money landing in Fuime's own Stripe balance is Fuime's OWN revenue — and
+    therefore lawful without a money-transmitter licence — only if Fuime is really
+    the seller. That is established by terms that say so and by Fuime actually
+    carrying the refund and chargeback obligation, not by anything in the code.
+    See docs/fuime/MOR_RISK_ACCEPTANCE.md §2 Q1.
+
+    Written to be true of the system as built: Fuime takes the payment, Fuime is
+    named on the card statement ("Fuime* ..."), Fuime issues the refund, and the
+    operator is paid afterwards as a vendor.
+
+    ⚠️ THE 14-DAY WINDOW IS A DEFAULT, NOT A DECISION. It was chosen so the
+    document could exist before launch; it is a binding term the moment a customer
+    pays and needs the founder's explicit sign-off. Change the number here and
+    nowhere else — no code reads it. %>
+<h2>8. Buying through Fuime</h2>
+<p>
+  This section is for <strong>customers</strong> — anyone paying for a service
+  they found through Fuime.
+</p>
+<p>
+  <strong>Fuime LLC is the seller.</strong> When you pay through Fuime, your
+  contract for that purchase is with Fuime LLC, not with the young person or the
+  business fulfilling it. Fuime takes your payment, Fuime appears on your card
+  statement, Fuime sends your receipt, and Fuime is responsible to you for the
+  purchase. The business you chose performs the work; we pay them afterwards as
+  our vendor.
+</p>
+<p>
+  <strong>Refunds.</strong> If the service has not been performed yet, you can
+  cancel and get a full refund. If something has gone wrong with a service that
+  was performed, contact us within <strong>14 days</strong> of the purchase and we
+  will look into it and put it right, which may mean a full or partial refund.
+  Refunds are paid by Fuime and go back to the card you used.
+</p>
+<p>
+  <strong>Disputes.</strong> Please contact us before disputing a charge with your
+  bank — we can usually resolve it faster. Either way, the chargeback is ours to
+  answer, not the young person's.
+</p>
+<p>
+  <strong>How to reach us.</strong> Email
+  <a href="mailto:support@fuime.com">support@fuime.com</a> with your receipt and
+  what happened. A young founder is not the right person to handle a payment
+  problem, and it is not their job to.
+</p>
+
+<h2>9. What you may not do</h2>
 <ul>
   <li>Break the law, or use Fuime to help someone else break the law.</li>
   <li>
@@ -126,42 +174,42 @@
   </li>
 </ul>
 
-<h2>9. A guardian can end this at any time</h2>
+<h2>10. A guardian can end this at any time</h2>
 <p>
   A parent or guardian may withdraw consent whenever they choose. When they do,
   the teen can no longer operate a business on Fuime. Records are kept
   according to our <%= link_to "Privacy Policy", privacy_path %>.
 </p>
 
-<h2>10. We can end it too</h2>
+<h2>11. We can end it too</h2>
 <p>
   We may suspend or close an account that breaks these terms, or where we
   believe someone is at risk. Where we can, we will tell you why and give you a
   chance to get your records out first.
 </p>
 
-<h2>11. No warranty</h2>
+<h2>12. No warranty</h2>
 <p>
   Fuime is provided &ldquo;as is&rdquo;. This is beta software. It may have
   bugs, it may be unavailable, and it may get something wrong. We do not
   promise it is error-free or that it will always be running.
 </p>
 
-<h2>12. Limit of liability</h2>
+<h2>13. Limit of liability</h2>
 <p>
   To the extent the law allows, Fuime is not liable for indirect or
   consequential losses, or for lost profits. Nothing here limits liability that
   cannot legally be limited.
 </p>
 
-<h2>13. Changes to these terms</h2>
+<h2>14. Changes to these terms</h2>
 <p>
   We will update the date at the top when these change. For a material change
   we will email you, and where the law requires it we will ask you to accept
   the new terms.
 </p>
 
-<h2>14. Open source</h2>
+<h2>15. Open source</h2>
 <p>
   Fuime is a fork of <%= link_to "HCB", "https://github.com/hackclub/hcb", target: "_blank" %>
   by Hack Club, and is licensed under the AGPL-3.0. The source code of the
@@ -169,7 +217,7 @@
   <%= link_to Rails.configuration.constants.github_url, Rails.configuration.constants.github_url, target: "_blank" %>.
 </p>
 
-<h2>15. Contact</h2>
+<h2>16. Contact</h2>
 <p>
   <%= Rails.configuration.constants.legal_entity_name %> —
   <%= mail_to "support@fuime.com" %>

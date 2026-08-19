@@ -75,6 +75,10 @@
       <p class="text-sm muted mt-3 mb-0 text-center">
         Secure checkout by Stripe. You'll be taken to Stripe to pay.
       </p>
+
+      <div class="text-center">
+        <%= render "fuime/seller_of_record", event: @event %>
+      </div>
     <% else %>
       <%# A dead Pay button on a link a teenager has already sent to a real
           customer is worse than an honest message. Unlike the storefront — which
