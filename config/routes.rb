@@ -85,6 +85,27 @@ Rails.application.routes.draw do
     post "webhooks/stripe/connect", to: "webhooks#connect"
   end
 
+  # Fuime: the API a venture's own software talks to.
+  #
+  # Authenticated by a Fuime::ApiKey, which speaks for exactly ONE venture — so
+  # no route here carries an event id or slug, and there is deliberately no way
+  # for a caller to name the business it wants to act on. See
+  # Fuime::Api::V1::BaseController.
+  #
+  # Scoped under /api/fuime/ rather than added to /api/v4/ because v4 is
+  # upstream HCB's OAuth API and shares its authentication, its Pundit policies
+  # and its versioning promises. This has none of those and should not inherit
+  # the obligation to keep them.
+  scope "api/fuime/v1", module: "fuime/api/v1", as: :fuime_api_v1, defaults: { format: :json } do
+    get "me", to: "venture#show"
+
+    resources :payment_links, only: [:index, :create, :destroy],
+                              # The public token, not the primary key — the same
+                              # identifier the link's own URL carries, and the
+                              # only one a caller ever sees.
+                              param: :id, constraints: { id: /[^\/]+/ }
+  end
+
   # Fuime: Tax Tracker
   get "/:event_slug/taxes", to: "fuime/taxes#show", as: :fuime_taxes
   get "/:event_slug/taxes/download", to: "fuime/taxes#download_packet", as: :fuime_taxes_download
@@ -144,11 +165,31 @@ Rails.application.routes.draw do
   post "/:event_slug/offers/:id/archive", to: "fuime/offers#archive", as: :fuime_offer_archive
   post "/:event_slug/offers/:id/restore", to: "fuime/offers#restore", as: :fuime_offer_restore
 
+  # Fuime: the keys a venture issues to its own software, and the links those
+  # keys have made. See Fuime::ApiKeysController.
+  get "/:event_slug/developer", to: "fuime/api_keys#index", as: :fuime_api_keys
+  post "/:event_slug/developer", to: "fuime/api_keys#create", as: :fuime_api_keys_create
+  delete "/:event_slug/developer/:id", to: "fuime/api_keys#destroy", as: :fuime_api_key_revoke
+
   get "/:event_slug/payouts", to: "fuime/payouts#index", as: :fuime_payouts
   post "/:event_slug/payouts", to: "fuime/payouts#create", as: :fuime_payouts_create
   post "/:event_slug/payouts/:id/approve", to: "fuime/payouts#approve", as: :fuime_payout_approve
   post "/:event_slug/payouts/:id/reject", to: "fuime/payouts#reject", as: :fuime_payout_reject
   post "/:event_slug/payouts/:id/settle", to: "fuime/payouts#settle", as: :fuime_payout_settle
+
+  # Fuime: the payout DESTINATION — where the money goes, as against the routes
+  # above which decide whether it goes at all. See Fuime::PayoutMethod: under
+  # merchant-of-record there is no merchant account for an operator to open, only
+  # somewhere to send their share.
+  #
+  # `link_token` is a POST despite reading nothing, because minting one is a write
+  # at Plaid and the token is single-use — a prefetching browser following a GET
+  # would burn tokens the operator then cannot use.
+  get "/:event_slug/payout-method", to: "fuime/payout_methods#show", as: :fuime_payout_method
+  post "/:event_slug/payout-method", to: "fuime/payout_methods#create", as: :fuime_payout_method_create
+  post "/:event_slug/payout-method/link-token", to: "fuime/payout_methods#link_token",
+                                                as: :fuime_payout_method_link_token
+  delete "/:event_slug/payout-method/:id", to: "fuime/payout_methods#destroy", as: :fuime_payout_method_remove
 
   # Fuime: a school funding a student's venture ("$100 per A"). Money IN from the
   # school, as against the payout routes above which move it out.
@@ -435,10 +476,20 @@ Rails.application.routes.draw do
       get "checks", to: "admin#checks"
       get "increase_checks", to: "admin#increase_checks"
       get "applications", to: "admin#applications"
+      # FUIME: cohorts — one person vouching for a group in advance, so an event
+      # does not need 150 clicks while it is running. See Fuime::Cohort.
+      # `cohort` doubles as the live roster board: where every founder is stuck.
+      get "cohorts", to: "admin#cohorts"
+      post "cohorts", to: "admin#cohort_create", as: "cohort_create"
+      get "cohorts/:id", to: "admin#cohort", as: "cohort"
+      post "cohorts/:id/archive", to: "admin#cohort_archive", as: "cohort_archive"
       # FUIME: the operator vetting queue. A human approves every operator before
       # they can sell — see Fuime::OperatorEligibility.
       get "operator_vetting", to: "admin#operator_vetting"
       post "operator_vetting/:id", to: "admin#operator_vetting_decide", as: "operator_vetting_decide"
+      # FUIME: set a venture's business category after activation. The only writer
+      # of that column outside activation — see Admin#operator_vetting_category.
+      post "operator_vetting/:id/category", to: "admin#operator_vetting_category", as: "operator_vetting_category"
       # FUIME: the weekly payout runs. A human reads every line before Fuime pays
       # anybody — see Fuime::PayoutBatchService.
       get "payout_batches", to: "admin#payout_batches"

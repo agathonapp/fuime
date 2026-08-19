@@ -4379,6 +4379,410 @@ rename-survives-the-link guarantee, the per-venture namespacing, and the fallbac
 
 ---
 
+## 2026-08-16 (later still) — Plaid Link: the payout destination gets a way to be set
+
+`fuime/vetting-from-application`. Completes `Fuime::PayoutMethod`, which shipped hours earlier
+as a model with no way to create a row.
+
+### What is new
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `Fuime::PlaidLinkService` | link token → exchange → verified destination | `app/services/fuime/plaid_link_service.rb` |
+| `Fuime::PayoutMethodsController` + view | the operator page | `app/controllers/fuime/payout_methods_controller.rb`, `app/views/fuime/payout_methods/show.html.erb` |
+| `plaid_link_controller.js` | opens Plaid Link, posts what it returns | `app/javascript/controllers/plaid_link_controller.js` |
+| `provider_account_id`, `provider_access_token_ciphertext` | Plaid addresses an account with a PAIR | `db/migrate/20260816230000_add_plaid_item_to_fuime_payout_methods.rb` |
+| `EventPolicy#payout_method?` / `#connect_payout_method?` | team reads, responsible adult acts | `app/policies/event_policy.rb` |
+| "Payout account" nav item, MoR-gated | the complement of "Payments" | `app/helpers/events_helper.rb` |
+| `PLAID_CLIENT_ID` / `PLAID_SECRET` / `PLAID_ENV` | flat names, sandbox default | `.env.development.example` |
+
+Upstream's `PlaidService` and `BankAccountsController` are untouched. They serve HCB's bank
+feeds, which Fuime does not have (`Admin::Nav` already marks them FUIME-DISABLED), and their
+`env` is hardcoded `"production"` — reusing that would have made Fuime's sandbox default a lie.
+
+### 🔑 This is the first Fuime integration exercised end to end against its provider
+
+Every previous session's handoff has carried some version of "nothing has run against Stripe".
+This one has run against Plaid: link token, public token exchange, `/accounts/get`,
+`/identity/get`, persistence, encryption-at-rest and the replace-the-old-destination path, all
+against Plaid's real sandbox, through `Fuime::PlaidLinkService` itself rather than raw HTTP.
+
+Two guards fired on real data rather than on a stub, which is worth recording because both were
+written speculatively:
+
+- an account id from a **different Item** was refused — the sandbox mints fresh account ids per
+  Item, so the cross-Item case happened by accident and the check caught it;
+- an Item with both checking and savings, and no account named, was **refused rather than
+  guessed at**.
+
+What was NOT exercised live is `ensure_payable!` rejecting a credit card: the card's id came from
+another Item, so the not-on-this-item guard fired first. It is covered by a unit example.
+
+### The design decisions worth carrying
+
+**Plaid verifies; it never moves money.** Unchanged from §4.3 and the reason `provider` is a
+column. This work buys a *verified destination*, not a payment — the originator (Stripe, Slash or
+Mercury) is still undecided, and `Fuime::PayoutBatchService#mark_paid!` is still a human assertion.
+
+**`/auth/get` is not called and must not be.** That endpoint returns the account and routing
+numbers. The `auth` product is requested at Link time so the Item is CAPABLE of being handed to
+an originator later; capability at Plaid is not possession at Fuime. A spec stubs `auth_get` to
+raise, so a future refactor that reaches for it fails the suite rather than quietly starting to
+hold credentials.
+
+**`provider_reference` now holds the Plaid `item_id`**, not the access token. The token is a
+secret — with `auth` on the Item it can be exchanged for the digits — so it lives in a Lockbox
+`_ciphertext` column, the same treatment upstream gives `BankAccount#plaid_access_token`. A spec
+reads the raw column and fails if the plaintext appears there.
+
+**Sandbox is the default and a typo cannot promote it.** `PLAID_ENV` is compared to the exact
+string `"production"`; anything else, including `"prod"`, is sandbox. Plaid production connects
+REAL bank accounts, and Fuime cannot pay one yet — collecting live banking connections for money
+that cannot move is the L8 failure with a family's bank at the end of it. The page carries a
+standing "this is a test connection" callout while sandbox is on, in the same posture as the
+Stripe test-mode banners from Phase 1.
+
+**The adult connects, the teen reads.** `connect_payout_method?` mirrors `setup_payments?`
+(guardian on a family venture, manager on a school one). Not a courtesy: a minor generally cannot
+open a bank account, and a teen who could repoint the destination could route their own earnings
+past the approval that makes the ownership structure real (L2). The teen still gets the page,
+because under MoR a venture with no verified destination is skipped from every payout run and
+that is something they need to be able to see.
+
+**Verification is the bank login.** Link's instant-auth flow means the operator proved control by
+logging in, so the row is `verified` when `connect!` returns. Micro-deposit flows are deliberately
+NOT enabled — they resolve days later through a webhook and Fuime has no Plaid webhook receiver,
+so offering that path would strand people in `pending` forever.
+
+**The page is reachable regardless of the flag; the nav item is not.** `FEATURE_MERCHANT_OF_RECORD`
+cannot be turned on in production until counsel answers §7 Q1/Q2/Q4, and a flow nobody can run
+even once is how this repository has twice shipped an integration that had never touched the
+service it integrates with. Under Connect the page says plainly that nothing will be sent to the
+destination yet, rather than implying it is live.
+
+### Traps found
+
+- **The plaid gem keeps nested request attributes as bare Hashes.** `LinkTokenCreateRequest.new(user: {…})`
+  works and serializes, but `request.user.client_user_id` raises — so a misspelled key would sail
+  through to Plaid as an ignored filter, and the first sign of it would be an operator connecting
+  a credit card the UI was supposed to hide. Use the typed classes
+  (`Plaid::LinkTokenCreateRequestUser`, `Plaid::LinkTokenAccountFilters`, `Plaid::DepositoryFilter`).
+- **`/item/create_public_token` is discontinued** as of API version 2020-09-14, so a sandbox Item
+  cannot be re-tokenised. To drive the whole flow headlessly, use a sandbox **custom user**
+  (`override_username: "user_custom"`, the config JSON as `override_password`) with exactly one
+  checking account.
+
+### One correction to the commit before this one
+
+`20fee1cd5` broke two request specs and reported green, because it verified only the suites it
+edited. `Fuime::PayableAssessment`'s new "no payout destination" skip is correct and stays; what
+was wrong is that `fuime_full_business_flow_spec` and `fuime_payout_batches_admin_spec` generate
+a run for a venture that has none, so the batch came out empty and their ledger assertions
+measured nothing. Both now create a `:verified` destination in setup — which is what a real
+merchant-of-record venture has, and in the walkthrough spec it is a step of the journey rather
+than a fixture. Confirmed by bisect, not assumed: disabling the gate alone made both files pass.
+
+### One spec-infrastructure change, and it is not optional
+
+`spec/support/structural_flags.rb` clears every `Fuime::Features` flag per example unless the
+owning tag is present. Without it, `FEATURE_MERCHANT_OF_RECORD` in `.env.development` reaches the
+test container through docker-compose's `env_file` and runs the entire suite in the umbrella
+model as a **green** run — with `:merchant_of_record` reduced to a no-op that still passes.
+
+It must be `before(:each)`. dotenv 3.1.7 loads `dotenv/autorestore`, which snapshots ENV once and
+restores it after every example, so a `before(:suite)` deletion survives exactly one example.
+
+---
+
+## 2026-08-16 (later still) — Selling stops asking for a parent; the parent is asked at payout. Plus a venture API.
+
+Driven by a real deadline: ~50 teenagers onboarding at a Founders Weekend, going from signup to
+a first sale in one sitting. Two things had to change and one had to be built.
+
+### 1. The bug that made merchant-of-record unable to sell at all
+
+`Event#accepts_payments?` opened with `return false unless payment_account&.ready_for_payments?`.
+Under MoR there is no per-venture merchant account by design — the charge is created on Fuime's
+own Stripe account with no `stripe_account:` — and `20fee1cd5` correctly hid the Connect
+onboarding screen. So `payment_account` was nil for every MoR venture, permanently, and this
+returned false forever.
+
+The effect was total and silent: `Fuime::Offer#only_a_selling_venture_may_publish` refused every
+publish, `Fuime::CheckoutsController` refused every checkout, the storefront and payment page
+rendered "not accepting payments", and the directory filtered the venture out — while
+`Fuime::PaymentLinkService#create_mor_checkout_session` underneath would have succeeded.
+**Verified against Stripe test mode:** a venture with zero selling blockers got a real Checkout
+Session from the service and `false` from the method. Now gated on the flag; `selling_blockers`
+is unchanged and still decides everything else.
+
+### 2. The guardian moved from the sell gate to the pay gate
+
+Previously a minor needed an active guardianship before they could operate a venture, publish an
+offer, or have their application activated. Under MoR that is the wrong seam. A teenager selling
+holds no account, signs nothing and incurs no obligation — the buyer's counterparty is Fuime LLC
+and the operator holds a claim on Fuime. Demanding a parent first is paperwork for a business
+that has earned nothing, and it is the biggest drop-off in the funnel. Same reasoning that
+already governs the payout destination (`CreateFuimePayoutMethods`): ask for the adult when the
+adult is needed.
+
+Removed from: `Fuime::OperatorEligibility#operator_blockers`, `Event::Application#activate_event!`,
+`User#permitted_to_operate_business?` (which `EventPolicy#member?`/`#manager?` and the app-wide
+`enforce_guardianship_requirement` filter both resolve through).
+
+Added to: `Fuime::PayableAssessment#compute_structural_skip_reason` (the batch path, where no
+policy is consulted) and `EventPolicy#request_payout?` (the request path). All MoR-only —
+**under Connect every gate is untouched**, because there the guardian owns the Stripe account and
+a venture without one has an owner who genuinely cannot act.
+
+`#request_payout?` is the non-obvious half and is not redundant. Without it a parentless operator
+could file a request, `#decide_payout?` requires a guardian so nobody but a Fuime admin could
+ever action it, and `one_pending_request_per_venture` would then refuse them a second request
+forever — one click, permanently wedged, money on the far side. Exactly the trap the school
+carve-out in `#decide_payout?` was written for.
+
+**What this costs, on the record:** during the selling window there is no adult obligor behind
+the operator, so a chargeback lands on Fuime with nobody to countersign the debt
+(MOR_MIGRATION_PLAN §7 Q3, unresolved). Bounded by the hold and reserve, and by money being
+unable to leave before a guardian arrives — but real.
+
+`spec/models/fuime/selling_without_a_guardian_spec.rb` asserts both directions end to end. It
+exists because the change spans five objects and each object's own spec proves only its own half:
+the property that matters — no path reaches money without an adult — is exactly the kind that
+stays green while the fifth object quietly loses its check.
+
+### 3. The operator age floor became a dial
+
+`MINIMUM_OPERATOR_AGE = 16` → `FUIME_MINIMUM_OPERATOR_AGE`, default 16. The 16–17 bracket is the
+product brief's launch shape (§8.1) on an accepted-risk question, and the brief itself widens to
+14 in its own Phase 2 — a business decision, so it should not need a code change. Deploy-time env
+rather than Flipper, per `Fuime::Features`' reasoning: lowering it widens Fuime's exposure and
+should cost a deploy and a diff.
+
+**13 is a hard floor that no configured value can cross** — under-13 is COPPA (L6), not a
+business decision. Lower values clamp up; unparseable values fall back to the default, never to
+"no floor"; raising is honoured as-is.
+
+### 4. New: a per-venture API, so a teenager's own software can sell
+
+`Fuime::ApiKey` (`fuime_sk_…`, Lockbox ciphertext + blind index, plaintext returned exactly once
+and never stored) and `/api/fuime/v1` — `me`, and `payment_links` index/create/destroy. The
+operator mints keys at `/:event_slug/developer`.
+
+Not `ApiToken`: that is Doorkeeper OAuth over a *user's whole account* and needs a registered
+OAuth application. This belongs to an **Event**, so a key pasted into a chatbot or an agent
+framework has a blast radius of one business's ability to *ask* for money — it cannot move money
+out, read the ledger, or reach another venture. **No route in this API carries an event id or
+slug**, so there is no request a caller can even express against another business.
+
+A pay link is an **unlisted published `Fuime::Offer`** (`listed` and `created_via` added by
+`AddListingToFuimeOffers`) rather than a second model. `published` now means "payable",
+`listed` means "in the shop window", and a private quote agreed with one customer is the former
+without the latter. A parallel model would have had to restate the price constraint, the
+`[fuime_…]` ledger-key refusal, `only_a_selling_venture_may_publish`, token/slug resolution and
+the sanitized `payment_description` — every one a control, and a second place for them to drift.
+
+Amounts are refused rather than coerced: the caller is frequently a language model choosing a
+number, and `to_i` would read "forty five" as 0 and a misplaced decimal would ask a teenager's
+customer for $450,000. Over-maximum is refused rather than clamped — silently charging $10,000
+when the caller said $450,000 is its own bug. Eligibility is re-asked per request, so a venture
+suspended an hour ago stops issuing payable links through a key nobody revoked.
+
+**Exercised end to end against Stripe test mode:** `POST /api/fuime/v1/payment_links` → the
+returned `url` renders the hosted payment page at the right price → Pay produces a real
+`cs_test_…` Checkout Session. 25 request specs.
+
+### Verification
+
+955 examples green across `spec/models/fuime`, `spec/services/fuime`, `spec/controllers/fuime`,
+`spec/requests` and the vetting/school specs before items 3 and 4 landed; the new and changed
+files green after. **Not yet run: the full repository suite.**
+
+### 5. A Stripe webhook has now run — the claim every doc has carried since Phase 0 is retired
+
+**For the merchant-of-record money-in path only, and it took no `stripe login`.** A real test-mode
+PaymentIntent was confirmed on Fuime's platform account with `pm_card_visa`, the resulting
+`payment_intent.succeeded` event was pulled from **Stripe's own Events API**, and that payload was
+delivered to `/fuime/webhooks/stripe` with a correctly computed `Stripe-Signature`. It reached the
+ledger: **+$45.00 payment line, −$2.25 fee line, one row after a replay.**
+
+The payload is now `spec/fixtures/fuime/payment_intent_succeeded.json` (only `client_secret`
+redacted), and `spec/requests/fuime_stripe_webhook_endpoint_spec.rb` drives it through the real
+HTTP boundary. **That boundary was the actual gap.** The handler had a spec; signature
+verification did not, and in production `FUIME_STRIPE_WEBHOOK_SECRET` is set so every delivery
+takes `Stripe::Webhook.construct_event`. If that branch were wrong, every webhook would 400, no
+sale would reach a ledger, and nothing on the app side would show it — the storefront works, the
+checkout works, Stripe shows the payment, the teenager's ledger stays empty.
+
+Now proven refused: a forged signature, a missing header, a signature made with a different
+secret, **a body altered after signing** (the amount lives in the body), a timestamp outside
+Stripe's tolerance, and — the one that must never degrade — **no secret configured returns 503
+rather than accepting unsigned events**.
+
+**Two corrections found while doing this, both worth carrying.** (1) `FUIME_STRIPE_WEBHOOK_SECRET`
+is **empty in `.env.development`**, so locally the endpoint takes the deliberate unsigned path for
+`stripe listen` — which means any local "webhook works" result proves nothing about production
+until that value is set. It briefly looked like a signature-verification bypass; it is not.
+(2) `Fuime::WebhooksController`'s `rescue JSON::ParserError` is **unreachable** for
+`Content-Type: application/json`, because Rack parses the body first. Not wrong, just dead — worth
+knowing before somebody debugs a malformed-payload report by adding logging to a branch that
+never runs.
+
+### Still not done
+
+**The Connect webhook endpoint remains unexercised**, as does the ledger path behind it
+(`Fuime::ConnectPaymentRecorder`). Under merchant-of-record that is not the money-in path, so it
+is not on the Founders Weekend critical path — but "no webhook has ever run" is now false only for
+the platform endpoint, and the distinction matters.
+
+**Registering the endpoint in Stripe is still config, not code.** The dashboard must point
+`payment_intent.succeeded`, `charge.refunded` and `charge.dispute.created` at
+`https://app.fuime.com/fuime/webhooks/stripe`. Nothing above checks that it does.
+
+**MoR going live still needs `FUIME_MOR_COUNSEL_MEMO`.** The boot guard is deliberate and was not
+touched. Nothing above makes MoR lawful; it makes MoR *work* once somebody has answered that.
+
+---
+
+## 2026-08-16 (evening, second entry) — Cohorts: one person vouches for a group, in advance.
+
+Founders Weekend needs ~50 teenagers to go from signup to a first sale in one sitting. Three human
+gates stood between them and that — an admin approves the application, an admin activates it into
+a venture, an admin records a vetting decision. **150 clicks while an event is running.**
+
+### The design decision, because it is the whole thing
+
+That is not a control. It is a queue somebody clears without reading, which is **strictly worse
+than no control**: it produces a signed record of a judgement nobody made, and
+`Event#record_vetting_decision!` exists precisely to make that record trustworthy.
+
+So the decision was moved rather than removed. `Fuime::Cohort` is one person deciding, once, ahead
+of time, with more information than the queue would ever have given them: *"I am running this
+event, I know who is coming, and I vouch for anyone holding my code."* `rationale` is **NOT NULL**
+because that person has to write down why they are entitled to make it, and that sentence is
+copied verbatim into every vetting note the cohort produces, next to their name.
+
+`Fuime::Cohort#vetting_note` states **what happened and nothing else** — a bulk admission, by a
+named person, on a stated basis. It deliberately does not say the venture looks legitimate, is low
+risk, or was reviewed, because none of that happened. A spec asserts those words never appear.
+
+### What a code deliberately cannot do
+
+- **It cannot exempt anybody from the rules.** Vetting is one input to
+  `Fuime::OperatorEligibility`, not the whole of it. An admitted 14-year-old is vetting-approved
+  and still cannot sell; an admitted crafts venture is vetting-approved and still cannot sell.
+  Both are asserted.
+- **It cannot stand in for a parent.** The guardian gate is at payout
+  (`Fuime::PayableAssessment`), and an admitted venture with no guardian is still refused there.
+  Asserted, because "one person vouched for a group" quietly becoming "money moves to minors
+  nobody is responsible for" is the failure worth writing a spec against.
+- **It cannot outlive its event or its headcount.** `expires_at` and `max_members` are NOT NULL
+  with no default that could read as unlimited — a code with neither is a permanent standing
+  bypass for whoever pastes it into a Discord. The cap is enforced **under a row lock**, because
+  fifty founders submitting in the same few minutes is the ordinary case here, not a
+  pathological one.
+- **It cannot sign somebody else's name.** `created_by` is not in `cohort_params`; it comes from
+  `current_user`. Likewise `fuime_cohort_id` is **not** permitted on the application —
+  a founder types a code and `Fuime::Cohort.for_code` resolves it, so nobody can admit themselves
+  to an event by putting an id in a form field.
+
+### Where the code is entered, and why not the URL
+
+On the review page, immediately before submitting — not carried from the URL that brought them in.
+A code arrives on a slide or a wristband, and the URL route through sign-in loses the parameter,
+which would drop somebody into the ordinary queue with nothing on screen explaining why their
+friend got in and they did not. An unrecognised code does **not** block saving: the applicant can
+always submit without one, and refusing to save a whole application over a typo is a wall in front
+of the thing they came to do.
+
+### Admission is best-effort by design
+
+`Fuime::CohortAdmission` runs from `mark_submitted`'s `after` block and rescues everything. A
+founder who has just pressed Submit must never see an exception because an automatic convenience
+failed — their application IS submitted, and the gates it did not pass are exactly the ones a
+human was doing by hand a week ago. Failures are reported, not swallowed.
+
+### The roster board — `/admin/cohorts/:id`
+
+The screen to watch during an event, and it answers a question neither existing admin queue does.
+`admin/applications` asks whether a venture should exist and `admin/operator_vetting` whether it
+may sell, both one row at a time. **Nobody works a queue during an event** — they walk the room
+looking for the four people who cannot get past something.
+
+`Fuime::FounderProgress` is an object rather than view conditionals because two of its properties
+are decisions worth testing: it names **one next action** rather than a state ("Publish something
+to sell" beats "not eligible", which just sends somebody to ask a question), and it checks things
+in the order a person would fix them. It reports and never decides — every answer is read from
+`Event#accepts_payments?`, `Event#selling_blockers`, `User#has_active_guardian?`, so the board can
+never confidently tell a teenager they can sell when the real gate disagrees.
+
+Parents are counted **apart from the funnel**, deliberately: under MoR a missing guardian does not
+block selling, it blocks being paid. Folding it in would have organisers chasing parents on the
+day instead of chasing first sales.
+
+### Verification
+
+**Exercised end to end in the dev app, not only in specs:** a real application carrying code
+`FW2026` was submitted and came out the far side as an activated, vetting-approved venture with
+`accepts_payments? == true`, no selling blockers, an honest attributed note, and the roster reading
+"Publish something to sell — nothing is listed yet."
+
+1327 examples green. New: `cohort_admission_spec` (17), `founder_progress_spec` (11),
+`fuime_cohorts_admin_spec` (13).
+
+**One thing the specs caught that is worth carrying:** an application that never picked a business
+type produces a venture with a blank `business_category`, which fails
+`Fuime::OperatorEligibility` closed and blocks selling **before any other check runs**. A cohort
+admits such a founder perfectly happily and they still cannot sell. The business-type step is not
+optional in practice, and the roster's next-action column is what surfaces it.
+
+---
+
+## 2026-08-18 — `business_category` was required by nothing and writable nowhere
+
+**What:** `business_category` joins `Event::Application#required_submission_fields` (with the
+label "What kind of business this is"), and a new admin action
+`POST /admin/operator_vetting/:id/category` sets it on an already-activated venture from the
+vetting queue.
+
+**Why:** the previous entry closed with the observation that a blank `business_category` blocks
+selling before any other check. Checking how a founder recovers from that turned up the real
+defect: they cannot, and neither can an admin.
+
+`Fuime::OperatorEligibility#category_blocker` fails closed on blank — correct, and unchanged
+here, because treating "not answered" as "allowed" would exempt every venture created before the
+control existed. The hole was on both sides of it:
+
+- **Nothing required the field.** `allow_blank: true` on both `Event::Application` and `Event`,
+  absent from `required_submission_fields`, and only ever derived from `service_type`. A blank
+  category submitted, approved and activated in silence.
+- **Nothing could write it.** Outside `activate_event!`, `business_category` appears in no form,
+  no strong-params list and no admin screen. A grep of every controller and view finds only
+  reads — the directory, the storefront header, the vetting queue.
+
+So the failure mode was a founder who did everything right reaching "Choose what this venture
+sells before accepting payments" with nowhere to choose it. Found three days before Founders
+Weekend rather than during it.
+
+**The admin control is deliberately not operator-facing.** The category is what Fuime vets
+against and, under merchant-of-record, what Fuime legally sells as. Letting an operator re-answer
+it after approval would let a venture vetted as a service business become something else without
+a human re-reading it. An unrecognised value is refused rather than stored: a junk category that
+looks set is worse than one honestly missing, because the blocker stops naming it.
+
+**Files:** `app/models/event/application.rb`, `app/controllers/admin_controller.rb`,
+`app/views/admin/operator_vetting.html.erb`, `config/routes.rb`,
+`spec/requests/fuime_business_category_spec.rb` (new).
+
+### Verification
+
+7 examples green, covering both halves — including that an invalid category, a blank one and a
+non-admin are each refused. The admin half is tagged `:merchant_of_record`; `category_blocker` is
+an `umbrella_scope_blocker`, so untagged the blocker never fires and the spec would assert
+nothing.
+
+Full repo suite before this change: **3357 examples, 8 failures, 17 pending** — all 8 the
+documented baseline. Re-run after it, because a change to a *gate* has a blast radius wider than
+the files it edits (the lesson `20fee1cd5` taught by silently reddening two request specs).
 ## 2026-08-19 — Defensive hardening: production logs, Twilio webhook, CI secrets
 
 Three confirmed issues, no other review findings.

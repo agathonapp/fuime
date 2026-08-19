@@ -1,0 +1,171 @@
+<% title "Developer — #{@event.name}" %>
+
+<%# FUIME: where an operator gets a key so their own software can sell for them.
+
+    Written for a 16-year-old wiring an agent or a website into their business,
+    which is why the page leads with a working example rather than a schema. The
+    fastest possible path from this page to a paid link is the whole design
+    brief.
+
+    Nothing here suggests an amount, for the same reason the offers page does not
+    (§8.3 D2). The examples use a price the operator has to replace. %>
+
+<h1>Developer</h1>
+
+<p class="muted">
+  A key lets your own software — a website, a Discord bot, an AI assistant —
+  create payment links for your business. Give it a price, get a link you can
+  send someone.
+</p>
+
+<%# ── The key it just made ─────────────────────────────────────────────────
+
+    Shown once. Fuime stores only an encrypted copy and cannot show it again;
+    see Fuime::ApiKey.mint!. Said plainly here rather than in help text, because
+    a teenager who closes this tab without copying it has to make a new one. %>
+<% if @fresh_key.present? %>
+  <div class="card mb2" style="border-color: var(--success);">
+    <h2 class="mt0 text-lg">Your new key</h2>
+    <p class="muted text-sm">
+      Copy it now. This is the only time it will be shown — Fuime keeps only an
+      encrypted copy and cannot show it to you again.
+    </p>
+    <pre class="mt1" style="overflow-x: auto;"><code><%= @fresh_key %></code></pre>
+  </div>
+<% end %>
+
+<%# ── Keys ─────────────────────────────────────────────────────────────── %>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Your keys</h2>
+
+  <% if @keys.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Key</th>
+          <th>Last used</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @keys.each do |key| %>
+          <tr>
+            <td><%= key.name %></td>
+            <td><code><%= key.display %></code></td>
+            <td class="muted">
+              <%# "Never" is the useful answer, not a blank cell — it is how an
+                  operator tells which of two keys their site is actually using
+                  before revoking the wrong one. %>
+              <%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %>
+            </td>
+            <td>
+              <% if @can_manage %>
+                <%= button_to "Revoke",
+                              fuime_api_key_revoke_path(event_slug: @event.slug, id: key.id),
+                              method: :delete,
+                              class: "danger",
+                              form: { data: { turbo_confirm: "Revoke #{key.name}? Anything using this key stops working immediately." } } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="muted">No keys yet.</p>
+  <% end %>
+
+  <% if @can_manage %>
+    <%= form_with url: fuime_api_keys_create_path(event_slug: @event.slug),
+                  method: :post, local: true, class: "mt2" do |form| %>
+      <div class="field">
+        <%= form.label :name, "What's this key for?" %>
+        <%= form.text_field :name, placeholder: "My website", maxlength: Fuime::ApiKey::MAX_NAME_LENGTH, required: true %>
+      </div>
+      <%= form.submit "Create a key" %>
+    <% end %>
+  <% end %>
+</div>
+
+<%# ── How to use it ────────────────────────────────────────────────────────
+
+    A copy-pasteable request, because that is what actually gets somebody from
+    "I have a key" to "a customer paid me". `curl` first since it works from any
+    machine with no setup, then the shape an agent needs. %>
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Making a payment link</h2>
+
+  <p class="muted text-sm">
+    Send the amount and what it's for. You get back a link to send your customer.
+  </p>
+
+  <pre style="overflow-x: auto;"><code>curl -X POST <%= root_url.chomp("/") %>/api/fuime/v1/payment_links \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "35.00", "name": "Lawn mow"}'</code></pre>
+
+  <p class="muted text-sm mt1">You get back:</p>
+
+  <pre style="overflow-x: auto;"><code>{
+  "id": "GKDm3dPQNHw2",
+  "url": "<%= root_url.chomp("/") %>/pay/<%= @event.slug %>/lawn-mow",
+  "amount_cents": 3500,
+  "status": "published"
+}</code></pre>
+
+  <p class="muted text-sm mt1">
+    Send that <code>url</code> to your customer. Other things you can do:
+    <code>GET /api/fuime/v1/me</code> to check the key works, and
+    <code>GET /api/fuime/v1/payment_links</code> to list what you've made.
+  </p>
+
+  <%# The one thing worth saying out loud to somebody about to paste this into a
+      prompt. A key cannot move money — see CreateFuimeApiKeys — and knowing that
+      is what makes it reasonable to hand one to a program at all. %>
+  <p class="muted text-sm mt1">
+    A key can only ask for money. It can't move your money out, see your
+    ledger, or touch any other business. If one leaks, revoke it above.
+  </p>
+</div>
+
+<%# ── What the software has been doing ──────────────────────────────────────
+
+    The accountability half. An operator handing a key to an agent needs to see
+    what it asked people for while they weren't watching, and this is the screen
+    where a runaway key becomes visible. %>
+<div class="card">
+  <h2 class="mt0 text-lg">Links your software made</h2>
+
+  <% if @links.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>What</th>
+          <th>Amount</th>
+          <th>Key</th>
+          <th>When</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @links.each do |link| %>
+          <tr>
+            <td>
+              <%= link_to link.name,
+                          fuime_payment_page_path(event_slug: @event.slug, offer: link.to_param),
+                          target: "_blank", rel: "noopener" %>
+            </td>
+            <td><%= render_money link.price_cents %></td>
+            <td class="muted"><%= link.fuime_api_key&.name || "—" %></td>
+            <td class="muted"><%= time_ago_in_words(link.created_at) %> ago</td>
+            <td class="muted"><%= link.aasm_state %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="muted">Nothing yet. Links your software creates will show up here.</p>
+  <% end %>
+</div>

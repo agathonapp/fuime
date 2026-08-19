@@ -1,0 +1,148 @@
+<% title "#{@cohort.name} — roster" %>
+
+<%# FUIME: the roster board. The one screen to watch during an event.
+
+    It answers "who is stuck, and on what?" for everybody at once, which is a
+    different question from either existing admin queue: admin/applications asks
+    whether a venture should exist and admin/operator_vetting whether it may
+    sell, both one row at a time. Nobody works a queue during an event — they
+    walk the room looking for the four people who cannot get past something.
+
+    The Next step column is the whole point of the page. See
+    Fuime::FounderProgress for why it names one action rather than a state. %>
+
+<% progresses = @applications.map { |a| Fuime::FounderProgress.new(application: a) } %>
+<% by_stage = progresses.group_by(&:stage) %>
+
+<h1><%= @cohort.name %></h1>
+
+<p class="muted">
+  Code <code><%= @cohort.code %></code> ·
+  <%= progresses.size %> of <%= @cohort.max_members %> ·
+  <% if @cohort.admitting? %>
+    <span class="success">admitting</span>
+  <% else %>
+    <span class="muted"><%= @cohort.admission_blocker %></span>
+  <% end %>
+  · expires <%= @cohort.expires_at.to_fs(:long) %>
+</p>
+
+<%# ── The funnel, counted ───────────────────────────────────────────────────
+
+    Read left to right it is the founder's journey, and the first column with a
+    number smaller than the one before it is where the room is stuck. That is the
+    fastest possible read of fifty people and it is why these are counts rather
+    than a chart. %>
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Where everyone is</h2>
+  <div class="flex flex-row flex-wrap gap-4">
+    <% Fuime::FounderProgress::STAGES.each_with_index do |stage, i| %>
+      <%# Cumulative: somebody who has sold has also been vetted. A per-stage
+          count would show 1 at "vetted" once everybody moved past it, which
+          reads as a collapse rather than progress. %>
+      <% reached = progresses.count { |p| Fuime::FounderProgress::STAGES.index(p.stage) >= i } %>
+      <div>
+        <div class="text-lg"><strong><%= reached %></strong></div>
+        <div class="muted text-sm"><%= stage.to_s.humanize %></div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%# ── Parents, tracked separately and deliberately ──────────────────────────
+
+    Not part of the funnel above, because under merchant-of-record a guardian
+    does not block selling — it blocks being PAID
+    (Fuime::PayableAssessment). Folding it into the funnel would have organisers
+    chasing parents on the day instead of chasing first sales, which is the wrong
+    order for everybody. It still has to be visible, because money cannot move
+    until it is done. %>
+<% awaiting_parent = progresses.select(&:guardian_pending?) %>
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Parents</h2>
+  <% if awaiting_parent.any? %>
+    <p class="mb1">
+      <strong><%= awaiting_parent.size %></strong> of <%= progresses.size %> have no
+      guardian on the account yet. They can sell today; they can't be paid out
+      until a parent accepts.
+    </p>
+    <p class="muted text-sm mb0">
+      <%= awaiting_parent.map { |p| p.founder.name }.join(", ") %>
+    </p>
+  <% else %>
+    <p class="muted mb0">Everyone who needs a guardian has one.</p>
+  <% end %>
+</div>
+
+<%# ── The roster ────────────────────────────────────────────────────────── %>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Founders</h2>
+
+  <% if progresses.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>Founder</th>
+          <th>Business</th>
+          <th>Stage</th>
+          <th>Next step</th>
+          <th>Parent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%# Stuck first. During an event the people who are fine do not need to be
+            at the top of anything — sorting by funnel position puts the rows
+            somebody has to act on where they will be seen. %>
+        <% progresses.sort_by { |p| Fuime::FounderProgress::STAGES.index(p.stage) }.each do |p| %>
+          <tr>
+            <td><%= p.founder.name %><br><span class="muted text-sm"><%= p.founder.email %></span></td>
+            <td>
+              <% if p.event %>
+                <%= link_to p.event.name, event_path(p.event) %>
+              <% else %>
+                <span class="muted"><%= p.application.name.presence || "—" %></span>
+              <% end %>
+            </td>
+            <td>
+              <% if p.done? %>
+                <span class="success"><%= p.stage.to_s.humanize %></span>
+              <% else %>
+                <%= p.stage.to_s.humanize %>
+              <% end %>
+            </td>
+            <td class="<%= "muted" if p.done? %>"><%= p.next_action %></td>
+            <td>
+              <% if p.guardian_pending? %>
+                <span class="muted">Waiting</span>
+              <% else %>
+                ✓
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="muted">Nobody has used this code yet.</p>
+  <% end %>
+</div>
+
+<%# ── Turning it off ────────────────────────────────────────────────────── %>
+
+<div class="card">
+  <h2 class="mt0 text-lg">The code</h2>
+  <p class="muted text-sm">
+    Created by <%= @cohort.created_by.name %>. Their stated basis, recorded on
+    every business this code admits:
+  </p>
+  <blockquote class="muted"><%= @cohort.rationale %></blockquote>
+
+  <% unless @cohort.archived? %>
+    <%= button_to "Turn this code off", cohort_archive_admin_index_path(@cohort),
+                  method: :post, class: "danger",
+                  form: { data: { turbo_confirm: "Turn off #{@cohort.code}? Nobody new can join. Founders already admitted keep their businesses." } } %>
+  <% else %>
+    <p class="muted mb0">Turned off <%= @cohort.archived_at.to_fs(:long) %>.</p>
+  <% end %>
+</div>

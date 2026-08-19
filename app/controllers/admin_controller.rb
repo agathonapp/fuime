@@ -865,6 +865,52 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: cohorts — a group somebody vouched for in advance.
+  #
+  # See Fuime::Cohort for why one decision made ahead of time is a better control
+  # than fifty made under time pressure during an event, not a weaker one.
+  def cohorts
+    @cohorts = Fuime::Cohort.includes(:created_by).order(created_at: :desc)
+    @cohort = Fuime::Cohort.new(expires_at: 3.days.from_now, max_members: 60)
+  end
+
+  def cohort_create
+    @cohort = Fuime::Cohort.new(cohort_params.merge(created_by: current_user))
+
+    if @cohort.save
+      redirect_to cohort_admin_index_path(@cohort),
+                  flash: { success: "#{@cohort.name} is live. Code: #{@cohort.code}" }
+    else
+      @cohorts = Fuime::Cohort.includes(:created_by).order(created_at: :desc)
+      render :cohorts, status: :unprocessable_entity
+    end
+  end
+
+  # FUIME: the roster board — the one screen to watch during an event.
+  #
+  # Its job is to answer "who is stuck, and on what?" for everybody at once. That
+  # is a different question from either existing queue: #applications asks whether
+  # a venture should exist and #operator_vetting whether it may sell, both one row
+  # at a time. During an event nobody is working a queue — they are walking the
+  # room looking for the four people who cannot get past something.
+  #
+  # `includes` covers exactly what the board reads per row. Without it fifty
+  # founders is a few hundred queries on a page somebody refreshes constantly.
+  def cohort
+    @cohort = Fuime::Cohort.find(params[:id])
+    @applications = @cohort.applications
+                           .includes(:user, event: [:organizer_positions, :users])
+                           .order(created_at: :desc)
+  end
+
+  def cohort_archive
+    @cohort = Fuime::Cohort.find(params[:id])
+    @cohort.archive!
+
+    redirect_to cohort_admin_index_path(@cohort),
+                flash: { success: "Code #{@cohort.code} is off. Nobody new can join." }
+  end
+
   # FUIME: the operator vetting queue.
   #
   # Manual approval on every operator is the compensating control for letting
@@ -881,7 +927,9 @@ class AdminController < Admin::BaseController
     @q = params[:q].presence
     @status = params[:status].presence
 
-    @events = Event.not_hidden.includes(:users, :plan)
+    # `:application` because the whole page is a review of what the applicant
+    # said, and without it every row fires its own query for the answers.
+    @events = Event.not_hidden.includes(:users, :plan, :application)
     @events = @events.where(operator_vetting_status: @status) if Event.operator_vetting_statuses.key?(@status)
     @events = @events.search_name(@q) if @q
 
@@ -911,6 +959,47 @@ class AdminController < Admin::BaseController
 
     redirect_back fallback_location: operator_vetting_admin_index_path,
                   flash: { success: "#{@event.name} is now #{status}." }
+  end
+
+  # FUIME: the repair for a venture whose business category was never set.
+  #
+  # `business_category` decides whether a venture may sell at all
+  # (Fuime::OperatorEligibility#category_blocker, which fails closed on blank), and
+  # until now it was written exactly once — derived from the application's
+  # service_type at activation — and by nothing else, anywhere. A founder whose
+  # application carried no category therefore reached "Choose what this venture
+  # sells before accepting payments" with no way to choose it, and neither did an
+  # admin standing next to them.
+  #
+  # Requiring the field at submission (Event::Application#required_submission_fields)
+  # closes the hole going forward. This exists for the ventures already through it,
+  # and for a live event where the answer is "ask the founder and fix it in ten
+  # seconds" rather than "open a Rails console".
+  #
+  # Deliberately NOT an operator-facing form. The category is what Fuime vets and,
+  # under merchant-of-record, what Fuime sells as; letting an operator re-answer it
+  # after approval would let a venture vetted as a service business quietly become
+  # something else without anyone re-reading it.
+  def operator_vetting_category
+    @event = Event.friendly.find(params[:id])
+    category = params[:business_category].to_s
+
+    unless Event::BUSINESS_CATEGORIES.include?(category)
+      redirect_back fallback_location: operator_vetting_admin_index_path,
+                    alert: "#{category.presence || 'That'} is not a business category."
+      return
+    end
+
+    previous = @event.business_category.presence
+    @event.update!(business_category: category)
+
+    Rails.logger.info(
+      "[Fuime] business_category for event #{@event.id} set to #{category} " \
+      "(was #{previous || 'blank'}) by user #{current_user.id}"
+    )
+
+    redirect_back fallback_location: operator_vetting_admin_index_path,
+                  flash: { success: "#{@event.name} is now categorised as #{category.titleize}." }
   end
 
   # FUIME: the weekly payout runs.
@@ -1746,6 +1835,17 @@ class AdminController < Admin::BaseController
   end
 
   private
+
+  # FUIME: `created_by` is NOT permitted, and must not be.
+  #
+  # It is the accountable human every vetting decision this cohort makes gets
+  # recorded against, so it is set from `current_user` in the action. Permitting
+  # it would let one admin create a cohort that signs another admin's name to
+  # fifty approvals.
+  def cohort_params
+    params.require(:fuime_cohort).permit(:name, :code, :rationale, :expires_at,
+                                         :max_members, :auto_approve, :risk_level)
+  end
 
   def payout_batch_service
     @payout_batch_service ||= Fuime::PayoutBatchService.new

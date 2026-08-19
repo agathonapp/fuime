@@ -81,7 +81,21 @@ module EventsHelper
       tooltip: "Set up and check how this venture gets paid",
       icon: "bank-account",
       symbol: :payments,
-      available_proc: ->(event) { policy(event).payment_setup_status? && organizer_signed_in? }
+      # Fuime: hidden under merchant-of-record, because there is nothing to set up.
+      #
+      # This screen is the Connect path: Stripe asks the guardian for an SSN
+      # last-4, a home address, a phone number, an MCC, a business URL and ToS
+      # acceptance BEFORE a teenager can sell anything. Under MoR the money is
+      # Fuime's own revenue from Fuime's own sale, so no merchant account exists
+      # for the operator to open — the only thing they need is a payout
+      # destination, and that is asked when they have money to send.
+      #
+      # Reads the flag rather than being deleted, so the two models swap cleanly
+      # in either direction (Rule 2).
+      available_proc: lambda { |event|
+        !::Fuime::Features.merchant_of_record? &&
+          policy(event).payment_setup_status? && organizer_signed_in?
+      }
     },
     # Fuime: what the venture sells.
     #
@@ -98,6 +112,22 @@ module EventsHelper
       tooltip: "List what you sell and set your prices",
       icon: "bag",
       symbol: :offers,
+      available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
+    },
+    # Fuime: keys for the operator's own software. See Fuime::ApiKeysController.
+    #
+    # Sits next to "What you sell" because it is the same act by another route —
+    # naming a price and asking somebody for it — and gated by the same predicate
+    # for the same reason.
+    #
+    # `terminal.svg` is verified to exist in app/assets/images/icons; a missing
+    # icon 500s the entire org nav rather than one entry (see the Taxes note).
+    {
+      name: "Developer",
+      path_proc: ->(event_id) { fuime_api_keys_path(event_slug: event_id) },
+      tooltip: "Let your own website or AI create payment links",
+      icon: "terminal",
+      symbol: :api_keys,
       available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
     },
     # Fuime: Payouts — moving money to the family's bank.
@@ -118,6 +148,33 @@ module EventsHelper
       icon: "cash",
       symbol: :payouts,
       available_proc: ->(event) { policy(event).payouts? && organizer_signed_in? }
+    },
+    # Fuime: where the money goes — the merchant-of-record counterpart to
+    # "Payments" above, and its exact complement.
+    #
+    # The two are never both visible, and the flag decides which. Under Connect a
+    # guardian opens a Stripe account and Stripe owns the bank details; under MoR
+    # there is no account to open, so the only thing left to ask is a
+    # destination. Showing both would put two different answers to "how do I get
+    # paid?" in one sidebar.
+    #
+    # Visible to the whole team like Payments, because a teen needs to know
+    # whether their venture can be paid — under MoR a venture with no verified
+    # destination is skipped from every payout run — even though the page's
+    # button is the responsible adult's alone.
+    #
+    # `bank-account.svg` is verified to exist in app/assets/images/icons; a
+    # missing icon 500s the entire org nav rather than one entry (see Taxes).
+    {
+      name: "Payout account",
+      path_proc: ->(event_id) { fuime_payout_method_path(event_slug: event_id) },
+      tooltip: "Where your money gets sent",
+      icon: "bank-account",
+      symbol: :payout_method,
+      available_proc: lambda { |event|
+        ::Fuime::Features.merchant_of_record? &&
+          policy(event).payout_method? && organizer_signed_in?
+      }
     },
     # Fuime: money the school put in ("$100 per A").
     #

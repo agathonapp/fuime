@@ -142,7 +142,22 @@ RSpec.describe "the full business flow", type: :request do
     expect(payables.disclosure).to match(/not a bank balance/)
     expect(payables.disclosure).to match(/not a deposit/)
 
-    # ── 10. …and a payout run picks it up ───────────────────────────────────
+    # ── 10. The operator says where the money goes ──────────────────────────
+    #
+    # Under merchant-of-record Fuime owes this operator and needs somewhere to
+    # send it, so a venture with no verified destination is skipped from every
+    # run with a stated reason (Fuime::PayableAssessment). That is a real step in
+    # a real teenager's journey and belongs in this walkthrough — connected here
+    # rather than at signup because the whole point of the destination model is
+    # that it is asked when there is money to send.
+    #
+    # Built directly rather than through Fuime::PlaidLinkService: driving Link
+    # here would need Plaid stubs in a spec whose subject is the journey, and the
+    # service has its own file. What matters to this example is the state.
+    create(:fuime_payout_method, :verified, event: venture, added_by: guardian,
+                                            institution_name: "First Platypus Bank", last4: "0000")
+
+    # ── 11. …and a payout run picks it up ───────────────────────────────────
     with_merchant_of_record do
       batch = Fuime::PayoutBatchService.new.generate!(period_end: Date.current)
       line = batch.payout_requests.find_by(event: venture)

@@ -1,0 +1,219 @@
+<% title "Payout account — #{@event.name}" %>
+
+<%= render "events/nav", selected: :payout_method %>
+
+<h1 class="heading">Payout account</h1>
+
+<%# Fuime: where this venture's money gets sent.
+
+    Under merchant-of-record there is no merchant account for an operator to
+    open — the money is Fuime's own revenue from Fuime's own sale, and what this
+    operator holds is a payable. So the only thing left to ask for is somewhere
+    to send their share, and it is asked when there is money to send rather than
+    before they have made a sale (Fuime::PayoutMethod, MOR_MIGRATION_PLAN §8.3b).
+
+    TWO AUDIENCES on one page, the same split as the Payments screen it replaces:
+    the whole team reads it, because a teen needs to know whether their venture
+    can be paid; only the responsible adult acts, because the bank account is
+    theirs and because a teen who could repoint the destination could route their
+    own earnings past the approval that makes the ownership structure real (L2).
+
+    Above everything: a venture that cannot sell has a more urgent problem than
+    how it gets paid. Renders nothing when clear. %>
+<%= render "fuime/selling_blockers", event: @event %>
+
+<%# ── What is at stake, in dollars ─────────────────────────────────────────────
+
+    The honest argument for doing this, and the reason the page leads with it.
+    Under MoR, Fuime::PayableAssessment SKIPS a venture with no verified
+    destination from every payout run — so an operator with money owed and no
+    bank connected is not waiting, they are stuck, and nothing else on this page
+    would tell them that.
+
+    Read through Fuime::PayablesLedger like every other operator-facing figure;
+    spec/views/fuime/payables_copy_spec.rb enforces that this is the only thing a
+    view may ask, and that this is never called a balance. %>
+<% if @payables.amount_owed_cents.positive? %>
+  <p class="h2 mt2 mb0"><%= render_money(@payables.amount_owed_cents) %></p>
+  <p class="secondary mt0"><%= @payables.owed_sentence %></p>
+<% end %>
+
+<% if !@configured %>
+  <%# Fuime has no Plaid keys. An operator problem and not the family's, so it
+      says so plainly rather than blaming the bank — telling a teenager their
+      bank refused them when Fuime never had an API key is a lie with a support
+      ticket attached. %>
+  <%= render "application/callout", type: "warning", title: "Connecting a bank isn't available yet" do %>
+    <p class="mb-0">
+      We're still setting this up. Nothing is wrong with your account — check
+      back shortly, and <%= help_message %>
+    </p>
+  <% end %>
+<% end %>
+
+<% if @payout_method.present? %>
+  <h2 class="mt2">Your payout account</h2>
+
+  <table class="table--autosize">
+    <tbody>
+      <tr>
+        <td>Account</td>
+        <td><strong><%= @payout_method.display_name %></strong></td>
+      </tr>
+      <% if @payout_method.account_holder_name.present? %>
+        <tr>
+          <%# The name the BANK reports, not one anybody typed. Shown because a
+              destination in a third party's name is the thing a payout review
+              exists to catch, and the person best placed to notice it is the
+              adult reading this page. %>
+          <td>In the name of</td>
+          <td><%= @payout_method.account_holder_name %></td>
+        </tr>
+      <% end %>
+      <tr>
+        <td>Status</td>
+        <td>
+          <% if @payout_method.verified? %>
+            <span class="badge bg-success">Verified</span>
+            <% if @payout_method.verified_at.present? %>
+              <span class="secondary">— connected <%= @payout_method.verified_at.strftime("%B %-d, %Y") %></span>
+            <% end %>
+          <% elsif @payout_method.failed? %>
+            <span class="badge bg-error">Couldn't be verified</span>
+            <% if @payout_method.failure_reason.present? %>
+              <span class="secondary">— <%= @payout_method.failure_reason %></span>
+            <% end %>
+          <% else %>
+            <span class="badge bg-info">Not verified yet</span>
+          <% end %>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <%# The two claims this page could make falsely, both guarded.
+
+      A row that is not `verified` is not a payout destination — PayableAssessment
+      reads `usable`, which is verified only — so saying "you're all set" on a
+      pending row would tell somebody they were connected while every run silently
+      skipped them. And under Connect the destination is not read at all, because
+      the money is already in the family's own Stripe account. %>
+  <% if !@payout_method.usable? %>
+    <p class="secondary">
+      This account isn't verified, so payouts can't be sent to it yet. Connecting
+      it again is the fastest way to fix that.
+    </p>
+  <% elsif !@in_use %>
+    <p class="secondary">
+      This venture is still paid through its own Stripe account, so nothing will
+      be sent here yet. We've saved it for when that changes.
+    </p>
+  <% else %>
+    <p class="secondary">Payouts are sent here.</p>
+  <% end %>
+
+<% elsif @configured %>
+  <h2 class="mt2">Connect where you'd like to be paid</h2>
+
+  <% if @in_use %>
+    <p>
+      Fuime pays what you're owed to a bank account you choose. Until one is
+      connected, your earnings stay recorded here and aren't included in a payout
+      run.
+    </p>
+  <% else %>
+    <p>
+      Connect a bank account now and it'll be ready when Fuime starts paying
+      earnings out directly. For the moment this venture is still paid through
+      its own Stripe account.
+    </p>
+  <% end %>
+<% end %>
+
+<%# ── The action ───────────────────────────────────────────────────────────────
+
+    Adult only. A teen sees everything above and is told who to ask, rather than
+    being shown a button that would refuse them — a disabled control with no
+    explanation reads as a broken page to the person it is aimed at. %>
+<% if @can_connect && @configured %>
+  <div data-controller="plaid-link"
+       data-plaid-link-token-url-value="<%= fuime_payout_method_link_token_path(event_slug: @event.slug) %>">
+    <button class="btn bg-accent"
+            data-action="plaid-link#open"
+            data-plaid-link-target="button"
+            data-label="<%= @payout_method.present? ? "Connect a different account" : "Connect a bank account" %>">
+      <%= @payout_method.present? ? "Connect a different account" : "Connect a bank account" %>
+    </button>
+
+    <%# What Plaid Link hands back, exchanged server-side. Never an account
+        number: these two values are a one-time token and an opaque account id,
+        and Fuime::PlaidLinkService is written so the digits cannot be read even
+        deliberately. %>
+    <%= form_with url: fuime_payout_method_create_path(event_slug: @event.slug),
+                  method: :post, data: { plaid_link_target: "form", turbo: false } do |f| %>
+      <%= f.hidden_field :public_token, data: { plaid_link_target: "publicToken" } %>
+      <%= f.hidden_field :account_id, data: { plaid_link_target: "accountId" } %>
+    <% end %>
+
+    <p class="error mt1" data-plaid-link-target="error" hidden></p>
+  </div>
+
+  <p class="secondary mt1">
+    You'll sign in to your bank through Plaid. Fuime never sees your username,
+    your password, or your account number — we're given a token that says the
+    account is yours, and that's all we store.
+  </p>
+
+  <% if @payout_method.present? %>
+    <%# Removal, kept well away from the connect button. Retiring the only
+        destination stops payouts, so it asks first and says what stops. %>
+    <p class="mt2">
+      <%= button_to "Remove this account",
+                    fuime_payout_method_remove_path(event_slug: @event.slug, id: @payout_method.id),
+                    method: :delete,
+                    class: "btn bg-error",
+                    data: { turbo_confirm: "Remove #{@payout_method.display_name}? " \
+                                           "Payouts can't be sent until another account is connected."
+} %>
+    </p>
+  <% end %>
+<% elsif !@can_connect %>
+  <p class="secondary mt2">
+    <% if @event.institutionally_sponsored? %>
+      Your school sets up where this venture's money is sent.
+    <% elsif @responsible_adults.any? %>
+      <%= @responsible_adults.map { |g| g.name.presence || g.email }.to_sentence %>
+      can connect the bank account this gets paid into. It has to be an adult's
+      account, so it's theirs to set up.
+    <% else %>
+      A parent or guardian connects the bank account this gets paid into. There
+      isn't an active guardian on this venture yet.
+      <%= link_to "Invite your guardian", new_guardianship_path, class: "underline" %>.
+    <% end %>
+  </p>
+<% end %>
+
+<%# ── Sandbox disclosure ───────────────────────────────────────────────────────
+
+    Same posture as the Stripe test-mode banners shipped in Phase 1: the app runs
+    against a test environment and nothing said so, on a page asking a stranger
+    for a real detail. A Plaid sandbox connection accepts fake bank logins and
+    connects nothing real, and a family must not be able to believe otherwise.
+    Reads the environment, so pointing at production removes it. %>
+<% if @sandbox %>
+  <%= render "application/callout", type: "info", title: "This is a test connection" do %>
+    <p class="mb-0">
+      Fuime is running against Plaid's test environment, so this connects a
+      practice bank rather than a real one. Nothing you connect here can send or
+      receive real money.
+    </p>
+  <% end %>
+<% end %>
+
+<%# Standing disclosure. Fuime is not a bank and does not hold this money — it is
+    sent to an account the family owns (L5). %>
+<p class="secondary mt2">
+  Fuime is a financial technology company, not a bank. Money is sent to the bank
+  account connected here, which is owned by the parent, guardian or school — not
+  by Fuime.
+</p>

@@ -13,9 +13,22 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
   let(:admin) { create(:user, :make_admin) }
   subject(:service) { described_class.new }
 
+  # A sale, and the destination it will be paid to.
+  #
+  # Under merchant-of-record Fuime owes this operator and needs somewhere to send
+  # it, so a venture with no verified payout method is skipped by design — see
+  # Fuime::PayableAssessment. Every example here is about the arithmetic rather
+  # than that gate, so the destination comes with the sale.
   def sale(event:, gross:, intent: "pi_#{SecureRandom.hex(4)}", date: period_end - 30)
+    payout_destination_for(event)
     create(:canonical_transaction, amount_cents: gross, event:, date:,
                                    memo: "Payment from a customer [fuime_#{intent}]")
+  end
+
+  def payout_destination_for(event)
+    return if event.fuime_payout_methods.live.any?
+
+    create(:fuime_payout_method, :verified, event:)
   end
 
   describe "#generate!" do
@@ -98,7 +111,9 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
       batch = service.generate!(period_end:)
 
       expect(batch.notes).to include("Not approved to trade")
-      expect(batch.notes).to include("Nothing owed")
+      # The second venture now skips for the destination gate, which fires
+      # ahead of "nothing owed" — see Fuime::PayableAssessment.
+      expect(batch.notes).to include("No payout destination")
     end
 
     it "refuses to generate when Fuime is not the seller of record" do

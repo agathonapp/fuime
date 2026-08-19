@@ -42,6 +42,9 @@ RSpec.describe Event::Application, type: :model do
         user: teen,
         teen_led: true,
         name: "Maya's Art Prints",
+        # Required to submit since 2026-08-18: it is what decides whether the
+        # venture may ever sell, and a "complete" application has answered it.
+        business_category: "services",
         description: "I sell custom art prints and stickers.",
         address_line1: "8605 Santa Monica Blvd",
         address_city: "West Hollywood",

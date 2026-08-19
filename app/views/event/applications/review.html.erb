@@ -29,6 +29,46 @@
   </div>
 </div>
 
+<%# FUIME: an event code, entered last.
+
+    Deliberately on THIS page rather than carried from the URL that brought them
+    in. A code arrives on a slide, a whiteboard or a wristband and gets typed by
+    fifty people at once — and the URL route through sign-in loses the parameter,
+    which would silently drop somebody into the ordinary queue with nothing on
+    screen explaining why their friend got in and they did not.
+
+    Optional and quiet: an applicant without one should not feel they are missing
+    something. See Fuime::Cohort. %>
+<div class="card mb2">
+  <%= form_with model: @application, url: application_path(@application), method: :patch do |form| %>
+    <div class="field">
+      <%= form.label :cohort_code, "Got an event code? (optional)" %>
+      <p class="muted text-sm mt-0">
+        If you're at an event that gave you a code, enter it here and your
+        business gets set up right away.
+      </p>
+      <%= form.text_field :cohort_code,
+                          value: @application.fuime_cohort&.code,
+                          placeholder: "FOUNDERS26",
+                          maxlength: Fuime::Cohort::MAX_CODE_LENGTH,
+                          autocapitalize: "characters", autocomplete: "off" %>
+    </div>
+    <%= form.submit "Save code", class: "btn bg-muted" %>
+  <% end %>
+
+  <% if @application.fuime_cohort.present? %>
+    <p class="success mt1">✓ You're in <%= @application.fuime_cohort.name %>.</p>
+  <% elsif flash[:cohort_code_unknown] %>
+    <%# Says the code did not work, and deliberately not whether it ever existed,
+        was archived, expired or is full — an applicant cannot act on the
+        difference, and the roster board tells the organiser who is stuck. %>
+    <p class="error mt1">
+      We didn't recognise that code. Check it with whoever gave it to you — you
+      can still submit without one.
+    </p>
+  <% end %>
+</div>
+
 <% content_for :footer do %>
   <div class="flex flex-row gap-4 items-start justify-center">
     <%= link_to "← Back", personal_info_application_path(@application), class: "btn bg-muted" %>

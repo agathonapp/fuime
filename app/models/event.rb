@@ -49,6 +49,7 @@
 #  discord_channel_id                           :string
 #  discord_guild_id                             :string
 #  emburse_department_id                        :string
+#  fuime_cohort_id                              :bigint
 #  increase_account_id                          :string           not null
 #  operator_vetted_by_id                        :bigint
 #  parent_id                                    :bigint
@@ -58,12 +59,14 @@
 #
 #  index_events_on_discord_channel_id       (discord_channel_id) UNIQUE
 #  index_events_on_discord_guild_id         (discord_guild_id) UNIQUE
+#  index_events_on_fuime_cohort_id          (fuime_cohort_id)
 #  index_events_on_operator_vetting_status  (operator_vetting_status)
 #  index_events_on_parent_id                (parent_id)
 #  index_events_on_point_of_contact_id      (point_of_contact_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (fuime_cohort_id => fuime_cohorts.id)
 #  fk_rails_...  (operator_vetted_by_id => users.id)
 #  fk_rails_...  (point_of_contact_id => users.id)
 #
@@ -530,6 +533,22 @@ class Event < ApplicationRecord
   # not disappear.
   has_many :fuime_offers, class_name: "Fuime::Offer", dependent: :restrict_with_error
 
+  # Fuime: where this venture's money goes under merchant-of-record. See
+  # Fuime::PayoutMethod — a destination, not a merchant account.
+  has_many :fuime_payout_methods, class_name: "Fuime::PayoutMethod", dependent: :restrict_with_error
+
+  # Fuime: the cohort this venture was admitted under, if any. Denormalised from
+  # the application at activation so the roster board can group and count
+  # ventures directly — see CreateFuimeCohorts.
+  belongs_to :fuime_cohort, class_name: "Fuime::Cohort", optional: true
+
+  # Fuime: keys this venture has issued to its own software. See Fuime::ApiKey.
+  #
+  # `restrict_with_error` for the same reason as offers: a key is named by every
+  # pay link it created, and those links are referenced by ledger memos and
+  # buyers' receipts. Keys are revoked, not deleted.
+  has_many :fuime_api_keys, class_name: "Fuime::ApiKey", dependent: :restrict_with_error
+
   # Fuime: top-ups this school made into its own Stripe balance. Restricted rather
   # than dependent-destroy for the same reason as payout_requests — these are the
   # record of real money movements a business office reconciles against, and they
@@ -798,8 +817,35 @@ class Event < ApplicationRecord
   # dashboard all ask. Answered locally (no network call) from the mirrored
   # Stripe state, and false when no guardian has set payments up — which is the
   # correct answer for every venture until one has.
+  #
+  # ── Why the connected account is not required under merchant-of-record ──────
+  #
+  # This method used to demand `payment_account&.ready_for_payments?`
+  # unconditionally, and under MoR that made every venture permanently unable to
+  # sell. Not "harder to sell" — impossible. Under MoR the buyer is buying from
+  # Fuime LLC, so the charge is created on FUIME's own Stripe account with no
+  # `stripe_account:` at all (see Fuime::PaymentLinkService#create_mor_checkout_session).
+  # There is no per-venture merchant account, and PR #68 correctly removed the
+  # screen a guardian would have used to open one. So `payment_account` is nil
+  # for every MoR venture, forever, and the guard above returned false forever.
+  #
+  # The consequence was silent and total: Fuime::Offer#only_a_selling_venture_may_publish
+  # refused to publish any offer, Fuime::CheckoutsController refused every
+  # checkout, the storefront and payment page rendered "not accepting payments",
+  # and Fuime::DirectoryController filtered the venture out — while the service
+  # layer underneath would happily have created the session. Verified against
+  # Stripe test mode: a venture with zero selling blockers got a real Checkout
+  # Session from the service and `false` from this method.
+  #
+  # What still gates an MoR sale is `selling_blockers` — vetting, the services-only
+  # scope, the operator age floor and the guardian requirement. Those are the
+  # controls that bound what Fuime is liable for as seller of record, and they are
+  # unchanged. This only stops asking a venture for a merchant account that the
+  # model it is running under does not issue.
   def accepts_payments?
-    return false unless payment_account&.ready_for_payments?
+    unless Fuime::Features.merchant_of_record? || payment_account&.ready_for_payments?
+      return false
+    end
 
     selling_blockers.empty?
   end

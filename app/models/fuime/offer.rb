@@ -21,34 +21,42 @@
 #
 # Table name: fuime_offers
 #
-#  id           :bigint           not null, primary key
-#  aasm_state   :string           default("draft"), not null
-#  description  :text
-#  name         :string           not null
-#  position     :integer          default(0), not null
-#  price_cents  :integer          not null
-#  public_token :string
-#  slug         :string
-#  unit_label   :string
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
-#  event_id     :bigint           not null
+#  id               :bigint           not null, primary key
+#  aasm_state       :string           default("draft"), not null
+#  created_via      :string           default("operator"), not null
+#  description      :text
+#  listed           :boolean          default(TRUE), not null
+#  name             :string           not null
+#  position         :integer          default(0), not null
+#  price_cents      :integer          not null
+#  public_token     :string
+#  slug             :string
+#  unit_label       :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  event_id         :bigint           not null
+#  fuime_api_key_id :bigint
 #
 # Indexes
 #
 #  index_fuime_offers_on_event_and_slug                (event_id,slug) UNIQUE WHERE (slug IS NOT NULL)
 #  index_fuime_offers_on_event_id                      (event_id)
+#  index_fuime_offers_on_fuime_api_key_id              (fuime_api_key_id)
 #  index_fuime_offers_on_public_token                  (public_token) UNIQUE WHERE (public_token IS NOT NULL)
+#  index_listed_fuime_offers_on_event_and_position     (event_id,position) WHERE (((aasm_state)::text = 'published'::text) AND (listed = true))
 #  index_published_fuime_offers_on_event_and_position  (event_id,position) WHERE ((aasm_state)::text = 'published'::text)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (fuime_api_key_id => fuime_api_keys.id)
 #
 # Check Constraints
 #
-#  fuime_offers_price_in_range  (price_cents > 0 AND price_cents <= 1000000)
-#  fuime_offers_state_known     (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text]))
+#  fuime_offers_api_offers_name_their_key  (created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL) NOT VALID
+#  fuime_offers_created_via_known          (created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])) NOT VALID
+#  fuime_offers_price_in_range             (price_cents > 0 AND price_cents <= 1000000)
+#  fuime_offers_state_known                (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text]))
 #
 module Fuime
   class Offer < ApplicationRecord
@@ -57,6 +65,17 @@ module Fuime
     self.table_name = "fuime_offers"
 
     belongs_to :event
+    # The key that made this, when a program did. See AddListingToFuimeOffers.
+    belongs_to :fuime_api_key, class_name: "Fuime::ApiKey", optional: true,
+                               inverse_of: :offers
+
+    CREATED_VIA = %w[operator api].freeze
+
+    validates :created_via, inclusion: { in: CREATED_VIA }
+    # Mirrors the database constraint. Both, because the constraint is what makes
+    # it true of rows this model never sees (console, importer, fixture) and the
+    # validation is what gives a caller an error it can read.
+    validate :api_offers_must_name_their_key
 
     MAXIMUM_PRICE_CENTS = 1_000_000
     MAX_NAME_LENGTH = 80
@@ -154,6 +173,14 @@ module Fuime
 
     scope :published, -> { where(aasm_state: "published") }
     scope :live, -> { where.not(aasm_state: "archived") }
+    # The shop window. See AddListingToFuimeOffers for why this is separate from
+    # `published`: a private pay link is published (payable) but unlisted (not on
+    # display). The storefront renders this; the payment page deliberately does
+    # not, because following a link somebody sent you is how an unlisted offer is
+    # meant to be reached.
+    scope :listed, -> { where(listed: true) }
+    scope :unlisted, -> { where(listed: false) }
+    scope :made_by_program, -> { where(created_via: "api") }
     # The storefront's order: the operator's own. See the migration for why an
     # operator ordering their OWN shop is not the ranking §8.3 D2 forbids.
     scope :in_operator_order, -> { order(:position, :id) }
@@ -220,7 +247,48 @@ module Fuime
       ::Fuime::VentureLedger.sanitize_memo_text(raw).truncate(120)
     end
 
+    # A private pay link for an amount agreed with one customer.
+    #
+    # Published so the link works, unlisted so it stays out of the shop window
+    # (AddListingToFuimeOffers), and published through `publish!` rather than by
+    # writing the state directly — `only_a_selling_venture_may_publish` is the
+    # check that stops a suspended or unvetted venture minting payable links, and
+    # setting `aasm_state` by hand is exactly how a caller skips it.
+    #
+    # Raises rather than returning an invalid record: every caller is either an
+    # API endpoint that must answer 422 or a controller that must not carry on,
+    # and a silently-unsaved pay link is a link a teenager sends to a customer
+    # that 404s.
+    def self.for_amount!(event:, price_cents:, name:, created_via: "operator",
+                         api_key: nil, description: nil, unit_label: nil)
+      offer = new(
+        event:,
+        name:,
+        description:,
+        unit_label:,
+        price_cents:,
+        listed: false,
+        created_via:,
+        fuime_api_key: api_key,
+        position: 0
+      )
+
+      offer.save!
+      offer.publish!
+      offer
+    end
+
     private
+
+    # See the mirrored database constraint in AddListingToFuimeOffers. A row
+    # claiming a program made it, with no key to point at, is a claim about a
+    # teenager's money that nobody can check afterwards.
+    def api_offers_must_name_their_key
+      return unless created_via == "api"
+      return if fuime_api_key_id.present?
+
+      errors.add(:fuime_api_key, "is required for a link created through the API")
+    end
 
     def assign_public_token
       self.public_token ||= self.class.generate_public_token

@@ -57,7 +57,13 @@ module Fuime
       # business does. The Buy buttons are what @accepts_payments gates, not the
       # list — a storefront that goes blank while a guardian finishes Stripe
       # onboarding tells a customer the business does not exist.
-      @offers = @event.fuime_offers.published.in_operator_order
+      #
+      # `.listed` keeps private pay links out of the shop window. An unlisted
+      # offer is a price agreed with ONE customer — "Tutoring, Thursday, $45" —
+      # and putting that on a public page publishes a stranger's arrangement, and
+      # a price the next customer was never offered. It stays payable by its own
+      # link; see AddListingToFuimeOffers.
+      @offers = @event.fuime_offers.published.listed.in_operator_order
 
       # The tax estimate is the business's own private figure — it is not
       # transparency data and must never appear on a public page.

@@ -55,6 +55,12 @@
             depth of is a queue that silently stops being worked. %>
         <%= card_to "Operator vetting (Fuime)", operator_vetting_admin_index_path, badge: Event.not_hidden.operator_vetting_unvetted.count %>
         <%= card_to "Payout runs (Fuime)", payout_batches_admin_index_path, badge: Fuime::PayoutBatch.awaiting_approval.count %>
+        <%# Fuime: cohorts — vouching for a group in advance instead of clearing a
+            queue during an event, and the roster board that gets watched while
+            one is running. Badged with the number of codes currently able to
+            admit, because a live code is a standing authority and "how many are
+            open right now?" should not need a click. %>
+        <%= card_to "Cohorts (Fuime)", cohorts_admin_index_path, badge: Fuime::Cohort.live.count %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Disputes", link_to_airtable_task(:disputed_transactions), async_badge: :pending_disputed_transactions_airtable %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Feedback", link_to_airtable_task(:feedback), async_badge: :pending_feedback_airtable %>
         <%# FUIME-DISABLED (Hack Club Airtable/identity): card_to "Warehouse SKUs", link_to_airtable_task(:marketing_shipment_request) %>

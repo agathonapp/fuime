@@ -157,6 +157,9 @@ RSpec.describe Fuime::PayableAssessment do
     # unique index stops a venture appearing twice in ONE run; this is what stops
     # it being paid twice across two.
     it "deducts a line already sitting in an earlier run" do
+      # A destination, because under MoR an operator without one is skipped
+      # before any arithmetic runs — see #structural_skip_reason.
+      create(:fuime_payout_method, :verified, event:)
       sale(intent: "pi_1", gross: 100_00)
       batch = create(:fuime_payout_batch)
       create(:payout_request, event:, payout_batch: batch, requested_by: nil,
@@ -169,6 +172,7 @@ RSpec.describe Fuime::PayableAssessment do
     # A paid line has already had its ledger debit posted, so it is inside
     # `payable_cents` and counting it again would deduct it twice.
     it "does not double-count a run that has already paid" do
+      create(:fuime_payout_method, :verified, event:)
       sale(intent: "pi_1", gross: 100_00)
       batch = create(:fuime_payout_batch, :paid)
       create(:payout_request, :paid, event:, payout_batch: batch, requested_by: nil,
@@ -198,6 +202,71 @@ RSpec.describe Fuime::PayableAssessment do
 
       expect(assessment).not_to be_payable
       expect(assessment.skip_reason).to include("frozen")
+    end
+
+    # THE guardian gate under merchant-of-record (L2).
+    #
+    # It moved here from Fuime::OperatorEligibility on 2026-08-16, so that a
+    # teenager can sell before a parent has actioned anything. These specs are
+    # what make that safe: selling without an adult is deliberate, being PAID
+    # without one is not, and there is now exactly one place that enforces it.
+    describe "the guardian requirement", :merchant_of_record do
+      # A verified destination on every example here, because the destination
+      # check runs FIRST and would otherwise be the reason returned — which would
+      # make these pass without proving anything about guardians. The ordering is
+      # deliberate (see #compute_structural_skip_reason): an operator is told
+      # about the blocker they can fix themselves before the one they cannot.
+      before { create(:fuime_payout_method, :verified, event:) }
+
+      it "refuses to pay a minor with no active guardian, naming them" do
+        teen = create(:user, :minor, birthday: 16.years.ago.to_date)
+        create(:organizer_position, event:, user: teen)
+
+        expect(assessment).not_to be_payable
+        expect(assessment.skip_reason).to include("parent or guardian")
+        expect(assessment.skip_reason).to include(teen.name)
+      end
+
+      it "is not satisfied by a pending invite" do
+        teen = create(:user, :minor, birthday: 16.years.ago.to_date)
+        create(:guardianship, minor: teen) # status: :pending
+        create(:organizer_position, event:, user: teen)
+
+        expect(assessment).not_to be_payable
+        expect(assessment.skip_reason).to include("parent or guardian")
+      end
+
+      # Event#has_overseeing_guardian? is satisfied by ONE guardian anywhere on
+      # the venture. Money is about to be sent on behalf of every operator, so
+      # this has to be true of each of them individually — otherwise a teen with
+      # no parent on file gets paid behind a co-founder who has one.
+      it "is not satisfied by a co-founder's guardian" do
+        guarded = create(:user, :minor_with_guardian, birthday: 17.years.ago.to_date)
+        unguarded = create(:user, :minor, birthday: 17.years.ago.to_date)
+        create(:organizer_position, event:, user: guarded)
+        create(:organizer_position, event:, user: unguarded)
+
+        expect(event.has_overseeing_guardian?).to be(true)
+        expect(assessment).not_to be_payable
+        expect(assessment.skip_reason).to include(unguarded.name)
+      end
+
+      it "lets a guardianed minor through" do
+        teen = create(:user, :minor_with_guardian, birthday: 17.years.ago.to_date)
+        create(:organizer_position, event:, user: teen)
+
+        expect(assessment.skip_reason).not_to include("parent or guardian")
+      end
+
+      # A school student's responsible adult is the school. Same carve-out as
+      # Event::Application#activate_event! and User#institutionally_vouched_for?.
+      it "exempts a venture inside a school programme" do
+        teen = create(:user, :minor, birthday: 16.years.ago.to_date)
+        create(:organizer_position, event:, user: teen)
+        allow(event).to receive(:institutionally_sponsored?).and_return(true)
+
+        expect(assessment.skip_reason).not_to include("parent or guardian")
+      end
     end
   end
 

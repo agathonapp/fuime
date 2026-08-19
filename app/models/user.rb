@@ -625,12 +625,35 @@ class User < ApplicationRecord
     minor_or_unknown_age? && !has_active_guardian?
   end
 
-  # Fuime: may this user create, own, or move money in a business?
+  # Fuime: may this user create, own, or RUN a business?
   #
   # This is the single predicate the guardianship control hangs off. It is
-  # enforced in EventPolicy and in a controller-level filter so that neither a
+  # enforced in EventPolicy (via #member? and #manager?, so every write path
+  # resolves through it) and in a controller-level filter, so that neither a
   # direct URL nor a missed view conditional can bypass it.
+  #
+  # ── Under merchant-of-record it no longer covers money OUT ────────────────
+  #
+  # It used to read "create, own, or move money in", and under MoR the last of
+  # those three has moved somewhere better (2026-08-16). The reasoning is in
+  # Fuime::OperatorEligibility#umbrella_scope_blockers; the short version is that
+  # under MoR a teenager running a business holds no account and signs nothing —
+  # the buyer's counterparty is Fuime LLC — so there is no obligation for an
+  # adult to stand behind until money is actually sent to them.
+  #
+  # Money out is gated instead at
+  # Fuime::PayableAssessment#compute_structural_skip_reason, which refuses to put
+  # an unguardianed operator in a payout run at all, and by EventPolicy's payout
+  # predicates, which were never gated on this method — the guardian's approval
+  # was always their own separate authority (see #decide_payout?). So the control
+  # protecting a minor's money is unchanged in strength; what has been removed is
+  # a wall in front of the part of the product that earns the money.
+  #
+  # Under Connect this is untouched: there the guardian owns the Stripe account,
+  # so a minor without one genuinely cannot operate the venture.
   def permitted_to_operate_business?
+    return true if ::Fuime::Features.merchant_of_record?
+
     !needs_guardian?
   end
 

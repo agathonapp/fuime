@@ -231,6 +231,17 @@ class Event
 
       authorize @application
 
+      # Fuime: an event code is resolved, never assigned.
+      #
+      # `fuime_cohort_id` is deliberately absent from `application_params` and
+      # must stay absent. A cohort is the authority that auto-approves, activates
+      # and vets a venture, so a permitted `fuime_cohort_id` would let an
+      # applicant put any id they liked into that field and admit themselves to
+      # somebody else's event. The only way in is a code somebody typed, looked up
+      # through Fuime::Cohort.for_code, which returns nil for unknown, archived
+      # and expired alike.
+      assign_cohort_from_code if params[:event_application]&.key?(:cohort_code)
+
       @application.save!
 
       if user_params.present?
@@ -322,6 +333,34 @@ class Event
     # anonymous applicant through sign-in and back to `start`.
     def teen_led_param
       params.dig(:event_application, :teen_led).presence || params[:teen_led].presence
+    end
+
+    # Fuime: a typed event code becomes a cohort, or nothing.
+    #
+    # A blank field clears the cohort — somebody who pasted the wrong code needs a
+    # way to undo it, and the alternative is an applicant permanently attached to
+    # an event they are not at.
+    #
+    # An unrecognised code is NOT an error that blocks saving. The applicant can
+    # always submit without one, and refusing to save their whole application over
+    # a mistyped code would be a wall in front of the thing they actually came to
+    # do. The flash tells them it did not take; the roster board tells the
+    # organiser who is stuck.
+    def assign_cohort_from_code
+      typed = params[:event_application][:cohort_code].to_s.strip
+
+      if typed.blank?
+        @application.fuime_cohort = nil
+        return
+      end
+
+      cohort = ::Fuime::Cohort.for_code(typed)
+      if cohort.nil?
+        flash[:cohort_code_unknown] = true
+        return
+      end
+
+      @application.fuime_cohort = cohort
     end
 
     def application_params

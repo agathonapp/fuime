@@ -43,6 +43,52 @@ RSpec.describe EventsHelper, type: :helper do
     end
   end
 
+  # Fuime: "Payments" and "Payout account" answer the same question — how do I get
+  # paid? — under the two different models, and the flag decides which is true.
+  #
+  # Showing both would put two different answers in one sidebar; showing neither
+  # would leave an operator with no way to be paid at all and no page saying so.
+  # Neither failure is visible from either item's own definition, which is why the
+  # complement is asserted here rather than left to a comment on each.
+  describe "the two money-in nav items" do
+    let(:event) { create(:event) }
+
+    # Both procs gate on the reader's own access as well as the flag. Those
+    # checks have their own specs; what is under test here is the flag alone.
+    #
+    # The collaborators are defined on the singleton rather than stubbed: `helper`
+    # is an ActionView::Base that implements neither method outside a request, so
+    # `allow(...).to receive` is refused by verify_partial_doubles — correctly,
+    # since there is nothing there to verify against.
+    #
+    # And they are defined HERE rather than in a `before`, because `helper` does
+    # not hand back the same object every time it is called. Setting them up in a
+    # `before` decorates one instance and the example then evaluates the proc
+    # against another, so every item reads as unavailable — which looks exactly
+    # like the flag being wrong and is not.
+    def available?(name)
+      item = EventsHelper::NAV_ITEMS.find { |i| i[:name] == name }
+      expect(item).to be_present, "no nav item named #{name.inspect}"
+
+      view = helper
+      access = instance_double(EventPolicy, payment_setup_status?: true, payout_method?: true)
+      view.define_singleton_method(:organizer_signed_in?) { true }
+      view.define_singleton_method(:policy) { |_record| access }
+
+      view.instance_exec(event, &item[:available_proc])
+    end
+
+    it "offers the Connect setup screen while merchant-of-record is off" do
+      expect(available?("Payments")).to be(true)
+      expect(available?("Payout account")).to be(false)
+    end
+
+    it "swaps to the payout destination under merchant-of-record", :merchant_of_record do
+      expect(available?("Payments")).to be(false)
+      expect(available?("Payout account")).to be(true)
+    end
+  end
+
   describe "the tagged nav items" do
     # A typo'd `module_prefix` would silently never match, leaving a dead link in
     # place while looking like it had been handled.

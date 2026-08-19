@@ -46,17 +46,20 @@
 #  updated_at                   :datetime         not null
 #  airtable_record_id           :string
 #  event_id                     :bigint
+#  fuime_cohort_id              :bigint
 #  user_id                      :bigint           not null
 #
 # Indexes
 #
-#  index_event_applications_on_event_id      (event_id)
-#  index_event_applications_on_service_type  (service_type) WHERE (service_type IS NOT NULL)
-#  index_event_applications_on_user_id       (user_id)
+#  index_event_applications_on_event_id         (event_id)
+#  index_event_applications_on_fuime_cohort_id  (fuime_cohort_id)
+#  index_event_applications_on_service_type     (service_type) WHERE (service_type IS NOT NULL)
+#  index_event_applications_on_user_id          (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (fuime_cohort_id => fuime_cohorts.id)
 #  fk_rails_...  (user_id => users.id)
 #
 # Check Constraints
@@ -94,6 +97,9 @@ class Event
 
     belongs_to :user
     belongs_to :event, optional: true
+    # Fuime: the group somebody vouched for this founder as part of, if any.
+    # See Fuime::Cohort and Fuime::CohortAdmission.
+    belongs_to :fuime_cohort, class_name: "Fuime::Cohort", optional: true
     belongs_to :contract_event, foreign_key: :event_id, class_name: "Event", inverse_of: :application, optional: true
 
     has_many :affiliations, as: :affiliable
@@ -215,6 +221,16 @@ class Event
             # in `submitted` forever waiting on a contract that never arrives.
             mark_under_review!
           end
+
+          # Fuime: a cohort somebody already vouched for advances the three gates
+          # now rather than leaving fifty founders in a queue during an event.
+          #
+          # Last in this block, and after the state transitions above, because it
+          # reads that state — and best-effort inside its own class rather than
+          # here, so that a failure leaves an ordinary submitted application in
+          # the ordinary queue rather than an exception in front of a teenager
+          # who has just pressed Submit. See Fuime::CohortAdmission#call.
+          ::Fuime::CohortAdmission.new(application: self).call if fuime_cohort_id.present?
         end
       end
 
@@ -340,6 +356,32 @@ class Event
 
     def started_from_template?
       starting_point == "from_template"
+    end
+
+    # Fuime: the facts a vetting reviewer would otherwise retype, as a starting
+    # line for their decision note.
+    #
+    # ── Facts, never a conclusion ───────────────────────────────────────────
+    #
+    # `Event#record_vetting_decision!` stamps a note with the time and the
+    # reviewer's name, so whatever is in that box becomes something a named human
+    # is on record as having written. Prefilling it with a *judgement* — "looks
+    # legitimate", "low risk" — would put words in their mouth on the one control
+    # the whole model rests on, and an admin clearing a queue would sign them
+    # without reading.
+    #
+    # So this is only what the applicant themselves said: category, age, website,
+    # political activity. The reviewer supplies the sentence that matters, and
+    # the trailing "— " is deliberately an open clause inviting it.
+    def vetting_summary
+      bits = []
+      bits << (service&.name || business_category.presence&.titleize)
+      bits << "operator #{user.age}" if user&.age
+      bits << (website_url.presence ? "site #{website_url}" : "no site")
+      bits << "POLITICAL ACTIVITY DECLARED" if political?
+      bits << "adult applicant" if teen_led == false
+
+      "#{bits.compact.join(' · ')} — "
     end
 
     def next_step
@@ -475,7 +517,29 @@ class Event
       # APPLICANT, not whoever is clicking activate — an admin activating a
       # teen's application is still held to the guardian requirement, which is
       # the case this gate was written for.
-      if user.minor_or_unknown_age? && !user.has_active_guardian? &&
+      #
+      # ── Not under merchant-of-record (2026-08-16) ─────────────────────────
+      #
+      # Under MoR this gate is in the wrong place, for the same reason the
+      # selling gate was: activation creates a venture and a manager seat, and
+      # under MoR neither carries an obligation a minor could be held to. There
+      # is no merchant account, no Stripe relationship and no bank account — the
+      # buyer contracts with Fuime LLC, and the operator holds a claim on Fuime.
+      # Refusing to let a 16-year-old have a venture at all until a parent has
+      # actioned an email is a wall in front of the part of the product that
+      # makes a parent want to say yes.
+      #
+      # The requirement is not removed, it is relocated to the seam where the
+      # adult is genuinely the legal party: money leaving. See
+      # Fuime::PayableAssessment#compute_structural_skip_reason and
+      # Fuime::OperatorEligibility#umbrella_scope_blockers, which together mean no
+      # guardian, no payout — including for a venture activated this way.
+      #
+      # Under Connect the original gate stands unchanged: there the guardian owns
+      # the Stripe account, so a venture without one is a venture whose owner
+      # genuinely cannot act, which is the case this was written for.
+      if !::Fuime::Features.merchant_of_record? &&
+         user.minor_or_unknown_age? && !user.has_active_guardian? &&
          !user.institutionally_vouched_for? && !user.staff?
         raise ArgumentError,
               "Cannot activate #{hashid}: #{user.email} is a minor with no active guardian. " \
@@ -621,6 +685,7 @@ class Event
 
     FIELD_LABELS = {
       "name"                   => "Business name",
+      "business_category"      => "What kind of business this is",
       "description"            => "What your business does",
       "address_line1"          => "Street address",
       "address_city"           => "City",
@@ -644,7 +709,21 @@ class Event
     }.freeze
 
     def required_submission_fields
-      fields = ["name", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
+      # Fuime: `business_category` is required to SUBMIT, not merely asked for.
+      #
+      # It is the field Fuime::OperatorEligibility#category_blocker reads to decide
+      # whether a venture may sell at all, and that check correctly fails closed on
+      # blank. But nothing required it here, its validation is `allow_blank: true`
+      # on both this model and Event, and it is only ever derived from `service_type`
+      # — so an application that skipped the business-type step submitted, approved
+      # and activated in silence, and produced a venture that could never sell.
+      #
+      # The blocker that venture then shows says "Choose what this venture sells",
+      # and until the admin control added alongside this there was nowhere to choose
+      # it: `business_category` is written exactly once, at activation, and appears
+      # in no form, no strong-params list and no admin screen. A dead end reached
+      # only after a founder had done everything right.
+      fields = ["name", "business_category", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
 
       # A parent's email is required only while the guardian question is OPEN.
       # A second application from the same teen has nothing to ask — their

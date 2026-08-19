@@ -54,7 +54,8 @@ module Fuime
     # does — which is the reason this is a constant and not a scattered check.
     ELIGIBLE_CATEGORIES = %w[services].freeze
 
-    # 16, from the Fair Labor Standards Act rather than from product taste.
+    # 16 by default, from the Fair Labor Standards Act rather than from product
+    # taste.
     #
     # FLSA leaves 16- and 17-year-olds unrestricted in hours for non-hazardous
     # occupations; below 16 the hour limits bite and the analysis changes shape.
@@ -63,10 +64,39 @@ module Fuime
     # vendors, the exposure is FLSA child-labour rather than tax. The bracket
     # keeps the worst case survivable while that question is open.
     #
-    # This is a floor on OPERATORS, and it is stricter than the platform's floor
-    # on users, which stays at 13 per L6. A 14-year-old may hold an account; they
-    # may not sell under the umbrella in Phase 1.
-    MINIMUM_OPERATOR_AGE = 16
+    # ── Why this is configurable, and why only downward to 13 ───────────────
+    #
+    # 16–17 is the launch shape from the product brief (MOR_MIGRATION_PLAN §8.1),
+    # and the brief itself widens to 14 in its own Phase 2. It is a business
+    # decision about accepted risk on an open question — not a statute — so the
+    # person accountable for that risk should be able to set it without a code
+    # change, and `FUIME_MINIMUM_OPERATOR_AGE` is how.
+    #
+    # Deploy-time env rather than a Flipper toggle, for the reason in
+    # Fuime::Features: lowering this widens who Fuime is legally exposed for, so
+    # it should cost a deploy, a diff and a person — not a checkbox a support
+    # admin can find.
+    #
+    # ⚠️ **13 is a hard floor and this method cannot go below it.** That one is
+    # not a business decision: under-13 is COPPA (L6), `User` refuses under-13
+    # signup outright, and the amended-COPPA programme that would be required
+    # does not exist. A misconfigured or hostile value clamps up to 13 rather
+    # than being honoured, and a value above the default is honoured as-is —
+    # raising the floor is always safe.
+    DEFAULT_MINIMUM_OPERATOR_AGE = 16
+    ABSOLUTE_MINIMUM_OPERATOR_AGE = 13
+
+    def self.minimum_operator_age
+      configured = ENV["FUIME_MINIMUM_OPERATOR_AGE"].to_s.strip
+      return DEFAULT_MINIMUM_OPERATOR_AGE if configured.empty?
+
+      parsed = Integer(configured, exception: false)
+      # An unparseable value is a misconfiguration, and the safe reading of a
+      # misconfigured age floor is the default one — never "no floor".
+      return DEFAULT_MINIMUM_OPERATOR_AGE if parsed.nil?
+
+      [parsed, ABSOLUTE_MINIMUM_OPERATOR_AGE].max
+    end
 
     def initialize(event:)
       @event = event
@@ -118,6 +148,38 @@ module Fuime
     private
 
     # The checks that only bind while Fuime is the legal seller. See #blockers.
+    #
+    # ── Why the guardian is NOT one of them, under MoR ──────────────────────
+    #
+    # A guardian used to be required here, before an operator could sell at all.
+    # Under merchant-of-record that gate is in the wrong place, and moving it is
+    # a deliberate product decision (2026-08-16) rather than a relaxation of L2.
+    #
+    # The reasoning is the one that already governs the payout destination
+    # (CreateFuimePayoutMethods): ask for the adult at the moment the adult is
+    # actually needed. Under MoR a teenager selling creates no merchant account,
+    # no Stripe relationship, no bank account and no obligation they could be
+    # held to — the buyer's counterparty is Fuime LLC, and what the operator has
+    # is a claim on Fuime. Demanding a parent before a 16-year-old can find out
+    # whether anybody will buy their thing is asking a family to do paperwork for
+    # a business that has earned nothing, which is the single biggest drop-off in
+    # the funnel and buys no protection during the period it blocks.
+    #
+    # The moment the adult genuinely matters is when money LEAVES: that is when
+    # there is a payee, a tax consequence, and a debt that could run negative.
+    # Fuime::PayableAssessment#compute_structural_skip_reason holds that gate now,
+    # alongside the payout destination, and it is strictly harder to pass than
+    # this one was — no guardian, no money out, no exceptions.
+    #
+    # ── What this costs, stated plainly ─────────────────────────────────────
+    #
+    # During the selling window there is no adult obligor behind the operator.
+    # MOR_MIGRATION_PLAN §7 Q3 ("who owes a clawback?") is unresolved, so a
+    # chargeback on an unguardianed operator's sale lands on Fuime with nobody to
+    # countersign the debt. That exposure is bounded by the reserve and hold in
+    # the payout policy, and by the fact that money cannot leave without the
+    # guardian arriving first — but it is real, and it is the reason this belongs
+    # in a comment rather than in a commit message.
     def umbrella_scope_blockers
       [category_blocker, *operator_blockers]
     end
@@ -146,20 +208,18 @@ module Fuime
 
     # One blocker per person, naming them.
     #
-    # Named because the fix is per-person — "someone on this venture needs a
-    # guardian" sends the wrong teenager to ask their parent — and because a
-    # two-founder venture can fail both checks for different people at once.
+    # Named because the fix is per-person — "someone on this venture is too young"
+    # sends the wrong teenager to ask — and because a two-founder venture can fail
+    # for one person and pass for the other.
+    #
+    # The guardianship check that used to live here moved to the payout seam; see
+    # #umbrella_scope_blockers for why, and what it costs.
     def operator_blockers
-      minor_operators.flat_map do |user|
+      minor_operators.filter_map do |user|
         # User#name already falls back through preferred_name, full_name and
         # finally the email handle, so it is never blank.
-        who = user.name
-
-        [
-          age_blocker(user, who),
-          guardianship_blocker(user, who)
-        ]
-      end.compact
+        age_blocker(user, user.name)
+      end
     end
 
     def age_blocker(user, who)
@@ -170,15 +230,11 @@ module Fuime
       # missing birthday must not be the way past a floor that exists to keep
       # FLSA hour limits out of the picture.
       return "#{who} has no date of birth on file." if age.nil?
-      return nil if age >= MINIMUM_OPERATOR_AGE
 
-      "#{who} is #{age}. Fuime operators must be at least #{MINIMUM_OPERATOR_AGE}."
-    end
+      floor = self.class.minimum_operator_age
+      return nil if age >= floor
 
-    def guardianship_blocker(user, who)
-      return nil if user.has_active_guardian?
-
-      "#{who} needs a parent or guardian on the account."
+      "#{who} is #{age}. Fuime operators must be at least #{floor}."
     end
 
     # Positions held by people who are minors, or whose age we do not know.

@@ -618,6 +618,30 @@ carries its own licensing regime. Phase 1 being services-only is currently a sen
 document rather than a validation — and the exposures it exists to remove, sales-tax nexus and
 product liability, are the two the brief leans on hardest.
 
+### 8.3b Gate status — updated 2026-08-16
+
+**Fuime LLC exists.** That is one of the two things §8.5 named as blocking the
+merchant-of-record flag, and it is now done.
+
+The other is unchanged: `FUIME_MOR_COUNSEL_MEMO` must cite a real memo before the
+boot guard will let `FEATURE_MERCHANT_OF_RECORD` turn on, and the questions it has
+to answer are §7 Q1 (does the MoR structure take the collection leg outside
+§ 1960 and state MTL), Q2 (does umbrella MoR break the independent-contractor
+characterization) and Q4 (will Stripe permit one account as MoR for N third-party
+operators). Existing as a company does not answer any of the three.
+
+**Product decision recorded the same day: under MoR there is no guardian Stripe
+onboarding.** The operator connects a payout destination only, and only once they
+have money to withdraw — the same deferral Whop uses (WHOP_EVALUATION.md §4). The
+"Payments" screen is the Connect path and disappears with it.
+
+⚠️ **Plaid is not a payout rail.** Plaid Auth verifies account and routing numbers;
+it never moves money and always needs an originator behind it (§4.3). "Payouts via
+Plaid" is therefore half a decision — Plaid verifies, and Stripe, Slash or Mercury
+originates. Choosing that originator is the remaining §4.3 diligence, and it is
+what `Fuime::PayoutBatchService#mark_paid!` currently stands in for with a human
+assertion.
+
 ### 8.4 Still open after the brief
 
 1. ~~**Hold period before payout.**~~ **Answered in phase 6 (2026-08-15), pending the founder's

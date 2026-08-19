@@ -17,6 +17,296 @@ Three fixes on `cursor/defensive-hardening-796c`. Production log default is `inf
 hosts and will not follow a redirect off that list. CI RSpec no longer injects
 `${{ secrets }}` and no longer `eval`s a constructed command. Focused specs:
 `spec/requests/twilio_webhook_spec.rb`, `spec/jobs/twilio/process_webhook_job_spec.rb`.
+**2026-08-18 — The branch is on GitHub as PR #70. Nothing of Friday's work was deployed.**
+
+The state that mattered most and was not visible from any doc: **five unpushed commits and 28
+uncommitted files** sat on this laptop while `fuime-web` auto-deploys from `main`. Among them was
+the one-line `Event#accepts_payments?` fix — so **app.fuime.com could not let a single
+merchant-of-record venture sell**, and no amount of live-mode configuration would have changed
+that. Now committed (`b435ba4e2`, `c25351286`), pushed, and open as **PR #70**. Not merged: a
+merge auto-deploys, and that is a decision to take deliberately.
+
+**First full-repository suite run in this repo's history: 3357 examples, 8 failures, 17 pending.**
+All 8 are the documented baseline in `known-failures.md` (Apple-Silicon `wkhtmltopdf` ×4, the
+`School` plan-lineup contradiction ×2, `stripe_connected_account` livemode, guardianships index).
+The branch adds ~460 examples and introduces **zero** new failures. Previous sessions reported
+1267/1327 green across *subsets*; this is the whole thing.
+
+**`business_category` was a dead end, not the trap the last handoff called it.** The last entry
+noted a blank category blocks selling. Checking how anyone recovers found the real defect: nobody
+can. The column was required by nothing (`allow_blank: true` both sides, absent from
+`required_submission_fields`, derived only from `service_type`) **and writable nowhere** — outside
+`activate_event!` it appears in no form, no strong-params list, no admin screen. A founder who did
+everything right reached "Choose what this venture sells" with nowhere to choose it. Both halves
+fixed; see UPSTREAM_DIVERGENCE 2026-08-18.
+
+**Scope decided by the founder today:** payouts ship the week of Aug 24, not Friday — the 7-day
+hold plus 10% reserve means nobody is payable before ~Aug 28 anyway, and `mark_paid!` is already a
+human assertion, so the open originator decision (§4.3) is **not** on the launch critical path.
+Identity/KYC moves to payout-request time, which is also when the W-9/1099-NEC obligation attaches.
+
+**Operator age floor for Friday is 13** (`FUIME_MINIMUM_OPERATOR_AGE=13`, set in
+`.env.development`; **still to set on Render**). A 7–12 tier was asked for and is not a config
+change: under MoR Stripe's 13-floor no longer binds (the operator holds no Stripe account — that
+obstacle is genuinely gone), but COPPA and child-labor both remain, and both point at the same
+structure — **parent as the operator and vendor, child as a named participant holding no account
+and signing nothing**. That is LEGAL_RESEARCH's "parent is the merchant", P3 item 7. An
+auto-linked parent email is **not** verifiable parental consent (16 CFR 312.5(b)), and a public
+storefront naming a child is exactly the disclosure case email-plus cannot cover.
+
+**Three things stand between this branch and real money, and none of them are code:**
+(1) Stripe live account approved, in Fuime LLC's name, with the MoR structure described
+accurately — under-describing it to get approved is worse than a rejection, because it gets
+revoked mid-event. (2) `FUIME_MOR_COUNSEL_MEMO`, unchanged and still the top item.
+(3) **Register the live webhook endpoint** and put *its* signing secret in
+`FUIME_STRIPE_WEBHOOK_SECRET` — live endpoints have their own, nothing in code checks it, and
+without it every sale succeeds on the card and is invisible in the ledger.
+
+**Still true and still worth saying: nobody has driven this in a browser end to end.** Everything
+is asserted at the request and model layer. A click-through on app.fuime.com from signup to a
+completed payment has not happened.
+
+
+**2026-08-16 (late) — Cohorts: one person vouches for a group, and the roster board.**
+
+Founders Weekend needed ~50 teens through signup → first sale in one sitting, past three human
+gates (approve, activate, vet). **150 clicks during a live event is not a control** — it is a
+queue somebody clears without reading, which produces a signed record of a judgement nobody made.
+
+`Fuime::Cohort` moves that decision rather than removing it: one person decides once, in advance,
+and `rationale` is NOT NULL because they must write down why they can. That sentence is copied
+verbatim into every vetting note, next to their name. The note states what happened and nothing
+else — a spec asserts it never says "looks legitimate" or "low risk".
+
+**A code cannot exempt anybody from anything.** An admitted 14-year-old is vetting-approved and
+still cannot sell; an admitted crafts venture likewise; an admitted founder with no parent is
+still refused at payout. All three asserted, because that is where this feature would go wrong.
+`expires_at` and `max_members` are required (a code with neither is a permanent bypass for whoever
+pastes it into a Discord), and the cap is enforced **under a row lock** — fifty people submitting
+at once is the ordinary case here.
+
+**Founders type the code on the review page**, not via URL: the sign-in round trip loses a query
+param, which would drop somebody into the ordinary queue with nothing explaining why their friend
+got in. A bad code never blocks submitting.
+
+**`/admin/cohorts/:id` is the roster board — the screen to watch on the day.** It answers "who is
+stuck and on what?" for everybody at once, which neither existing queue does.
+`Fuime::FounderProgress` names ONE next action rather than a state, and reports rather than
+decides — every answer reads from `accepts_payments?` / `selling_blockers` / `has_active_guardian?`
+so it can never tell a teenager they can sell when the real gate disagrees. Parents are counted
+apart from the funnel on purpose: under MoR a missing guardian blocks being paid, not selling.
+
+**Set up Friday's cohort at `/admin/cohorts`.** Exercised end to end in the dev app: an application
+carrying `FW2026` came out as an activated, vetted venture, `accepts_payments? == true`, roster
+reading "Publish something to sell".
+
+⚠️ **An application that skipped the business-type step produces a venture with a blank
+`business_category`, which fails eligibility closed and blocks selling before any other check.** A
+cohort admits them happily and they still cannot sell. The roster's next-action column is what
+surfaces it.
+
+**Verification:** 1327 examples green. Full repo suite still not run.
+
+
+**2026-08-16 (evening) — Merchant-of-record could not sell at all. It can now, and a
+teenager's own software can sell for them.**
+
+Driven by Founders Weekend: ~50 teens onboarding Friday 2026-08-21, signup → application →
+first sale in one sitting, with real revenue (~$1k each over three days).
+
+**The bug worth knowing about even if you read nothing else.** `Event#accepts_payments?` opened
+with `return false unless payment_account&.ready_for_payments?`. Under MoR there IS no per-venture
+merchant account — that is the whole model — and PR #68 correctly hid the screen to open one. So
+every MoR venture was permanently unable to publish an offer, take a checkout, or appear in the
+directory, while `PaymentLinkService#create_mor_checkout_session` underneath would have worked
+fine. **Verified against Stripe test mode**: zero selling blockers, a real Checkout Session from
+the service, `false` from the method. One line, total effect, invisible from either side alone.
+
+**The guardian moved rather than went away.** A minor can now sell with no parent attached —
+under MoR they hold no account and sign nothing, so there is no obligation for an adult to stand
+behind yet. Removed from `OperatorEligibility`, `activate_event!` and
+`User#permitted_to_operate_business?`; added to `PayableAssessment#compute_structural_skip_reason`
+(batch path) and `EventPolicy#request_payout?` (request path). **All MoR-only — Connect is
+untouched.**
+
+`#request_payout?` is the one that is not obvious and is not redundant. Without it a parentless
+teen files a request, `#decide_payout?` needs a guardian so nobody but an admin can action it, and
+`one_pending_request_per_venture` then blocks them forever. One click, permanently wedged.
+`spec/models/fuime/selling_without_a_guardian_spec.rb` asserts the whole property end to end —
+it exists because the change spans five objects and no single object's spec can see it.
+
+**The cost, on the record:** no adult obligor behind a chargeback during the selling window
+(MOR_MIGRATION_PLAN §7 Q3, still open). Bounded by hold + reserve and by money being unable to
+leave before a guardian arrives.
+
+**`FUIME_MINIMUM_OPERATOR_AGE`** — the 16 floor is now a dial, default 16, **hard-clamped at 13**
+(COPPA/L6; a lower value clamps up rather than being honoured, an unparseable one falls back to
+16). Set it to `13` or `14` for a cohort with younger founders. It only binds under MoR.
+
+**New: `/api/fuime/v1`** — `Fuime::ApiKey` (`fuime_sk_…`, Lockbox + blind index, plaintext shown
+exactly once), `GET /me`, and `payment_links` index/create/destroy. Operators mint keys at
+`/:event_slug/developer`. A pay link is an **unlisted published `Fuime::Offer`** — `published`
+now means payable, `listed` means in the shop window. **No route carries an event id**, so a
+leaked key cannot express a request against another business. **Exercised end to end**: POST →
+hosted payment page at the right price → real `cs_test_…` Checkout Session.
+
+**A Stripe webhook has now run, and it needed no `stripe login`.** A real test-mode PaymentIntent
+was confirmed with `pm_card_visa`, the `payment_intent.succeeded` event was pulled from **Stripe's
+own Events API**, and that payload — correctly signed — reached the ledger through the real HTTP
+endpoint: **+$45.00, −$2.25 fee, one row after replay.** It is now a fixture
+(`spec/fixtures/fuime/payment_intent_succeeded.json`) driven by
+`spec/requests/fuime_stripe_webhook_endpoint_spec.rb`, which also proves a forged signature, a
+tampered body, a wrong secret and a stale timestamp are all refused — and that a missing secret
+returns 503 rather than accepting anything.
+
+⚠️ **`FUIME_STRIPE_WEBHOOK_SECRET` is empty in `.env.development`**, so locally this endpoint takes
+the deliberate unsigned path for `stripe listen`. Any local "the webhook works" result proves
+nothing about production until you set it. This briefly looked like a signature bypass; it is not.
+
+**Before Friday, three things that are not code.** (1) `FUIME_MOR_COUNSEL_MEMO` must be set or the
+app refuses to boot with MoR on — deliberate, untouched, and yours to answer. (2) `STRIPE_MODE`
+is `test` on both Render services and there are no live credentials anywhere; live is a
+credentials + env change, not a deploy of this branch. (3) **Register the webhook endpoint in
+Stripe** — `payment_intent.succeeded`, `charge.refunded`, `charge.dispute.created` pointed at
+`https://app.fuime.com/fuime/webhooks/stripe`. Nothing in code checks that this is done, and
+without it every sale is invisible in the ledger.
+
+**Still unexercised: the Connect webhook endpoint** and `Fuime::ConnectPaymentRecorder` behind it.
+Not the MoR money-in path, so not on Friday's critical path — but "no webhook has ever run" is now
+false only for the platform endpoint.
+
+**Verification:** 1267 examples green across `spec/models/fuime`, `spec/services/fuime`,
+`spec/controllers/fuime`, `spec/requests`, `spec/policies`, `spec/views/fuime`, `spec/helpers` and
+the guardianship/vetting/school specs. **The full repository suite has not been run.**
+
+
+**2026-08-16 (later) — Plaid Link works, and it is the first integration this repo has
+actually run against its provider.**
+
+`Fuime::PayoutMethod` shipped this morning as a model with no way to create a row. It now has
+one: `Fuime::PlaidLinkService`, an operator page at **`/:event_slug/payout-method`**, and a
+"Payout account" nav item that appears under merchant-of-record exactly where "Payments"
+disappears. Sandbox Plaid keys are in `.env.development`.
+
+**🔑 It was exercised end to end against Plaid's real sandbox** — link token, public token
+exchange, `/accounts/get`, `/identity/get`, persistence, encryption-at-rest, and the
+replace-the-old-destination path, through the service itself rather than raw HTTP. Every prior
+handoff has had to say "nothing has run against the provider". This one does not. Two guards
+fired on real data rather than a stub: an account id from a **different Plaid Item** was refused
+(sandbox mints fresh ids per Item, so that case happened by accident), and an Item with both
+checking and savings and no account named was **refused rather than guessed at**.
+
+**⚠️ The trap that cost the most time, and it invalidates spec runs silently.**
+`docker-compose.yml` gives the `web` service `env_file: .env.development`, and specs run through
+that service — so **everything in `.env.development` is in the test container whatever
+`RAILS_ENV` says.** Adding `FEATURE_MERCHANT_OF_RECORD=true` there (the obvious way to see the
+new page in a browser) ran the entire suite in the umbrella model, as a *green* run that tested a
+different application, with the `:merchant_of_record` tag silently reduced to a no-op.
+
+`spec/support/structural_flags.rb` now clears every structural flag per example unless the
+owning tag is present. **It has to be `before(:each)`, not `before(:suite)`** — dotenv 3.1.7
+loads `dotenv/autorestore`, which snapshots ENV once and restores it after *every example*, so a
+suite-level deletion holds for exactly one example and is then undone. That presents as one
+inexplicable failure in a file that passes under `-e`. Anything wanting ENV to hold across this
+suite must re-assert it per example.
+
+**Two design points worth carrying.** (1) **Plaid verifies; it never moves money** — unchanged
+from §4.3. This buys a verified destination, not a payment, and `mark_paid!` is still a human
+assertion until an originator is chosen. (2) **`/auth/get` is never called and must not be.**
+The `auth` product is requested at Link time only so the Item is *capable* of being handed to an
+originator later; a spec stubs `auth_get` to raise so a future refactor that reaches for the
+digits fails the suite. `provider_reference` holds the Plaid `item_id`; the access token lives in
+a Lockbox `_ciphertext` column and a spec reads the raw column to prove the plaintext is not there.
+
+**Also worth knowing: the plaid gem keeps nested request attributes as bare Hashes.**
+`LinkTokenCreateRequest.new(user: {…})` serializes fine but `request.user.client_user_id` raises,
+so a misspelled filter key would sail through to Plaid ignored — and the first sign would be an
+operator connecting a credit card the UI meant to hide. Use the typed classes. And
+`/item/create_public_token` is discontinued (API 2020-09-14), so to drive the flow headlessly use
+a sandbox **custom user** (`override_username: "user_custom"`, config JSON as `override_password`).
+
+**Two specs were already red on this branch and nobody knew.** `fuime_full_business_flow_spec`
+and `fuime_payout_batches_admin_spec` both generate a payout run for a venture with no payout
+destination, which `20fee1cd5` had just taught `PayableAssessment` to skip. That commit verified
+"505 examples across the touched suites" — and these two exercise the same gate from further
+away. **A change to a gate has a blast radius wider than the files it edits; run the full suite
+for those even when the targeted specs are green.** Both now set up a verified destination, which
+is what a real MoR venture has; the gate was not weakened.
+
+**A schema.rb false alarm, so nobody re-debugs it.** Regenerating `db/schema.rb` on this
+machine's Postgres rewrites seven existing check constraints from
+`ARRAY['a'::character varying]::text[]` to `ARRAY['a'::character varying::text]` — semantically
+identical, purely how `pg_get_constraintdef` renders across server versions. It is not a missing
+migration. It was reverted out of this diff so the schema change stays exactly the two new
+columns; expect it to reappear and revert it again rather than committing it.
+
+**⚠️ A second session was editing this checkout at the same time** — API keys
+(`Fuime::ApiKey`, `/:event_slug/developer`), offer listings, and the guardian gate moving from
+`Fuime::OperatorEligibility` into `Fuime::PayableAssessment`, with migrations `20260817000000`
+and `20260817000100` landing after this one. That is the house failure mode CLAUDE.md warns
+about, and it has two consequences here: the full-suite number below measured the **combined**
+working tree rather than the Plaid work alone, and `db/schema.rb` was regenerated at
+`20260816230000`, so it does not yet describe those two later migrations. Re-run `db:migrate`
+and check the schema version before committing either half.
+
+**Still not done and still the biggest gap: no Stripe webhook has ever run.** Plaid does not
+change that. `stripe login` against the Fuime account first — the CLI is on `acct_1Tmdhs…` while
+the app key is `acct_1Tzna…`.
+
+**Next:** an originator for §4.3 (Slash / Mercury / Stripe) is what turns a verified destination
+into a payment, and it is still an open decision. Engineering is still not the critical path —
+`FUIME_MOR_COUNSEL_MEMO` is.
+
+
+**2026-08-16 — PR #68 merged and deployed; payout methods started; MoR has one gate left.**
+
+**Read `docs/fuime/PLATFORM_REVIEW.md` first** — it is the honest audit of what Fuime is and
+is not, written today, and it names the one gap that can lose money (disputes and clawback,
+§8.5 phase 7 — still unbuilt).
+
+**What landed on main (`5d763097c`, PR #68):** MoR phase 6 payout runs · the business-type
+onboarding step · `Fuime::Offer` and the storefront that stops being a tip jar ·
+`/pay/business/thing` payment links · the substrate decision (stay on Stripe, `WHOP_EVALUATION.md`
+§11) · a ledger memo-injection fix. **`fuime-web` autoDeploys from main**, so this is live at
+app.fuime.com. Both Stripe webhook secrets are set.
+
+**Uncommitted-to-main work sits on `fuime/vetting-from-application`** — four commits: vetting
+reads the application, LLC recorded, `Fuime::PayoutMethod`, and the batch/nav wiring. Not yet a
+PR.
+
+**🔑 The single most important state change: Fuime LLC exists.** That clears one of the two
+merchant-of-record gates. The other is unchanged and is now the ONLY thing between here and
+flipping `FEATURE_MERCHANT_OF_RECORD`: `FUIME_MOR_COUNSEL_MEMO` must cite a memo answering
+§7 Q1, Q2 and Q4. Adding code does not move it. That counsel conversation is the highest-leverage
+item on the list.
+
+**Next task, already shaped:** the Plaid Link flow and the operator page for
+`Fuime::PayoutMethod`. The model, its no-credentials-stored guarantees, the batch gate and the
+nav swap are done and tested; what is missing is `Fuime::PlaidLinkService` (create link token →
+exchange public token → write `provider_reference` → `mark_verified!`) plus the page. **It needs
+`PLAID_CLIENT_ID` and `PLAID_SECRET` in the environment** — sandbox is fine, and without them the
+integration cannot be run even once, which this session twice showed is not good enough.
+
+**Two traps this session paid for, both worth carrying:**
+
+1. **`bin/lint` is not safe without a full suite after it.** `rubocop -a` took the suite from 8
+   failures to 26: `Rails/HttpPositionalArguments` saw a spec's local `post(...)` ledger helper,
+   assumed it was an HTTP request, and rewrote every call into a request spec that tested
+   nothing — while satisfying the linter. Rename such helpers (`post_line`) rather than trusting
+   the autocorrect.
+2. **AASM is not whiny by default.** A transition whose save fails validation reverts the state
+   and returns `false` rather than raising. Check the return value or you will tell a user
+   something happened that did not.
+
+**Verification at handoff: 3189 examples, 8 failures** on main — the standing eight in
+`known-failures.md`. CI's RSpec shards are red on main for the same reason and were before this
+work; all twelve non-RSpec checks pass.
+
+**Still never done, and now the biggest gap: no webhook has ever run against Stripe.** The
+secrets are set, so a test-mode payment landing on a ledger is finally testable and is the one
+thing that proves the money path. `stripe login` against the Fuime account first — the CLI is on
+`acct_1Tmdhs…` ("Hack Club Shop testing") while the app key is `acct_1Tzna…`.
+
 
 **2026-08-15 — Phase 7a: the business-type step, and the venture-born-blocked bug it fixes.**
 
