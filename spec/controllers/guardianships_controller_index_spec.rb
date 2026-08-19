@@ -92,7 +92,9 @@ RSpec.describe GuardianshipsController do
       get :index
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(guardian.email)
+      # The page names the guardian (email only when they have no name),
+      # matching every other guardianship surface.
+      expect(response.body).to include(guardian.name)
     end
   end
 

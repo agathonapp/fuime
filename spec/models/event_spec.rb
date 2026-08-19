@@ -293,12 +293,14 @@ RSpec.describe Event, type: :model do
       expect(child.plan).to be_instance_of(Event::Plan::HackClubAffiliate)
     end
 
-    it "uses the standard plan as a fallback" do
+    it "uses the free plan as a fallback" do
       parent = create(:event)
       parent.plans.destroy_all
       child = create(:event, plan_type: nil, parent:)
 
-      expect(child.plan).to be_instance_of(Event::Plan::Standard)
+      # Event#fallback_plan_class: new ventures start on Free (7%, no monthly).
+      # Standard stays on ventures that already have it.
+      expect(child.plan).to be_instance_of(Event::Plan::Free)
     end
   end
 

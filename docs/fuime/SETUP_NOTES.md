@@ -2,6 +2,22 @@
 
 ## Handoff (most recent first)
 
+**2026-08-19 (later) — CI green: the 16 pre-existing RSpec failures.**
+The hardening PR re-sharded the suite so every shard carried a failure
+that already existed on `main`. Specs were stale against current Fuime
+rules (Free + School plans, livemode from StripeService, guardian name
+not email). WebAuthn needed the same `TEST_URL_HOST` fallback as
+`config/environments/test.rb` so FakeClient works without secrets.
+Do not re-inject GitHub secrets. Affected examples: 135, 0 failures locally.
+
+**2026-08-19 — Defensive hardening (production logs, Twilio webhook, CI).**
+Three fixes on `cursor/defensive-hardening-796c`. Production log default is `info`
+(`RAILS_LOG_LEVEL` still overrides). Twilio webhooks 403 without a valid
+`X-Twilio-Signature` / `TWILIO__AUTH_TOKEN`; media download allowlists Twilio
+hosts and will not follow a redirect off that list. CI RSpec no longer injects
+`${{ secrets }}` and no longer `eval`s a constructed command. Focused specs:
+`spec/requests/twilio_webhook_spec.rb`, `spec/jobs/twilio/process_webhook_job_spec.rb`.
+
 **2026-08-15 — Phase 7a: the business-type step, and the venture-born-blocked bug it fixes.**
 
 New `business_type` step between the intro screen and `project_info`, plus

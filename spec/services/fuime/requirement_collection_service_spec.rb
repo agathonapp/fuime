@@ -103,12 +103,13 @@ RSpec.describe Fuime::RequirementCollectionService do
     # permissions problem, so the absence is asserted.
     it "updates the account with the platform key and no Stripe-Account header" do
       stub_account_update
+      allow(StripeService).to receive(:secret_key).and_return("sk_test_platform")
 
       service.submit!(details:)
 
       expect(Stripe::Account).to have_received(:update) do |_id, _params, opts|
         expect(opts).not_to have_key(:stripe_account)
-        expect(opts[:api_key]).to be_present
+        expect(opts[:api_key]).to eq("sk_test_platform")
       end
     end
 

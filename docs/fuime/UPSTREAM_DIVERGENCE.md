@@ -4376,3 +4376,32 @@ stops a teenager from ever changing it.
 
 `spec/models/fuime/offer_slug_spec.rb` (12 examples) and the payment-page request spec cover the
 rename-survives-the-link guarantee, the per-venture namespacing, and the fallbacks.
+
+---
+
+## 2026-08-19 — Defensive hardening: production logs, Twilio webhook, CI secrets
+
+Three confirmed issues, no other review findings.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Production `log_level` default `debug` → `info` | Debug request logs include PII; still overridable via `RAILS_LOG_LEVEL`. Lograge unchanged. | `config/environments/production.rb` |
+| Twilio webhook signature check + fail-closed missing token | Middleware only mounted when `TWILIO__AUTH_TOKEN` is present (nil token makes `RequestValidator` raise). Controller re-checks `X-Twilio-Signature` and 403s before enqueue if the token is missing outside development. CSRF skip stays because signature verification is in place. | `config/initializers/twilio.rb`, `app/controllers/twilio_controller.rb` |
+| Twilio media fetch host allowlist | `MediaUrlN` was opened with OpenURI after an HTTP(S) scheme check; OpenURI follows redirects to any host. Fetch only HTTPS Twilio media hosts; follow one redirect, and only to Twilio or a signed S3 URL (Twilio's documented 307). Credentials stay on the Twilio request. | `app/jobs/twilio/process_webhook_job.rb` |
+| CI no longer dumps `${{ secrets }}` or `eval`s a constructed rspec command | The suite already runs with test defaults (see `spec/rails_helper.rb`, lockbox test key, other CI jobs). Spec paths are passed as data via `"${specs[@]}"`. `permissions.contents: read` unchanged. | `.github/workflows/ci.yml` |
+
+Specs: `spec/requests/twilio_webhook_spec.rb` (unsigned / bad signature / missing token fail closed), `spec/jobs/twilio/process_webhook_job_spec.rb` (untrusted host and untrusted redirect are not fetched).
+
+---
+
+## 2026-08-19 (later) — Make the suite pass without a secrets dump
+
+The 16 RSpec examples that were already red on `main` are product/spec drift, not CI flake.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| WebAuthn `TEST_URL_HOST` fallback `localhost:3000` | Same default as `config/environments/test.rb`. Unset host → empty origins → `FakeClient` URI error. | `config/initializers/webauthn.rb` |
+| Teen guardian overview asserts name | View renders `name.presence \|\| email`. | `spec/controllers/guardianships_controller_index_spec.rb` |
+| livemode from `StripeService.mode` | v1 Account has no livemode field. | `spec/models/stripe_connected_account_spec.rb` |
+| Platform key stubbed in test | Suite must not need `STRIPE__TEST__SECRET_KEY`. | `spec/services/fuime/requirement_collection_service_spec.rb` |
+| Fallback plan is Free; lineup includes Free + School | Matches `Event#fallback_plan_class` and `selectable?`. | `spec/models/event_spec.rb`, `spec/models/event/plan_spec.rb` |

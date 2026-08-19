@@ -131,8 +131,14 @@ RSpec.describe StripeConnectedAccount, type: :model do
 
     # Fuime runs test mode even in production, so a live account and a test one
     # must be distinguishable in the database rather than inferred from Rails.env.
-    it "mirrors livemode" do
-      account.sync_from_stripe!(stripe_account(livemode: true))
+    #
+    # v1 Account objects have no `livemode` field (calling it raises), so the
+    # row records the mode of the key that made the request — StripeService.mode
+    # — not a field on the payload. See StripeConnectedAccount#sync_from_stripe!.
+    it "mirrors livemode from StripeService, not the Account object" do
+      allow(StripeService).to receive(:mode).and_return(:live)
+
+      account.sync_from_stripe!(stripe_account(livemode: false))
 
       expect(account.reload.livemode).to be true
     end
