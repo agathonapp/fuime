@@ -103,7 +103,13 @@ jobs:
         run: yarn build && yarn build:css
       - name: Run RSpec
         env:
-          ${{ insert }}: ${{ secrets }}
+          # Do not inject ${{ secrets }}. The suite uses test defaults
+          # (TWILIO__AUTH_TOKEN in spec/rails_helper.rb, a generated
+          # Lockbox key in config/initializers/lockbox.rb). Other CI jobs
+          # already run Rails with only DATABASE_URL / REDIS_URL / RAILS_ENV.
+          # Dumping every GitHub secret into RSpec would expose them to the
+          # process, SimpleCov, and any spec that prints ENV — and a
+          # DOPPLER_TOKEN would pull the rest of the secret store at boot.
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/bank_test
           REDIS_URL: redis://localhost:6379
           RAILS_ENV: test
@@ -118,14 +124,18 @@ jobs:
         # upgrade to a balancer (ci-queue, knapsack_pro) later if shards
         # drift apart in wall time.
         run: |
-          specs=$(find spec -name '*_spec.rb' | sort | awk -v i="$SHARD_INDEX" -v n="$SHARD_TOTAL" 'NR % n == (i - 1) % n { print }')
-          echo "Running $(echo "$specs" | wc -l) spec files on shard $SHARD_INDEX/$SHARD_TOTAL"
+          set -euo pipefail
+          mapfile -t specs < <(find spec -name '*_spec.rb' | sort | awk -v i="$SHARD_INDEX" -v n="$SHARD_TOTAL" 'NR % n == (i - 1) % n { print }')
+          echo "Running ${#specs[@]} spec files on shard $SHARD_INDEX/$SHARD_TOTAL"
+          if [ "${#specs[@]}" -eq 0 ]; then
+            echo "No spec files selected for this shard" >&2
+            exit 1
+          fi
           seed=$RANDOM
-          cmd="bundle exec rspec --seed $seed --tag '~skip' $(echo $specs | tr '\n' ' ')"
           echo "To reproduce locally, run:"
           echo "  RAILS_ENV=test bundle exec rails db:drop db:create db:schema:load && \\"
-          echo "  $cmd"
-          eval "$cmd"
+          echo "  bundle exec rspec --seed ${seed} --tag '~skip' -- ${specs[*]}"
+          bundle exec rspec --seed "$seed" --tag '~skip' -- "${specs[@]}"
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         with:

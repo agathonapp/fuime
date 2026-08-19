@@ -57,5 +57,22 @@ RSpec.describe "Twilio Webhook", type: :request do
         expect(response).to have_http_status(:forbidden)
       end
     end
+
+    context "when the auth token is unavailable at request time" do
+      it "fails closed and does not enqueue work" do
+        signature = validator.build_signature_for(webhook_url, params)
+
+        allow(Credentials).to receive(:fetch).and_call_original
+        allow(Credentials).to receive(:fetch).with(:TWILIO, :AUTH_TOKEN).and_return(nil)
+
+        expect {
+          post "/twilio/webhook",
+               params:,
+               headers: xml_headers.merge("X-Twilio-Signature" => signature)
+        }.not_to have_enqueued_job(Twilio::ProcessWebhookJob)
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
   end
 end
