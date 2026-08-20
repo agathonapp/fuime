@@ -4868,3 +4868,54 @@ No other spec is touched by the gate.
 must be separate statements, and `disable_ddl_transaction!` is required for the concurrent index.
 Same shape as `CreateFuimeCohorts`. Deployed to production as `c97827653`; the migration ran in
 0.05s.
+
+---
+
+## Home-screen refresh (2026-08-19)
+
+Both dashboards a founder actually lands on, cut down to what Fuime has. No behaviour
+changed at the server; every destination that existed still exists.
+
+**Global dashboard (`static_pages/index.html.erb`, 234 → ~205 lines).** Eight
+independently-headed sections rendered in upstream's accretion order, so a teenager with one
+business scrolled past five empty regions. They collapse into one "Needs you" strip above the
+businesses grid. The two card-grant sections are now gated on
+`fuime_module_hidden?("card_grants")` — the same prefix `Fuime::DisabledModules` refuses at the
+request layer — rather than rendering UI for a module that is permanently off (Rule 2, disable
+don't delete). Flavor text kept but demoted from a loud pill to a muted line.
+
+**Admin console (`static_pages/admin_tools.html.erb`, 140 → 61 lines).** Was five headings and
+~30 equally-weighted cards plus an Alpine `$persist` "pin a card" feature that existed only
+because the wall was too big to scan. Now: queues with work outstanding surface as "Needs you";
+everything else sits behind one disclosure, grouped. The two lists moved out of the template into
+`StaticPagesHelper#admin_queues` / `#admin_directories`. The pin feature went with the wall it
+was working around, and `card_to` lost the Alpine attributes that served it.
+
+**Business tiles (`events/_event_card.html.erb`).** The second stat was
+`stripe_cards.active.on_main_ledger.count`, and card issuing is behind a default-off flag — so
+every tile on every dashboard read "0 cards". While `Fuime::Features.card_issuing_permitted?` is
+false it counts published `Fuime::Offer`s instead; the card count returns with the feature.
+
+**Business home (`events/show.html.erb`).** Four charts and a heatmap rendered
+unconditionally, each with its own "It's quiet here..." empty state — five identical panels on a
+new business's first day, which reads as five broken widgets. Gated on `@has_ledger_history`
+(two EXISTS queries in `EventsController#show`); the charts themselves stay lazy.
+
+**Two real bugs found while in here:**
+
+- `$` + `render_money_amount` rendered a negative receivable as `$-93.00` on the business home.
+  `render_money` puts the sign in front of the unit. Same fix in
+  `balance_graph_controller.js#renderBalance`, which had the same string-concatenation shape.
+- `balance_graph_controller.js` overwrote the server-rendered "Owed to you" label with
+  **"Account balance"** on every sparkline hover and hover-out. `Fuime::PayablesLedger` exists
+  precisely so operator-facing surfaces never say that (L5 forbidden vocabulary; the class
+  comment states the rule and a spec enforces it for views). The controller was outside the
+  spec's reach. Both strings now say "Owed to you".
+
+### Verification
+
+`erb_lint` and `rubocop` clean on all touched files. `spec/views/fuime/payables_copy_spec.rb`
+and `spec/requests/fuime_waitlist_admin_spec.rb` (the only specs referencing the changed
+helpers/copy) 34/34 green. Rendered all four states in a browser against the dev database:
+admin dashboard, plain-user empty state, a business with ledger history (Insights shown), and a
+business without (Insights correctly absent).

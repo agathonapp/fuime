@@ -97,10 +97,22 @@
           <%= inline_icon "event-add", size: 20, class: "muted align-middle", 'aria-label': "Cards", style: "transform: scale(1.2)" %>
           <%= time_ago_in_words(event.created_at).sub("about ", "").sub("over ", "").sub("almost ", "") %> ago
         </span>
-      <% else %>
+      <%# Fuime: the second stat used to be the active card count, and card
+          issuing is behind a default-off flag — so every tile on every
+          dashboard read "0 cards", which tells a founder nothing and looks
+          like a broken counter. While cards are off, count what the business
+          actually has: things it sells. The card count comes back with the
+          feature, keyed on the same flag the request layer uses. %>
+      <% elsif Fuime::Features.card_issuing_permitted? %>
         <span class="flex items-center gap-1 tabular-nums">
           <%= inline_icon "card", size: 20, class: "muted align-middle", 'aria-label': "Cards", style: "transform: scale(1.2)" %>
           <%= event.stripe_cards.active.on_main_ledger.count %>
+        </span>
+      <% else %>
+        <% published_offers = event.fuime_offers.published.count %>
+        <span class="flex items-center gap-1 tabular-nums muted text-base font-normal" title="Live on the storefront">
+          <%= inline_icon "bag", size: 18, class: "align-middle", 'aria-label': "Listings" %>
+          <%= published_offers %>
         </span>
       <% end %>
     </div>

@@ -3,137 +3,75 @@
 
 <%= render "users/nav", selected: :home if signed_in? %>
 
-<h1 class="heading border-b-0 mb-0 pb-0 flex-col sm:flex-row items-center sm:items-start justify-center sm:justify-between center sm:text-left w-auto m-0 mt-3 gap-2">
+<%# Fuime: the founder's front door.
+
+    What used to live here: eight independently-headed sections, each a full h2
+    plus its own grid, rendered in whatever order upstream happened to add them
+    — so a teenager with one business and one pending form scrolled past five
+    empty regions to find the thing they came for.
+
+    Everything that needs a decision now collects into a single "Needs you"
+    strip above the fold; the businesses grid is the page. Nothing was deleted:
+    the two card-grant sections are gated on the same DisabledModules prefix the
+    request layer refuses, so they come back with the feature rather than
+    needing a second edit here (Rule 2). %>
+
+<div class="flex flex-col sm:flex-row items-baseline justify-between gap-2 mt-3 mb-6">
   <div>
-    <span class="<%= "warning" if fall? %>">
+    <h1 class="heading border-b-0 m-0 p-0 <%= "warning" if fall? %>">
       Welcome to <span class="primary">Fuime</span>
-    </span>
-    <% if current_user.is_teenager? %>
-      <span class="text-base muted block">Your teen business dashboard</span>
-    <% end %>
-  </div>
-  <span class="badge ml-0 text-sm rounded-xl caps <%= Rails.env.development? ? "bg-success" : by_season("bg-muted", fall: "bg-warning") %>" id="flavor-text" data-turbo-permanent><%= flavor_text %></span>
-</h1>
-
-<% if @applications.any? %>
-  <div class="my-2 ml-0 py-2 flex flex-row items-end justify-between">
-    <h2 class="heading h2 line-height-4 m-0 p-0 border-none">Applications</h2>
-    <%= link_to applications_path, class: "flex items-center shrink-0 no-underline" do %>
-      View all applications
-      <%= inline_icon "view-forward" %>
-    <% end %>
-  </div>
-
-  <div class="grid grid--wide mb-12 pb-2">
-    <% @applications.each do |application| %>
-      <%= render partial: "event/applications/application_card", locals: { application: } %>
-    <% end %>
-  </div>
-<% end %>
-
-<% if current_user.card_grants.not_activated.any? %>
-  <h2 class="user-home-section mb-2">Pending grant invitations</h2>
-  <ul class="grid grid-cols-1 text-left w-full mt-2">
-    <% current_user.card_grants.not_activated.each do |grant| %>
-      <div class="card mx-auto text-center sm:text-left flex items-center flex-col sm:flex-row w-full">
-        <div class="flex-1">
-          <p class="my-0 text-lg font-[700]">You have a grant invitation from <%= grant.event.name %></p>
-          <p class="my-0 text-md"><%= render_money grant.amount %><% if grant.purpose.present? %> for <strong><%= grant.purpose %></strong><% end %></p>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <%= link_to "Activate my grant", grant, class: "btn" %>
-          <p class="my-0 text-sm italic text-muted">
-            <% if grant.expiration_at.future? %>
-              Spend within <%= distance_of_time_in_words(Time.current, grant.expiration_at) %>
-            <% else %>
-              Expired <%= time_ago_in_words(grant.expiration_at) %> ago
-            <% end %>
-          </p>
-        </div>
-      </div>
-    <% end %>
-  </ul>
-<% end %>
-
-<% if current_user.card_grants.activated.any? %>
-  <h2 class="user-home-section">Your grants</h2>
-
-  <div class="mixed-grid grid--spacious">
-    <% current_user.card_grants.includes(:stripe_card).activated.each do |grant| %>
-      <%= render "stripe_cards/stripe_card", stripe_card: grant.stripe_card, headless: true, show_purpose: true, href: card_grant_path(grant) %>
-    <% end %>
-    <% if current_user.card_grants.activated.size.odd? %>
-      <div></div>
-    <% end %>
-  </div>
-<% end %>
-
-<% if current_user.pending_payments_received.any? %>
-  <h2 class="user-home-section">Payments to you</h2>
-
-  <ul class="grid grid--wide mb-12 pb-2">
-    <% current_user.pending_payments_received.each do |payment| %>
-      <%= link_to payment.pending_legal_entity? ? choose_legal_entity_payee_path(payment.payee) : payment_path(payment) do %>
-        <li class="overflow-visible card card--hover flex flex-row justify-between items-center gap-2">
-          <span>
-            <%= status_badge "info" %>
-            <strong><%= payment.amount.format(with_currency: true) %> from <%= payment.event.name %> for "<%= payment.purpose %>"</strong>
-          </span>
-        </li>
+    </h1>
+    <p class="muted m-0 mt-1">
+      <% if current_user.is_teenager? %>
+        Your business, your money, your call.
+      <% else %>
+        Financial tools for young founders.
       <% end %>
-    <% end %>
-  </ul>
-<% end %>
+    </p>
+  </div>
+  <span class="muted text-sm italic shrink-0" id="flavor-text" data-turbo-permanent><%= flavor_text %></span>
+</div>
 
-<% if current_user.onboarding_contractor_positions.any? %>
-  <h2 class="user-home-section">Finish your contractor onboarding</h2>
+<main class="flex flex-col pb-8">
+  <%# ------------------------------------------------------------------
+      Needs you — every "you have an outstanding thing" list, in one place.
+      Each block still owns its own markup because they link to different
+      objects; what they share is the heading, so the heading is shared.
+      ------------------------------------------------------------------ %>
+  <% card_grants_hidden = fuime_module_hidden?("card_grants") %>
+  <% pending_grants = card_grants_hidden ? CardGrant.none : current_user.card_grants.not_activated %>
+  <% valid_contracts = current_user.contracts.sent.select { |contract| contract.party(:signee).present? } %>
+  <% has_attention_items = @applications.any? || @invites.any? || @invite_requests.any? || current_user.pending_payments_received.any? || current_user.onboarding_contractor_positions.any? || pending_grants.any? || valid_contracts.any? %>
 
-  <ul class="grid grid--wide mb-12 pb-2">
-    <% current_user.onboarding_contractor_positions.each do |position| %>
-      <% next_step = position.next_onboarding_step %>
-      <%= link_to onboarding_payroll_position_url(position) do %>
-        <li class="overflow-visible card card--hover flex flex-row justify-between items-center gap-2">
-          <span>
-            <%= status_badge "warning" %>
-            <strong><%= position.title %> at <%= position.event.name %></strong>
-            <% if next_step %><span class="muted">— next: <%= next_step[:label] %></span><% end %>
-          </span>
-        </li>
-      <% end %>
-    <% end %>
-  </ul>
-<% end %>
-
-<main class="flex flex-col items-center text-center pb-8">
-  <% if signed_in? %>
-    <% if @invites.any? %>
-      <h2 class="w-full text-left mt-8 pb-0 border-none h2 pl-0 ml-0">Pending business invitations</h2>
-      <ul class="grid grid--narrow text-left w-full mt-2">
-        <% @invites.each do |invite| %>
-          <%= link_to invite do %>
-            <li class="overflow-visible card card--hover flex flex-row justify-between items-center gap-2">
-              <span>
-                <%= status_badge "info" %>
-                <strong><%= invite.event&.name %></strong>
-              </span>
-            </li>
-          <% end %>
+  <% if has_attention_items %>
+    <div class="flex items-baseline justify-between gap-2">
+      <h2 class="user-home-section mb-2">Needs you</h2>
+      <% if @applications.any? %>
+        <%= link_to applications_path, class: "flex items-center shrink-0 no-underline text-sm" do %>
+          View all applications
+          <%= inline_icon "view-forward", size: 16 %>
         <% end %>
-      </ul>
-    <% end %>
+      <% end %>
+    </div>
+    <div class="grid grid--wide text-left w-full mt-2 mb-8">
 
-    <% if @invite_requests.any? %>
-      <h2 class="w-full text-left mt-8 pb-0 border-none h2 pl-0 ml-0">Pending join requests</h2>
-      <ul class="grid grid--narrow text-left w-full mt-2">
-        <% @invite_requests.each do |invite_request| %>
-          <li class="overflow-visible card card--hover flex flex-row justify-between items-center gap-2">
-            <span class="w-full flex gap-2 items-center align-middle">
-              <%= status_badge "info" %>
-              <strong><%= invite_request.link.event.name %></strong>
-              <div class="flex-grow"></div>
-              <%= pop_icon_to "view-close-small",
+      <% @invites.each do |invite| %>
+        <%= link_to invite, class: "link-reset" do %>
+          <div class="card card--hover flex items-center gap-2">
+            <%= status_badge "info" %>
+            <span><strong><%= invite.event&.name %></strong> invited you to join</span>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% @invite_requests.each do |invite_request| %>
+        <div class="card flex items-center gap-2">
+          <%= status_badge "info" %>
+          <span>Waiting on <strong><%= invite_request.link.event.name %></strong></span>
+          <span class="flex-grow"></span>
+          <%= pop_icon_to "view-close-small",
                 deny_request_path(invite_request),
-                class: "error tooltipped tooltipped--w h-8 w-8",
+                class: "error tooltipped tooltipped--w h-8 w-8 shrink-0",
                 data: {
                   turbo_method: :post,
                   turbo_confirm: "Are you sure you want to cancel this join request?",
@@ -141,94 +79,140 @@
                 },
                 'aria-label': "Cancel",
                 disabled: !policy(invite_request).deny? %>
-            </span>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
+        </div>
+      <% end %>
 
-    <h2 class="user-home-section mb-2 flex items-center w-full">
-      <span>Your businesses</span>
-      <% if @show_event_reorder_tip && @events.any? %>
-        <% if @events.size > 1 %>
-          <span class="muted flex items-center justify-end h6 ml-auto">
-            <%= inline_icon "hand-pointer-solid", size: 18, class: "mr1" %> Drag to reorder
-          </span>
+      <% current_user.pending_payments_received.each do |payment| %>
+        <%= link_to(payment.pending_legal_entity? ? choose_legal_entity_payee_path(payment.payee) : payment_path(payment), class: "link-reset") do %>
+          <div class="card card--hover flex items-center gap-2">
+            <%= status_badge "info" %>
+            <span><strong><%= payment.amount.format(with_currency: true) %></strong> from <%= payment.event.name %> for “<%= payment.purpose %>”</span>
+          </div>
         <% end %>
       <% end %>
-    </h2>
 
-    <% if @events.any? %>
-      <ul
-        class="grid grid--medium-narrow text-left w-100 mt0"
-        data-controller="sortable event-sort"
-        data-sortable-append-to-value="body"
-        data-event-sort-organizer-positions-value="<%= @organizer_positions.pluck(:id).to_json %>"
-        data-action="sortable:stop->event-sort#sort">
+      <% current_user.onboarding_contractor_positions.each do |position| %>
+        <% next_step = position.next_onboarding_step %>
+        <%= link_to onboarding_payroll_position_url(position), class: "link-reset" do %>
+          <div class="card card--hover flex items-center gap-2">
+            <%= status_badge "warning" %>
+            <span>
+              Finish onboarding as <strong><%= position.title %></strong> at <%= position.event.name %>
+              <% if next_step %><span class="muted">— next: <%= next_step[:label] %></span><% end %>
+            </span>
+          </div>
+        <% end %>
+      <% end %>
 
-        <%= render partial: "events/event_card", collection: @events.not_hidden, as: :event %>
+      <% pending_grants.each do |grant| %>
+        <%= link_to grant, class: "link-reset" do %>
+          <div class="card card--hover flex items-center gap-2">
+            <%= status_badge "info" %>
+            <span>
+              <strong><%= render_money grant.amount %></strong> grant from <%= grant.event.name %><% if grant.purpose.present? %> for <%= grant.purpose %><% end %>
+              <span class="muted block text-sm">
+                <% if grant.expiration_at.future? %>
+                  Spend within <%= distance_of_time_in_words(Time.current, grant.expiration_at) %>
+                <% else %>
+                  Expired <%= time_ago_in_words(grant.expiration_at) %> ago
+                <% end %>
+              </span>
+            </span>
+          </div>
+        <% end %>
+      <% end %>
 
-        <%= link_to apply_path do %>
-          <li class="card card--hover bold font-brand flex items-center justify-center align-center h-full" style="max-width: calc(100vw - 2rem)">
-            <div class="center">
-              <div class="pop success mx-auto flex mb-1">
-                <%= inline_icon "plus", size: 28 %>
-              </div>
-              New business
+      <% valid_contracts.each do |contract| %>
+        <%= render partial: "contracts/contract", locals: { contract: } %>
+      <% end %>
+
+      <% @applications.each do |application| %>
+        <%= render partial: "event/applications/application_card", locals: { application: } %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ------------------------------------------------------------------
+      Your businesses — the page.
+      ------------------------------------------------------------------ %>
+  <div class="flex items-baseline justify-between gap-2">
+    <h2 class="user-home-section mb-2">Your businesses</h2>
+    <% if @show_event_reorder_tip && @events.size > 1 %>
+      <span class="muted flex items-center text-sm shrink-0">
+        <%= inline_icon "hand-pointer-solid", size: 16, class: "mr1" %> Drag to reorder
+      </span>
+    <% end %>
+  </div>
+
+  <% if @events.any? %>
+    <ul
+      class="grid grid--medium-narrow text-left w-100 mt-2"
+      data-controller="sortable event-sort"
+      data-sortable-append-to-value="body"
+      data-event-sort-organizer-positions-value="<%= @organizer_positions.pluck(:id).to_json %>"
+      data-action="sortable:stop->event-sort#sort">
+
+      <%= render partial: "events/event_card", collection: @events.not_hidden, as: :event %>
+
+      <%= link_to apply_path, class: "link-reset" do %>
+        <li class="card card--hover bold font-brand flex items-center justify-center h-full min-h-[8rem]" style="max-width: calc(100vw - 2rem)">
+          <div class="center">
+            <div class="pop success mx-auto flex mb-1">
+              <%= inline_icon "plus", size: 28 %>
             </div>
-          </li>
-        <% end %>
+            New business
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="card center flex flex-col items-center justify-center gap-2 py-10 mt-2">
+      <p class="h3 m-0">Ready to start your first business?</p>
+      <p class="muted m-0">List what you sell, get paid, and keep track of it all in one place.</p>
+      <%= link_to apply_path, class: "btn bg-success mt2" do %>
+        <%= inline_icon "plus" %>
+        New business
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @events.hidden.any? %>
+    <details class="w-full text-left mt-4">
+      <summary class="cursor-pointer muted">Hidden businesses</summary>
+      <ul class="grid grid--medium-narrow text-left mt-2">
+        <%= render partial: "events/event_card", collection: @events.hidden, as: :event %>
       </ul>
-    <% end %>
+    </details>
+  <% end %>
 
-    <% if @events.hidden.any? %>
-      <details class="w-full text-left">
-        <summary><h4 class="inline-block pb-0 border-none muted">Hidden businesses</h4></summary>
-        <ul class="grid grid--medium-narrow text-left mt-0">
-          <%= render partial: "events/event_card", collection: @events.hidden, as: :event %>
-        </ul>
-      </details>
-    <% end %>
+  <%# FUIME-DISABLED: Hack Club teenager raffle promo (upstream branding). %>
+  <%# FUIME-DISABLED: "Explore Hack Club" promo cards (upstream branding). %>
 
-    <% if @events.empty? %>
-      <div class="center mt0 mb0 pt4 pb4 slate bold h3 mx-auto rounded-lg border flex flex-col w-full items-center justify-center">
-        <span>
-          Ready to start your first business?
-        </span>
-        <%= link_to apply_path, class: "btn bg-success mt2" do %>
-          <%= inline_icon "plus" %>
-          New business
-        <% end %>
-      </div>
-    <% end %>
+  <%# Latest Fuime announcement - hidden for now until we have announcements.
+    NOTE: an ERB comment tag ends at the first closing delimiter, so the
+    disabled markup below must contain no further ERB tags of its own.
+    Re-opening a tag here leaves a stray `end` that breaks the template.
 
-    <%# FUIME-DISABLED: Hack Club teenager raffle promo (upstream branding). %>
+    if @latest_hcb_announcement
+      render partial: "announcements/announcement_card",
+             locals: { announcement: @latest_hcb_announcement }
+    end %>
 
-    <%# Latest Fuime announcement - hidden for now until we have announcements.
-      NOTE: an ERB comment tag ends at the first closing delimiter, so the
-      disabled markup below must contain no further ERB tags of its own.
-      Re-opening a tag here leaves a stray `end` that breaks the template.
-
-      if @latest_hcb_announcement
-        render partial: "announcements/announcement_card",
-               locals: { announcement: @latest_hcb_announcement }
-      end %>
-
-    <%# FUIME-DISABLED: "Explore Hack Club" promo cards (upstream branding). %>
-
-    <% valid_contracts = current_user.contracts.sent.select { |contract| contract.party(:signee).present? } %>
-    <% if valid_contracts.any? %>
-      <h2 class="w-full text-left mt-4 pb-0 border-none">Pending forms</h2>
-      <p class="text-left my0 w-100 muted">Forms are sent to your email: <%= mail_to current_user.email %>.</p>
-      <div class="grid grid--narrow grid-cols-1 text-left w-full mt-2">
-        <%= render partial: "contracts/contract", collection: valid_contracts, as: :contract %>
-      </div>
-    <% end %>
+  <% if !card_grants_hidden && current_user.card_grants.activated.any? %>
+    <h2 class="user-home-section">Your grants</h2>
+    <div class="mixed-grid grid--spacious">
+      <% current_user.card_grants.includes(:stripe_card).activated.each do |grant| %>
+        <%= render "stripe_cards/stripe_card", stripe_card: grant.stripe_card, headless: true, show_purpose: true, href: card_grant_path(grant) %>
+      <% end %>
+      <% if current_user.card_grants.activated.size.odd? %>
+        <div></div>
+      <% end %>
+    </div>
   <% end %>
 
   <% if auditor_signed_in? %>
     <%= turbo_frame_tag(:admin_tools, src: admin_tools_path, loading: :eager, target: "_top", class: "w-full") do %>
-      <p>Loading admin tools</p>
+      <p class="muted">Loading admin tools…</p>
     <% end %>
   <% end %>
 </main>
