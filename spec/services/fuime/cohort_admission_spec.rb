@@ -96,7 +96,10 @@ RSpec.describe Fuime::CohortAdmission, :merchant_of_record do
       event.update!(business_category: "crafts")
 
       expect(event.accepts_payments?).to be(false)
-      expect(event.selling_blockers).to include(/service business/)
+      # Matched on the refused category rather than on the allowed ones: the
+      # allowlist is product copy that moves (digital was opened 2026-08-20), and
+      # what this example is actually about is that crafts stays out.
+      expect(event.selling_blockers).to include(/not crafts/)
     end
 
     # Admission is not a parent. Under MoR the guardian gate is at payout, and a

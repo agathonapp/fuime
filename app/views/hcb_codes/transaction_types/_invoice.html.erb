@@ -282,7 +282,11 @@
             +<%= invoice_payment_processor_fee %>
             <span class="muted">
               <% "Pending " unless @invoice&.fee_reimbursement&.t_transaction %>
-              (<%= link_to "learn more", "https://blog.hcb.hackclub.com/posts/were-making-payment-processing-fees-disappear-101088" %>)
+              <%# FUIME-DIVERGENCE: was a "learn more" link to
+                  blog.hcb.hackclub.com announcing HCB's fee change — another
+                  company's announcement, on a Fuime ledger page, about a policy
+                  that is not Fuime's. Dropped rather than repointed: Fuime has
+                  no equivalent post, and a dead link is worse than no link. %>
             </span>
           </span>
         </p>
@@ -297,8 +301,8 @@
             <% if @hcb_code.fee_waived? %>
               Fees were waived on this transaction — enjoy!
             <% end %>
-            The funds from this invoice payment are immediately reflected in your account balance.
-            (<a href="https://blog.hcb.hackclub.com/posts/oh-yeah-deposits-are-instant-now-238700">learn more</a>)
+            <%# Same as above — the "learn more" pointed at HCB's blog. %>
+            The money from this invoice payment shows in your balance right away.
           </p>
         </section>
       <% end %>

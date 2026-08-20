@@ -68,7 +68,13 @@ RSpec.describe InvoiceService::Create, type: :model do
               auto_advance: true,
               collection_method: "send_invoice",
               customer: nil,
-              description: "To support Scrapyard. Scrapyard is fiscally sponsored by The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit with the EIN 81-2908499.",
+              # FUIME: was the upstream "To support Scrapyard… fiscally sponsored by
+              # The Hack Foundation… 501(c)(3)… EIN 81-2908499." Invoice#set_defaults
+              # replaced it because that text asserted a sponsorship Fuime does not
+              # have, framed a purchase as a donation, and named another
+              # organisation's EIN on a document the PAYER receives. This spec was
+              # left behind by that change.
+              description: "Payment to Scrapyard, sold through Fuime. Fuime LLC is the seller of record.",
               due_date: due_date_unix,
               footer: "\n\n\n\n\nNeed to pay by mailed paper check?\n\nPlease pay the amount to the order of The Hack Foundation, and include 'Scrapyard (##{event.id})' in the memo. Checks can be mailed to:\n\nScrapyard (##{event.id}) c/o The Hack Foundation\n8605 Santa Monica Blvd #86294\nWest Hollywood, CA 90069",
               metadata: { event_id: event.id },

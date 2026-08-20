@@ -218,7 +218,7 @@ module Fuime
 
       cpt = ::CanonicalPendingTransaction.create!(
         date: raw.date,
-        memo: "Fuime platform fee (#{::Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT}%)",
+        memo: fee_memo_for(event, fee_cents, gross_cents),
         amount_cents: raw.amount_cents,
         raw_pending_donation_transaction_id: raw.id,
         fronted: false
@@ -234,6 +234,37 @@ module Fuime
       )
 
       raw
+    end
+
+    # What the fee line says it charged — which must be what it actually charged.
+    #
+    # This read Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT, the HEADLINE
+    # rate, on every venture. That constant is prose for the FAQ and the Terms; it
+    # knows nothing about the venture's plan. A venture on Free (7%) was charged
+    # $1.75 on a $25 sale and shown a line reading "Fuime platform fee (5%)" — the
+    # right money under a wrong label, which is the more corrosive half, because the
+    # label is what a teenager checks the maths against.
+    #
+    # Exactly the bug #platform_fee_cents was already fixed for once: the amount was
+    # moved onto Event#fuime_fee_cents_on and the label was left behind. So this
+    # reads the same plan the money came from.
+    #
+    # The floor gets its own wording rather than a computed percentage. When
+    # Event::Plan::MINIMUM_FEE_CENTS bites, the effective rate on a $5 sale is 10%,
+    # and printing "10.0%" would describe a rate Fuime does not charge and cannot be
+    # found on any pricing page. Naming the minimum is both true and answers the
+    # question the reader actually has.
+    def fee_memo_for(event, fee_cents, gross_cents)
+      percentage_fee = (gross_cents * event.revenue_fee).round
+
+      if fee_cents > percentage_fee
+        "Fuime platform fee (#{ActionController::Base.helpers.number_to_currency(fee_cents / 100.0)} minimum)"
+      else
+        # Event#revenue_fee, not plan.revenue_fee_label: inside a school programme
+        # the school's terms govern and the student sub org's own plan says
+        # something different. Same resolution the money used. See Event#billing_plan.
+        "Fuime platform fee (#{ActionController::Base.helpers.number_to_percentage(event.revenue_fee * 100, precision: 1)})"
+      end
     end
 
     # Prefer the fee Stripe recorded at checkout, so the ledger matches what the

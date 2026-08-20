@@ -298,6 +298,7 @@ module EventsHelper
     },
     {
       name: "Invoices",
+      module_prefix: "invoices",
       path_proc: ->(event_id) { event_invoices_path(event_id:) },
       tooltip: "Collect sponsor payments",
       icon: "payment-docs",
@@ -324,7 +325,22 @@ module EventsHelper
       icon: "card",
       data: { tour_step: "cards" },
       symbol: :cards,
-      available_proc: ->(event) { policy(event).card_overview? }
+      # FUIME: also gated on card issuing being permitted at all.
+      #
+      # `card_overview?` is `plan.cards_enabled?`, and Event::Plan::Standard's
+      # feature list is "everything minus card_grants and disbursements" — so
+      # `cards` is ON for every ordinary venture and this item showed to every
+      # operator. It became visibly wrong the moment STRIPE_MODE went live:
+      # Fuime::Features.card_issuing_permitted? is `!StripeService.live?`, so
+      # cards are now off, and the nav was advertising a feature the product does
+      # not have and has no funding rail for (PLATFORM_REVIEW "what exists").
+      #
+      # This item has no `module_prefix` and cannot be hidden by
+      # Fuime::DisabledModules — its route is events#card_overview, which is not a
+      # card controller — so the gate has to be here.
+      available_proc: lambda { |event|
+        policy(event).card_overview? && ::Fuime::Features.card_issuing_permitted?
+      }
     },
     {
       name: "Grants",

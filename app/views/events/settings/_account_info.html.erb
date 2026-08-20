@@ -3,11 +3,16 @@
 <p>
   <%= event.name %> is on the <strong><%= event.plan.label %></strong> plan.
 
+  <%# FUIME-DIVERGENCE: "fee waiver" linked to a Hack Club blog post announcing
+      HCB's hackathon-grant programme — not Fuime's, and not something a Fuime
+      operator can act on. Unlinked rather than repointed: there is no Fuime
+      equivalent to point at, and a dead "#" href is worse than plain text.
+
+      The plan and its expiry date are left as they are. This branch only renders
+      for Event::Plan::HighSchoolHackathon, an upstream plan no Fuime venture is
+      on, so rewriting the sentence would be inventing copy for a state that
+      cannot occur (CLAUDE.md Rule 2 — disable, don't delete). %>
   <% if event.plan.is_a?(Event::Plan::HighSchoolHackathon) %>
-    The <strong><a
-          href="https://blog.hcb.hackclub.com/posts/hackathon-grants-and-0-fee-241524">fee waiver</a> expires
-      </strong>
-      December 31st, 2024.
-    </p>
+    The <strong>fee waiver expires</strong> December 31st, 2024.
   <% end %>
 </p>

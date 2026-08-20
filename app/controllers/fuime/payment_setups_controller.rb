@@ -295,6 +295,20 @@ module Fuime
       @event = Event.find_by!(slug: params[:event_slug])
     end
 
+    # See the before_action for why the whole controller is off under MoR.
+    #
+    # `skip_authorization` because Pundit's after_action still runs on a filtered
+    # request, and this redirect happens before any authorize call — without it
+    # every redirect here raises AuthorizationNotPerformedError instead.
+    def retired_under_merchant_of_record
+      return unless ::Fuime::Features.merchant_of_record?
+
+      skip_authorization
+      redirect_to fuime_payout_method_path(event_slug: @event.slug),
+                  notice: "Fuime handles taking payments for you now — " \
+                          "all you need to tell us is where to send your money."
+    end
+
     def authorize_setup
       authorize @event, :setup_payments?
     end

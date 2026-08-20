@@ -4996,3 +4996,125 @@ They rely on `available_proc` instead — `event.payment_account&.cards_profile?
 and `EventPolicy#card_overview?` (`plan.cards_enabled?`) for the upstream one. Neither consults
 `card_issuing_permitted?`. Whether they actually surface in production depends on plan features
 and the connected account's profile, which was not checked.
+
+---
+
+## 2026-08-20 — Retiring the Connect screens properly: hiding a nav item is not retiring a page.
+
+Reported from the live app: a merchant-of-record venture (Fuime HQ) was showing the Connect
+onboarding screen, reading *"Before Fuime HQ can accept money, a parent or guardian needs to set
+up a payment account; money settles to their bank, not to Fuime."* Under MoR **every clause of
+that is false** — there is no account to open, the money settles to Fuime as the seller, and no
+parent can do anything about it.
+
+`20fee1cd5` hid the "Payments" nav item under MoR. That was right and it was half the job. Three
+places still read `Event#payment_account` — the Connect account, which under MoR is **nil forever
+by design** — to decide what to say:
+
+1. **`Fuime::PaymentSetupsController`** stayed reachable at its URL for every action. A page that
+   cannot be reached from the nav but can be reached from a link is still a page people reach.
+   Now a `before_action` redirects the whole controller to `/:event_slug/payout-method` under MoR
+   — redirected rather than 404'd, because somebody landing there is asking a real question
+   ("how does money reach me?") and that screen is the answer.
+2. **The payouts page** gated on `@connected_account`, so `account.blank?` was permanently true
+   and it told every operator to go and set up a Stripe account, linking to the screen above.
+3. **The public storefront** fell to its else branch permanently and told *strangers* that a
+   parent had not finished setting something up. Worst of the three: false, and said on behalf of
+   a venture whose actual reason is a vetting or eligibility decision about a child's business.
+   Under MoR it now shows only the harmless generic line, and still says nothing about why.
+
+### The fix that matters beyond this bug
+
+**`Event#payout_setup_blockers`** is new and is now the single source for "why can't money leave?".
+`Fuime::PayableAssessment` was duplicating that reasoning for the batch path; it now reads the same
+list and takes the first entry. Two copies of that question is exactly the pair that drifts, and
+the failure mode is a teenager being told to fix something different from what is actually
+stopping them. Order is deliberate — destination first, because it is the half the operator can
+fix themselves; a screen leading with "you need a parent" reads as a wall.
+
+`spec/requests/fuime_connect_screens_retired_spec.rb` (10 examples) covers all three surfaces in
+both models, including that the Connect path is untouched.
+
+### One thing this turn got wrong and corrected
+
+An earlier note in this log said a webhook signature bypass had been found. It had not — the local
+`FUIME_STRIPE_WEBHOOK_SECRET` is empty, so the endpoint was taking its documented unsigned
+development path, and the harness was signing with an empty secret. Recorded in the entry above.
+
+---
+
+## 2026-08-20 — HCB-era content still reaching Fuime users: emails, a PDF statement, and an invoice.
+
+Reported from a real email: the transparency-mode notice told a Fuime operator that the fields at
+risk of leaking contact info were **sponsor company names, ACH transfer recipients and check
+recipients** — three things `Fuime::DisabledModules` makes impossible — while omitting the one
+that actually can leak, the free text a buyer types at checkout and that lands in a ledger memo.
+
+The brand sweep (Milestone 3) covered strings. It did not cover **what the strings describe**, and
+it missed outbound links entirely. Fixed, in order of how badly it read:
+
+### The PDF statement was issued in another organisation's name
+
+`exports/transactions.pdf.erb` is live (`ExportsController#index`, `format.pdf`). It carried the
+**HCB logo from assets.hackclub.com**, the heading **"The Hack Foundation"**, and that entity's
+real street address — and closed with *"is fiscally sponsored by The Hack Foundation, a 501(c)(3)
+nonprofit with the EIN 81-2908499… restricted-fund provided by The Hack Foundation."*
+
+That is the artefact a family forwards to a parent, a school or an accountant, so it is the worst
+place for it. It is also the exact inverse of Fuime's structure: under MoR Fuime LLC is the
+**seller**, the money is Fuime's own revenue, and the operator holds a payable
+(MOR_MIGRATION_PLAN §1) — restating HCB's sentence tells a tax preparer something false about
+where a teenager's money came from.
+
+Now Fuime LLC, the Fuime logo, and the L5 standing disclosure. **⚠️ Deliberately no street
+address**: Fuime's registered address is not in this codebase (LAUNCH_SPEC §1.2) and inventing one
+on a financial statement would be a worse defect than omitting it. Also switched to
+`wicked_pdf_asset_base64`, the convention every other PDF here uses — a plain `image_tag` renders
+broken under wkhtmltopdf. Verified by rendering the template: no Hack Club references, logo
+embedded.
+
+### The invoice memo claimed charitable status to the payer
+
+`Invoice#set_defaults` defaulted to *"To support <venture>. <venture> is fiscally sponsored by The
+Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit with the EIN 81-2908499."* Invoices are
+**deliberately kept alive** for Fuime (money IN), so this is a live customer-facing document.
+Three faults, increasing: "to support" frames a purchase as a donation; the sponsorship is not
+Fuime's structure; and naming another organisation's EIN invites the payer to claim a deduction
+that does not exist.
+
+### Emails and pages pointing at Hack Club
+
+Every one of these fires on a **live** Fuime path:
+
+| Surface | Was |
+|---|---|
+| `event_mailer/transparency_mode_enabled` | disabled-module field list; "our blog post" → blog.hcb.hackclub.com |
+| `event_mailer/monthly_announcements_enabled` | same blog link; described "donations" summaries |
+| `announcement_mailer/notice` + `_explanation` | same blog link, on a live feature in the nav |
+| `contract/party_mailer/remind_cosigner` | "our website" → hackclub.com/**fiscal-sponsorship** — in the email a **parent** gets before signing |
+| `hcb_codes/transaction_types/_invoice` ×2 | HCB fee-change and instant-deposit blog posts |
+| `transactions/_fancy_transaction` | "we announced" → HCB's post about a change Fuime never made |
+| `events/settings/_account_info` | "fee waiver" → HCB hackathon-grant post |
+
+Links were **dropped rather than repointed** — Fuime has no blog, and a dead link is worse than
+none.
+
+### Found, not live, and left alone (Rule 2) — but worth knowing
+
+`app/helpers/marketing_helper.rb` still contains funder FAQ copy asserting *"You give to Fuime by
+Hack Club, legally The Hack Foundation, a registered 501(c)(3) public charity, so your deduction
+is immediate"* and *"Fuime is operated by The Hack Foundation… EIN 81-2908499."* Both are false of
+a for-profit LLC. **They are unreachable** — `MarketingController`'s `block_disabled_marketing_pages`
+is an unscoped `before_action`, so every marketing action redirects. That is one missing `only:`
+away from being served, which is why it is recorded here rather than left as a comment.
+
+Also noted, not fixed: `melanie_signature.png` (a Hack Club signatory) is embedded in
+`documents/verification_letter`, `fiscal_sponsorship_letter` and both transfer-confirmation
+letters. Those sit behind disabled modules; if any is ever revived it must not go out signed by
+somebody at another company.
+
+### Verification
+
+283 mailer/view/request/invoice examples green after the change; 1100 across the wider set with
+one pre-existing ordering failure (`public_activity/user_session/create_spec`, listed in
+known-failures.md's standing remainder — passes in isolation, on a clean tree and with this diff).

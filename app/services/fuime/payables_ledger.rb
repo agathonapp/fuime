@@ -125,7 +125,39 @@ module Fuime
     # and a caller deciding whether to claw back needs the real sign.
     # `#amount_owed_cents` is the display-safe version.
     def net_payable_cents
-      @net_payable_cents ||= event.balance_v2_cents
+      @net_payable_cents ||= event.balance_v2_cents + unsettled_fuime_fee_cents
+    end
+
+    # Fuime's cut of sales that have not settled yet, as a positive number.
+    #
+    # ── Why the payable has to add this back ────────────────────────────────
+    #
+    # A sale posts two pending lines together: the gross (+) and Fuime's fee (-).
+    # `balance_v2_cents` treats them asymmetrically, and correctly so on its own
+    # terms — pending INCOMING is excluded because Fuime does not front unsettled
+    # money, while pending OUTGOING is included because a commitment already made
+    # must not be spendable twice. Every other outgoing line Fuime posts really is
+    # a commitment: a card hold, a payout in flight.
+    #
+    # A fee on an unsettled sale is not. It is one half of a pair that settles as
+    # a unit, and counting it while its other half is excluded made a venture's
+    # first sale read as a debt: $25 in, and the dashboard said -$1.75 with
+    # `#in_arrears?` true and `#owed_sentence` explaining a refund that never
+    # happened. Verified against a real test-mode charge, 2026-08-20.
+    #
+    # Adding it back is self-correcting rather than a suppression: the moment
+    # Fuime::ConnectSettlementSweep settles the pair, the fee leaves this sum and
+    # arrives in `#fuime_fee_cents` on the settled side, and the payable moves in
+    # one step from 0 to gross-minus-fee. There is no window in which the fee is
+    # counted twice or not at all.
+    #
+    # Only fee lines, and only unsettled ones. A refund reversal genuinely does
+    # reduce what Fuime owes the moment it is known, and a settled fee is already
+    # inside `balance_v2_cents` where it belongs.
+    def unsettled_fuime_fee_cents
+      @unsettled_fuime_fee_cents ||= self.class.unsettled_sum_for(
+        event:, prefix: FUIME_FEE_PREFIX
+      ).abs
     end
 
     # The same figure floored at zero, for display.
@@ -151,8 +183,13 @@ module Fuime
     # Shown separately and never added to what is owed, because the honest sentence
     # is "this is coming, it is not payable yet". Conflating the two is how a user
     # concludes Fuime is holding a balance for them.
+    # Net of the fee on those same sales, because that is what will actually
+    # arrive. Showing the gross here while `#net_payable_cents` adds the fee back
+    # would promise a teenager $25 and then settle them $23.25, with the missing
+    # $1.75 explained nowhere.
     def pending_sales_cents
-      @pending_sales_cents ||= event.pending_incoming_balance_v2_cents
+      @pending_sales_cents ||=
+        event.pending_incoming_balance_v2_cents - unsettled_fuime_fee_cents
     end
 
     # ── The breakdown, which always sums to net_payable_cents ───────────────
@@ -207,7 +244,8 @@ module Fuime
     # operator looking at a figure $15 lower than their own arithmetic should be
     # able to see the $15 hold that caused it.
     def committed_cents
-      @committed_cents ||= event.pending_outgoing_balance_v2_cents.abs
+      @committed_cents ||=
+        (event.pending_outgoing_balance_v2_cents.abs - unsettled_fuime_fee_cents)
     end
 
     # Whatever the named categories do not account for.
@@ -351,6 +389,24 @@ module Fuime
       scope = scope.where(canonical_transactions: { date: on_or_after.to_date.. }) if on_or_after
 
       scope.sum(:amount_cents)
+    end
+
+    # The pending twin of .settled_sum_for.
+    #
+    # Pending lines carry their key on the raw row rather than in the memo, so this
+    # cannot share the settled query no matter how similar the intent — and the
+    # `.where.missing(:canonical_pending_settled_mapping)` clause is what makes
+    # "unsettled" mean it, rather than "posted recently".
+    def self.unsettled_sum_for(event:, prefix:)
+      escaped = ActiveRecord::Base.sanitize_sql_like(prefix)
+
+      ::CanonicalPendingTransaction
+        .joins(:canonical_pending_event_mapping)
+        .joins(:raw_pending_donation_transaction)
+        .where(canonical_pending_event_mappings: { event_id: event.id })
+        .where("raw_pending_donation_transactions.donation_transaction_id LIKE ?", "#{escaped}%")
+        .where.missing(:canonical_pending_settled_mapping)
+        .sum(:amount_cents)
     end
 
     private

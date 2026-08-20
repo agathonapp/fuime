@@ -8,16 +8,34 @@
   </script>
 </head>
 
+<%# FUIME-DIVERGENCE: this letterhead was Hack Club's, on a document Fuime
+    users download.
+
+    It carried the HCB logo from assets.hackclub.com, the heading "The Hack
+    Foundation", and that entity's real street address — so every financial
+    statement a Fuime venture exported was a document issued in another
+    organisation's name, from an address that is not Fuime's. That is a
+    trademark problem (CLAUDE.md Rule 7 covers the code, not the brand) and a
+    misrepresentation problem, and it is worse here than in a page because a
+    statement is the artefact people forward to a parent, a school or an
+    accountant.
+
+    ⚠️ NO STREET ADDRESS. Fuime's registered address is not in this codebase
+    (LAUNCH_SPEC §1.2 — entity formation), and inventing one on a financial
+    statement would be a worse defect than omitting it. Add it here once the
+    entity exists; the support address stands in until then. %>
 <div>
-  <img src="https://assets.hackclub.com/hcb-light.png" height="100px" />
+  <%# wicked_pdf_asset_base64, matching every other PDF template here. A plain
+      image_tag renders a broken image under wkhtmltopdf, which cannot resolve
+      the asset path — and a broken logo on a financial statement is its own
+      kind of unprofessional. %>
+  <%= image_tag(wicked_pdf_asset_base64("fuime-logo.png"), height: 60) %>
   <div>
     <h1 style="margin-block: 0">
-      The Hack Foundation
+      Fuime LLC
     </h1>
     <h4 style="margin-block: 0">
-      8605 Santa Monica Blvd #86294
-      <br />
-      West Hollywood, CA, 90069
+      support@fuime.com
     </h4>
   </div>
   <div>
@@ -68,8 +86,30 @@
   </tr>
 </table>
 
+<%# FUIME-DIVERGENCE: this footer asserted a fiscal-sponsorship relationship
+    that does not exist, on a document a family may hand to an accountant.
+
+    It named another organisation's EIN and described the venture's money as a
+    "restricted fund provided by The Hack Foundation" — HCB's actual structure,
+    and the reason HCB may hold the money at all. Fuime's structure is the
+    opposite: under merchant-of-record Fuime LLC is the SELLER, the money is
+    Fuime's own revenue from its own sale, and what the operator holds is a
+    payable (MOR_MIGRATION_PLAN §1). Restating HCB's sentence here would tell a
+    tax preparer something false about where a teenager's money came from.
+
+    L5 also binds this line: no "deposits", no "funds held", nothing implying a
+    bank. It says what the document is and stops. %>
 <p>
-  <i><%= @event.name %></i> is fiscally sponsored by The Hack Foundation, a 501(c)(3) nonprofit with the EIN 81-2908499. The above transactions are from <i><%= @event.name %></i>'s restricted-fund provided by The Hack Foundation.
+  <i><%= @event.name %></i> sells through Fuime. Fuime LLC is the seller of
+  record on those sales and settles the venture&apos;s share to it; this statement
+  lists that activity for the period shown.
+</p>
+
+<p>
+  <i>
+    Fuime is a financial technology company, not a bank. Fuime does not hold
+    deposits.
+  </i>
 </p>
 
 <style>

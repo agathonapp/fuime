@@ -26,10 +26,88 @@ RSpec.describe Fuime::PayablesLedger do
   end
 
   # One realistic sale: $100 in, Fuime's 4% out, Stripe's ~2.9%+30¢ out.
+  # Returns the lines keyed by amount, so an example that needs to pair a settled
+  # line with its pending twin can find it without re-deriving the memo.
   def sale(intent: "pi_1", gross: 100_00, fee: 4_00, processing: 3_20)
-    post_line("fuime_#{intent}", gross, memo: "Payment from a customer")
-    post_line("fuime_fee_#{intent}", -fee, memo: "Fuime platform fee (4%)")
-    post_line("fuime_stripefee_#{intent}", -processing, memo: "Stripe processing fee")
+    lines = [
+      post_line("fuime_#{intent}", gross, memo: "Payment from a customer"),
+      post_line("fuime_fee_#{intent}", -fee, memo: "Fuime platform fee (4%)"),
+      post_line("fuime_stripefee_#{intent}", -processing, memo: "Stripe processing fee"),
+    ]
+    lines.index_by(&:amount_cents)
+  end
+
+  # Fuime: the pending window — the state a venture is in for the days between a
+  # sale succeeding and Stripe releasing the funds.
+  #
+  # This is not an edge case. Every venture is in it immediately after its first
+  # sale, and Fuime's Stripe account releases funds a week out, so it is where a
+  # Founders Weekend operator spends their whole first week.
+  describe "a sale that has not settled yet" do
+    # Pending lines carry their key on the raw row, not in the memo — the same
+    # pair Fuime::PaymentWebhookHandler posts when a payment succeeds.
+    def pending_line(key, amount_cents, memo: "Line")
+      raw = RawPendingDonationTransaction.create!(
+        donation_transaction_id: key, amount_cents:, date_posted: Date.current
+      )
+      cpt = CanonicalPendingTransaction.create!(
+        date: raw.date, memo:, amount_cents: raw.amount_cents,
+        raw_pending_donation_transaction_id: raw.id, fronted: false
+      )
+      CanonicalPendingEventMapping.create!(
+        canonical_pending_transaction_id: cpt.id, event_id: event.id
+      )
+      cpt
+    end
+
+    before do
+      pending_line("fuime_pi_9", 25_00, memo: "Payment from a customer")
+      pending_line("fuime_fee_pi_9", -1_75, memo: "Fuime platform fee (7.0%)")
+    end
+
+    # The regression, found 2026-08-20 against a real test-mode charge one day
+    # before the first live sales. `Event#balance_v2_cents` excludes pending
+    # INCOMING (Fuime fronts nothing) but includes pending OUTGOING (a commitment
+    # already made must not be spendable twice). Both rules are right on their own
+    # terms; applied to the two halves of one sale they made a venture's first
+    # sale read as a debt.
+    it "does not report a successful sale as money owed to Fuime" do
+      expect(payables.net_payable_cents).to eq(0)
+      expect(payables).not_to be_in_arrears
+      expect(payables.owed_sentence).not_to match(/refunded or disputed/i)
+    end
+
+    # The fee is one half of a pair that settles as a unit — it is not a card hold.
+    it "does not count the unsettled fee as a spending commitment" do
+      expect(payables.committed_cents).to eq(0)
+    end
+
+    # Promising $25 and settling $23.25 leaves $1.75 explained nowhere.
+    it "reports what is coming net of the fee on it" do
+      expect(payables.pending_sales_cents).to eq(23_25)
+    end
+
+    # The add-back must be a deferral, not a suppression. Once the pair settles the
+    # fee has to leave the pending sum and arrive on the settled side — otherwise
+    # this fix would simply have stopped charging the fee.
+    #
+    # Driven by creating the settled mapping, because that mapping's absence is
+    # exactly what `.unsettled_sum_for` keys on. Stubbing the method under test
+    # would assert only that the stub works.
+    it "hands the fee to the settled side once the sale settles" do
+      settled = sale(intent: "pi_9", gross: 25_00, fee: 1_75, processing: 0)
+
+      CanonicalPendingTransaction.find_each do |cpt|
+        CanonicalPendingSettledMapping.create!(
+          canonical_pending_transaction: cpt, canonical_transaction: settled.fetch(cpt.amount_cents)
+        )
+      end
+
+      expect(payables.unsettled_fuime_fee_cents).to eq(0)
+      expect(payables.fuime_fee_cents).to eq(1_75)
+      expect(payables.gross_sales_cents).to eq(25_00)
+      expect(payables.net_payable_cents).to eq(23_25)
+    end
   end
 
   describe "the breakdown" do
