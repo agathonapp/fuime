@@ -4919,3 +4919,52 @@ and `spec/requests/fuime_waitlist_admin_spec.rb` (the only specs referencing the
 helpers/copy) 34/34 green. Rendered all four states in a browser against the dev database:
 admin dashboard, plain-user empty state, a business with ledger history (Insights shown), and a
 business without (Insights correctly absent).
+
+---
+
+## `fuime:reset` — clearing the inherited HCB data (2026-08-19)
+
+`lib/tasks/fuime_reset.rake`. `fuime:reset_preview` reports; `fuime:reset[email]` acts and
+refuses to run without `FUIME_RESET_CONFIRM=yes-wipe-this-database`.
+
+**Kept:** users, sessions, logins, guardianships, legal entities and their KYC, Flipper flags,
+PaperTrail versions, Ahoy analytics. People keep their accounts and their verification.
+
+**The twelve organisations that cannot be deleted.** `EventMappingEngine::EventIds` names them by
+hardcoded integer id — INCOMING_FEES routes every fee, NOEVENT catches unmapped money. Deleting
+the rows means rewriting the ledger engine's constants, which Rule 3 forbids. They keep their
+ids, take Fuime names, and are hidden.
+
+**Three things the implementation had to learn the hard way, all now encoded:**
+
+- *The ledger tables cannot be deleted in any order.* `fees` → `canonical_event_mappings` →
+  `canonical_transactions` and back again. One `TRUNCATE` naming all of them together does it,
+  deliberately **without** `CASCADE` so a table outside the list gets named in an error rather
+  than quietly emptied. Its referential closure pulls in five more tables than the obvious list
+  — including `ledgers`, so primary ledgers are rebuilt afterwards (`Event` has
+  `after_create :create_ledger`; an org without one is broken).
+- *The list of tables referencing `events` must not be written by hand.* There are 57 across 59
+  columns, and three attempts each shipped missing one — `announcements`,
+  `guardian_verifications`, `payout_requests` — surfacing only as a mid-run foreign-key
+  violation. It is derived from `information_schema` now.
+- *Deletion order within those is also unsolvable by sorting.* `fuime_offers` → `fuime_api_keys`,
+  `checks` → `lob_addresses`. `delete_until_settled` retries each statement in its own savepoint
+  until a pass makes no progress, which is a real cycle and says so.
+
+Everything runs in one transaction, so a violation rolls back rather than half-erasing a ledger.
+
+### Applied
+
+- **Local `bank_development`:** 18 organisations and 13 ledger tables cleared.
+- **Production `fuime_production`:** 5 organisations (Sunset Cookies, Fuime, Maya's Cookies,
+  Alpha School Santa Barbara, Angus's Money — all internal test data, no third party's org), 22
+  ledger tables, 3 unattached applications, 1 abandoned incomplete subscription. Nothing real had
+  ever reached the canonical ledger: the four rows were HCB seed fixtures ("George Clooney
+  Speaking Fee", "Cruise Ship Rental") and the twelve pending rows were internal transfers.
+  17 users, 3 guardianships and 23 legal entities untouched.
+
+Both databases were dumped first, to `~/fuime-db-backups/`. The production dump needed a
+Postgres 18 client (`docker run --rm postgres:18 pg_dump`); the host client is 14. Reaching the
+database at all needed a temporary entry in Render's IP allow list for `fuime-postgres`, **added
+and removed again** — if `render psql` reports "IP address not in allow list", that is the
+expected resting state, not a fault.
