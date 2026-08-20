@@ -664,3 +664,26 @@ the ~460 examples this branch adds:
 green" — those were *subsets* (`spec/models/fuime`, `spec/services/fuime`, and friends), not the
 repository. Two of this branch's own request specs were red for a day precisely because a subset
 run cannot see a gate's blast radius. When the change touches a gate, run the whole thing.
+
+---
+
+## 2026-08-20 — `fuime/vetting-from-application` @ `d73a3626e` (sale-terms acknowledgement)
+
+**3389 examples, 13 failures, 17 pending**, decomposing as:
+
+| Count | Spec | Cause |
+|---|---|---|
+| 4 | `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — Apple Silicon `wkhtmltopdf`. The standing baseline. |
+| 9 | `fuime_payment_links_api_spec` | **Not a baseline failure.** This run predates the fix in the same commit; the file is 40/40 green after it. |
+
+So the real baseline on this tree is **4**, all environmental. Recorded with the
+decomposition rather than as "13 failures", because a bare count here would be read by
+the next session as a regression.
+
+**What the run was actually for.** The change adds a gate on publishing an offer, and a
+gate's blast radius is wider than the files it edits — the lesson `20fee1cd5` taught by
+silently reddening two request specs, and `fuime_business_category_spec` taught again.
+The question was "what else publishes offers?" The answer was exactly one thing, the
+payment-links API, and it was found this way rather than by reading code: **`Fuime::Offer
+.for_amount!` calls `publish!` itself**, so the API never reached the controller gate.
+Nine failures pointed straight at it.

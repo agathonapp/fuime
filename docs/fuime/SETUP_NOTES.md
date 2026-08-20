@@ -2,6 +2,62 @@
 
 ## Handoff (most recent first)
 
+**2026-08-20 — Fuime is LIVE. Real Stripe, real money, merchant-of-record on.**
+
+`app.fuime.com` runs `c97827653` with `STRIPE_MODE=live`, live keys on Fuime's own account
+(`acct_1TznaN2Uz4P3wrXO`, `charges_enabled`), `FEATURE_MERCHANT_OF_RECORD=true`, storage on
+Cloudflare R2, and a live webhook endpoint whose secret went straight from Stripe's API into
+Render. Founders Weekend is Friday 2026-08-21, ~50 teens, ages 13+.
+
+**⚠️ The Render Blueprint is NOT syncing.** `STRIPE_MODE` and `ACTIVE_STORAGE_SERVICE` were
+declared in `render.yaml` with literal values and were **unset on both services**. Every
+`render.yaml` env change is therefore documentation only — the live values were set through the
+Render API (the CLI has no env-var command; the session token in `~/.render/cli.yaml` works
+against `api.render.com`). **Fix the Blueprint link before trusting that file again.**
+
+**Storage was silently ephemeral until 2026-08-19.** `ACTIVE_STORAGE_SERVICE` unset meant uploads
+went to the container filesystem and were destroyed every deploy. Now R2 (`S3__ENDPOINT` +
+`region: auto`; the bucket must NOT appear in the endpoint, `force_path_style` appends it).
+
+**The legal position, honestly.** There is no counsel memo. `FUIME_MOR_COUNSEL_MEMO` cites
+`docs/fuime/MOR_RISK_ACCEPTANCE.md`, which records the structure, ranks §7 Q1/Q2/Q4, and states
+that no attorney has reviewed any of it. **Q2 — the independent-contractor characterisation — is
+the sharp one and gets sharper at a 13-year floor**, because FLSA child-labor rules are far
+stricter under 14 than at 16. One paid hour with a payments attorney on Q2 is worth more than any
+further code. Do not add anything that sets rates, assigns customers, or ranks operators.
+
+**Shipped so the model is at least true and disclosed:** buyer-facing seller-of-record copy on
+the storefront and payment page, terms §8 (Fuime LLC sells, Fuime refunds, Fuime answers the
+chargeback, 14-day window confirmed by the founder), a plain-language operator panel, and a
+recorded acknowledgement gated on publishing — **enforced on both HTTP paths**, because
+`Fuime::Offer.for_amount!` publishes directly and the API bypassed the controller gate.
+
+**Also fixed: terms §7 still told customers "no real payments are processed"** while live money
+moved. That is L8 pointed at buyers. A spec greps for the sentence now.
+
+**⚠️ The boot-time safety rails print NOTHING in production.** Ruled out all three documented
+causes: `FUIME_SKIP_SAFETY_CHECK` unset, env is production, `SECRET_KEY_BASE_DUMMY` is inline on
+the Docker `RUN` and does not leak. Warning-level logs *do* reach Render (deprecations and Puma
+warnings appear), so `Rails.logger.warn` works and the block genuinely is not reporting.
+**Treat its silence as "not protecting you", never as a pass.** Unexplained — next session's best
+first task.
+
+**Still not done: nobody has driven signup → paid sale in a browser.** Everything is asserted at
+the request and model layer.
+
+**Rotate the secrets pasted into the 2026-08-19 session:** the `sk_live_…` Stripe key, the R2
+secret access key, and the `cfat_…` Cloudflare token (that one is R2-scoped and cannot read DNS).
+
+**One DNS trap, already fixed but it will recur:** `*.fuime.com` is a wildcard pointing at
+Vercel. When the explicit `app` record went missing on 2026-08-19, `app.fuime.com` fell through to
+the wildcard and returned Vercel's `DEPLOYMENT_NOT_FOUND` — a total outage that looked like an app
+failure. Either scope that wildcard or enumerate the subdomains.
+
+**Recommended before payouts open (week of Aug 24):** make the guardian the **payee**, not merely
+the approver. It is the one idea worth taking from the Founders School precedent and the cheapest
+reduction of both Q2 and L2 voidability.
+
+
 **2026-08-19 (later) — CI green: the 16 pre-existing RSpec failures.**
 The hardening PR re-sharded the suite so every shard carried a failure
 that already existed on `main`. Specs were stale against current Fuime
