@@ -85,7 +85,7 @@ RSpec.describe Fuime::StorefrontsController, "blocker privacy", type: :controlle
       get :show, params: { slug: event.slug }
 
       expect(response).to have_http_status(:ok)
-      expect(rendered_text).not_to match(/service businesses only/i)
+      expect(rendered_text).not_to match(/service and digital businesses/i)
       expect(rendered_text).not_to include("Maya Operator is")
       expect(rendered_text).not_to match(/\bis 15\b/)
     end

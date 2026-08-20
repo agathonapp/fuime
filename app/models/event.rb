@@ -905,6 +905,53 @@ class Event < ApplicationRecord
     Fuime::OperatorEligibility.new(event: self).blockers
   end
 
+  # Fuime: why money cannot leave this venture yet, under merchant-of-record.
+  #
+  # ── Why this lives here rather than in the payout run ───────────────────────
+  #
+  # Two places need the same answer and they are not the same code path.
+  # Fuime::PayableAssessment asks it when generating a batch, where no controller
+  # or policy is consulted at all; the payouts PAGE asks it to tell an operator
+  # what to do next. Before this method the page did not ask at all — it gated on
+  # `payment_account`, the Connect account, which under MoR is nil forever. So a
+  # venture that simply had no payout destination yet was told "a parent or
+  # guardian needs to set up this venture's payment account", pointing at a Stripe
+  # onboarding screen that MoR has retired. Correct sentence, wrong model.
+  #
+  # Empty under Connect, where the money is already in the family's own Stripe
+  # account and none of this is Fuime's business.
+  #
+  # ── Order is deliberate ─────────────────────────────────────────────────────
+  #
+  # Destination first, because it is the one the operator can fix themselves. A
+  # screen that leads with "you need a parent" — which they may not be able to
+  # produce today — reads as a wall, and the thing they could have done in two
+  # minutes is underneath it.
+  #
+  # These name people ("Jane Doe"). Fine on the payouts page, which is the
+  # operator's and their guardian's own, and on a batch a Fuime admin reads.
+  # They must never reach a public page, exactly like #selling_blockers.
+  def payout_setup_blockers
+    return [] unless Fuime::Features.merchant_of_record?
+
+    blockers = []
+    blockers << "No payout destination set up yet." if fuime_payout_methods.usable.none?
+
+    # Per operator rather than via #has_overseeing_guardian?, which is satisfied
+    # by ONE guardian even when a second co-founder has none. Money is about to
+    # be sent on behalf of every one of them.
+    unless institutionally_sponsored?
+      unguarded = users.select { |u| u.minor_or_unknown_age? && !u.has_active_guardian? }
+
+      if unguarded.any?
+        blockers << "Needs a parent or guardian on the account before money can be sent " \
+                    "(#{unguarded.map(&:name).join(', ')})."
+      end
+    end
+
+    blockers
+  end
+
   # Fuime: record a human's decision about whether this operator may sell.
   #
   # The status alone is not the record. Under merchant-of-record Fuime is the

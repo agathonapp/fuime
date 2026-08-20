@@ -46,13 +46,34 @@ module Fuime
     #   other  — unknown by definition, and this list is an allowlist precisely
     #            so that "unknown" fails closed.
     #
-    # `digital` is the deliberate near-miss and the obvious first widening: a
-    # digital product carries no product liability and no shipping, so two of the
-    # three rationales above do not apply. It is excluded anyway because ~30
-    # states tax digital goods and the nexus tracking for that does not exist yet
-    # (§8.5 phase 8). Widening to `digital` is a one-word change here once it
-    # does — which is the reason this is a constant and not a scattered check.
-    ELIGIBLE_CATEGORIES = %w[services].freeze
+    # `digital` WAS the deliberate near-miss. Opened 2026-08-20 on the founder's
+    # call, and the reasoning is worth keeping because the note above was written
+    # as a "not yet" rather than a "no".
+    #
+    # Two of the three rationales for excluding physical goods never applied to
+    # digital: no product liability on a file, and no shipping. What remained was
+    # sales tax — roughly 30 states tax digital goods and SaaS, and under
+    # merchant-of-record that nexus accrues against Fuime's single entity rather
+    # than against fifty individual teenagers.
+    #
+    # What makes opening it recoverable rather than a one-way door: **the data
+    # needed to compute that nexus is already being captured.**
+    # Fuime::PaymentLinkService sets `billing_address_collection: "required"` on
+    # every MoR checkout for exactly this reason — nexus is measured on history and
+    # history cannot be backfilled. So what is missing is the registration and
+    # reporting (§8.5 phase 8), which can be built later FROM stored data. Opening
+    # the category now costs a reporting obligation to catch up on, not evidence
+    # that is gone.
+    #
+    # Still excluded and for unchanged reasons: `crafts` and `food` (physical
+    # goods, liability, licensing) and `other` (unknown by definition — this is an
+    # allowlist so that unknown fails closed).
+    #
+    # ⚠️ Monthly subscriptions are a SEPARATE thing and are not enabled by this.
+    # Fuime::Offer has no recurring concept and MoR checkout is `mode: "payment"`,
+    # so an operator can sell one-time access to a digital product but cannot yet
+    # bill for it monthly. See docs/fuime/MOR_RISK_ACCEPTANCE.md §5.
+    ELIGIBLE_CATEGORIES = %w[services digital].freeze
 
     # 16 by default, from the Fair Labor Standards Act rather than from product
     # taste.
@@ -203,7 +224,10 @@ module Fuime
       return "Choose what this venture sells before accepting payments." if category.nil?
       return nil if ELIGIBLE_CATEGORIES.include?(category)
 
-      "Fuime currently supports service businesses only, not #{category}."
+      # Names what IS supported rather than only what is not: a founder reading
+      # "not crafts" cannot tell whether they picked the wrong option or built the
+      # wrong business.
+      "Fuime supports service and digital businesses right now, not #{category}."
     end
 
     # One blocker per person, naming them.

@@ -141,44 +141,29 @@ module Fuime
 
       return "Payments are frozen on this venture." if event.financially_frozen?
 
-      # Under merchant-of-record Fuime owes this operator money and needs
-      # somewhere to send it. Generating a line for a venture with no verified
-      # destination would put an amount in an approved run that nobody can
-      # actually pay — and the batch's whole value is that a human reads it and
-      # every line on it is actionable.
+      # Under merchant-of-record: a destination to send to, and an adult to send
+      # on behalf of.
       #
-      # Only under MoR: on the Connect path the money is already in the family's
-      # own Stripe account and the destination is Stripe's business, not Fuime's.
-      if ::Fuime::Features.merchant_of_record? && event.fuime_payout_methods.usable.none?
-        return "No payout destination set up yet."
-      end
-
-      # THE guardian gate under merchant-of-record (L2).
+      # Both live on Event#payout_setup_blockers rather than here, because the
+      # payouts PAGE has to give an operator the same answer this run gives a
+      # Fuime admin. Two copies of "why can't this money move?" is exactly the
+      # kind of pair that drifts, and the failure mode is a teenager being told
+      # to fix something different from what is actually stopping them.
       #
-      # It used to sit in Fuime::OperatorEligibility, blocking a minor from
-      # selling at all. It was moved here on 2026-08-16 — read that class's
-      # #umbrella_scope_blockers for the full argument, including what the move
-      # costs. The short version: under MoR a teenager selling incurs no
-      # obligation and holds no account, so the adult is not needed yet; a
-      # teenager being PAID has a payee, a tax consequence and a debt that can run
-      # negative, so the adult is needed now.
+      # First blocker only: this method returns one reason, and the ordering
+      # there is deliberate — the destination is the one the operator can fix
+      # themselves, so it leads. Empty under Connect, where the money is already
+      # in the family's own Stripe account.
       #
-      # Deliberately the last structural check, so a venture missing both a parent
-      # and a destination is told about the destination first — that is the one
-      # the operator can fix themselves, and a run that reports the unfixable
-      # blocker first reads as a wall.
-      #
-      # Checked per operator rather than via Event#has_overseeing_guardian?, which
-      # is satisfied by ONE guardian even when a second co-founder has none. Money
-      # is about to be sent on behalf of every one of them.
-      if ::Fuime::Features.merchant_of_record?
-        unguarded = event.users.select { |u| u.minor_or_unknown_age? && !u.has_active_guardian? }
-
-        if unguarded.any? && !event.institutionally_sponsored?
-          return "Needs a parent or guardian on the account before money can be sent " \
-                 "(#{unguarded.map(&:name).join(', ')})."
-        end
-      end
+      # THE guardian gate under MoR (L2) is inside that list. It used to sit in
+      # Fuime::OperatorEligibility, blocking a minor from SELLING; it moved here
+      # on 2026-08-16 — read that class's #umbrella_scope_blockers for the full
+      # argument and what the move costs. The short version: under MoR a teenager
+      # selling incurs no obligation and holds no account, so the adult is not
+      # needed yet; a teenager being PAID has a payee, a tax consequence and a
+      # debt that can run negative, so the adult is needed now.
+      first = event.payout_setup_blockers.first
+      return first if first
 
       nil
     end

@@ -112,7 +112,7 @@ week of 2026-08-24.
 
 | Control | Where |
 |---|---|
-| Services only — no physical goods, no sales-tax nexus, no product liability | `Fuime::OperatorEligibility#category_blocker`, fails closed on blank |
+| Services **and digital** — no physical goods, so no product liability. **Sales-tax nexus on digital is now accepted, see §7** | `Fuime::OperatorEligibility#category_blocker`, fails closed on blank |
 | Human vetting of every operator before they may sell | `Event#operator_vetting_status` |
 | Human approval of every payout run | `Fuime::PayoutBatchService`, `mark_paid!` is a human assertion |
 | 7-day hold + 10% rolling reserve over a 90-day window | `Fuime::PayableAssessment` |
@@ -155,3 +155,51 @@ holding, spending directly from the figure, transfers between users, or issuing 
 it. Any of those is stored value whatever the label says.
 
 **The next thing to do is still one hour with a payments attorney on Q2**, not more code.
+
+---
+
+## 7. Scope change 2026-08-20: digital products are now allowed
+
+**Decided by the founder, recorded here because it moves a risk rather than removing one.**
+
+`ELIGIBLE_CATEGORIES` was `%w[services]`; it is now `%w[services digital]`. The driver is that
+the archetypal Founders Weekend business is a teenager who vibecodes a site and sells access to
+it — the example given was a real one, an AI drill-plan tool billing $9.99/month that had made
+$200. Under services-only that founder could not have published at all.
+
+**What this does not cost.** Two of the three reasons physical goods are excluded never applied
+to digital: there is no product liability on a file, and no shipping.
+
+**What it does cost, precisely.** Roughly 30 states tax digital goods and SaaS. Under
+merchant-of-record that nexus accrues against **Fuime's single entity**, not against fifty
+individual teenagers — which is the whole reason the original note deferred this to §8.5 phase 8.
+Fuime is not registered to collect or remit anywhere.
+
+**Why this is recoverable rather than a one-way door, and this is the part that made it
+reasonable to say yes:** the data needed to compute that nexus is **already being captured.**
+`Fuime::PaymentLinkService` sets `billing_address_collection: "required"` on every MoR checkout
+for exactly this reason — nexus is measured on history and history cannot be backfilled. So what
+is outstanding is registration and remittance, which can be built later *from stored data*.
+Opening the category incurs a reporting obligation to catch up on; it does not destroy the
+evidence needed to catch up.
+
+**Action this creates, and it has a clock:** economic-nexus thresholds are commonly $100K in
+sales or 200 transactions per state per year. At fifty operators that is not immediate, but it is
+also not far away, and the obligation attaches from the transaction that crosses it rather than
+from the day somebody notices. **Build the nexus report off `billing_address` before volume, not
+after.**
+
+## 8. Not enabled by §7: monthly subscriptions
+
+The same conversation asked for operator subscriptions. **They do not exist and were not added.**
+`Fuime::Offer` has no recurring concept and `Fuime::PaymentLinkService` uses `mode: "payment"`;
+`Fuime::SubscriptionService` is Fuime's *own* family-plan billing on the platform account, not a
+facility for operators to bill their customers. So an operator can sell **one-time** access to a
+digital product and cannot yet bill monthly for it.
+
+Not attempted the night before a real-money launch, deliberately. Recurring billing means invoice
+webhooks reaching the ledger, dunning on a failed card, proration, cancellation, and each of those
+touching a teenager's earnings figure. A half-built subscription that charges a stranger's card
+every month and does not post to the ledger is a worse outcome than not offering subscriptions.
+Scoped as the first post-Founders-Weekend feature.
+

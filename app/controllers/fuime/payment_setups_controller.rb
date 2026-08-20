@@ -56,6 +56,23 @@ module Fuime
     CARDS_FLAG = :fuime_cards_2026_08_04
 
     before_action :set_event
+    # Fuime: this whole controller is the Connect path, and MoR retires it.
+    #
+    # PR #68 hid the "Payments" nav item under merchant-of-record, which was
+    # right but only half the job — every action here stayed reachable at its
+    # URL, and anything still linking to it (the payouts page did) walked an
+    # operator straight into a screen telling them "a parent or guardian needs to
+    # set up a payment account; money settles to their bank, not to Fuime."
+    #
+    # Under MoR that sentence is false in every clause: there is no account to
+    # open, the money settles to FUIME as the seller, and no parent can do
+    # anything about it. A page that cannot be reached from the nav but can be
+    # reached from a link is still a page people reach.
+    #
+    # Redirected rather than 404'd, and to the payout-method screen specifically,
+    # because somebody who lands here is asking a real question — "how does money
+    # reach me?" — and under MoR that screen is the answer.
+    before_action :retired_under_merchant_of_record
     # `:create` was in this list but no such action exists on this controller (the flow is
     # show / new / return / refresh, and routes.rb defines exactly those four). Rails
     # raises AbstractController::ActionNotFound for a callback naming a missing action

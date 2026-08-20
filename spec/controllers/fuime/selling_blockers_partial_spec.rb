@@ -101,7 +101,7 @@ RSpec.describe Fuime::PayoutsController, "selling blockers" do
 
       get :index, params: { event_slug: venture.slug }
 
-      expect(rendered_text).to match(/service businesses only/)
+      expect(rendered_text).to match(/service and digital businesses/)
       # The exact string the storefront must never print. Here it is the point.
       expect(rendered_text).to include("Maya Operator")
     end

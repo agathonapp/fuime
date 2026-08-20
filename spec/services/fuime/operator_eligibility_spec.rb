@@ -93,12 +93,35 @@ RSpec.describe Fuime::OperatorEligibility do
       expect(eligibility.blockers).to be_empty
     end
 
+    # Opened 2026-08-20 on the founder's call. Asserted explicitly rather than left
+    # to the derived loop above, because "digital may sell" is now a product
+    # decision with a sales-tax consequence and should fail loudly if reverted by
+    # accident.
+    it "allows digital, opened 2026-08-20" do
+      event.update!(business_category: "digital")
+
+      expect(described_class.new(event:).blockers).to be_empty
+      expect(described_class.new(event:)).to be_eligible
+    end
+
+    # Widening to digital must not have widened anything else. `other` is the one
+    # that matters most: it is unknown by definition and this is an allowlist so
+    # that unknown fails closed.
+    it "still blocks crafts, food and other" do
+      %w[crafts food other].each do |category|
+        event.update!(business_category: category)
+
+        expect(described_class.new(event:)).not_to be_eligible,
+                                                   "expected #{category.inspect} to stay ineligible"
+      end
+    end
+
     it "blocks every category outside the Phase 1 slice" do
       (Event::BUSINESS_CATEGORIES - described_class::ELIGIBLE_CATEGORIES).each do |category|
         event.update!(business_category: category)
 
         expect(described_class.new(event:).blockers)
-          .to contain_exactly(/service businesses only/),
+          .to contain_exactly(/service and digital businesses/),
               "expected #{category.inspect} to be outside the Phase 1 slice"
       end
     end
@@ -304,7 +327,7 @@ RSpec.describe Fuime::OperatorEligibility do
       event.update!(business_category: "food")
 
       expect { described_class.new(event:).eligible! }
-        .to raise_error(described_class::Ineligible, /service businesses only/)
+        .to raise_error(described_class::Ineligible, /service and digital businesses/)
     end
   end
 end
