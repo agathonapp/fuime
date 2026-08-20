@@ -43,24 +43,37 @@ module UsersHelper
       }
     end
 
-    items << {
-      name: "Cards",
-      path: my_cards_path,
-      icon: "card",
-      tooltip: "See all your cards",
-      selected: selected == :cards,
-    }
-
-
-    if current_user&.events&.any? || current_user&.stripe_cards&.any? || current_user&.reimbursement_reports&.any?
+    # Fuime: both of these are card features, and card issuing is off whenever
+    # Stripe is live without a sponsor bank — which is the shipping posture.
+    #
+    # Cards was unconditional, so every teen in production got a nav entry to a
+    # page listing cards they cannot be issued. Receipts looks like a general
+    # document inbox but is not: MyController#inbox reads
+    # `transactions_missing_receipt` and `card_locking_overdue_charges`, then
+    # groups the results by `hcb.card` — with no cards it is permanently empty.
+    #
+    # Gated on the same predicate StripeCard#balance_available and
+    # DisabledModules use, so both come back with the feature rather than
+    # needing a third edit here (Rule 2, disable don't delete).
+    if Fuime::Features.card_issuing_permitted?
       items << {
-        name: "Receipts",
-        path: my_inbox_path,
-        icon: "receipt",
-        tooltip: "See transactions awaiting receipts",
-        selected: selected == :receipts,
-        async_badge: my_missing_receipts_icon_path,
+        name: "Cards",
+        path: my_cards_path,
+        icon: "card",
+        tooltip: "See all your cards",
+        selected: selected == :cards,
       }
+
+      if current_user&.events&.any? || current_user&.stripe_cards&.any? || current_user&.reimbursement_reports&.any?
+        items << {
+          name: "Receipts",
+          path: my_inbox_path,
+          icon: "receipt",
+          tooltip: "See transactions awaiting receipts",
+          selected: selected == :receipts,
+          async_badge: my_missing_receipts_icon_path,
+        }
+      end
     end
 
     items << {

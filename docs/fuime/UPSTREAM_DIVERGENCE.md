@@ -4968,3 +4968,31 @@ Postgres 18 client (`docker run --rm postgres:18 pg_dump`); the host client is 1
 database at all needed a temporary entry in Render's IP allow list for `fuime-postgres`, **added
 and removed again** — if `render psql` reports "IP address not in allow list", that is the
 expected resting state, not a fault.
+
+---
+
+## User nav: Cards and Receipts were dead in production (2026-08-19)
+
+`UsersHelper#users_nav`. Both are card features, and `card_issuing_permitted?` is
+`!StripeService.live?` unless a sponsor bank exists — production runs `STRIPE_MODE=live`, so
+card issuing is off there and both entries pointed at nothing a teen could use.
+
+Cards was added unconditionally. Receipts reads like a general document inbox and is not:
+`MyController#inbox` builds itself from `transactions_missing_receipt` and
+`card_locking_overdue_charges`, then groups the results by `hcb.card` — with no cards it is
+permanently empty. Both are now inside a `Fuime::Features.card_issuing_permitted?` guard, the
+same predicate `StripeCard#balance_available` and `DisabledModules` use, so they return with the
+feature (Rule 2).
+
+Reimbursements stays unconditional. It is deliberately absent from every disabled list — a teen
+reimbursing themselves for a business expense is a live flow and the money moves inside Fuime.
+
+Verified both branches: permitted -> `Home, Cards, Receipts, Reimbursements`;
+blocked -> `Home, Reimbursements`.
+
+**Not addressed, same class of bug:** the two org-level "Cards" entries in
+`EventsHelper::NAV_ITEMS` carry no `module_prefix`, so `fuime_module_hidden?` never filters them.
+They rely on `available_proc` instead — `event.payment_account&.cards_profile?` for the Fuime one
+and `EventPolicy#card_overview?` (`plan.cards_enabled?`) for the upstream one. Neither consults
+`card_issuing_permitted?`. Whether they actually surface in production depends on plan features
+and the connected account's profile, which was not checked.
