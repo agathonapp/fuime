@@ -141,7 +141,13 @@ RSpec.describe "seller of record disclosure", type: :request do
   # is that the record exists, names a person and a version, and that publishing is
   # actually blocked without it — a gate only enforced in a view is not a gate.
   describe "the sale-terms acknowledgement", :merchant_of_record do
-    let(:operator) { create(:user, birthday: 15.years.ago.to_date) }
+    # 17, not 15. These examples publish, and publishing runs the FULL eligibility
+    # check — spec/support/operator_age_floor.rb clears FUIME_MINIMUM_OPERATOR_AGE
+    # so the default of 16 applies, and a 15-year-old is refused by the age floor
+    # before the acknowledgement gate is ever reached. Using 15 here made this file
+    # assert that the gate works when what actually blocked the publish was the age
+    # check, which is the wrong test passing for the wrong reason.
+    let(:operator) { create(:user, birthday: 17.years.ago.to_date) }
     let!(:draft) { create(:fuime_offer, event: venture, name: "Dog walking") }
 
     before do
@@ -184,6 +190,21 @@ RSpec.describe "seller of record disclosure", type: :request do
            params: { acknowledged: "0" }
 
       expect(venture.reload.sale_terms_acknowledged_at).to be_nil
+    end
+
+    # The API is the other door. `Fuime::Offer.for_amount!` calls `publish!` itself,
+    # so it never touches Fuime::OffersController#publish — without its own check an
+    # API key could mint a live payable link for a venture that has affirmed
+    # nothing, and a control with a second door is not a control.
+    it "refuses to mint a payment link over the API before confirmation" do
+      _key, plaintext = ::Fuime::ApiKey.mint!(event: venture, created_by: operator, name: "test")
+
+      post "/api/fuime/v1/payment_links",
+           params: { amount: "45.00", name: "Consult" },
+           headers: { "Authorization" => "Bearer #{plaintext}" }
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body["error"]).to eq("terms_not_acknowledged")
     end
 
     # A substantive change to the terms re-asks rather than resting on agreement to
