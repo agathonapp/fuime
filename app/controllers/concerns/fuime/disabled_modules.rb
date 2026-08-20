@@ -39,7 +39,7 @@ module Fuime
     #   SPONSOR_BANKING_CONTROLLER_PREFIXES — until a sponsor bank exists.
     #   CARD_ISSUING_CONTROLLER_PREFIXES    — until cards have a funding rail.
     #
-    # Deliberately in NONE of them: invoices (money IN — Fuime's model), receipts,
+    # Deliberately in NONE of them: receipts,
     # comments, ledger/transactions, card grants' read views, or the admin console.
     #
     # NOTE: reimbursements are deliberately absent too. FUIME_HACKATHON_SPEC lists
@@ -58,6 +58,31 @@ module Fuime
       "donations",
       "donation",      # namespace
       "recurring_donations",
+
+      # FUIME 2026-08-20: invoices, and this one is a MONEY-CORRECTNESS decision
+      # rather than a product one — it was previously listed here as deliberately
+      # NOT disabled, "money IN — Fuime's model". That was true before Fuime had
+      # its own money-in path and is now actively dangerous.
+      #
+      # `Fuime::PayablesLedger` attributes a sale to an operator by MEMO PREFIX:
+      # gross sales are `settled_sum("fuime_pi_")`, written only by Fuime's own
+      # payment recorders. An upstream HCB invoice payment writes an
+      # invoice-shaped memo, so under merchant-of-record the money lands in
+      # FUIME'S Stripe balance, appears on the ledger, and **never becomes
+      # something Fuime owes the operator** — no payable, and no 5% fee either.
+      # A teenager would invoice a client, be paid, and have no record that Fuime
+      # holds their money.
+      #
+      # Offers and payment links are the money-in path now and they are wired
+      # correctly. Invoices are a stale second door that mis-accounts, so they are
+      # closed rather than left to be discovered by a founder chasing $400.
+      #
+      # Re-enable only alongside a recorder that writes the `fuime_pi_` prefix and
+      # takes the fee — at which point this comment is the specification.
+      "invoices",
+      # The v4 API twin. Blocking only the HTML controller would leave the same
+      # capability open on a different path — asserted by disabled_modules_spec.
+      "api/v4/invoices",
       "card_grants",
       "card_grant",    # namespace
 

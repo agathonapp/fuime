@@ -34,7 +34,38 @@
 
 <% account = @connected_account %>
 
-<% if account.blank? || !account.ready_for_payouts? %>
+<%# FUIME: why money cannot leave, and the two models answer it differently.
+
+    This block used to read `@connected_account` unconditionally. Under
+    merchant-of-record that account does not exist and never will — the venture
+    has no Stripe account, because Fuime is the seller — so `account.blank?` was
+    permanently true and every operator was told "a parent or guardian needs to
+    set up this venture's payment account first", linking to a Connect
+    onboarding screen MoR has retired. Right sentence, wrong model, and it sent
+    people to a page that could not help them.
+
+    Under MoR the real gates are a verified payout destination and a guardian,
+    and they come from Event#payout_setup_blockers, which is the same list
+    Fuime::PayableAssessment refuses a payout run on. One source, so the page and
+    the run cannot tell an operator different things. %>
+<% if Fuime::Features.merchant_of_record? %>
+  <% payout_blockers = @event.payout_setup_blockers %>
+  <% if payout_blockers.any? %>
+    <%= render "application/callout", type: "warning", title: "Money can't be sent out yet" do %>
+      <ul class="mb-0">
+        <% payout_blockers.each do |blocker| %>
+          <li><%= blocker %></li>
+        <% end %>
+      </ul>
+      <%# The destination is the half the operator can fix themselves, so it gets
+          the link. The guardian half has no button — it is somebody accepting an
+          invite — and a link implying otherwise would be a dead end. %>
+      <p class="mb-0 mt1">
+        <%= link_to "Set where your money goes", fuime_payout_method_path(event_slug: @event.slug), class: "underline" %>.
+      </p>
+    <% end %>
+  <% end %>
+<% elsif account.blank? || !account.ready_for_payouts? %>
   <%= render "application/callout", type: "warning", title: "Money can't be sent out yet" do %>
     <p class="mb-0">
       <% if account.blank? %>

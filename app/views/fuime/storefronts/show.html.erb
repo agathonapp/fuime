@@ -174,8 +174,21 @@
             So the reason is named only when it is the harmless one. The operator
             sees the real blockers on their own authenticated pages. Never render
             Event#selling_blockers here — those strings state children's ages. %>
+        <%# Under merchant-of-record there is only ONE possible reason, and it is
+            the unsafe one.
+
+            The `payment_account` branch below is the Connect split: no account
+            means the guardian has not finished Stripe setup, which is harmless to
+            state. Under MoR no venture ever has that account, so this fell to the
+            else branch permanently and told every stranger that a parent had not
+            finished setting something up — false, and worse, said on behalf of a
+            venture whose actual reason is a vetting or eligibility decision about
+            a child's business.
+
+            So under MoR it says only the harmless generic line. The operator sees
+            the real blockers on their own authenticated pages. %>
         <p class="muted m-0">
-          <% if @event.payment_account&.ready_for_payments? %>
+          <% if Fuime::Features.merchant_of_record? || @event.payment_account&.ready_for_payments? %>
             <strong><%= @event.name %> isn't taking payments right now.</strong>
             Please check back soon.
           <% else %>

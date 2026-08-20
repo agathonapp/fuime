@@ -22,7 +22,11 @@ RSpec.describe EventsHelper, type: :helper do
     end
 
     it "hides nothing the blocker permits" do
-      expect(helper.fuime_module_hidden?("invoices")).to be(false)
+      # `invoices` used to be the example here and is now blocked (see
+      # Fuime::DisabledModules — an invoice payment never becomes an operator
+      # payable). `receipts` is the durable choice: it is record-keeping Fuime
+      # needs permanently, so it will not be reclassified out from under this spec.
+      expect(helper.fuime_module_hidden?("receipts")).to be(false)
       expect(helper.fuime_module_hidden?("reimbursement")).to be(false)
     end
 

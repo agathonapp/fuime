@@ -85,8 +85,23 @@ RSpec.describe AchTransfersController, type: :controller do
     end
 
     # Fuime's own money-in and record-keeping must stay reachable.
-    it "does NOT disable invoices, receipts, comments, or the ledger" do
-      expect(disabled).not_to include("invoices", "receipts", "comments", "canonical_transactions")
+    it "does NOT disable receipts, comments, or the ledger" do
+      expect(disabled).not_to include("receipts", "comments", "canonical_transactions")
+    end
+
+    # Invoices WERE deliberately permitted here as "money IN — Fuime's model".
+    # That inverted on 2026-08-20 and the reason is money correctness, not product
+    # taste: Fuime::PayablesLedger attributes a sale by MEMO PREFIX
+    # (`settled_sum("fuime_pi_")`), written only by Fuime's own payment recorders.
+    # An upstream invoice payment writes an invoice-shaped memo, so under
+    # merchant-of-record the money lands in FUIME's balance and never becomes
+    # something Fuime owes the operator — no payable, and no fee.
+    #
+    # Asserted rather than left to the list, because re-permitting invoices without
+    # a recorder that writes the `fuime_pi_` prefix would silently strand a
+    # teenager's money again.
+    it "DOES disable invoices, which have no operator payable behind them" do
+      expect(disabled).to include("invoices", "api/v4/invoices")
     end
 
     # Reimbursements are "hide nav", not disable (FUIME_HACKATHON_SPEC §WON'T).

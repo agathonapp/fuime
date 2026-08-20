@@ -414,9 +414,24 @@ class Invoice < ApplicationRecord
     @raw_pending_invoice_transactions ||= ::RawPendingInvoiceTransaction.where(invoice_transaction_id: id)
   end
 
+  # FUIME-DIVERGENCE: the default memo asserted a fiscal-sponsorship
+  # relationship that does not exist, on a document the PAYER receives.
+  #
+  # It read "To support <venture>. <venture> is fiscally sponsored by The Hack
+  # Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit with the EIN
+  # 81-2908499." Three things wrong with that here, in increasing order of
+  # seriousness: "to support" frames a purchase as a donation; the sponsorship
+  # is not Fuime's structure; and naming another organisation's EIN on an
+  # invoice invites the payer to treat the payment as a charitable deduction it
+  # is not. Invoices are deliberately kept alive for Fuime (money IN), so this
+  # is a live customer-facing document rather than dead code.
+  #
+  # What replaces it is the MoR structure stated plainly: Fuime LLC is the
+  # seller of record (MOR_MIGRATION_PLAN §1), which is also what the buyer's
+  # card statement and receipt say, so the three agree.
   def set_defaults
     event = sponsor.event.name
-    self.memo = "To support #{event}. #{event} is fiscally sponsored by The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit with the EIN 81-2908499."
+    self.memo = "Payment to #{event}, sold through Fuime. Fuime LLC is the seller of record."
 
     self.auto_advance = true
   end

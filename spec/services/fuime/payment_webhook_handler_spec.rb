@@ -81,13 +81,35 @@ RSpec.describe Fuime::PaymentWebhookHandler do
       expect(lines.map(&:amount_cents)).to contain_exactly(10_000)
     end
 
-    it "labels the fee so the teen can see what Fuime charged" do
+    # Regression: this asserted the HEADLINE rate constant, which is prose for the
+    # FAQ and knows nothing about the venture's plan. A Free-plan venture (7%) was
+    # charged $1.75 on a $25 sale and shown a line reading "Fuime platform fee
+    # (5%)" — right money, wrong label, and the label is what a teenager checks
+    # their maths against. Asserted against the venture's own rate now, so the
+    # label cannot drift from the money again.
+    it "labels the fee with the rate the venture was actually charged" do
       handle("payment_intent.succeeded", payment_intent)
 
       expect(fee_lines.size).to eq(1)
-      expect(fee_lines.first.memo)
-        .to match(/Fuime platform fee \(#{Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT}%\)/i)
+      expect(fee_lines.first.memo).to eq(
+        "Fuime platform fee (#{ActionController::Base.helpers.number_to_percentage(event.revenue_fee * 100, precision: 1)})"
+      )
       expect(fee_lines.first.fronted).to be false
+    end
+
+    # The floor is not a rate, so it must not be printed as one. On a $5 sale at
+    # 5% the fee is 50c, an effective 10% — a number that appears on no pricing
+    # page and would read as a mistake or a rip-off.
+    it "names the minimum rather than an effective rate when the floor applies", :merchant_of_record do
+      small = create(:event, plan_type: Event::Plan::Standard)
+      handle("payment_intent.succeeded", payment_intent(event_id: small.id, amount: 500))
+
+      lines = CanonicalPendingEventMapping.where(event_id: small.id)
+                                          .map(&:canonical_pending_transaction)
+      fee = lines.find { |l| l.amount_cents.negative? }
+
+      expect(fee.amount_cents).to eq(-Event::Plan::MINIMUM_FEE_CENTS)
+      expect(fee.memo).to eq("Fuime platform fee ($0.50 minimum)")
     end
 
     # Fronting means advancing spendable credit against unsettled money. Fuime
