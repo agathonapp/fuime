@@ -163,7 +163,7 @@ Rails.application.routes.draw do
   # FUIME: the operator affirms they were told what selling through Fuime means.
   # Gates #publish — see Fuime::OffersController#acknowledge_sale_terms.
   post "/:event_slug/offers/acknowledge-sale-terms", to: "fuime/offers#acknowledge_sale_terms",
-                                                    as: :fuime_offers_acknowledge_sale_terms
+                                                     as: :fuime_offers_acknowledge_sale_terms
   post "/:event_slug/offers/:id/publish", to: "fuime/offers#publish", as: :fuime_offer_publish
   post "/:event_slug/offers/:id/unpublish", to: "fuime/offers#unpublish", as: :fuime_offer_unpublish
   post "/:event_slug/offers/:id/archive", to: "fuime/offers#archive", as: :fuime_offer_archive

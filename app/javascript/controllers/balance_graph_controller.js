@@ -8,16 +8,15 @@ export default class extends Controller {
     slug: String,
   }
 
+  // Fuime: the sign goes in front of the unit. `toLocaleString` with the dollar
+  // stripped out left negatives reading "$-93.00".
   renderBalance(amount) {
-    return (
-      '$' +
-      (amount / 100)
-        .toLocaleString('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        })
-        .replace('$', '')
-    )
+    const formatted = Math.abs(amount / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    })
+
+    return (amount < 0 ? '-' : '') + formatted
   }
 
   connect() {
@@ -117,7 +116,7 @@ export default class extends Controller {
 
   update(_, { date, value }) {
     this.balanceTarget.textContent = this.renderBalance(value)
-    this.labelTarget.textContent = `Account balance on ${new Date(
+    this.labelTarget.textContent = `Owed to you on ${new Date(
       date
     ).toLocaleString('en-US', {
       month: 'short',
@@ -127,7 +126,7 @@ export default class extends Controller {
   }
 
   clear() {
-    this.labelTarget.textContent = 'Account balance'
+    this.labelTarget.textContent = 'Owed to you'
     this.balanceTarget.textContent = this.initial.balance
   }
 }

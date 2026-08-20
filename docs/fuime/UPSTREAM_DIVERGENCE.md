@@ -4868,3 +4868,131 @@ No other spec is touched by the gate.
 must be separate statements, and `disable_ddl_transaction!` is required for the concurrent index.
 Same shape as `CreateFuimeCohorts`. Deployed to production as `c97827653`; the migration ran in
 0.05s.
+
+---
+
+## Home-screen refresh (2026-08-19)
+
+Both dashboards a founder actually lands on, cut down to what Fuime has. No behaviour
+changed at the server; every destination that existed still exists.
+
+**Global dashboard (`static_pages/index.html.erb`, 234 → ~205 lines).** Eight
+independently-headed sections rendered in upstream's accretion order, so a teenager with one
+business scrolled past five empty regions. They collapse into one "Needs you" strip above the
+businesses grid. The two card-grant sections are now gated on
+`fuime_module_hidden?("card_grants")` — the same prefix `Fuime::DisabledModules` refuses at the
+request layer — rather than rendering UI for a module that is permanently off (Rule 2, disable
+don't delete). Flavor text kept but demoted from a loud pill to a muted line.
+
+**Admin console (`static_pages/admin_tools.html.erb`, 140 → 61 lines).** Was five headings and
+~30 equally-weighted cards plus an Alpine `$persist` "pin a card" feature that existed only
+because the wall was too big to scan. Now: queues with work outstanding surface as "Needs you";
+everything else sits behind one disclosure, grouped. The two lists moved out of the template into
+`StaticPagesHelper#admin_queues` / `#admin_directories`. The pin feature went with the wall it
+was working around, and `card_to` lost the Alpine attributes that served it.
+
+**Business tiles (`events/_event_card.html.erb`).** The second stat was
+`stripe_cards.active.on_main_ledger.count`, and card issuing is behind a default-off flag — so
+every tile on every dashboard read "0 cards". While `Fuime::Features.card_issuing_permitted?` is
+false it counts published `Fuime::Offer`s instead; the card count returns with the feature.
+
+**Business home (`events/show.html.erb`).** Four charts and a heatmap rendered
+unconditionally, each with its own "It's quiet here..." empty state — five identical panels on a
+new business's first day, which reads as five broken widgets. Gated on `@has_ledger_history`
+(two EXISTS queries in `EventsController#show`); the charts themselves stay lazy.
+
+**Two real bugs found while in here:**
+
+- `$` + `render_money_amount` rendered a negative receivable as `$-93.00` on the business home.
+  `render_money` puts the sign in front of the unit. Same fix in
+  `balance_graph_controller.js#renderBalance`, which had the same string-concatenation shape.
+- `balance_graph_controller.js` overwrote the server-rendered "Owed to you" label with
+  **"Account balance"** on every sparkline hover and hover-out. `Fuime::PayablesLedger` exists
+  precisely so operator-facing surfaces never say that (L5 forbidden vocabulary; the class
+  comment states the rule and a spec enforces it for views). The controller was outside the
+  spec's reach. Both strings now say "Owed to you".
+
+### Verification
+
+`erb_lint` and `rubocop` clean on all touched files. `spec/views/fuime/payables_copy_spec.rb`
+and `spec/requests/fuime_waitlist_admin_spec.rb` (the only specs referencing the changed
+helpers/copy) 34/34 green. Rendered all four states in a browser against the dev database:
+admin dashboard, plain-user empty state, a business with ledger history (Insights shown), and a
+business without (Insights correctly absent).
+
+---
+
+## `fuime:reset` — clearing the inherited HCB data (2026-08-19)
+
+`lib/tasks/fuime_reset.rake`. `fuime:reset_preview` reports; `fuime:reset[email]` acts and
+refuses to run without `FUIME_RESET_CONFIRM=yes-wipe-this-database`.
+
+**Kept:** users, sessions, logins, guardianships, legal entities and their KYC, Flipper flags,
+PaperTrail versions, Ahoy analytics. People keep their accounts and their verification.
+
+**The twelve organisations that cannot be deleted.** `EventMappingEngine::EventIds` names them by
+hardcoded integer id — INCOMING_FEES routes every fee, NOEVENT catches unmapped money. Deleting
+the rows means rewriting the ledger engine's constants, which Rule 3 forbids. They keep their
+ids, take Fuime names, and are hidden.
+
+**Three things the implementation had to learn the hard way, all now encoded:**
+
+- *The ledger tables cannot be deleted in any order.* `fees` → `canonical_event_mappings` →
+  `canonical_transactions` and back again. One `TRUNCATE` naming all of them together does it,
+  deliberately **without** `CASCADE` so a table outside the list gets named in an error rather
+  than quietly emptied. Its referential closure pulls in five more tables than the obvious list
+  — including `ledgers`, so primary ledgers are rebuilt afterwards (`Event` has
+  `after_create :create_ledger`; an org without one is broken).
+- *The list of tables referencing `events` must not be written by hand.* There are 57 across 59
+  columns, and three attempts each shipped missing one — `announcements`,
+  `guardian_verifications`, `payout_requests` — surfacing only as a mid-run foreign-key
+  violation. It is derived from `information_schema` now.
+- *Deletion order within those is also unsolvable by sorting.* `fuime_offers` → `fuime_api_keys`,
+  `checks` → `lob_addresses`. `delete_until_settled` retries each statement in its own savepoint
+  until a pass makes no progress, which is a real cycle and says so.
+
+Everything runs in one transaction, so a violation rolls back rather than half-erasing a ledger.
+
+### Applied
+
+- **Local `bank_development`:** 18 organisations and 13 ledger tables cleared.
+- **Production `fuime_production`:** 5 organisations (Sunset Cookies, Fuime, Maya's Cookies,
+  Alpha School Santa Barbara, Angus's Money — all internal test data, no third party's org), 22
+  ledger tables, 3 unattached applications, 1 abandoned incomplete subscription. Nothing real had
+  ever reached the canonical ledger: the four rows were HCB seed fixtures ("George Clooney
+  Speaking Fee", "Cruise Ship Rental") and the twelve pending rows were internal transfers.
+  17 users, 3 guardianships and 23 legal entities untouched.
+
+Both databases were dumped first, to `~/fuime-db-backups/`. The production dump needed a
+Postgres 18 client (`docker run --rm postgres:18 pg_dump`); the host client is 14. Reaching the
+database at all needed a temporary entry in Render's IP allow list for `fuime-postgres`, **added
+and removed again** — if `render psql` reports "IP address not in allow list", that is the
+expected resting state, not a fault.
+
+---
+
+## User nav: Cards and Receipts were dead in production (2026-08-19)
+
+`UsersHelper#users_nav`. Both are card features, and `card_issuing_permitted?` is
+`!StripeService.live?` unless a sponsor bank exists — production runs `STRIPE_MODE=live`, so
+card issuing is off there and both entries pointed at nothing a teen could use.
+
+Cards was added unconditionally. Receipts reads like a general document inbox and is not:
+`MyController#inbox` builds itself from `transactions_missing_receipt` and
+`card_locking_overdue_charges`, then groups the results by `hcb.card` — with no cards it is
+permanently empty. Both are now inside a `Fuime::Features.card_issuing_permitted?` guard, the
+same predicate `StripeCard#balance_available` and `DisabledModules` use, so they return with the
+feature (Rule 2).
+
+Reimbursements stays unconditional. It is deliberately absent from every disabled list — a teen
+reimbursing themselves for a business expense is a live flow and the money moves inside Fuime.
+
+Verified both branches: permitted -> `Home, Cards, Receipts, Reimbursements`;
+blocked -> `Home, Reimbursements`.
+
+**Not addressed, same class of bug:** the two org-level "Cards" entries in
+`EventsHelper::NAV_ITEMS` carry no `module_prefix`, so `fuime_module_hidden?` never filters them.
+They rely on `available_proc` instead — `event.payment_account&.cards_profile?` for the Fuime one
+and `EventPolicy#card_overview?` (`plan.cards_enabled?`) for the upstream one. Neither consults
+`card_issuing_permitted?`. Whether they actually surface in production depends on plan features
+and the connected account's profile, which was not checked.

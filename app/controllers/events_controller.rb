@@ -72,6 +72,13 @@ class EventsController < ApplicationController
     @offers = @event.fuime_offers.live.in_operator_order.limit(5)
     @offer_count = @event.fuime_offers.live.count
     @published_offer_count = @event.fuime_offers.published.count
+
+    # Fuime: whether to draw the Insights section at all. Each chart already has
+    # an empty state, but five of them stacked is what a brand-new business sees
+    # on day one, and "It's quiet here..." five times reads as breakage rather
+    # than as an empty ledger. Two EXISTS queries, not two counts.
+    @has_ledger_history = @event.canonical_transactions.exists? ||
+                          @event.canonical_pending_transactions.exists?
   end
 
   def transaction_heatmap
