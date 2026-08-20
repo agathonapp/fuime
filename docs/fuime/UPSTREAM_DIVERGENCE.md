@@ -4996,3 +4996,95 @@ They rely on `available_proc` instead — `event.payment_account&.cards_profile?
 and `EventPolicy#card_overview?` (`plan.cards_enabled?`) for the upstream one. Neither consults
 `card_issuing_permitted?`. Whether they actually surface in production depends on plan features
 and the connected account's profile, which was not checked.
+
+---
+
+## 2026-08-20: money-in verified against Stripe, and three bugs it exposed
+
+The first end-to-end exercise of the **merchant-of-record** money path against real
+Stripe test-mode charges on Fuime's own account (`acct_1TznaN2Uz4P3wrXO`), one day
+before Founders Weekend. Prior sessions had verified the Connect direct-charge shape;
+nothing had ever driven a payment through the MoR handler, the ledger and the payables
+page in sequence.
+
+Two `payment_intent.succeeded` events were forwarded with `stripe listen` and returned
+200. The money-in half worked. Everything downstream of it did not.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `PayablesLedger` adds unsettled Fuime-fee lines back to the payable | A successful sale read as a debt — see below | `app/services/fuime/payables_ledger.rb` |
+| `pending_sales_cents` net of the fee on those sales | Promised $25 and settled $23.25 | `app/services/fuime/payables_ledger.rb` |
+| `committed_cents` excludes the same lines | The fee was displayed as a pending card hold | `app/services/fuime/payables_ledger.rb` |
+| New `.unsettled_sum_for` — the pending twin of `.settled_sum_for` | Pending lines carry their key on the raw row, not in the memo | `app/services/fuime/payables_ledger.rb` |
+| `ConnectSettlementSweep.sweep_all` drives off unsettled lines, not `StripeConnectedAccount` | Under MoR no venture has a connected account, so the job swept nothing | `app/services/fuime/connect_settlement_sweep.rb` |
+| New `#stripe_options` — no `stripe_account:` under MoR | The charge is Fuime's own sale on Fuime's own balance | `app/services/fuime/connect_settlement_sweep.rb` |
+| Missing Connect account raises `ArgumentError`, not `NoMethodError` | It surfaced from inside a Stripe call as `undefined method 'stripe_id' for nil` | `app/services/fuime/connect_settlement_sweep.rb` |
+| Fee memo reads the venture's own rate, and names the floor as a minimum | Charged 7%, labelled "5%" | `app/services/fuime/payment_webhook_handler.rb` |
+
+### 1. A successful sale told the teen they owed Fuime money
+
+`net_payable_cents` was `Event#balance_v2_cents`. That figure excludes pending
+INCOMING (Fuime fronts nothing, correctly) but includes pending OUTGOING (a commitment
+already made must not be spendable twice, also correctly). A sale posts both halves at
+once, so after a real $25 sale the dashboard's "Owed to you" card read **−$1.75** and
+the payouts page said:
+
+> "Your sales have been refunded or disputed by more than you've been paid, so $1.75
+> will be taken off your next payouts."
+
+No refund had happened. Every venture would have hit this on its first sale, and
+`app/views/events/async_balance.html.erb` renders it on the venture dashboard, not only
+on the payouts page.
+
+The fix defers rather than suppresses: the fee leaves the pending sum and arrives in
+`#fuime_fee_cents` the moment the pair settles, so it is never counted twice or lost.
+
+### 2. Nothing ever settled under merchant-of-record
+
+`ConnectSettlementSweep.sweep_all` iterated `StripeConnectedAccount` — the right driver
+under Connect, and **zero rows under MoR**. The scheduled
+`fuime_connect_settlement_sweep_job` therefore ran and did nothing, silently, with no
+error to point at. Calling `#sweep!` directly raised `NoMethodError` on nil.
+
+Consequence had it shipped: sales pending forever, `gross_sales_cents` $0 forever, and
+the Wednesday `fuime_generate_payout_batch_job` generating **$0 for every operator**.
+`MOR_MIGRATION_PLAN.md` §3.10 had this file marked "CHANGE — sweeps Fuime's own balance
+now"; the change was never made.
+
+### 3. The fee line lied about its own rate
+
+`record_platform_fee` labelled every line with `PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`,
+which is prose for the FAQ and knows nothing about a venture's plan. A Free-plan venture
+(7%) was charged $1.75 on a $25 sale and shown "Fuime platform fee (5%)". Exactly the
+bug `#platform_fee_cents` was already fixed for once — the amount was moved onto
+`Event#fuime_fee_cents_on` and the label was left behind.
+
+### Not fixed, and worth knowing
+
+**`CanonicalTransaction#assign_ledger_item` reports an unexpected error on every settled
+line.** Upstream code, unchanged by this work: `calculated_ledger_item` disagrees with
+`local_hcb_code.ledger_item` for each newly settled CT. It is wrapped in `safely`, so
+production reports and continues — settlement completes. In development
+`Rails.error.unexpected` raises, which aborts `settle_one!` after the CT is created but
+before `CanonicalPendingTransactionService::Settle` runs; the next sweep resumes and
+completes it, which is the idempotency the class header claims, demonstrated the hard
+way. Expect one error report per settled line in production until this is understood.
+
+**Stripe's first-charge availability is ~7 days, not the account's `delay_days: 2`.**
+The test charge on 2026-08-20 reported `available_on` 2026-08-27. New accounts carry a
+longer initial hold. Sales from Founders Weekend will not be settleable — and therefore
+not payable — until roughly a week later, which the Friday payout copy does not know.
+Verified on the test account; the live account is tracked separately by Stripe.
+
+### Verification
+
+Real test-mode charges `pi_3U6Wu02Uz4P3wrXO00WQAmNC` ($25, Free plan, $1.75 fee) and
+`pi_3U6X4D2Uz4P3wrXO0YKkMJ0k` ($5, floor applied, $0.50 fee). After the fixes the
+ledger reconciles: gross $25.00, Fuime fee $1.75, net payable $23.25, "Fuime owes you
+$23.25", no arrears, breakdown summing to the payable. Stripe's own cut on the $25 was
+$1.03, leaving Fuime $0.72.
+
+New specs pin all three: the pending window in `payables_ledger_spec.rb`, the MoR sweep
+in `connect_settlement_sweep_spec.rb`, and the fee label (including the floor wording)
+in `payment_webhook_handler_spec.rb`. The label spec previously asserted the buggy
+behaviour and was rewritten against the venture's own rate.

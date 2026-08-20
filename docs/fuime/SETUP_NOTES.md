@@ -2,6 +2,43 @@
 
 ## Handoff (most recent first)
 
+**2026-08-20 (later) — the MoR money path was exercised against Stripe for the first
+time, and three things downstream of the webhook were broken.**
+
+Two real test-mode charges on `acct_1TznaN2Uz4P3wrXO`, forwarded with `stripe listen`,
+both 200. Money-in works. What followed it did not: a successful sale showed the teen
+**"Fuime owes you −$1.75… refunded or disputed"** on the venture dashboard, nothing ever
+settled under merchant-of-record (so the weekly payout run would have paid **$0 to
+everyone**), and the fee line labelled a 7% charge as "5%". All three are fixed on
+`fuime/mor-settlement-and-payable` with specs; the full reasoning is in
+UPSTREAM_DIVERGENCE.md under 2026-08-20.
+
+**These bugs are in production right now** — the three files were unchanged since
+`c97827653`, which is what app.fuime.com runs. This branch needs to ship before Friday's
+sales, not after.
+
+**Two facts to carry, neither of them a bug:**
+
+- **Stripe holds the first charges ~7 days**, not the account's configured
+  `delay_days: 2`. The 2026-08-20 charge reported `available_on` 2026-08-27. Founders
+  Weekend money is not payable until roughly Aug 28, whatever the Friday copy says.
+- **Every settled line files a `Rails.error.unexpected`** from upstream's
+  `CanonicalTransaction#assign_ledger_item`. Production reports and continues; dev
+  raises, which aborts `settle_one!` mid-way and leaves the next sweep to resume it.
+  Not understood yet.
+
+**The Stripe CLI is still logged into "Hack Club Shop testing"** (the
+EMBEDDED_CONNECT.md §7 blocker). Work around it without re-logging in:
+
+```bash
+KEY=$(grep '^STRIPE__TEST__SECRET_KEY' .env.development | cut -d'"' -f2)
+stripe listen --api-key "$KEY" --forward-to http://127.0.0.1:3000/fuime/webhooks/stripe
+```
+
+**Still not done, and now the biggest gap:** nobody has driven signup → paid sale in a
+browser. This session drove it through the service and webhook layers only.
+
+
 **2026-08-20 — Fuime is LIVE. Real Stripe, real money, merchant-of-record on.**
 
 `app.fuime.com` runs `c97827653` with `STRIPE_MODE=live`, live keys on Fuime's own account

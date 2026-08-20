@@ -5,20 +5,29 @@
 #
 # ── Why this exists ──────────────────────────────────────────────────────────
 #
-# Fuime::ConnectPaymentRecorder posts a CanonicalPendingTransaction when a
-# payment succeeds, and VentureLedger deliberately posts it `fronted: false` —
+# The money-in recorder posts a CanonicalPendingTransaction when a payment
+# succeeds — Fuime::ConnectPaymentRecorder under Connect, and
+# Fuime::PaymentWebhookHandler under merchant-of-record — and VentureLedger
+# deliberately posts it `fronted: false` —
 # Fuime has no reserves and never holds the funds, so nothing may count toward a
 # balance before Stripe settles it. Correct, but it left the other half missing:
 # nothing ever created the SETTLED line, so a venture that took a payment showed
 # $0 forever. Found during the first Stripe pass (docs/fuime/STRIPE_PASS.md),
 # where a real $25 charge produced cpt#3 and a balance of $0.00.
 #
-# ── When is Connect money "settled"? ─────────────────────────────────────────
+# ── When is the money "settled"? ─────────────────────────────────────────────
 #
-# When the charge's balance transaction reports status "available" on the
-# venture's own connected account — Stripe's word for "these funds are the
-# account holder's to pay out". There is no per-charge Stripe webhook for that
-# moment, so this is a sweep on a schedule rather than an event handler.
+# When the charge's balance transaction reports status "available" — Stripe's word
+# for "these funds are the account holder's to pay out". There is no per-charge
+# Stripe webhook for that moment, so this is a sweep on a schedule rather than an
+# event handler.
+#
+# WHOSE balance transaction depends on which model is running, and the class name
+# is now half a lie: under Connect it is the venture's own connected account, and
+# under merchant-of-record it is FUIME's platform balance, because the charge was
+# Fuime's own sale. See #stripe_options. The name is kept because renaming a class
+# referenced by a scheduled job, its spec and two docs is a worse trade than a
+# paragraph explaining it.
 #
 # ── How the settled line is written (Rule 3) ─────────────────────────────────
 #
@@ -53,14 +62,40 @@ module Fuime
     # matched literally so dispute-kind keys fall through to "not swept".
     REFUND_REVERSAL_KEY = /\Afuime_rev_(pi_\w+)_refund_/
 
+    # Fuime: which ventures to sweep, and why the answer changed under MoR.
+    #
+    # This used to iterate StripeConnectedAccount, which was the right driver while
+    # every payment lived on a guardian-owned account: no account, no charges, no
+    # work. Under merchant-of-record NO venture has a connected account — charges
+    # are on Fuime's own platform balance — so that query returns zero rows and the
+    # scheduled job did nothing at all, silently. Sales stayed pending forever,
+    # `PayablesLedger#gross_sales_cents` stayed $0, and the weekly payout run would
+    # have generated $0 for every operator. Found 2026-08-20 against a real
+    # test-mode charge, one day before the first live sales.
+    #
+    # Driving off the unsettled lines themselves is correct under both models and
+    # cannot drift out of sync with either: a venture needs sweeping exactly when it
+    # has a Fuime-keyed pending line with no settled twin. It also self-limits — a
+    # venture with nothing outstanding is never visited, which is most of them.
     def self.sweep_all
-      StripeConnectedAccount.where.not(stripe_id: nil).find_each do |account|
-        new(event: account.event).sweep!
+      events_with_unsettled_lines.find_each do |event|
+        new(event:).sweep!
       rescue Stripe::StripeError => e
         # One venture's Stripe hiccup must not stop the sweep for every other
         # venture; the next run retries this one from scratch.
-        Rails.logger.error("[Fuime] settlement sweep failed for event #{account.event_id}: #{e.class}")
+        Rails.logger.error("[Fuime] settlement sweep failed for event #{event.id}: #{e.class}")
       end
+    end
+
+    def self.events_with_unsettled_lines
+      ::Event.where(
+        id: ::CanonicalPendingTransaction
+              .joins(:canonical_pending_event_mapping)
+              .joins(:raw_pending_donation_transaction)
+              .where("raw_pending_donation_transactions.donation_transaction_id LIKE 'fuime\\_%'")
+              .where.missing(:canonical_pending_settled_mapping)
+              .select("canonical_pending_event_mappings.event_id")
+      )
     end
 
     def initialize(event:)
@@ -101,6 +136,32 @@ module Fuime
       @account ||= @event.payment_account
     end
 
+    # Which Stripe account to ask about a charge — the one that took it.
+    #
+    # Under merchant-of-record that is Fuime's own platform account, so there is no
+    # `stripe_account:` at all: omitting it IS the request for the platform. Under
+    # Connect it is the venture's (or its school's) connected account.
+    #
+    # Keyed on the flag rather than on `account.present?`, deliberately. A venture
+    # onboarded before the MoR cutover still has a connected account row, but its
+    # charges since the cutover landed on the platform — so presence of an account
+    # is not evidence of where the money is, and guessing from it would send the
+    # lookup to an account where the PaymentIntent does not exist.
+    #
+    # Raises rather than falling back when Connect is on and no account exists:
+    # that combination previously surfaced as `NoMethodError: undefined method
+    # 'stripe_id' for nil` from inside a Stripe call, which is a confusing way to
+    # learn that a venture was never onboarded.
+    def stripe_options
+      return { api_key: StripeService.secret_key } if ::Fuime::Features.merchant_of_record?
+
+      unless account&.stripe_id
+        raise ArgumentError, "Event #{@event.id} has no Stripe account to settle against"
+      end
+
+      { api_key: StripeService.secret_key, stripe_account: account.stripe_id }
+    end
+
     # This venture's Fuime-keyed pendings that have no settled twin yet, grouped
     # by the PaymentIntent they came from so one Stripe lookup covers the whole
     # group (payment + both fee lines settle together — they are one charge).
@@ -127,7 +188,7 @@ module Fuime
     def refunds_available?(intent_id)
       refunds = Stripe::Refund.list(
         { payment_intent: intent_id, expand: ["data.balance_transaction"] },
-        { api_key: StripeService.secret_key, stripe_account: account.stripe_id }
+        stripe_options
       ).data
       refunds.any? && refunds.all? { |r| r.balance_transaction&.status == "available" }
     end
@@ -135,7 +196,7 @@ module Fuime
     def available?(intent_id)
       intent = Stripe::PaymentIntent.retrieve(
         { id: intent_id, expand: ["latest_charge.balance_transaction"] },
-        { api_key: StripeService.secret_key, stripe_account: account.stripe_id }
+        stripe_options
       )
       intent.latest_charge&.balance_transaction&.status == "available"
     end
