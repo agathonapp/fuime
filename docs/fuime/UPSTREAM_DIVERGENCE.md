@@ -4809,3 +4809,62 @@ The 16 RSpec examples that were already red on `main` are product/spec drift, no
 | livemode from `StripeService.mode` | v1 Account has no livemode field. | `spec/models/stripe_connected_account_spec.rb` |
 | Platform key stubbed in test | Suite must not need `STRIPE__TEST__SECRET_KEY`. | `spec/services/fuime/requirement_collection_service_spec.rb` |
 | Fallback plan is Free; lineup includes Free + School | Matches `Event#fallback_plan_class` and `selectable?`. | `spec/models/event_spec.rb`, `spec/models/event/plan_spec.rb` |
+
+---
+
+## 2026-08-20 — the operator affirms the sale terms, and `/documents` stops 500ing
+
+**What (1):** `Event#sale_terms_acknowledged?`, `Event::SALE_TERMS_VERSION`, three columns on
+`events` recording who acknowledged / when / which version, a checkbox in
+`fuime/_operator_sale_terms`, a gate in `Fuime::OffersController#publish`, and the same gate in
+`Fuime::Api::V1::PaymentLinksController#create`.
+
+**Why:** under merchant-of-record Fuime is the legal seller and the teen is a vendor — and the
+operator had agreed to nothing. No DocuSeal template is configured, so
+`Event::Plan#contract_available?` is false and `Event::Application#send_contract` returns nil;
+the application flow has no terms checkbox. A cohort-admitted 13-year-old could publish, sell as
+Fuime's vendor, and never have affirmed a word of it. That is `MOR_RISK_ACCEPTANCE.md` §2 Q2 in
+concrete form, and it collides with L2, where a teen-only clickwrap is voidable anyway.
+
+**It is not a contract and the copy does not claim to be.** It records that a named person saw a
+named version and said so. Where no vendor agreement exists, that record is the difference
+between "we published a page" and "they acknowledged, and here is when".
+
+**Two decisions worth carrying:**
+
+- **The API needed its own check.** `Fuime::Offer.for_amount!` calls `publish!` itself, so
+  `/api/fuime/v1/payment_links` never reached the controller gate — an API key could have minted
+  a live payable link for a venture that affirmed nothing. Found by the suite, not by reading:
+  nine failures in `fuime_payment_links_api_spec` pointed at it.
+- **NOT enforced on the model's `publish` transition, deliberately.** That is the narrowest place
+  and the better long-term home, and it would refuse for every fixture in the suite that
+  publishes without acknowledging — too wide a change the week of a launch. Both HTTP paths are
+  covered; the model-level version is the follow-up, recorded in the controller comment.
+
+`SALE_TERMS_VERSION` is dated rather than numbered, and a bump re-asks every venture — so it is
+for substance (who the seller is, who bears refunds and chargebacks, the window, the
+"you set your own price" fact), never for rewording.
+
+**What (2), unrelated and live:** `app/views/documents/_preview.html.erb` called
+`document.file.filename.extension` unconditionally. `filename` is nil when no blob is attached,
+so one unattached `Document` row raised `undefined method 'extension' for nil` and took the whole
+`/documents` index down with a 500 for every document on it. Observed in production at
+2026-08-19 22:07:57 UTC. Guarded on `file.attached?`; the placeholder image is still correct
+without the extension label, so the label is what gives way.
+
+**Files:** `app/models/event.rb`, `app/controllers/fuime/offers_controller.rb`,
+`app/controllers/fuime/api/v1/payment_links_controller.rb`,
+`app/views/fuime/_operator_sale_terms.html.erb`, `app/views/documents/_preview.html.erb`,
+`config/routes.rb`, `db/migrate/20260819230000_add_sale_terms_acknowledgement_to_events.rb`,
+`spec/requests/fuime_seller_of_record_spec.rb`, `spec/requests/fuime_payment_links_api_spec.rb`.
+
+### Verification
+
+Full suite 3389 examples / 13 failures, decomposed in `known-failures.md` — 4 environmental, 9
+from the API spec before the fix in the same commit. Both affected files 40/40 green afterwards.
+No other spec is touched by the gate.
+
+**Migration needed two corrections strong_migrations forced:** the reference and the foreign key
+must be separate statements, and `disable_ddl_transaction!` is required for the concurrent index.
+Same shape as `CreateFuimeCohorts`. Deployed to production as `c97827653`; the migration ran in
+0.05s.

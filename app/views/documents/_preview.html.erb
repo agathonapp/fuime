@@ -1,6 +1,13 @@
 <% if document.preview_url %>
   <%= image_tag(document.preview_url, width: 330, style: "max-width: 100%;") %>
 <% else %>
-  <span class="bold h1 absolute" style="opacity: 0.8; color: #8492a6;"><%= document.file.filename.extension %></span>
+  <%# FUIME-DIVERGENCE: guarded. `document.file.filename` is nil when no blob is
+      attached, so `.extension` raised and took the whole /documents index down
+      with a 500 — one unattached row breaks the page for every document on it.
+      Upstream renders the extension unconditionally. The placeholder below is
+      still correct without a label, so the label is what gives way. %>
+  <% if document.file.attached? %>
+    <span class="bold h1 absolute" style="opacity: 0.8; color: #8492a6;"><%= document.file.filename.extension %></span>
+  <% end %>
   <%= image_tag("placeholder-document.svg", width: 300, style: "max-width: 100%; opacity: 0.5;") %>
 <% end %>
