@@ -106,7 +106,16 @@
         <%= render "events/account_number_modal" %>
       <% end %>
 
-      <% if InvoicePolicy.new(current_user, @event).create? %>
+      <%# FUIME: also gated on the module being enabled at all.
+          `InvoicePolicy#create?` is an upstream permission question — may THIS
+          USER invoice — and answers yes for any organizer. It cannot answer
+          "does Fuime offer invoices", which is Fuime::DisabledModules' job.
+          Without this the nav item was hidden while a "Send an invoice"
+          quick-action sat on the venture home page, which is worse than either
+          state on its own: a founder clicks it and is bounced.
+          See Fuime::DisabledModules for why invoices are off (an invoice payment
+          never becomes an operator payable). %>
+      <% if InvoicePolicy.new(current_user, @event).create? && !fuime_module_hidden?("invoices") %>
         <%= link_to new_event_invoice_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "new_invoice" } do %>
           <%= inline_icon "briefcase", size: 20 %>
           Send an invoice

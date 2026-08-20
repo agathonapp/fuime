@@ -31,7 +31,10 @@
 
 <h2 class="heading">
   Invoices
-  <%= link_to "New Invoice", new_event_invoice_path(@event), class: "btn bg-success" %>
+  <%# FUIME: hidden while the invoices module is off — see Fuime::DisabledModules. %>
+  <% unless fuime_module_hidden?("invoices") %>
+    <%= link_to "New Invoice", new_event_invoice_path(@event), class: "btn bg-success" %>
+  <% end %>
 </h2>
 
 <% if @sponsor.invoices.any? %>
