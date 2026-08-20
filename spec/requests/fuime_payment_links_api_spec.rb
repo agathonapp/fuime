@@ -20,6 +20,15 @@ RSpec.describe "the payment links API", :merchant_of_record, type: :request do
     create(:event, business_category: "services", is_public: true, name: "Sunset Lawn Care").tap do |e|
       e.update!(operator_vetting_status: :approved, operator_vetted_at: Time.current)
       create(:organizer_position, event: e, user: teen, role: :manager)
+
+      # A venture that can mint payment links has acknowledged the sale terms —
+      # the API enforces the same gate as the offers page, because
+      # Fuime::Offer.for_amount! publishes directly and never touches
+      # Fuime::OffersController#publish. Set here rather than stubbed: this is what
+      # a real merchant-of-record venture looks like.
+      e.update_columns(sale_terms_acknowledged_at: Time.current,
+                       sale_terms_acknowledged_by_id: teen.id,
+                       sale_terms_version: ::Event::SALE_TERMS_VERSION)
     end
   end
 

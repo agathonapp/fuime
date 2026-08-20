@@ -56,5 +56,35 @@
     <p class="muted text-sm mb-0">
       The full version is in the <%= link_to "terms", terms_path %>, section 8.
     </p>
+
+    <%# The acknowledgement. Shown only where publishing happens (`confirmable`),
+        and only to somebody who can actually publish — a teammate who cannot
+        manage offers should not be taking on the obligation, and a read-only
+        viewer being asked to tick a box would be meaningless.
+
+        Not a contract, and the copy does not pretend otherwise. It records that
+        this person saw this version and said so. See the migration for why that
+        is worth having when no vendor agreement exists. %>
+    <% if local_assigns[:confirmable] && !event.sale_terms_acknowledged? %>
+      <%= form_with url: fuime_offers_acknowledge_sale_terms_path(event_slug: event.slug),
+                    method: :post, local: true, class: "mt-3" do |form| %>
+        <label class="flex items-start gap-2" style="cursor: pointer;">
+          <%= form.check_box :acknowledged, { required: true }, "1", "0" %>
+          <span class="text-sm">
+            I've read this and I understand it. Fuime is the seller, I set my own
+            prices, and refunds come off what I'm owed.
+          </span>
+        </label>
+        <%= form.submit "Confirm", class: "btn bg-accent mt-2" %>
+      <% end %>
+      <p class="muted text-sm mt-2 mb-0">
+        You'll need to confirm once before you can publish anything.
+      </p>
+    <% elsif local_assigns[:confirmable] %>
+      <p class="muted text-sm mt-2 mb-0">
+        ✓ Confirmed
+        <%= l(event.sale_terms_acknowledged_at, format: :long) if event.sale_terms_acknowledged_at %>.
+      </p>
+    <% end %>
   </div>
 <% end %>

@@ -37,6 +37,8 @@
 #  public_reimbursement_page_message            :text
 #  reimbursements_require_organizer_peer_review :boolean          default(FALSE), not null
 #  risk_level                                   :integer
+#  sale_terms_acknowledged_at                   :datetime
+#  sale_terms_version                           :string
 #  short_name                                   :string
 #  show_recent_donors                           :boolean          default(FALSE), not null
 #  show_top_donors                              :boolean          default(FALSE), not null
@@ -54,21 +56,24 @@
 #  operator_vetted_by_id                        :bigint
 #  parent_id                                    :bigint
 #  point_of_contact_id                          :bigint
+#  sale_terms_acknowledged_by_id                :bigint
 #
 # Indexes
 #
-#  index_events_on_discord_channel_id       (discord_channel_id) UNIQUE
-#  index_events_on_discord_guild_id         (discord_guild_id) UNIQUE
-#  index_events_on_fuime_cohort_id          (fuime_cohort_id)
-#  index_events_on_operator_vetting_status  (operator_vetting_status)
-#  index_events_on_parent_id                (parent_id)
-#  index_events_on_point_of_contact_id      (point_of_contact_id)
+#  index_events_on_discord_channel_id             (discord_channel_id) UNIQUE
+#  index_events_on_discord_guild_id               (discord_guild_id) UNIQUE
+#  index_events_on_fuime_cohort_id                (fuime_cohort_id)
+#  index_events_on_operator_vetting_status        (operator_vetting_status)
+#  index_events_on_parent_id                      (parent_id)
+#  index_events_on_point_of_contact_id            (point_of_contact_id)
+#  index_events_on_sale_terms_acknowledged_by_id  (sale_terms_acknowledged_by_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (fuime_cohort_id => fuime_cohorts.id)
 #  fk_rails_...  (operator_vetted_by_id => users.id)
 #  fk_rails_...  (point_of_contact_id => users.id)
+#  fk_rails_...  (sale_terms_acknowledged_by_id => users.id)
 #
 class Event < ApplicationRecord
   MIN_WAITING_TIME_BETWEEN_FEES = 5.days
@@ -99,6 +104,17 @@ class Event < ApplicationRecord
 
   # Fuime: Business categories for teen ventures
   BUSINESS_CATEGORIES = %w[crafts services digital food other].freeze
+
+  # Fuime: the version of the sale terms an operator acknowledged.
+  #
+  # Bumped when the SUBSTANCE changes — who the seller is, who bears refunds and
+  # chargebacks, the refund window, or the "you set your own price" fact. Not for
+  # rewording. A bump means every venture is asked again, so bumping it casually
+  # interrupts fifty founders mid-event for nothing.
+  #
+  # Dated rather than numbered so the record says when, which is what anybody
+  # reading it later actually wants to know.
+  SALE_TERMS_VERSION = "2026-08-19"
   validates :business_category, inclusion: { in: BUSINESS_CATEGORIES }, allow_blank: true
 
   include AASM
@@ -842,6 +858,20 @@ class Event < ApplicationRecord
   # controls that bound what Fuime is liable for as seller of record, and they are
   # unchanged. This only stops asking a venture for a merchant account that the
   # model it is running under does not issue.
+  # Fuime: has this venture's operator been told, and said so?
+  #
+  # Only meaningful under merchant-of-record — under Connect the guardian owns the
+  # account, signed Stripe's own terms, and carries the chargeback, so there is no
+  # Fuime-as-seller relationship to acknowledge.
+  #
+  # Compares the recorded version, so a substantive change to the terms re-asks
+  # rather than silently relying on somebody's agreement to a different document.
+  def sale_terms_acknowledged?
+    return true unless Fuime::Features.merchant_of_record?
+
+    sale_terms_acknowledged_at.present? && sale_terms_version == SALE_TERMS_VERSION
+  end
+
   def accepts_payments?
     unless Fuime::Features.merchant_of_record? || payment_account&.ready_for_payments?
       return false

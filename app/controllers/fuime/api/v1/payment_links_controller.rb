@@ -53,6 +53,27 @@ module Fuime
             }, status: :conflict
           end
 
+          # Fuime: the same acknowledgement gate the offers page enforces.
+          #
+          # `Fuime::Offer.for_amount!` calls `publish!` itself, so this path never
+          # reaches Fuime::OffersController#publish and would otherwise let an API
+          # key mint a live, payable link for a venture whose operator has affirmed
+          # nothing. A control with a second door is not a control.
+          #
+          # NOT enforced on the `publish` transition in the model, deliberately.
+          # That would be the narrowest place and is the better long-term home —
+          # it would also refuse for every fixture in the suite that publishes an
+          # offer without acknowledging, which is a wide change to make the week of
+          # a launch. Both HTTP paths are covered here; the model-level version is
+          # the follow-up.
+          unless current_event.sale_terms_acknowledged?
+            return render json: {
+              error: "terms_not_acknowledged",
+              message: "Confirm how selling through Fuime works on your offers " \
+                       "page before creating payment links."
+            }, status: :conflict
+          end
+
           offer = ::Fuime::Offer.for_amount!(
             event: current_event,
             price_cents: amount_cents,
