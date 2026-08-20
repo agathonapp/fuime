@@ -59,22 +59,34 @@
                 </p>
               <% end %>
             </div>
+            <%# Fuime: a confirmation, not a date of birth (2026-08-20).
+                Signup asked every user for month, day and year. It now asks the
+                one question the platform needs from a teenager — see
+                AddAgeAttestationToUsers. The box on THIS page can only ever say
+                "13 or older"; adulthood is asserted in the guardian flow. %>
             <div class="field flex-1">
-              <div class="inline-flex items-center gap-1">
-                <%= form.label :birthday %>
-                <div class="info tooltipped tooltipped--e tooltipped--tappable h-[18px]" aria-label="We collect user birthdays because we work with financials and have a responsibility to know our users. We also work with teenagers and need to know which users are under 18 as there are certain laws that protect them.">
-                  <%= inline_icon "info", size: 18 %>
+              <% if @user.age_attestation.present? || @user.birthday.present? %>
+                <%= form.label :age_attestation, "Your age" %>
+                <p class="h5 muted mt0 mb0">
+                  <% if @user.known_adult? %>
+                    You've confirmed you're 18 or older.
+                  <% else %>
+                    You've confirmed you're 13 or older<%= " on #{@user.age_attested_at.to_fs(:long)}" if @user.age_attested_at %>.
+                  <% end %>
+                  <br>
+                  Need to correct this? Email <a href="mailto:support@fuime.com">support@fuime.com</a>.
+                </p>
+              <% else %>
+                <div class="field field--checkbox">
+                  <%= check_box_tag "user[age_attestation_confirmed]", "1", false,
+                                    id: "user_age_attestation_confirmed", required: true %>
+                  <%= label_tag "user_age_attestation_confirmed", "I'm 13 or older" %>
                 </div>
-              </div>
-              <div class="flex gap-2 onboarding">
-                <%= form.date_select :birthday,
-                                     { start_year: Date.today.year,
-                                       end_year: Date.today.year - 100,
-                                       order: [:month, :day, :year],
-                                       prompt: @user.birthday.nil?
-                                     },
-                                     { required: true } %>
-              </div>
+                <p class="h5 muted mt0 mb0">
+                  Fuime is for founders aged 13 and up. If you're under 18 we'll ask you
+                  to add a parent or guardian to your account.
+                </p>
+              <% end %>
             </div>
           </div>
           <%= form.label :profile_picture %>
@@ -179,25 +191,36 @@
             </p>
           <% end %>
         </div>
-        <div class="field">
-          <%= form.label :birthday %>
-          <p class="h5 muted mt0 mb1">
-            Used for card issuing.
-          </p>
-          <div class="flex items-center space-x-1">
-            <%= form.date_select :birthday,
-                                 start_year: Date.today.year,
-                                 end_year: Date.today.year - 100,
-                                 order: [:month, :day, :year],
-                                 prompt: @user.birthday.nil?,
-                                 disabled: %>
-            <% unless @user.birthday.nil? %>
-              <% admin_tool("p-1.5 !ml-2") do %>
-                <%= @user.is_teenager? ? "✅ Teenager" : "Not a teenager" %>
+        <%# Fuime: this used to be an editable date-of-birth field for every user.
+            It is now admin-only and read-mostly.
+
+            Two reasons. Ordinary users are no longer asked for a date at all, so
+            rendering an empty date picker here invites them to supply one nobody
+            needs. And :birthday is no longer a permitted parameter on this form
+            (security review F-02) — leaving the input would post a value that is
+            silently dropped, which is worse than not asking.
+
+            Stripe genuinely requires a real date for an Issuing cardholder, and
+            that flow collects it on its own form (stripe_cards/_form). %>
+        <% if @user.birthday.present? || admin_signed_in? %>
+          <div class="field">
+            <%= form.label :birthday, "Date of birth" %>
+            <p class="h5 muted mt0 mb1">
+              Only needed for card issuing. Fuime asks everyone else to confirm they're
+              13 or older instead.
+            </p>
+            <div class="flex items-center space-x-1">
+              <% if @user.birthday.present? %>
+                <span><%= @user.birthday.to_fs(:long) %></span>
+                <% admin_tool("p-1.5 !ml-2") do %>
+                  <%= @user.is_teenager? ? "✅ Teenager" : "Not a teenager" %>
+                <% end %>
+              <% else %>
+                <span class="muted">Not on file — collected when a card is issued.</span>
               <% end %>
-            <% end %>
+            </div>
           </div>
-        </div>
+        <% end %>
         <div class="field">
           <%= form.label :email %>
           <%= form.email_field :email, disabled: %>

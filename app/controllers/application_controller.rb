@@ -41,9 +41,39 @@ class ApplicationController < ActionController::Base
 
   before_action :attach_appsignal_tags
 
+  # Fuime: deny indexing everywhere EXCEPT the three pages that exist to be found.
+  #
+  # Upstream sets `X-Robots-Tag: none` unconditionally, which is right for a
+  # fiscal-sponsorship dashboard where every page is somebody's private ledger.
+  # Fuime then added a public directory, public storefronts and public payment
+  # pages — the demand side the brief calls the moat — and this header made all
+  # three permanently unindexable. `Event#is_indexable` and
+  # `Event.indexable` existed and could never have any effect.
+  #
+  # An allowlist rather than a per-controller `skip_before_action`, for the same
+  # reason Fuime::GuardianshipEnforcement uses one: a controller added later is
+  # non-indexable until somebody decides otherwise, which is the safe default when
+  # the pages being added are about minors.
+  #
+  # Note what is deliberately NOT here: the event ledger, team and stats pages.
+  # Those are private (see EventPolicy), and a venture opting into published
+  # transparency is opting into human readers, not into search results.
+  INDEXABLE_CONTROLLER_PATHS = [
+    "fuime/directory",
+    "fuime/storefronts",
+    "fuime/payment_pages",
+    "static_pages"
+  ].freeze
+
   before_action do
-    # Disallow indexing and following
-    response.set_header("X-Robots-Tag", "none")
+    if INDEXABLE_CONTROLLER_PATHS.include?(controller_path)
+      # `noai`/`noimageai` are honoured by some crawlers and cost nothing. These
+      # pages describe businesses run by children; being findable by a buyer is
+      # the point, being scraped into a training set is not (CLAUDE.md L7).
+      response.set_header("X-Robots-Tag", "noarchive, noai, noimageai")
+    else
+      response.set_header("X-Robots-Tag", "none")
+    end
   end
 
   before_action do

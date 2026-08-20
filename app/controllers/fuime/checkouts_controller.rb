@@ -19,7 +19,11 @@ module Fuime
     MAXIMUM_AMOUNT_CENTS = 10_000_00
 
     def create
-      event = ::Event.find_by!(slug: params[:slug])
+      # `.not_hidden` for the reason Fuime::StorefrontsController now does: an
+      # admin-hidden venture must not be payable. Its OTHER states — frozen, demo
+      # mode — are refused by #accepts_payments? below, which now asks
+      # Fuime::OperatorEligibility about all three.
+      event = ::Event.not_hidden.find_by!(slug: params[:slug])
 
       # Only businesses that have published a storefront can be paid. Without
       # this, the endpoint would take payments for any org by slug, including

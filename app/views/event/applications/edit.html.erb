@@ -130,25 +130,39 @@
             <%= form.hidden_field :phone_number, value: @application.user.phone_number.presence, required: true, placeholder: "555-555-5555", id: "phone_number" %>
             <input type="tel" id="phone_raw" style="max-width:100%;" value="<%= @application.user.phone_number.presence %>" required>
           </div>
+          <%# Fuime: a confirmation, not a date of birth (2026-08-20). See
+              AddAgeAttestationToUsers.
+
+              The Alpine `minor` flag used to be computed from the selected date, and
+              it drives whether a parent's email is asked for further down. A
+              checkbox cannot tell 14 from 17, so it stays at its fail-closed
+              default — we ask for a parent unless the user is a KNOWN adult, which
+              mirrors User#minor_or_unknown_age? on the server. Ticking the box
+              therefore leaves `minor` true, which is the safe direction: the cost of
+              being wrong is asking an 18-year-old for a parent's email, not letting
+              a 14-year-old past the guardian question. %>
           <div class="field flex-1">
-            <div class="inline-flex items-center justify-between w-full gap-1">
-              <%= form.label :birthday do %>
-                Birthday <span class="text-primary">*</span>
-              <% end %>
-              <div class="info tooltipped tooltipped--w h-[18px]" aria-label="We collect user birthdays because we work with financials and have a responsibility to know our users. We also work with teenagers and need to know which users are under 18 as there are certain laws that protect them.">
-                <%= inline_icon "info", size: 18 %>
+            <% if @application.user.age_attestation.present? || @application.user.birthday.present? %>
+              <%= form.label :age_attestation, "Your age" %>
+              <p class="h5 muted mt0 mb0">
+                <% if @application.user.known_adult? %>
+                  You've confirmed you're 18 or older.
+                <% else %>
+                  You've confirmed you're 13 or older.
+                <% end %>
+              </p>
+            <% else %>
+              <div class="field field--checkbox">
+                <%= check_box_tag "event_application[age_attestation_confirmed]", "1", false,
+                                  id: "application_age_attestation_confirmed", required: true %>
+                <%= label_tag "application_age_attestation_confirmed" do %>
+                  I'm 13 or older <span class="text-primary">*</span>
+                <% end %>
               </div>
-            </div>
-            <div class="flex gap-2 onboarding" x-on:change="minor = new Date() - new Date([...$el.children].map(c => c.selectedOptions[0].label).join(' ')) < 568_025_136_000">
-              <%= form.date_select :birthday,
-                                    { start_year: Date.today.year,
-                                      end_year: Date.today.year - 100,
-                                      order: [:month, :day, :year],
-                                      prompt: @application.user.birthday.nil?,
-                                      default: @application.user.birthday.presence
-                                    },
-                                    { required: true } %>
-            </div>
+              <p class="h5 muted mt0 mb0">
+                Fuime is for founders aged 13 and up.
+              </p>
+            <% end %>
           </div>
         </div>
 
@@ -220,7 +234,10 @@
             <%= form.text_area :accessibility_notes, class: "w-full max-w-full" %>
           </div>
 
-          <% if @application.user.is_minor? %>
+          <%# `minor_or_unknown_age?`, not `is_minor?`: the latter is nil without a
+              date of birth, so this whole block — the parent's email — would have
+              disappeared for every checkbox-only teenager. %>
+          <% if @application.user.minor_or_unknown_age? %>
             <div class="field col-span-2" x-show="minor">
               <%= form.label :cosigner_email do %>
                 Parent email <span class="text-primary">*</span>

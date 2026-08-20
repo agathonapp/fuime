@@ -115,6 +115,11 @@
       <th>Eligible</th>
       <th>Paid</th>
       <th>State</th>
+      <%# Fuime: whether the adult who approved this looks like the teen who asked.
+          Here because this page is the last human decision before Fuime's own money
+          leaves, and it was the one place with no way to tell a family from one
+          person holding two inboxes. See Guardianship#self_signed_signals. %>
+      <th>Guardian</th>
     </tr>
   </thead>
   <tbody>
@@ -131,6 +136,32 @@
           <% end %>
         </td>
         <td><%= line.aasm_state.humanize %></td>
+        <td>
+          <% flagged = line.event.overseeing_guardianships.select(&:self_signed_suspected?) %>
+          <% if flagged.any? %>
+            <details>
+              <summary class="bold" style="color: var(--warning); cursor: pointer;">
+                Review <%= "signal".pluralize(flagged.sum { |g| g.self_signed_signals.size }) %>
+              </summary>
+              <% flagged.each do |guardianship| %>
+                <div class="mt1">
+                  <div class="h5 bold"><%= guardianship.guardian.email %></div>
+                  <ul class="mt0 mb0 pl3 h5 muted">
+                    <% guardianship.self_signed_signals.each do |signal| %>
+                      <li><%= signal %></li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+              <p class="h5 muted mt1 mb0">
+                Not proof. A parent and a teen share a house, a router and sometimes a
+                laptop. Worth a look before this operator's first payout.
+              </p>
+            </details>
+          <% else %>
+            <span class="muted">—</span>
+          <% end %>
+        </td>
       </tr>
     <% end %>
   </tbody>

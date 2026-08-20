@@ -14,7 +14,15 @@ module Fuime
     before_action :hide_footer
 
     def show
-      @event = Event.find_by!(slug: params[:slug])
+      # `.not_hidden`, matching Fuime::PaymentPagesController and
+      # Fuime::DirectoryController.
+      #
+      # `hidden_at` is HCB's admin suppression, used for abuse. This action used a
+      # bare `find_by!`, so the three public surfaces disagreed: hiding a venture
+      # removed it from the directory and from its payment pages, and left its
+      # storefront up. A 404 rather than a redirect, because a hidden venture should
+      # not be confirmed to exist.
+      @event = Event.not_hidden.find_by!(slug: params[:slug])
 
       # Check if business has public transparency enabled
       unless @event.is_public

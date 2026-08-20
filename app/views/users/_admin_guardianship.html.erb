@@ -16,17 +16,24 @@
       <strong>Account type:</strong>
       <%= badge_for user.account_type_label,
                     class: user.account_type == :teen ? "bg-warning" : "bg-info" %>
+      <%# Fuime: what we actually know, and how we know it. An admin vetting an
+          operator needs to be able to tell "confirmed 13+" from "told us nothing",
+          because the two look identical through #minor_or_unknown_age?. %>
       <% if user.birthday.present? %>
-        <span class="muted">age <%= user.age %></span>
+        <span class="muted">age <%= user.age %> &middot; from date of birth</span>
+      <% elsif user.attested_adult_18_plus? %>
+        <span class="muted">confirmed 18 or older<%= " on #{user.age_attested_at.to_fs(:long)}" if user.age_attested_at %></span>
+      <% elsif user.attested_minor_13_plus? %>
+        <span class="muted">confirmed 13 or older<%= " on #{user.age_attested_at.to_fs(:long)}" if user.age_attested_at %> &mdash; exact age unknown</span>
       <% else %>
-        <span class="muted">no date of birth on file &mdash; treated as a minor</span>
+        <span class="muted">age not confirmed &mdash; treated as a minor</span>
       <% end %>
     </p>
 
     <% if user.needs_guardian? %>
       <p class="error">
         <strong>Cannot operate a business.</strong>
-        This user is a minor (or has no date of birth) with no active guardian.
+        This user is a minor (or has not confirmed their age) with no active guardian.
       </p>
     <% end %>
 

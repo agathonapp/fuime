@@ -11,7 +11,7 @@ class EventPolicy < ApplicationPolicy
 
   # Event homepage
   def show?
-    is_public || auditor_or_reader?
+    publishes_ledger? || auditor_or_reader?
   end
 
   def show_in_v4?
@@ -48,7 +48,7 @@ class EventPolicy < ApplicationPolicy
   end
 
   def balance_by_date?
-    is_public || auditor_or_reader?
+    publishes_ledger? || auditor_or_reader?
   end
 
   def edit?
@@ -88,8 +88,15 @@ class EventPolicy < ApplicationPolicy
     user&.admin? && record.demo_mode?
   end
 
+  # Fuime: the roster is NOT part of publishing a storefront.
+  #
+  # This page lists the people on the venture by name, with their profile
+  # pictures — and on a Fuime venture those people are children. The storefront
+  # goes to real trouble to show the owner's name only when the owner is a
+  # confirmed adult; publishing the same names here on the strength of a
+  # storefront checkbox undid that. See AddPublishesLedgerToEvents.
   def team?
-    is_public || auditor_or_reader?
+    publishes_ledger? || auditor_or_reader?
   end
 
   def announcement_overview?
@@ -101,7 +108,7 @@ class EventPolicy < ApplicationPolicy
   end
 
   def emburse_card_overview?
-    is_public || auditor_or_reader?
+    publishes_ledger? || auditor_or_reader?
   end
 
   # Re-enabled for test-mode card issuing (2026-08-02), reverting the
@@ -221,7 +228,7 @@ class EventPolicy < ApplicationPolicy
   end
 
   def card_grant_overview?
-    (is_public || auditor_or_reader?) && (record.plan.card_grants_enabled? || record.card_grants.any?)
+    (publishes_ledger? || auditor_or_reader?) && (record.plan.card_grants_enabled? || record.card_grants.any?)
   end
 
   def bulk_upload_card_grants?
@@ -265,7 +272,7 @@ class EventPolicy < ApplicationPolicy
     # Gating on the sub-organizations this viewer may see, rather than on all of
     # them: a page that exists only for organizations with a private roster
     # gives away that the roster is there.
-    (is_public || auditor_or_reader?) && (record.subevents_enabled? || record.visible_subevents(user).exists?)
+    (publishes_ledger? || auditor_or_reader?) && (record.subevents_enabled? || record.visible_subevents(user).exists?)
   end
 
   alias async_sub_organizations_graph? sub_organizations?
@@ -774,6 +781,26 @@ class EventPolicy < ApplicationPolicy
 
   def is_public
     record.is_public?
+  end
+
+  # Fuime: may a stranger read this venture's books?
+  #
+  # Every predicate above that used to read `is_public` now reads this, and the
+  # difference between the two is the whole point: `is_public` means "this venture
+  # has a public storefront", which is what its own UI label says and what
+  # `Fuime::StorefrontsController` and `Fuime::CheckoutsController` gate on.
+  # Publishing the LEDGER — the sales, the balance, the roster of children who run
+  # the venture — is a separate decision, defaults to false, and has to be made on
+  # purpose.
+  #
+  # Both halves are required. A venture that turned its storefront off has withdrawn
+  # from public view entirely, and a stale `publishes_ledger` must not keep its
+  # books up after it.
+  #
+  # See AddPublishesLedgerToEvents for what was leaking and why this is a new column
+  # rather than a changed default.
+  def publishes_ledger?
+    record.is_public? && record.publishes_ledger?
   end
 
 end

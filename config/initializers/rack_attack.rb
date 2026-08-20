@@ -49,6 +49,32 @@ class Rack::Attack
     !column_ips_webhooks.include?(req.ip)
   end
 
+  # Fuime: the same treatment for Fuime's OWN Stripe endpoints.
+  #
+  # Upstream protects `/stripe/webhook` this way and Fuime added two more Stripe
+  # endpoints (`Fuime::WebhooksController#stripe` and `#connect`) without adding
+  # them here, so they were the only webhook paths in the app any IP could reach.
+  #
+  # Defence in depth, stated as such: signature verification in the controller is
+  # the real control and it fails closed — a missing secret returns 503 rather
+  # than accepting. This closes the gap that let an arbitrary host spend CPU on
+  # signature checks against a payments endpoint.
+  FUIME_STRIPE_WEBHOOK_PATHS = [
+    "/fuime/webhooks/stripe",
+    "/fuime/webhooks/stripe/connect"
+  ].freeze
+
+  safelist("always allow Stripe IPs to send Fuime webhooks") do |req|
+    req.post? && stripe_ips_webhooks.include?(req.ip) &&
+      FUIME_STRIPE_WEBHOOK_PATHS.include?(req.path)
+  end
+
+  blocklist("block Fuime Stripe webhooks from non-Stripe IPs") do |req|
+    next false unless FUIME_STRIPE_WEBHOOK_PATHS.include?(req.path)
+
+    !stripe_ips_webhooks.include?(req.ip)
+  end
+
   ### Throttle Spammy Clients ###
 
   # If any single client IP is making tons of requests, then they're
@@ -216,6 +242,68 @@ class Rack::Attack
     end
   end
 
+  # ── Fuime: the three endpoints that cost money or send mail ────────────────
+
+  # Fuime: starting a checkout.
+  #
+  # Public, unauthenticated, and every request creates a Stripe PaymentIntent. Two
+  # abuses it stops: card testing (a stranger cycling stolen numbers through a
+  # teenager's storefront, whose decline rate lands on the account the charge is
+  # on), and simply running up API volume against Fuime's Stripe account.
+  #
+  # 20 in 5 minutes is far above a real buyer — who starts one checkout, maybe
+  # retries once — and low enough that automation hits it in seconds.
+  throttle("fuime/checkout/ip", limit: 20, period: 5.minutes) do |req|
+    req.ip if req.post? && req.path.match?(%r{\A/b/[^/]+/pay\z})
+  end
+
+  # Fuime: inviting a guardian.
+  #
+  # `GuardianshipsController#create` creates a `User` row for whatever address is
+  # typed and sends it mail, so without a cap one signed-in teen is a mail cannon
+  # and a way to squat accounts on addresses whose owners have not registered yet.
+  #
+  # Keyed on the session cookie rather than the IP, following the
+  # `first/request_org_invite` throttle above: a household or a school shares an
+  # IP, and rate-limiting a classroom because one student is inviting a parent is
+  # the wrong failure. Unauthenticated requests never reach the action.
+  #
+  # 10 a day is generous for a real family — two guardians, a couple of typos, a
+  # resend — and ends the bombing channel.
+  throttle("fuime/guardian_invite/user", limit: 10, period: 1.day) do |req|
+    if req.post? && req.path == "/guardianships"
+      req.cookies["session_token"]
+    end
+  end
+
+  # Fuime: the venture API.
+  #
+  # Not brute-force protection — keys are 32 bytes of SecureRandom and guessing is
+  # not the threat. This is the ceiling that makes a LEAKED key's abuse visible and
+  # bounded: a stolen key minting payment links in a loop, or an agent stuck in a
+  # retry. `Fuime::ApiKey::MAX_LIVE_LINKS_PER_KEY` bounds the total; this bounds
+  # the rate.
+  #
+  # Keyed on the presented credential, so one compromised key cannot throttle
+  # every other venture's integration. Hashed because throttle keys reach the
+  # cache and, on some stores, logs — a rate-limit key is not a place to put a
+  # live secret in plaintext.
+  throttle("fuime/api/key", limit: 120, period: 1.minute) do |req|
+    if req.path.start_with?("/api/fuime/v1/")
+      presented = req.get_header("HTTP_AUTHORIZATION").to_s.strip
+      presented = presented.sub(/\Abearer\s+/i, "")
+      Digest::SHA256.hexdigest(presented) if presented.present?
+    end
+  end
 end
 
-Rack::Attack.enabled = Rails.env.production? # only enable in production
+# Fuime: on in staging too.
+#
+# This was production-only, which meant the staging environment — the one place
+# these rules get exercised before they matter — ran with no throttling at all, so
+# a misconfigured limit was only ever discovered in production. Staging is also
+# internet-reachable and holds test-mode Stripe credentials.
+#
+# Still off in development and test: a throttle that fires mid-suite is a flaky
+# spec, and localhost does not need protecting from itself.
+Rack::Attack.enabled = Rails.env.production? || Rails.env.staging?

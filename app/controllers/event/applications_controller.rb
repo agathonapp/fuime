@@ -244,6 +244,18 @@ class Event
 
       @application.save!
 
+      # Fuime: the age checkbox that replaced the date-of-birth field.
+      #
+      # Applied through #attest_minor_13_plus! rather than as a permitted attribute,
+      # so this request can only ever produce the MINOR value — the enum's
+      # `adult_18_plus` is reachable only from the guardian-acceptance flow. Same
+      # design as UsersController#update; see AddAgeAttestationToUsers.
+      if ActiveModel::Type::Boolean.new.cast(params.dig(:event_application, :age_attestation_confirmed))
+        @application.user.attest_minor_13_plus!(
+          ip: request.remote_ip, user_agent: request.user_agent
+        )
+      end
+
       if user_params.present?
         success = @application.user.update(user_params)
         if params[:autosave] != "true" && !success
@@ -368,7 +380,11 @@ class Event
     end
 
     def user_params
-      params.require(:event_application).permit(:full_name, :preferred_name, :phone_number, :birthday)
+      # :birthday deliberately dropped — the application asks for a confirmation
+      # instead (AddAgeAttestationToUsers), handled above rather than assigned, and
+      # leaving it permitted would keep the F-02 self-re-aging hole open through a
+      # field nothing renders.
+      params.require(:event_application).permit(:full_name, :preferred_name, :phone_number)
     end
 
     def record_pageview

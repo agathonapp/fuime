@@ -217,8 +217,29 @@ module Fuime
     # two sides resumes instead of double-posting one of them.
     UNIQUE_BANK_IDENTIFIER = "FUIMEINTERNAL"
 
+    # The prose is sanitized here, in the one place the bracketed key is attached.
+    #
+    # `#{memo} [#{key}]` is the whole classification scheme: PayablesLedger asks
+    # `memo LIKE '%[fuime_fee_%'` and FeeEngine::Create asks `.memo_carries_key?`.
+    # So any bracket that arrives in the PROSE half is indistinguishable from a key
+    # Fuime wrote, and .sanitize_memo_text existed to strip them — but it was only
+    # ever called at two INPUT boundaries (Offer#payment_description and
+    # Fuime::CheckoutsController#payment_description), never here.
+    #
+    # That left the class open through every other route to a memo, and one was
+    # already live: `memo_for` in both recorders falls back to
+    # "Payment to #{venture.name}", and `Event#name` validates presence and nothing
+    # else. An operator renaming their venture "Acme [fuime_payout_" made their own
+    # sales classify as money already paid out to them, on the page their guardian
+    # reads.
+    #
+    # Sanitizing at the sink closes the class rather than the instance: a memo
+    # cannot reach the classifier with a bracket in it, whatever new path produces
+    # one. The input-boundary guards stay — Fuime::Offer *validates* rather than
+    # strips, so an operator gets told instead of silently edited, which is worth
+    # keeping on the one path where there is a person to tell.
     def self.settled_memo(key, memo)
-      "#{memo} [#{key}]"
+      "#{sanitize_memo_text(memo)} [#{key}]"
     end
 
     # Does this settled line's memo carry a Fuime ledger key?
@@ -347,7 +368,14 @@ module Fuime
 
       cpt = ::CanonicalPendingTransaction.create!(
         date: raw.date,
-        memo: memo,
+        # Sanitized on the way IN, not only when the sweep settles it.
+        #
+        # A pending line's memo is what Fuime::ConnectSettlementSweep later carries
+        # into the settled memo, so a bracket stored here becomes a bracket in front
+        # of the classifier days later. Cleaning it at write time means the settled
+        # line is correct even for a row that was posted before this change and swept
+        # after it. See .settled_memo.
+        memo: self.class.sanitize_memo_text(memo),
         amount_cents: raw.amount_cents,
         raw_pending_donation_transaction_id: raw.id,
         fronted: false

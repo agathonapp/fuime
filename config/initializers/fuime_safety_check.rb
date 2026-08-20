@@ -47,7 +47,18 @@ Rails.application.config.after_initialize do
         0 # table may not exist yet during an initial migrate
       end
 
-    fatal = ENV["STRIPE_MODE"].to_s == "live" || stored_receipts.positive?
+    # Fuime: merchant-of-record is a third trigger, added because the first two
+    # both miss the launch configuration.
+    #
+    # Under MoR Fuime is the legal seller, which means Fuime — not the family — owes
+    # the buyer a receipt and owes the IRS the records behind its own revenue. Those
+    # obligations start with the first sale and do not wait for STRIPE_MODE=live
+    # (test-mode sales are still sales somebody made), nor for a blob to already
+    # exist, which is a trigger that can only fire after something has been put at
+    # risk. Waiting for either is waiting to have something to lose.
+    fatal = ENV["STRIPE_MODE"].to_s == "live" ||
+            stored_receipts.positive? ||
+            Fuime::Features.merchant_of_record?
 
     message = <<~MSG.strip
       Active Storage is using the :local service in #{Rails.env}.
@@ -95,14 +106,103 @@ Rails.application.config.after_initialize do
   end
 
   # --- 3. Webhooks must be signature-verified --------------------------------
-  # Without the secret, Fuime::WebhooksController rejects every Stripe webhook
-  # in production (400), so payments are taken and never reach a ledger.
+  # Without the secret, Fuime::WebhooksController refuses every Stripe webhook
+  # (503), so payments are taken and never reach a ledger.
+  #
+  # ── Why the payment secret is now an ERROR under merchant-of-record ────────
+  #
+  # This was a warning on the reasoning that a missing secret degrades the product.
+  # Under MoR it does not degrade anything — it breaks the one thing that makes the
+  # model lawful. Customer money lands in FUIME's balance and the webhook is the
+  # only thing that turns it into a payable the operator is owed. No webhook, no
+  # payable: Fuime holds a stranger's money with no record that it owes anybody,
+  # which is the shape of check 5 and check 6 arrived at by accident instead of by
+  # configuration. That belongs with the conditions that refuse to boot.
+  #
+  # Still a warning under Connect, where the money never touches Fuime and a lost
+  # webhook is a stale mirror of a balance the family can see in Stripe.
   if ENV["FUIME_STRIPE_WEBHOOK_SECRET"].blank?
-    warnings << <<~MSG.strip
+    message = <<~MSG.strip
       FUIME_STRIPE_WEBHOOK_SECRET is not set. Stripe payment webhooks will be
-      rejected with a signature error, so payments will NOT appear on any
-      business ledger. Set it from the Stripe dashboard endpoint's signing secret.
+      refused, so payments will NOT appear on any business ledger. Set it from the
+      Stripe dashboard endpoint's signing secret.
     MSG
+
+    if Fuime::Features.merchant_of_record?
+      errors << "#{message}\n\nUnder FEATURE_MERCHANT_OF_RECORD this is not a degraded ledger — it is money in Fuime's balance with no record of who it is owed to."
+    else
+      warnings << message
+    end
+  end
+
+  # The Connect endpoint's own secret, which was never checked at all.
+  #
+  # A separate secret because Stripe scopes webhook endpoints separately (see
+  # Fuime::WebhooksController#connect). Losing these loses `account.updated`, so a
+  # venture finishes Stripe onboarding and Fuime never learns it can sell —
+  # `accepts_payments?` stays false with nothing for the family to point at.
+  #
+  # A warning rather than an error in both models: no money is mis-held, and under
+  # MoR there are no connected accounts to hear about, so requiring it would refuse
+  # to boot over an endpoint that has nothing to deliver.
+  if ENV["FUIME_STRIPE_CONNECT_WEBHOOK_SECRET"].blank?
+    warnings << <<~MSG.strip
+      FUIME_STRIPE_CONNECT_WEBHOOK_SECRET is not set. Connected-account webhooks
+      will be refused, so onboarding completions (account.updated) will be missed
+      and a venture that finished Stripe setup may still show as unable to sell.
+    MSG
+  end
+
+  # --- 3b. The session signing key must not be the one in the repository -----
+  #
+  # `config/master.key` is COMMITTED (it arrived upstream in 8b96a8b45, "Use
+  # default credentials for all non prod environments", and is tracked despite
+  # being listed in .gitignore). It decrypts config/credentials.yml.enc, which
+  # holds exactly one value: `secret_key_base`.
+  #
+  # That value signs and encrypts every session and flash cookie. Rails resolves it
+  # from ENV["SECRET_KEY_BASE"] first and falls back to credentials — so a
+  # production deploy that never set the env var is signing admin sessions with a
+  # key that anyone holding a clone of this repository already has. Forging one is
+  # then arithmetic, not an attack.
+  #
+  # Compared rather than merely checked for presence: setting SECRET_KEY_BASE to
+  # the committed value (by copying it out of the credentials file, which is the
+  # obvious thing to do when a boot check demands the variable) would satisfy a
+  # presence check and fix nothing.
+  #
+  # An error, not a warning. Every other control in this file assumes sessions are
+  # trustworthy; if they are not, none of them mean anything.
+  begin
+    committed_key_base = Rails.application.credentials.secret_key_base.presence
+    live_key_base = ENV["SECRET_KEY_BASE"].presence
+
+    if committed_key_base && live_key_base == committed_key_base
+      errors << <<~MSG.strip
+        SECRET_KEY_BASE is set to the value stored in config/credentials.yml.enc.
+        That file is decryptable by anyone with this repository, because
+        config/master.key is committed — so this key is public and every session
+        and flash cookie in #{Rails.env} is forgeable, including an admin's.
+
+        Generate a fresh one (`rails secret`), set it in the deploy environment,
+        and treat the committed value as burned.
+      MSG
+    elsif committed_key_base && live_key_base.nil?
+      errors << <<~MSG.strip
+        SECRET_KEY_BASE is not set, so Rails is falling back to the
+        secret_key_base in config/credentials.yml.enc. That file is decryptable by
+        anyone with this repository, because config/master.key is committed — so
+        the key signing every session and flash cookie in #{Rails.env} is public,
+        and forging an admin session is arithmetic.
+
+        Generate a fresh one (`rails secret`) and set SECRET_KEY_BASE in the
+        deploy environment.
+      MSG
+    end
+  rescue => e
+    # A credentials file that cannot be read is not this check's problem to
+    # diagnose, and must not be the reason a deploy fails to boot.
+    warnings << "Could not verify SECRET_KEY_BASE against the committed credentials (#{e.class}). Confirm by hand that SECRET_KEY_BASE is set in the deploy environment."
   end
 
   # --- 4. Don't let a fork reach Hack Club production ------------------------

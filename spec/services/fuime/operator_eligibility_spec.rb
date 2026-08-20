@@ -226,15 +226,46 @@ RSpec.describe Fuime::OperatorEligibility do
       end
     end
 
-    # The one that matters most. A missing birthday must not be the way past a
-    # floor that exists to keep FLSA hour limits out of the picture.
-    it "blocks an operator with no date of birth on file" do
+    # The one that matters most. An unanswered age question must not be the way past
+    # a floor that exists to keep FLSA hour limits out of the picture.
+    #
+    # "No date of birth" is now the ORDINARY state — signup asks for a checkbox
+    # (AddAgeAttestationToUsers) — so the interesting distinction is no longer
+    # date/no-date but answered/unanswered. Both cases below.
+    it "blocks an operator who has not confirmed their age at all" do
       unknown = create(:user, :unknown_age)
       create(:guardianship, :active, minor: unknown)
       create(:organizer_position, event:, user: unknown)
 
       expect(described_class.new(event:).blockers)
-        .to include(/#{Regexp.escape(unknown.name)} has no date of birth on file/)
+        .to include(/#{Regexp.escape(unknown.name)} hasn't confirmed their age/)
+    end
+
+    it "accepts a 13+ confirmation while the floor is 13" do
+      teen = create(:user, :attested_teen)
+      create(:guardianship, :active, minor: teen)
+      create(:organizer_position, event:, user: teen)
+
+      ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "13"
+      expect(described_class.new(event:).blockers).to be_empty
+    ensure
+      ENV.delete("FUIME_MINIMUM_OPERATOR_AGE")
+    end
+
+    # The cost of the checkbox, asserted rather than left implicit: it cannot tell
+    # 14 from 17, so a higher floor refuses and says why.
+    it "refuses a 13+ confirmation against a higher floor, naming what it would need" do
+      teen = create(:user, :attested_teen)
+      create(:guardianship, :active, minor: teen)
+      create(:organizer_position, event:, user: teen)
+
+      ENV["FUIME_MINIMUM_OPERATOR_AGE"] = "16"
+      blockers = described_class.new(event:).blockers
+
+      expect(blockers.join).to match(/must be at least 16/)
+      expect(blockers.join).to match(/date of birth to tell/)
+    ensure
+      ENV.delete("FUIME_MINIMUM_OPERATOR_AGE")
     end
   end
 

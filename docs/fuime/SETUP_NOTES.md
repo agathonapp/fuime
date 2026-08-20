@@ -2,6 +2,88 @@
 
 ## Handoff (most recent first)
 
+**2026-08-20 (latest) — signup stopped asking for a date of birth.**
+
+Founder's call: a checkbox instead, like most consumer sites. No user is asked for a
+date any more; the only thing that still collects one is Stripe card issuing, which
+legally requires it and has its own prompt. Full write-up in UPSTREAM_DIVERGENCE.md
+under "Date of birth replaced by an age checkbox".
+
+**The one thing to understand before touching this.** A single "I'm 13+" boolean
+cannot run Fuime, so `users.age_attestation` records *which* claim was made —
+`minor_13_plus` or `adult_18_plus`. The code asks three age questions (≥13 COPPA,
+≥16 operator floor, ≥18 guardian) and a boolean has two states; with one flag,
+`minor_or_unknown_age?` is true for everybody, `known_adult?` is true for nobody,
+and **no guardianship can ever activate.** Two values fixes that. Since the
+production operator floor is already 13, the checkbox satisfies everything that is
+currently switched on.
+
+**The security property, which must not be broken by a later "convenience" change:**
+the box a user can tick from a page they control can only ever say `minor_13_plus`.
+`adult_18_plus` is set in exactly one place — `GuardianshipsController#accept`,
+where the box already read "I am 18 or older, and their guardian". `age_attestation`
+and `:birthday` are permitted parameters nowhere. A spec asserts the allowlist.
+
+**Where the bodies were.** `User#is_minor?` is a tri-state returning **nil** with no
+date, which is falsy — so four places in the application flow silently inverted:
+the parent's-email field disappeared for checkbox teens, and contract creation
+**deleted** a `cosigner_email` that had just been entered, because `!nil` is true.
+If you add an age check anywhere, use `known_adult?` (positively an adult) or
+`minor_or_unknown_age?` (fail-closed), never `is_minor?`.
+
+**Accepted trade:** the checkbox does not age. A date made a 15-year-old eligible at
+16 by itself; a `minor_13_plus` tick never becomes a 16+ tick. If
+`FUIME_MINIMUM_OPERATOR_AGE` is ever raised above 13, every existing checkbox
+operator is blocked until they supply a date — `OperatorEligibility#age_blocker`
+says so in words rather than guessing.
+
+Privacy policy, terms and FAQ were all updated — they claimed we collect a date of
+birth, and L8 is specifically about not letting copy describe a product that does
+not exist.
+
+
+**2026-08-20 (latest) — a full-platform security review, and its thirteen fixes.**
+
+Whole app, not the branch diff. The money paths held up: idempotency, price tampering,
+IDOR, payout segregation of duties and webhook signature verification are all correct,
+and no path pays out more than is owed. What did not hold up was **who may read a
+teenager's business** and **how much rests on a self-asserted date of birth**. Change log
+in UPSTREAM_DIVERGENCE.md under "Security review remediation"; reasoning is in a comment
+at each fix.
+
+The four that mattered: `is_public` meant both "my storefront is public" and "my books are
+public", so ticking a storefront box published every sale, the balance and the minors'
+names — now split by `events.publishes_ledger` (default false); `birthday` was editable
+from the settings form, which turned off guardianship enforcement, the 16+ floor and the
+payout guardian gate in one PATCH — now write-once; a teen with a second email address
+could accept their own guardianship and approve their own payouts — now surfaced as
+signals on the admin batch review, not blocked, because shared IPs are what real families
+look like; and `config/master.key` is committed, so `secret_key_base` is public — the boot
+guard now refuses to start if `SECRET_KEY_BASE` is unset or equal to it.
+
+**Two things need a human, not a commit:**
+
+- **Rotate `secret_key_base`** and confirm `SECRET_KEY_BASE` is set in the deploy env.
+  The boot guard will now refuse to start if it is wrong, so *deploy this branch to
+  staging before production* — a missing variable becomes a failed boot, not a warning.
+- **`FEATURE_MERCHANT_OF_RECORD` now makes two more things fatal at boot**: a missing
+  `FUIME_STRIPE_WEBHOOK_SECRET` (under MoR that is money in Fuime's balance with no
+  record of who it is owed to) and local Active Storage. Both are correct and both will
+  stop a deploy that would previously have started.
+
+**`blazer` was left on 3.3.0 on purpose.** Its stored-XSS advisory is real, but the
+upgrade forces `safely_block` 1.0, and `safely` wraps code inside
+`canonical_transaction.rb` — the ledger. Taking it turned five `user_session_spec`
+examples red, i.e. it changes exception-swallowing behaviour somewhere. Blazer is
+auditor-only; that upgrade belongs on its own branch with its own verification.
+`json` 2.21.2 (the one on the untrusted-webhook path) is taken and pulls in nothing.
+
+Suite: `3412 → 3439 examples`, same 5 pre-existing failures (four `receipt_bin_mailbox`
+needing `wkhtmltopdf`, one stale invoice-copy expectation). Brakeman 0. Run specs with
+`docker compose exec -T web bundle exec rspec` — the host Ruby is 4.0.6 against a Gemfile
+pinned to 3.4.9, so `bundle` does not work outside the container.
+
+
 **2026-08-20 — Fuime is LIVE. Real Stripe, real money, merchant-of-record on.**
 
 `app.fuime.com` runs `c97827653` with `STRIPE_MODE=live`, live keys on Fuime's own account

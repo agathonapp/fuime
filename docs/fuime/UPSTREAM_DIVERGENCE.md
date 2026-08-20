@@ -5118,3 +5118,171 @@ somebody at another company.
 283 mailer/view/request/invoice examples green after the change; 1100 across the wider set with
 one pre-existing ordering failure (`public_activity/user_session/create_spec`, listed in
 known-failures.md's standing remainder — passes in isolation, on a clean tree and with this diff).
+
+## Security review remediation — 2026-08-20
+
+A full-platform security review (whole app, not the branch diff) produced thirteen
+findings. This section is the change log; the reasoning for each lives in a comment at
+the site of the fix, because that is where the next person reads it.
+
+Baseline before: `3412 examples, 5 failures` — four `receipt_bin_mailbox` examples
+(`wkhtmltopdf` missing in the container) and one stale invoice-copy expectation. Both
+pre-existing and unrelated.
+
+### Authorization
+
+| Change | Why | Files |
+|--------|-----|-------|
+| New `events.publishes_ledger` column, default false | `is_public` meant BOTH "my storefront is public" (its Fuime label, and what the storefront/checkout gate on) and "my books are public" (what `EventPolicy` granted on). Every venture is created `is_public: true`, so ticking a storefront box published every sale, the running balance, and the names and photos of the minors running it. CLAUDE.md L7. | `db/migrate/20260820120000_add_publishes_ledger_to_events.rb` |
+| `EventPolicy` grants on `publishes_ledger?` (= `is_public? && publishes_ledger?`) instead of `is_public` | Covers `show?` and everything aliased to it — `transactions?`, `transactions_list?`, `team?`, `balance_transactions?`, `money_movement?`, `users_chart?`, `stats?`, `statements?`, `async_balance?` — plus `balance_by_date?`, `emburse_card_overview?`, `card_grant_overview?`, `sub_organizations?`. `announcement_overview?` deliberately unchanged: a published announcement is a deliberate publication. | `app/policies/event_policy.rb` |
+| Transparency toggle in org settings rebound to `:publishes_ledger` | It was labelled "Make …'s finances transparent" and set the same column as the offers page's "Show my storefront publicly". Each switch now sets the thing its own label names. | `app/views/events/settings/_details.html.erb`, `app/controllers/events_controller.rb` |
+| `/stats/:slug` requires `publishes_ledger` and `not_hidden` | An unauthenticated endpoint returning a venture's lifetime revenue, keyed on the storefront flag, linked from nothing. | `app/controllers/stats_controller.rb` |
+| `Event#overseeing_guardianships` extracted; `#overseeing_guardians` reads through it | One definition of "overseeing", now that the guardianship records themselves are needed. | `app/models/event.rb` |
+
+### Authentication & the guardianship structure
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `birthday` is write-once (`User#birthday_is_write_once`) | `:birthday` was permitted on the ordinary settings form. One PATCH setting it to 1990 turned off `GuardianshipEnforcement`, the FLSA 16+ operator floor, the payout guardian gate, and `Guardianship#activation_blockers` at once. Admins and no-session callers (console, jobs, seeds) may still change it. | `app/models/user.rb` |
+| `Errors::PrivilegedBirthdayChange`, reported on any change to an already-set DOB | A change to age is a change to eligibility to trade, so the privileged path is reviewable rather than merely permitted. | `app/lib/errors.rb`, `app/models/user.rb` |
+| `Guardianship#self_signed_signals` / `#self_signed_suspected?`, surfaced on the admin payout-batch review | `decide_payout?` resolves to `guardian_reader?` and `approver_must_not_be_the_requester` compares user IDs, so a teen with a second email address approves their own payouts. Signals, not a block: shared IP and fast acceptance are true of real families. Derived from already-persisted data, so no migration and so it applies to guardianships signed earlier. | `app/models/guardianship.rb`, `app/views/admin/payout_batch.html.erb` |
+
+### Money paths
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `financially_frozen?`, `hidden?` and `demo_mode?` added to `OperatorEligibility#blockers` | `accepts_payments?` asked about none of them. Frozen was the worst: `PayableAssessment` already skips a frozen venture from every payout run, so money went in and had no path out. | `app/services/fuime/operator_eligibility.rb` |
+| Storefront and checkout scoped `.not_hidden` | The payment page and directory already filtered it; these two used a bare `find_by!`, so hiding a venture left its Buy button working. | `app/controllers/fuime/storefronts_controller.rb`, `app/controllers/fuime/checkouts_controller.rb` |
+| Memo sanitization moved to the SINK — `VentureLedger.settled_memo` and `#post!` | `sanitize_memo_text` was called at two input boundaries only. `memo_for` falls back to `"Payment to #{venture.name}"` and `Event#name` validates presence alone, so an operator naming their venture `Acme [fuime_payout_` made their own sales classify as already paid out. Money was never reachable (`net_payable_cents` reads `balance_v2_cents`; the unsettled-fee sum keys off the raw row) but the breakdown a guardian reads was wrong. | `app/services/fuime/venture_ledger.rb` |
+| `ConnectSettlementSweep#settle_one!` calls `.settled_memo` instead of re-interpolating it | The duplicated format string is what would have left the fix above incomplete on the path every real sale settles through. | `app/services/fuime/connect_settlement_sweep.rb` |
+
+### Secrets
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Boot check: `SECRET_KEY_BASE` must be set and must differ from the committed credentials value | `config/master.key` is committed (upstream `8b96a8b45`, tracked despite `.gitignore`) and `credentials.yml.enc` holds `secret_key_base`. Without the env var, session and flash cookies are signed with a key anyone with a clone has. **Still to do by hand: confirm the deploy sets it, then rotate.** | `config/initializers/fuime_safety_check.rb` |
+| Freshly minted API keys render in the response that created them | The plaintext travelled in `flash`, and with no `session_store` initializer the session is Rails' default cookie store — a live credential written to the browser's cookie jar. A server-side cache was tried first and rejected: `Rails.cache` is `:null_store` in test and in development without `tmp/caching-dev.txt`. | `app/controllers/fuime/api_keys_controller.rb` |
+
+### Hardening
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Content Security Policy, **report-only** | The initializer was Rails' commented-out template. Report-only because `script_src` omits `:unsafe_inline` and there are 19 inline `<script>` blocks in `app/views` — enforcing today would break the checkout. Blocks nothing yet; the two steps to enforcement are written in the file. | `config/initializers/content_security_policy.rb` |
+| `json` 2.21.1 → 2.21.2 | CVE-2026-71847: freed-buffer dereference on truncated duplicate-key JSON. Relevant because the Fuime webhook endpoints parse untrusted JSON before anything else happens. No dependency churn. | `Gemfile.lock` |
+| **`blazer` 3.3.0 → 3.5.1 deliberately NOT taken** | GHSA-m5f6-4589-m89f (stored XSS) is real but Blazer is behind `AuditorConstraint`, so it is an auditor→admin path rather than a public one. The upgrade forces `safely_block` 0.5 → **1.0**, and `safely` is used inside `canonical_transaction.rb` and `canonical_pending_transaction.rb` — the ledger (CLAUDE.md Rule 3). Taking it turned five `user_session_spec` public-activity examples red, which is a change in exception-swallowing behaviour I did not chase down. A major bump in the ledger's error handling does not ride along with a security patch the day before real money. **Follow-up: upgrade Blazer on its own branch, and understand what `safely_block` 1.0 changed before merging.** | — |
+| IP allowlist for `/fuime/webhooks/stripe` and `…/connect` | Upstream protects `/stripe/webhook` this way; Fuime's own two Stripe endpoints were added without it. Depth only — signature verification is the real control and fails closed. | `config/initializers/rack_attack.rb` |
+| Throttles on checkout, guardian invites and the venture API | The public checkout creates a Stripe PaymentIntent per request (card testing); `POST /guardianships` creates a `User` row and sends mail per request (bombing, account squatting); the API had no per-key ceiling to make a leaked key's abuse visible. The API throttle key is SHA-256'd — a rate-limit key is not a place for a live secret. | `config/initializers/rack_attack.rb` |
+| Rack::Attack enabled in staging | Was production-only, so the environment where limits get exercised before they matter had none. | `config/initializers/rack_attack.rb` |
+| `FUIME_STRIPE_WEBHOOK_SECRET` missing is now fatal under merchant-of-record | Under MoR it is not a degraded ledger: money lands in Fuime's balance with no record of who it is owed to. Also added a warning for the previously unchecked `FUIME_STRIPE_CONNECT_WEBHOOK_SECRET`. | `config/initializers/fuime_safety_check.rb` |
+| Local Active Storage is fatal under merchant-of-record | The existing triggers (`STRIPE_MODE=live`, or blobs already stored) both fire only after there is something to lose. As seller of record Fuime owes receipts from the first sale. | `config/initializers/fuime_safety_check.rb` |
+| `X-Robots-Tag` allowlist | It was `none` on every response, so the public directory and storefronts could never be indexed and `Event#is_indexable` could have no effect. Allowlisted the three public commerce controllers, with `noai, noimageai` (L7); everything else stays `none`. | `app/controllers/application_controller.rb` |
+
+### Specs
+
+`spec/requests/fuime_security_review_fixes_spec.rb` covers F-01, F-02, F-03, F-05, F-08,
+F-09 and F-13. Each example asserts the hole is closed on the real object rather than
+that a guard exists — the F-09 examples run against `PayablesLedger`'s own classifier,
+because a spec asserting `sanitize_memo_text` strips brackets passes whether or not
+anything calls it, which is how the 2026-08-16 fix came to be incomplete.
+
+Two existing specs asserted the old behaviour and were rewritten, not deleted:
+`event_policy_spec.rb`'s `#sub_organizations?` block (parent now needs
+`publishes_ledger`; the child-visibility logic it actually tests is unchanged, and a new
+example covers the un-opted-in parent) and `api_keys_controller_spec.rb`'s minting
+example (now asserts the secret is in the page and in no cookie).
+
+### Not fixed here
+
+- **Rotating `secret_key_base`** and confirming the production env. Needs someone with
+  the deploy dashboard; the boot check will refuse to start if it is wrong.
+- **Enforcing the CSP.** Needs nonces on the 19 inline scripts and a pass over the money
+  paths.
+- **Verifying a guardian out of band.** `Fuime::RequirementCollectionService` already
+  forwards identity to Stripe and keeps only the consent record, so the machinery exists;
+  gating the first payout on it is a product decision, not a patch. The signals above are
+  the interim control.
+- **A full review of the 41 upstream controllers that `skip_before_action :signed_in_user`.**
+  This pass covered the Fuime surface exhaustively and sampled upstream.
+
+## Date of birth replaced by an age checkbox — 2026-08-20
+
+**Founder's call.** Signup asked every user for a full month, day and year,
+`required: true`, in three places. It now asks for a confirmation instead, the way
+most consumer sites gate age. No user is asked for a date of birth any more.
+
+### Why the column records a STATE and not a boolean
+
+A single "I'm 13+" boolean cannot run this platform, and the reason is arithmetic
+rather than caution — the code asks three different age questions:
+
+| Threshold | Read by | Purpose |
+|---|---|---|
+| ≥ 13 | `User#age_attestation_required_for_onboarding`, `minimum_age_requirement` | COPPA floor (L6) |
+| ≥ 16 | `Fuime::OperatorEligibility#age_blocker` | FLSA operator floor — configurable, **13 in production** |
+| ≥ 18 | `User#known_adult?` | who may be a GUARDIAN, i.e. the whole parent-signs structure (L2) |
+
+With one boolean, `minor_or_unknown_age?` (deliberately fail-closed) reads true for
+everybody, so `known_adult?` is never true for anybody and **no guardianship could
+ever activate** — every user, parents included, becomes a minor waiting for a
+parent. So `users.age_attestation` records *which* claim was made:
+`minor_13_plus` ("I am 13 or older" — the teen's box) or `adult_18_plus` ("I am 18
+or older, and their guardian" — the guardian's box). One tick per person, no date,
+three thresholds still resolve.
+
+Because the production operator floor is already 13, the checkbox satisfies it
+exactly and **nothing switched on today is lost.**
+
+### The load-bearing security property
+
+**The box a user can tick from a page they control can never make them an adult.**
+`attest_minor_13_plus!` is the only door from the user-facing forms and can express
+one value; `adult_18_plus` is reachable only from `GuardianshipsController#accept`.
+`age_attestation` is not a permitted parameter anywhere, and neither is `:birthday`
+any more. A spec asserts the allowlist directly.
+
+This preserves what `User#birthday_is_write_once` was added for hours earlier
+(security review F-02): before it, a teen could PATCH their birthday to 1990 and
+switch off guardianship enforcement, the operator floor and the payout guardian
+gate in one request. The attestation is write-once on the same terms, including the
+unverified-session case.
+
+### Files
+
+| Change | Why | Files |
+|---|---|---|
+| `users.age_attestation` + `age_attested_at` / `_ip` / `_user_agent` | The claim, and the consent record for it — mirroring `guardianships.agreement_*`. An unverified claim is still worth recording precisely. | `db/migrate/20260820170000_add_age_attestation_to_users.rb` |
+| `known_adult?` / `minor_or_unknown_age?` read both sources | A stored date of birth **wins outright** — it is the more specific fact, and otherwise a teen who supplied one for a card could tick their way out of being a minor. `is_minor?` stays birthday-only, because upstream call sites read it. | `app/models/user.rb` |
+| `attested_at_least?(years)` | Expresses the claim as a floor it clears. `minor_13_plus` clears 13 and nothing above — the checkbox genuinely cannot tell 14 from 17. | `app/models/user.rb` |
+| `OperatorEligibility#age_blocker` reads the attestation | Passes a 13+ tick against a floor of 13. Raise the floor to 16 and it refuses **with a sentence saying it would need a date of birth to tell** — a loud failure rather than a guess, on the control that exists to keep FLSA exposure out of the picture. | `app/services/fuime/operator_eligibility.rb` |
+| The guardian's existing tick now records `adult_18_plus` | The acceptance box already read "I confirm I am the parent or legal guardian of X, **that I am 18 or older**, and I agree to the guardian agreement". The assertion was always being made there; it is now recorded. `activation_blockers` no longer sends a parent to a settings page to enter a date that no longer has a field. | `app/controllers/guardianships_controller.rb`, `app/models/guardianship.rb` |
+| `is_teenager?` falls back to the attestation | Without it, dropping the date would silently zero every teen-count metric by reclassifying everybody as not-a-teenager. | `app/models/user.rb` |
+| **Four `is_minor?` holes in the application flow** | `is_minor?` is a tri-state returning **nil** with no date, which is falsy. So: the cosigner-email field would have vanished for every checkbox teen; `cosigner_email` would have been **deleted** on contract creation because `!nil` is true; the submit gate required a birthday nobody could supply. All four now use `known_adult?` / `minor_or_unknown_age?`. | `app/models/event/application.rb`, `app/views/event/applications/edit.html.erb` |
+| Onboarding, settings and application forms | Checkbox in place of `date_select`. The settings date field is now admin-only and read-only; `:birthday` is no longer permitted, so leaving an input would post a silently-dropped value. | `app/views/users/edit.html.erb`, `app/views/event/applications/edit.html.erb`, `app/controllers/users_controller.rb`, `app/controllers/event/applications_controller.rb` |
+| Guardianship-enforcement message | Said "please add your date of birth" and pointed at a field that no longer exists. | `app/controllers/concerns/fuime/guardianship_enforcement.rb` |
+| Admin displays | "age unknown" is now the *normal* state, so the vetting queue and the user panel distinguish "confirmed 13+" from "answered nothing". The reviewer approving an operator is the one person who can act on the difference. | `app/views/admin/operator_vetting.html.erb`, `app/views/users/_admin_guardianship.html.erb` |
+| **Privacy policy, terms and FAQ** | They said we collect a date of birth and that we ask for one at signup. Both false as of this change, and L8 is explicitly about not letting copy describe a product that does not exist. The privacy policy now also names the one case where a date IS taken. | `app/views/static_pages/privacy.html.erb`, `terms.html.erb`, `faq.html.erb` |
+
+### What still collects a real date of birth
+
+**Stripe, and only Stripe.** An Issuing cardholder and a Connect individual both
+legally require one, so `stripe_cards/_form` keeps its own prompt — it already only
+asks when the field is empty, and cards are behind a default-off flag. Connect
+onboarding degrades gracefully: `Fuime::ConnectOnboardingService` returns nil for
+the prefill and Stripe collects it directly. `users.birthday` is untouched and stays
+encrypted (Rule 2).
+
+### Not changed, and worth saying plainly
+
+**This is not a security improvement.** A typed date and a ticked box are both
+unverified claims — that is security-review F-02/F-03, and the write-once guard is
+what makes either durable. It is a data-minimisation change: Fuime now holds one
+boolean-ish fact where it used to hold a full date of birth for every minor on the
+platform.
+
+One trade accepted deliberately: **the checkbox does not age.** A date of birth
+made a 15-year-old eligible at 16 by itself. A `minor_13_plus` tick never becomes a
+16+ tick, so if `FUIME_MINIMUM_OPERATOR_AGE` is ever raised, every existing
+checkbox operator is blocked until they supply a date. `#age_blocker` says exactly
+that when it happens.
+
+Specs: `spec/models/fuime/age_attestation_spec.rb` (22 examples).

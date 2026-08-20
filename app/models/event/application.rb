@@ -64,7 +64,7 @@
 #
 # Check Constraints
 #
-#  event_applications_starting_point_known  (starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying::text, 'have_idea'::character varying::text, 'from_template'::character varying::text])))
+#  event_applications_starting_point_known  (starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[])))
 #
 class Event
   class Application < ApplicationRecord
@@ -436,7 +436,17 @@ class Event
         raise StandardError.new("Cannot create a contract for application #{hashid}: missing name and/or description")
       end
 
-      if cosigner_email.present? && !user.is_minor?
+      # `known_adult?` and not `!is_minor?`.
+      #
+      # `is_minor?` is a tri-state and returns nil when no date of birth is on file
+      # — which since 2026-08-20 is the ordinary state, because signup asks for a
+      # confirmation instead of a date (AddAgeAttestationToUsers). `!nil` is true,
+      # so this branch would have read every checkbox-only teenager as an adult and
+      # DELETED the parent's email address they had just supplied.
+      #
+      # `known_adult?` is the question this actually means: positively an adult,
+      # never merely unknown.
+      if cosigner_email.present? && user.known_adult?
         update!(cosigner_email: nil)
       end
 
@@ -656,7 +666,21 @@ class Event
       end
 
       USER_FIELD_LABELS.each do |field, label|
+        # Fuime: `birthday` is no longer a blanket requirement — signup asks for a
+        # confirmation instead (AddAgeAttestationToUsers), and the age answer is
+        # satisfied by EITHER source, which this all-or-nothing loop cannot express.
+        # It is checked once, below.
+        next if field == "birthday"
+
         blockers << label unless user[field].present?
+      end
+
+      # The age answer. Deliberately one blocker satisfied by either the checkbox or
+      # a date already on file, and deliberately computed the same way
+      # #user_ready_to_submit? computes it — a spec asserts those two agree, and a
+      # second definition here is how they would drift.
+      unless user.age_attestation.present? || user.birthday.present?
+        blockers << "Confirming you're 13 or older"
       end
 
       if address_country.present? && address_country.in?(DISALLOWED_COUNTRIES)
@@ -731,7 +755,12 @@ class Event
       # must never be asked for a parent at all (#37: the school vouches).
       # Requiring it unconditionally forced both to invent an answer for a
       # field the system would then ignore.
-      if user.is_minor? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+      # `minor_or_unknown_age?`, the fail-closed twin, for the reason spelled out at
+      # #cosigner_email above: `is_minor?` is nil without a date of birth, which is
+      # falsy, so this would have stopped asking checkbox-only teenagers for a
+      # parent's email — silently turning the guardian question off for exactly the
+      # population it exists for.
+      if user.minor_or_unknown_age? && !user.has_active_guardian? && !user.institutionally_vouched_for?
         fields.push("cosigner_email")
       end
 
@@ -762,11 +791,16 @@ class Event
     end
 
     def user_ready_to_submit?
-      required_fields = ["full_name", "phone_number", "birthday"]
+      required_fields = ["full_name", "phone_number"]
 
       missing_fields = required_fields.any? do |field|
         !user[field].present?
       end
+
+      # The age answer, which used to be `birthday` in the list above. A stored date
+      # of birth still satisfies it — users who applied before the switch answered in
+      # a more precise way and must not be sent back to re-answer.
+      missing_fields ||= user.age_attestation.blank? && user.birthday.blank?
 
       !missing_fields
     end

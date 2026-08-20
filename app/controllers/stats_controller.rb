@@ -7,7 +7,15 @@ class StatsController < ApplicationController
   def project_stats
     slug = params[:slug]
 
-    event = Event.find_by(is_public: true, slug:)
+    # Fuime: `publishes_ledger`, not `is_public`.
+    #
+    # This endpoint is unauthenticated and returns a venture's total revenue. It
+    # keyed on `is_public`, which in Fuime means "this venture has a public
+    # storefront" — so every teenager who opened a shop was publishing their
+    # lifetime earnings as JSON, to anybody who guessed the slug, on an endpoint
+    # nothing in the Fuime UI links to. Same conflation as
+    # AddPublishesLedgerToEvents; same fix.
+    event = Event.not_hidden.find_by(is_public: true, publishes_ledger: true, slug:)
 
     return render plain: "404 Not found", status: :not_found unless event
 
