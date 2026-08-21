@@ -27,12 +27,13 @@ class Event
         0.00
       end
 
+      # This one genuinely is 0%, so it says so.
       def label
-        "spend-only"
+        "Fuime spend down (0.0%, no money in)"
       end
 
       def description
-        "All incoming money is blocked; the venture can only spend what it already has. No fee."
+        "Money in is blocked; the venture spends down the balance it already has, with cards, transfers and reimbursements intact. No fee, because there is no revenue to take one from."
       end
 
       def features

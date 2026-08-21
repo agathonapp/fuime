@@ -253,6 +253,25 @@ module Admin
             count: ->{ Invoice.count },
             count_type: :records
           ),
+          # FUIME: the family plan — Fuime's own subscription revenue. :tasks
+          # because the count is failed and stalled payments, which is work owed
+          # to a family, not a total.
+          make_item(
+            name: "Subscriptions (Fuime)",
+            path: subscriptions_admin_index_path,
+            count: ->{ Fuime::Subscription.needs_attention.count },
+            count_type: :tasks
+          ),
+          # FUIME: the weekly payout runs. This queue existed with no way to reach
+          # it — an admin had to know the URL — which is how a week's payouts get
+          # missed. Money out rather than in, but it belongs next to the other
+          # thing a human has to action before anybody is paid.
+          make_item(
+            name: "Payout batches (Fuime)",
+            path: payout_batches_admin_index_path,
+            count: ->{ Fuime::PayoutBatch.awaiting_approval.count + Fuime::PayoutBatch.awaiting_payment.count },
+            count_type: :tasks
+          ),
           # make_item(
           #   name: "Sponsors",
           #   path: sponsors_admin_index_path,

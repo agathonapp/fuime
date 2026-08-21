@@ -84,7 +84,7 @@ class Event
       end
 
       def label
-        "Fuime family (#{revenue_fee_label} + monthly)"
+        "Fuime family (#{price_label})"
       end
 
       def description

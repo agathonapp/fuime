@@ -2,7 +2,57 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — request-boundary hardening (CORS, CSP, config.hosts).**
+**2026-08-21 (latest) — two family-plan write holes on PR #87.**
+
+A subscription is a contract billed to a confirmed adult. `grant_family_plan!`
+now refuses anyone who is not `known_adult?` or `staff?`, and
+`Admin#subscription_grant` checks the same thing so the queue form cannot route
+around the user-page button. `BillingController#subscribe` refuses when the
+existing row is `stripe_backed?` (not just `#active?`) and sends that family to
+the billing portal — `past_due` / `unpaid` / `incomplete` were the leftover
+invisible-charge case. Comp vs Stripe-mirror split is unchanged: grant still
+refuses a billed row, cancel still does not write `status`.
+
+**2026-08-21 — the admin console can now do something about the family plan.**
+
+Two gaps, both the same shape: the model was finished and there was no surface.
+`Fuime::Subscription` had exactly one writer (Stripe), so **comping the plan meant
+a Rails console** — and the admin plan dropdown still wore four of HCB's lowercase
+labels in the one control that decides what a venture is charged. Full write-up in
+UPSTREAM_DIVERGENCE.md under "What an admin can actually do about the family plan".
+
+**The one design rule to keep.** Comping and cancelling are different verbs.
+A **comped** plan is Fuime's own gift with no Stripe side, so `/admin/subscriptions`
+and the user page may grant and revoke it directly. A **paid** plan is a mirror:
+"Cancel at Stripe" calls Stripe and lets the existing webhook write the status back.
+Do not add a button that edits a Stripe-backed row locally — a console reading
+`active` while the card is failing is worse than no console. `#comped?` is the test,
+and it flips to false the moment Stripe starts billing a previously comped family.
+
+**New surfaces:** `/admin/subscriptions` (the ADMIN_OPS_QUEUES §4 queue, finally
+built — `past_due` and stalled-`incomplete` families were invisible everywhere), a
+Family plan panel next to the guardianship panel on any user's admin page, and nav
+entries for both it and **payout batches, which had no link anywhere** — you had to
+know the URL, which is how a week of payouts gets missed.
+
+**Two live bugs fixed on the way.** (1) `BillingController#subscribe` had no
+already-active guard, so a double submit minted a second Stripe subscription and
+the webhook then hid the first *while it kept charging the card monthly*. (2)
+Yesterday's "Change plan" form built its `<select>` from `selectable_plans`, so a
+venture on a retired plan had the FIRST option pre-selected and pressing the button
+silently migrated it — `Plan.select_options(current)` exists for exactly that and
+the older form was already using it.
+
+**Unchanged and still the honest caveat: no family-plan purchase has ever
+completed.** Stripe test mode holds five subscription Checkout sessions, all
+expired unpaid, and zero subscriptions. The platform endpoint *is* registered for
+`customer.subscription.created/updated/deleted` (verified against Stripe), so
+completion → webhook → `active` should work — but it is proven by stubs only. The
+comp path added here does not depend on it, which is why it is the safe way to give
+somebody the plan today.
+
+
+**2026-08-21 — request-boundary hardening (CORS, CSP, config.hosts).**
 
 CORS no longer treats `Array#each` as a match; leftover HCB origins are gone;
 `resource "*"` is gone; cookies stay only on `/api/current_user`. Rails CSP is

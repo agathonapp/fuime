@@ -28,7 +28,7 @@ class Event
       end
 
       def label
-        "Fuime internal organization"
+        "Fuime internal (engineering only)"
       end
 
       def description

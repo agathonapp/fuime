@@ -21,10 +21,28 @@
         Renews <%= @subscription.current_period_end.strftime("%B %-d, %Y") %><%= @subscription.cancel_at_period_end ? " (set to cancel)" : "" %>.
       <% end %>
     </p>
-    <% if @is_adult %>
+    <%# Fuime: a comped plan has no Stripe customer behind it, so the portal would
+        have nothing to open. Say who gave it to them instead of showing a button
+        that answers "nothing to manage yet". %>
+    <% if @subscription.comped? %>
+      <p class="muted mb-0">Fuime comped this plan for your family, so there's nothing to pay and no card on file.</p>
+    <% elsif @is_adult %>
       <%# Fuime: turbo: false is load-bearing — see the Upgrade button below. %>
       <%= button_to "Manage billing", my_billing_portal_path, class: "btn btn--secondary", form: { data: { turbo: false } } %>
       <p class="muted text-sm mt-1">Card changes, invoices, and cancellation happen in Stripe's secure portal — Fuime never sees your card.</p>
+    <% end %>
+  <% elsif @subscription&.stripe_backed? %>
+    <%# past_due / unpaid / incomplete still have a live Stripe subscription.
+        Upgrade would open a second Checkout session; the portal is the writer. %>
+    <h3 class="mt0">There's already a subscription on this account</h3>
+    <p>
+      Stripe has this family as <strong><%= @subscription.status.humanize.downcase %></strong>.
+      Update the card or pay the invoice from the billing portal. Starting another
+      subscription would charge you twice.
+    </p>
+    <% if @is_adult %>
+      <%= button_to "Manage billing", my_billing_portal_path, class: "btn btn--secondary", form: { data: { turbo: false } } %>
+      <p class="muted text-sm mt-1 mb-0">Card changes and invoices happen in Stripe's secure portal — Fuime never sees your card.</p>
     <% end %>
   <% else %>
     <h3 class="mt0">Free plan</h3>

@@ -33,6 +33,16 @@
         <p><strong><%= plan.new.label %></strong>: <%= plan.new.description %></p>
       <% end %>
 
+      <%# Fuime: the family plan is not in the list above and cannot be, because it
+          is a property of the FAMILY resolved at read time (Event#billing_plan),
+          not a row an admin assigns. Said here so an admin reading this panel is
+          not left thinking Fuime has no paid tier. %>
+      <p class="muted italic">
+        <strong><%= Event::Plan::Pro.new.label %></strong> is never assigned here — a guardian buys it at
+        <code>/my/billing</code> and it then covers every venture they sign for. To comp it, use the
+        Family plan panel on the guardian's own admin page.
+      </p>
+
       <% if Event::Plan.legacy_plans.any? %>
         <p class="muted italic">Retired plans inherited from HCB, kept only for organizations already on them: <%= Event::Plan.legacy_plans.map { |plan| plan.new.label }.sort.to_sentence %>.</p>
       <% end %>
@@ -61,10 +71,22 @@
             <strong><%= event.billing_plan.label %></strong>.
           <% end %>
         </p>
+        <%# Fuime: `select_options`, NOT `selectable_plans_by_popularity` (fixed
+            2026-08-21). A venture on a retired plan — any of the HCB grant or
+            fee-ladder plans, or `terminated` — is not in the selectable list, so the
+            browser rendered the FIRST option as selected and pressing "Change plan"
+            silently migrated it. `select_options(current)` keeps the current type in
+            the list for exactly this reason; the big settings form below was already
+            using it and this form was not. %>
         <%= plan_form.select :plan,
-                             Event::Plan.selectable_plans_by_popularity.map { |plan| [plan.new.label, plan.name] },
-                             { selected: event.plan.type },
+                             Event::Plan.select_options(event.plan&.type),
+                             { selected: event.plan&.type },
                              { class: "w-full max-w-full" } %>
+        <p class="muted text-sm mt-1 mb-0">
+          <% Event::Plan.selectable_plans_by_popularity.each do |plan| %>
+            <strong><%= plan.new.label %></strong>: <%= plan.new.description %><br>
+          <% end %>
+        </p>
       </div>
       <%= plan_form.submit "Change plan",
                            class: "btn bg-accent",
@@ -91,20 +113,28 @@
         <%= form.text_field :name, disabled: %>
       </div>
 
+      <%# Fuime: read-only here (2026-08-21). This was a second <select> for
+          `:plan` on the same page as the dedicated "Change plan" form above, so
+          the page had two controls for one attribute and submitting THIS form to
+          change a postal code also posted a plan. The dedicated form is the one
+          writer; this states the fact. %>
       <div class="field">
-        <%= form.label :plan, capture { %>
+        <%= form.label :plan, "Current plan" %>
+        <p class="mt-0 mb-0">
           <% if event.plan.present? %>
-            Current plan
-            <% if !event.plan.was_backfilled? %>
-              (started on <%= format_date event.plan.created_at %>)
-            <% else %>
-              (backfilled)
-            <% end %>
+            <strong><%= event.plan.label %></strong>
+            <span class="muted">
+              <% if !event.plan.was_backfilled? %>
+                &mdash; started <%= format_date event.plan.created_at %>
+              <% else %>
+                &mdash; backfilled
+              <% end %>
+            </span>
           <% else %>
-            Assign a plan
+            <span class="error">No plan assigned.</span>
           <% end %>
-        <% } %>
-        <%= form.select :plan, Event::Plan.select_options(event.plan&.type), { selected: event.plan&.type }, { disabled: } %>
+          <span class="muted">Change it with the Plan form above.</span>
+        </p>
       </div>
 
       <div class="field">

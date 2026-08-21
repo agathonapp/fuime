@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1409,6 +1409,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
     t.datetime "created_at", null: false
     t.datetime "current_period_end"
     t.bigint "event_id"
+    t.text "grant_notes"
+    t.datetime "granted_at"
+    t.bigint "granted_by_id"
     t.string "status", default: "incomplete", null: false
     t.string "stripe_customer_id"
     t.string "stripe_subscription_id"
@@ -1416,6 +1419,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
     t.index ["billed_to_id"], name: "index_fuime_subscriptions_family_per_guardian", unique: true, where: "(event_id IS NULL)"
     t.index ["billed_to_id"], name: "index_fuime_subscriptions_on_billed_to_id"
     t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true, where: "(event_id IS NOT NULL)"
+    t.index ["granted_by_id"], name: "index_fuime_subscriptions_on_granted_by_id"
     t.index ["stripe_subscription_id"], name: "index_fuime_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
   end
 
@@ -3474,6 +3478,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
   add_foreign_key "fuime_payout_methods", "users", column: "added_by_id", validate: false
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
+  add_foreign_key "fuime_subscriptions", "users", column: "granted_by_id", validate: false
   add_foreign_key "g_suite_accounts", "g_suites"
   add_foreign_key "g_suite_accounts", "users", column: "creator_id"
   add_foreign_key "g_suite_aliases", "g_suite_accounts"

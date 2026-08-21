@@ -96,8 +96,12 @@ RSpec.describe Event::Plan, type: :model do
       rate = Event::Plan::FALLBACK_REVENUE_FEE
 
       expect(Event::Plan::Standard.new.revenue_fee).to eq(rate)
+      # `include`, not `eq`: since 2026-08-21 the label states both halves of the
+      # price ("5.0% + $15.00/mo") because Standard charges both, and an admin
+      # moving a venture onto it from a dropdown could not see the second one.
+      # The exact string is pinned in spec/models/event/plan_labels_spec.rb.
       expect(Event::Plan::Standard.new.label)
-        .to eq("Fuime standard (#{ActionController::Base.helpers.number_to_percentage(rate * 100, precision: 1)})")
+        .to include("Fuime standard (#{ActionController::Base.helpers.number_to_percentage(rate * 100, precision: 1)}")
     end
 
     it "waives the fee on the founders plan" do

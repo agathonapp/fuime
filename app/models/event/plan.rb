@@ -176,6 +176,24 @@ class Event
       ActionController::Base.helpers.number_to_percentage(revenue_fee * 100, precision: 1)
     end
 
+    # Fuime: the subscription half of the price, for labels that state both.
+    #
+    # A plan's price has two dials (see #monthly_fee_cents) and a picker that
+    # shows only the percentage tells an admin half the price. `nil` rather than
+    # "$0.00/mo" when there is no subscription, so a label can interpolate it
+    # without printing a fee that does not exist.
+    def monthly_fee_label
+      cents = monthly_fee_cents.to_i
+      return nil unless cents.positive?
+
+      "#{ActionController::Base.helpers.number_to_currency(cents / 100.0)}/mo"
+    end
+
+    # "5.0% + $15.00/mo", or just "5.0%" when nothing is billed monthly.
+    def price_label
+      [revenue_fee_label, monthly_fee_label].compact.join(" + ")
+    end
+
     def self.available_features
       # this must contain every HCB feature that we want enable / disable with plans.
       # Fuime: `api_keys` added 2026-08-21 as the first paid-only feature.

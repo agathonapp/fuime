@@ -945,6 +945,103 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: the family-plan queue.
+  #
+  # Every subscription Fuime bills, plus every one it has comped, in one place.
+  # ADMIN_OPS_QUEUES.md §4 specified this and it was never built, so until now a
+  # `past_due` family — a card that failed, on the one product Fuime charges for —
+  # was invisible everywhere in the app.
+  #
+  # Attention-first ordering for the same reason the vetting queue uses it: a
+  # failed payment is work owed to somebody, not a statistic.
+  def subscriptions
+    @page = params[:page] || 1
+    @per = params[:per] || 50
+    @filter = params[:filter].presence
+
+    scope = Fuime::Subscription.includes(:billed_to, :event, :granted_by)
+    scope = case @filter
+            when "attention" then scope.needs_attention
+            when "comped"    then scope.comped
+            when "active"    then scope.where(status: Fuime::Subscription::ACTIVE_STATUSES)
+            else scope
+            end
+
+    @counts = {
+      all: Fuime::Subscription.count,
+      active: Fuime::Subscription.where(status: Fuime::Subscription::ACTIVE_STATUSES).count,
+      attention: Fuime::Subscription.needs_attention.count,
+      comped: Fuime::Subscription.comped.count
+    }
+
+    @subscriptions = scope.order(
+      Arel.sql("status IN (#{Fuime::Subscription::ATTENTION_STATUSES.map { |st| ActiveRecord::Base.connection.quote(st) }.join(',')}) DESC"),
+      "created_at desc"
+    ).page(@page).per(@per)
+  end
+
+  # FUIME: comp the family plan to a user.
+  #
+  # The one write an admin is allowed to make to this model directly, and only on
+  # a row Stripe is not billing — Fuime::Subscription.grant_family_plan! enforces
+  # that and raises otherwise, which is why this rescues rather than pre-checks.
+  #
+  # Adult is checked here as well as in the model: the user-page button is hidden
+  # unless known_adult? / staff?, but this action is also the queue form, which
+  # takes any email. Hiding a button is not a control. A subscription is a
+  # contract (L2); BillingController refuses a minor for the same reason.
+  def subscription_grant
+    user = find_user_for_subscription(params[:user_id])
+
+    if user.nil?
+      redirect_back fallback_location: subscriptions_admin_index_path,
+                    alert: "No user matches #{params[:user_id].presence || 'that'}."
+      return
+    end
+
+    unless user.known_adult? || user.staff?
+      redirect_back fallback_location: subscriptions_admin_index_path,
+                    alert: "The family plan can only be comped to a confirmed adult " \
+                           "(#{user.email} is #{user.account_type_label.downcase})."
+      return
+    end
+
+    Fuime::Subscription.grant_family_plan!(user:, by: current_user, notes: params[:notes])
+
+    redirect_back fallback_location: subscriptions_admin_index_path,
+                  flash: { success: "#{user.email} is on the family plan, comped by Fuime." }
+  rescue Fuime::Subscription::StripeBacked => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
+  rescue Fuime::Subscription::NotAdult => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
+  end
+
+  def subscription_revoke
+    subscription = Fuime::Subscription.find(params[:id])
+    subscription.revoke_grant!(by: current_user, notes: params[:notes])
+
+    redirect_back fallback_location: subscriptions_admin_index_path,
+                  flash: { success: "Comped family plan revoked for #{subscription.billed_to.email}." }
+  rescue Fuime::Subscription::NotComped => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
+  end
+
+  # FUIME: cancel a REAL subscription, at Stripe.
+  #
+  # Does not touch `status` here — the webhook mirrors it back within seconds.
+  # See Fuime::Subscription#cancel_in_stripe!.
+  def subscription_cancel_in_stripe
+    subscription = Fuime::Subscription.find(params[:id])
+    subscription.cancel_in_stripe!
+
+    redirect_back fallback_location: subscriptions_admin_index_path,
+                  flash: { success: "Cancelled at Stripe. The status here updates when Stripe's webhook lands." }
+  rescue Fuime::Subscription::NotStripeBacked => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
+  rescue Stripe::StripeError => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: "Stripe refused: #{e.message}"
+  end
+
   def operator_vetting_decide
     @event = Event.friendly.find(params[:id])
     status = params[:status].to_s
@@ -1835,6 +1932,20 @@ class AdminController < Admin::BaseController
   end
 
   private
+
+  # An admin comping a plan has whatever identifier is in front of them — the
+  # email from a support thread, or the id from a URL. Accept all three rather
+  # than making them go and look one up.
+  def find_user_for_subscription(needle)
+    needle = needle.to_s.strip
+    return nil if needle.blank?
+
+    User.find_by(email: needle) || begin
+      User.friendly.find(needle)
+    rescue ActiveRecord::RecordNotFound
+      nil
+    end
+  end
 
   # FUIME: `created_by` is NOT permitted, and must not be.
   #

@@ -515,6 +515,16 @@ Rails.application.routes.draw do
       # FUIME: set a venture's business category after activation. The only writer
       # of that column outside activation — see Admin#operator_vetting_category.
       post "operator_vetting/:id/category", to: "admin#operator_vetting_category", as: "operator_vetting_category"
+      # FUIME: the family-plan queue, and the two writes an admin may make to a
+      # subscription. Comping is a local write; cancelling a PAID subscription
+      # goes to Stripe and comes back through the webhook — see
+      # Fuime::Subscription#comped? for why those are different verbs.
+      get "subscriptions", to: "admin#subscriptions"
+      # `user_id` travels in the body rather than the path, so the queue page and
+      # the user's own admin page post the same form to the same place.
+      post "subscriptions/grant", to: "admin#subscription_grant", as: "subscription_grant"
+      post "subscriptions/:id/revoke", to: "admin#subscription_revoke", as: "subscription_revoke"
+      post "subscriptions/:id/cancel_in_stripe", to: "admin#subscription_cancel_in_stripe", as: "subscription_cancel_in_stripe"
       # FUIME: the weekly payout runs. A human reads every line before Fuime pays
       # anybody — see Fuime::PayoutBatchService.
       get "payout_batches", to: "admin#payout_batches"

@@ -23,12 +23,15 @@
 class Event
   class Plan
     class CardsOnly < Standard
+      # No rate in the label because this plan cannot collect: it inherits
+      # Standard's `revenue_fee` and would print "5.0%" against money it never
+      # takes in.
       def label
-        "card-only"
+        "Fuime cards only (no money in)"
       end
 
       def description
-        "Spending cards only — the venture can't raise money. For ventures funded from elsewhere, or ones still waiting on a guardian agreement."
+        "Spending cards only — the venture cannot collect money at all. For ventures funded from elsewhere, or ones parked while something is sorted out."
       end
 
       def features
