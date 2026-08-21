@@ -30,6 +30,15 @@ RSpec.describe "Fuime Discover", type: :request do
     create(:fuime_offer, :published, { event: venture, name:, price_cents: }.merge(attrs))
   end
 
+  # For ventures `#publish!` will refuse (demo, hidden, no payment account).
+  # The row still has to exist as published so Discover cannot leak it by
+  # state alone.
+  def force_published_offer(venture, name:, **attrs)
+    offer = create(:fuime_offer, { event: venture, name: }.merge(attrs))
+    offer.update_column(:aasm_state, "published")
+    offer
+  end
+
   def rendered
     CGI.unescapeHTML(response.body)
   end
@@ -135,16 +144,17 @@ RSpec.describe "Fuime Discover", type: :request do
     end
 
     it "hides private, non-indexable, demo and hidden ventures" do
-      {
-        "Private Co" => { is_public: false },
-        "Noindex Co" => { is_indexable: false },
-        "Demo Co"    => { demo_mode: true },
-        "Hidden Co"  => { hidden_at: Time.current }
-      }.each do |name, attrs|
-        slug = name.parameterize
-        venture = payable_venture(name:, slug:, **attrs)
-        listed_offer(venture, name: "#{name} offer")
-      end
+      private_v = payable_venture(name: "Private Co", slug: "private-co", is_public: false)
+      listed_offer(private_v, name: "Private Co offer")
+
+      noindex = payable_venture(name: "Noindex Co", slug: "noindex-co", is_indexable: false)
+      listed_offer(noindex, name: "Noindex Co offer")
+
+      demo = payable_venture(name: "Demo Co", slug: "demo-co", demo_mode: true)
+      force_published_offer(demo, name: "Demo Co offer")
+
+      hidden = payable_venture(name: "Hidden Co", slug: "hidden-co", hidden_at: Time.current)
+      force_published_offer(hidden, name: "Hidden Co offer")
 
       get fuime_discover_path
 

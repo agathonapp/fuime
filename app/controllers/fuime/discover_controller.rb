@@ -95,5 +95,6 @@ module Fuime
         format.any  { head :not_found }
       end
     end
+
   end
 end
