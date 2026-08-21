@@ -5581,3 +5581,4 @@ is refused as a buyer rather than redirected to "invite your guardian."
 |---|---|---|
 | `refuse_minor_buyer` before_action on `Fuime::CheckoutsController` | A signed-in minor or unknown-age user must not open a Stripe session. Guests skip the check. | `app/controllers/fuime/checkouts_controller.rb` |
 | Request spec: guest / adult / teen / unknown-age / staff | The three buyer cases the product asked for, plus the fail-closed and staff exemptions already used on billing. | `spec/requests/fuime_checkout_buyer_age_spec.rb` |
+| Controller spec: signed-in minor refused, adult proceeds | Same gate, next to the other checkout guards, so a later edit cannot drop the request file and lose coverage. | `spec/controllers/fuime/checkouts_controller_spec.rb` |
