@@ -6,6 +6,10 @@
 #
 #  id                            :bigint           not null, primary key
 #  access_level                  :integer          default(0), not null
+#  age_attestation               :integer
+#  age_attestation_ip            :string
+#  age_attestation_user_agent    :string
+#  age_attested_at               :datetime
 #  birthday_ciphertext           :text
 #  card_locking_suppressed_until :datetime
 #  cards_locked                  :boolean          default(FALSE), not null
@@ -82,6 +86,15 @@ class User < ApplicationRecord
   }, prefix: :receipt_report, default: :weekly
 
   enum :access_level, { user: 0, admin: 1, superadmin: 2, auditor: 3 }, scopes: false, default: :user
+
+  # Fuime: what this user CLAIMED about their age, in place of a date of birth.
+  #
+  # See AddAgeAttestationToUsers for why this is a state rather than a boolean, and
+  # for the security property that matters: `minor_13_plus` is the only value the
+  # user-facing form can produce, and `adult_18_plus` is reachable only from the
+  # guardian-acceptance flow. A box you can tick on your own settings page must
+  # never be able to make you an adult.
+  enum :age_attestation, { minor_13_plus: 0, adult_18_plus: 1 }, prefix: :attested
 
   enum :creation_method, {
     login: 0,
@@ -231,17 +244,82 @@ class User < ApplicationRecord
   # Fuime: Block under-13 signups (COPPA compliance)
   validate :minimum_age_requirement, if: -> { birthday_changed? && birthday.present? }
 
-  # Fuime: close the "omit the birthday" bypass.
+  # Fuime: close the "skip the age question" bypass.
+  #
+  # Was `birthday_required_for_onboarding`. Signup now asks for a checkbox rather
+  # than a date (AddAgeAttestationToUsers), so this requires the attestation
+  # instead — same context, same reasoning.
   #
   # Only on the :onboarding context, driven by UsersController#update. Users are
   # also created programmatically — organizer invites, guardian stubs built from
-  # an email address, seeds — and those legitimately have no birthday yet, so a
-  # blanket validation would break account creation rather than protect anyone.
+  # an email address, seeds — and those legitimately have neither yet, so a blanket
+  # validation would break account creation rather than protect anyone.
   #
-  # The control that actually matters does not depend on this: a user with no
-  # birthday is treated as a minor (see #minor_or_unknown_age?), so they are
-  # blocked from operating a business until they supply one.
-  validate :birthday_required_for_onboarding, on: :onboarding
+  # The control that actually matters does not depend on this: a user who has
+  # answered nothing is treated as a minor (see #minor_or_unknown_age?), so they
+  # are blocked from operating a business until they answer.
+  validate :age_attestation_required_for_onboarding, on: :onboarding
+
+  # Fuime: the age claim is made once, exactly like the date of birth it replaced.
+  #
+  # `birthday_is_write_once` below exists because a teen could PATCH their birthday
+  # to 1990 and switch off guardianship enforcement, the operator floor and the
+  # payout guardian gate in one request (security review F-02). Swapping the date
+  # for a checkbox must not reopen that, so the checkbox is write-once on the same
+  # terms: refused for its owner, allowed for an admin, allowed with no signed-in
+  # actor (console, jobs, seeds).
+  #
+  # Belt and braces with the parameter allowlist — `age_attestation` is not
+  # permitted on UsersController#update at all, and the form posts a boolean that
+  # can only ever mean `minor_13_plus`. This is the guard for every other path.
+  validate :age_attestation_is_write_once
+
+  # Fuime: a date of birth is set once and then belongs to Fuime, not to the user.
+  #
+  # ── What this closes ────────────────────────────────────────────────────────
+  #
+  # `:birthday` is a permitted attribute on `UsersController#update`, so it was
+  # editable by its owner at any time, from the ordinary settings form. Age is the
+  # single input every one of Fuime's protective controls derives from, and all of
+  # them read it live:
+  #
+  #   * Fuime::GuardianshipEnforcement lets #permitted_to_operate_business? through
+  #     for an adult, so a minor with no guardian became unblocked everywhere.
+  #   * Fuime::OperatorEligibility's 16+ floor (FLSA, per its own comment) passed.
+  #   * Event#payout_setup_blockers stopped requiring a guardian, because it keys on
+  #     #minor_or_unknown_age?.
+  #   * Guardianship#activation_blockers accepted the user as the responsible adult,
+  #     since it asks only #known_adult?.
+  #
+  # One PATCH to a settings form turned all four off. For calibration: changing a
+  # phone number is rate-limited three times a day in that same action, because
+  # doing it too often is Twilio abuse.
+  #
+  # ── Why write-once rather than a re-verification flow ───────────────────────
+  #
+  # Because there is nothing to re-verify against. Fuime performs no identity check
+  # on a teen (LEGAL_RESEARCH L3 — SSN-free onboarding is only possible while no
+  # real money moves), so a "confirm your new date of birth" step would confirm a
+  # second self-assertion with the first. What write-once buys is that the
+  # assertion is made ONCE, before there is anything to gain by it, and is then
+  # fixed — which is what makes the vetting decision recorded against it mean
+  # something a week later.
+  #
+  # ── Who can still change it, and why that is not the same hole ──────────────
+  #
+  # Admins, and any caller with no signed-in user (console, jobs, seeds, specs).
+  # Two reasons this is safe where self-service was not: a correction becomes an
+  # act by a Fuime staff member, recorded by paper_trail, rather than a silent
+  # self-edit; and every control above re-reads age on each request, so a
+  # correction DOWNWARD bites immediately rather than needing anything unwound.
+  # #birthday_change_is_privileged logs the privileged case so it is reviewable
+  # rather than merely permitted.
+  #
+  # A first-time assertion is untouched — a stub user created from an email address
+  # has no birthday and must be able to supply one.
+  validate :birthday_is_write_once
+  after_update :report_privileged_birthday_change,
+               if: -> { birthday_previously_changed? && birthday_before_last_save.present? }
 
   validates :full_name, format: {
     with: /\A[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,'-]+ [a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð.,' -]+\z/,
@@ -522,14 +600,108 @@ class User < ApplicationRecord
 
   def is_teenager?
     return age <= 18 if birthday.present?
+    # Fuime: a "13 or older" tick is a teenager for counting purposes. Without
+    # this, dropping the date of birth from signup would quietly zero every
+    # teen-count metric (User::UpdateTeenagerColumnJob, the org team page) by
+    # reclassifying everybody as not-a-teenager.
+    return true if attested_minor_13_plus?
 
     first_robotics_student?
   end
 
   # Upstream tri-state: true / false / nil when no birthday is recorded.
   # Fuime code should prefer #minor_or_unknown_age? — see below.
+  #
+  # Deliberately still birthday-only. Upstream call sites read this, and the
+  # attestation is Fuime's concept; folding it in here would change what upstream
+  # code means by "minor" without anybody deciding to. #known_adult? and
+  # #minor_or_unknown_age? are the two that consult both, and they are what Fuime
+  # code is told to use.
   def is_minor?
     age&.<(18)
+  end
+
+  # Fuime: what the user CLAIMED, expressed as a floor they clear.
+  #
+  # `adult_18_plus` clears any floor up to 18; `minor_13_plus` clears 13 and
+  # nothing above it. No attestation clears nothing.
+  #
+  # The middle case is the one worth understanding. With
+  # FUIME_MINIMUM_OPERATOR_AGE at its production value of 13, a "13 or older" tick
+  # satisfies the operator floor exactly — so nothing is lost today. Raise that
+  # floor back to 16 and a teen holding only a 13+ tick stops clearing it, and
+  # Fuime::OperatorEligibility says so in words rather than guessing. That loud
+  # failure is the point: the checkbox genuinely does not know whether somebody is
+  # 14 or 17, and the honest response to a question you cannot answer is to say so.
+  # Fuime: record "I am 13 or older", from the user's own form.
+  #
+  # A method rather than a permitted attribute, and that is the whole security
+  # design: this cannot express `adult_18_plus` at any input. The controller passes
+  # a boolean; the only value that can result is the minor one. So no crafted PATCH,
+  # no future form field and no mass-assignment mistake can promote somebody to
+  # adult from a page they control.
+  #
+  # Idempotent. Re-ticking a box you already ticked is not a change, and must not
+  # trip #age_attestation_is_write_once.
+  #
+  # Two forms, following the Rails convention, and the difference matters:
+  #
+  #   #attest_minor_13_plus   assigns, does not save
+  #   #attest_minor_13_plus!  assigns and saves
+  #
+  # UsersController#update needs the first. It assigns the profile, then this, then
+  # saves once with `context: :onboarding` — and a writer that saved on its own would
+  # persist `full_name` early, which flips `onboarding?` (defined as
+  # `full_name_in_database.blank?`) before the controller reads it. The visible
+  # symptom was a new user being bounced back to the settings form instead of landing
+  # on the dashboard, because the onboarding transition had already been consumed.
+  def attest_minor_13_plus(ip: nil, user_agent: nil)
+    return self if age_attestation.present?
+
+    assign_attributes(
+      age_attestation: :minor_13_plus,
+      age_attested_at: Time.current,
+      age_attestation_ip: ip,
+      age_attestation_user_agent: user_agent
+    )
+    self
+  end
+
+  def attest_minor_13_plus!(ip: nil, user_agent: nil)
+    return true if age_attestation.present?
+
+    attest_minor_13_plus(ip:, user_agent:)
+    save
+  end
+
+  # Fuime: record "I am 18 or older, and I am this child's parent or guardian".
+  #
+  # Reachable ONLY from the guardian-acceptance flow (GuardianshipsController#accept),
+  # which is the one place somebody asserts adulthood in a context that means
+  # something — they are simultaneously signing the guardian agreement, and the
+  # consent record for both lands together.
+  #
+  # Overwrites a prior `minor_13_plus`: a parent who was invited by email, ticked
+  # "13 or older" while setting up their own account, and then accepted a
+  # guardianship is making the more specific claim second. That is the one legitimate
+  # transition, so it is spelled out here rather than left to the write-once guard,
+  # which would otherwise refuse it.
+  def attest_adult_18_plus!(ip: nil, user_agent: nil)
+    return true if attested_adult_18_plus?
+
+    update_columns(
+      age_attestation: self.class.age_attestations[:adult_18_plus],
+      age_attested_at: Time.current,
+      age_attestation_ip: ip,
+      age_attestation_user_agent: user_agent
+    )
+  end
+
+  def attested_at_least?(years)
+    case age_attestation
+    when "adult_18_plus" then years <= 18
+    when "minor_13_plus" then years <= 13
+    end || false
   end
 
   # Fuime: fail-closed age check.
@@ -539,13 +711,28 @@ class User < ApplicationRecord
   # entered a date of birth. For a platform whose core legal control is "minors
   # need a guardian", unknown age must be treated as minor until proven
   # otherwise, or the control is opt-out.
+  #
+  # Unchanged in meaning now that a date of birth is optional: it is the negation
+  # of #known_adult?, so a user who has ticked nothing still reads as a minor.
   def minor_or_unknown_age?
-    is_minor? != false
+    !known_adult?
   end
 
   # Fuime: true once we positively know the user is an adult.
+  #
+  # Two sources, and the ORDER matters. A stored date of birth wins outright: it is
+  # the more specific fact, and if it says somebody is 15 then no checkbox may
+  # override it — otherwise a teen who supplied a real birthday for a card could
+  # later tick their way out of being a minor.
+  #
+  # Only with no date on file does the attestation answer, and only
+  # `adult_18_plus` does — which the user-facing form cannot produce. See
+  # AddAgeAttestationToUsers.
   def known_adult?
-    is_minor? == false
+    return false if is_minor? == true
+    return true if is_minor? == false
+
+    attested_adult_18_plus?
   end
 
   # Fuime: Check if this minor has an active guardian
@@ -958,18 +1145,100 @@ class User < ApplicationRecord
     end
   end
 
-  # Fuime: a user cannot complete onboarding without a date of birth.
+  # See the validation for the full reasoning. The mechanics:
   #
-  # Age drives the guardianship requirement and the COPPA floor. Leaving it
-  # optional made both controls opt-out: no birthday meant `is_minor?` was nil,
-  # so the under-13 validation never ran and the guardian redirect never fired.
+  # `birthday_ciphertext_in_database` rather than `birthday_was` — birthday is
+  # `has_encrypted`, and asking the ciphertext column whether a value was ever
+  # stored avoids decrypting just to answer "was this blank?". It is the same test
+  # `validates_presence_of :birthday` above already uses.
   #
-  # Runs only on the :onboarding validation context — see the validation.
-  def birthday_required_for_onboarding
-    return if birthday.present?
+  # A nil `Current.user` means no HTTP session is in play: console, a job, seeds, a
+  # spec factory. Allowed, and #report_privileged_birthday_change records it.
+  def birthday_is_write_once
+    return unless birthday_changed?
+    return if birthday_ciphertext_in_database.blank? # first assertion
     return if system_user?
 
-    errors.add(:birthday, "is required. Fuime needs your date of birth to know whether you need a parent or guardian on the account.")
+    # `Current.session` present but `Current.user` nil means an UNVERIFIED session
+    # — `User::Session#user` returns nil until 2FA completes. Refuse rather than
+    # fall through to the console allowance below: a half-authenticated request is
+    # the last thing that should be able to re-age somebody. (Not reachable today —
+    # UsersController#update requires a verified sign-in — which is why it is a
+    # cheap guard rather than a fix.)
+    return errors.add(:birthday, birthday_locked_message) if Current.session.present? && Current.user.nil?
+
+    actor = Current.user
+    # No session at all: console, a job, seeds, a spec factory. Allowed, and
+    # #report_privileged_birthday_change records it.
+    return if actor.nil?
+    return if actor.admin?
+
+    errors.add(:birthday, birthday_locked_message)
+  end
+
+  def birthday_locked_message
+    "can't be changed here. Your date of birth decides whether you need a parent " \
+      "or guardian on your account, so contact support@fuime.com if it's wrong."
+  end
+
+  # A changed date of birth is a change to somebody's eligibility to trade, so it
+  # is reported rather than merely allowed. `handled: true` — this is a record of a
+  # legitimate privileged action, not a failure.
+  def report_privileged_birthday_change
+    Rails.error.report(
+      Errors::PrivilegedBirthdayChange.new("Date of birth changed for user #{id}"),
+      handled: true,
+      context: {
+        user_id: id,
+        changed_by: Current.user&.id,
+        # The dates themselves are deliberately absent — this is a minor's personal
+        # data and the point is that a human looks at the record, not that the value
+        # is copied into an error tracker.
+        was_minor: birthday_before_last_save && ((Date.current - birthday_before_last_save).to_i / 365.25) < 18,
+        now_minor: minor_or_unknown_age?,
+        operates_ventures: events.exists?
+      }
+    )
+  end
+
+  # Fuime: a user cannot complete onboarding without answering the age question.
+  #
+  # The answer drives the guardianship requirement and the COPPA floor. Leaving it
+  # optional would make both controls opt-out, which is what the date-of-birth
+  # version of this validation was written to prevent: with nothing on file
+  # `is_minor?` is nil, so the under-13 refusal never runs and the guardian
+  # redirect never fires.
+  #
+  # A stored date of birth also satisfies it — users who signed up before the
+  # switch already answered, in a more precise way, and must not be re-asked.
+  #
+  # Runs only on the :onboarding validation context — see the validation.
+  def age_attestation_required_for_onboarding
+    return if age_attestation.present? || birthday.present?
+    return if system_user?
+
+    errors.add(:age_attestation, "is required. Please confirm you're 13 or older — Fuime needs to know whether you need a parent or guardian on the account.")
+  end
+
+  # See the validation for the reasoning. Mechanically the twin of
+  # #birthday_is_write_once, including the unverified-session case.
+  def age_attestation_is_write_once
+    return unless age_attestation_changed?
+    return if age_attestation_was.blank? # first answer
+    return if system_user?
+
+    return errors.add(:age_attestation, age_claim_locked_message) if Current.session.present? && Current.user.nil?
+
+    actor = Current.user
+    return if actor.nil?
+    return if actor.admin?
+
+    errors.add(:age_attestation, age_claim_locked_message)
+  end
+
+  def age_claim_locked_message
+    "can't be changed here. It decides whether you need a parent or guardian on " \
+      "your account, so contact support@fuime.com if it's wrong."
   end
 
   def system_user?

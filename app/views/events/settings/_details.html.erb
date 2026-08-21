@@ -116,14 +116,27 @@
     <div class="field field--checkbox">
       <span style="font-weight: 700">Make <%= possessive(event.name) %> finances transparent</span>
       <div class="field--checkbox--switch ml-auto">
-        <%= form.label :is_public do %>
-          <%= form.check_box :is_public, data: { action: "change->accordion#toggle", accordion_target: "checkbox" }, disabled:, switch: true %>
+        <%#
+          Fuime: this switch is bound to :publishes_ledger, not :is_public.
+
+          It used to set :is_public — the same column the Fuime offers page sets
+          from a switch labelled "Show my storefront publicly". Two switches, two
+          meanings, one column: a teenager opening a shop also published their
+          sales, their balance and their team's names, having been asked about a
+          storefront. See AddPublishesLedgerToEvents.
+
+          This one keeps the meaning its own label states. The storefront switch
+          keeps :is_public.
+        %>
+        <%= form.label :publishes_ledger do %>
+          <%= form.check_box :publishes_ledger, data: { action: "change->accordion#toggle", accordion_target: "checkbox" }, disabled:, switch: true %>
           <span class="slider"></span>
         <% end %>
       </div>
     </div>
     <ul class="mt0 pl4 mb2">
-      <li>Unauthenticated users will be able to access a <strong>read-only</strong> version of your account.</li>
+      <li><strong>This is separate from your storefront.</strong> Your shop page and Buy buttons stay exactly as they are — this switch is only about whether strangers can read your books.</li>
+      <li>Unauthenticated users will be able to access a <strong>read-only</strong> version of your account: <strong>every sale and its amount, your balance, and the names of everyone on your team</strong>.</li>
       <li>None of Fuime’s pages will change for signed in team members.</li>
       <li>We’ll do our best to redact contact info, but we can’t guarantee it doesn't show up in these
         fields:

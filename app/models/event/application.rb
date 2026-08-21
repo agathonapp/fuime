@@ -386,12 +386,16 @@ class Event
 
     def next_step
       return "Choose what kind of business" if business_category.blank?
-      return "Tell us about your project" if name.blank? || description.blank?
-      return "Add your information" if address_line1.blank? || address_city.blank? || address_country.blank? || address_postal_code.blank?
+      return "Tell us about your business" if name.blank? || description.blank?
+      # Fuime: keyed on `address_country` alone, matching what the step now asks
+      # for. Left on the street-address fields it would have sent every founder
+      # back to a page that no longer collects them — a step the wizard could
+      # never advance past.
+      return "Add your information" if address_country.blank?
       return "Review and submit" if draft?
       return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
       return "We're reviewing your application" if submitted? || under_review?
-      return "Start spending!" if event.present?
+      return "Start selling!" if event.present?
       return "" if rejected?
       # Approved but not yet activated. Without this the method returns nil and
       # the application card falls back to its "We're reviewing your
@@ -399,11 +403,19 @@ class Event
       return "Waiting on Fuime to finish setting up your account" if approved?
     end
 
+    # Fuime: keyed on the same conditions #next_step uses, not on the sentences
+    # it returns.
+    #
+    # This matched `next_step` against four hardcoded strings, so the wording of
+    # a founder-facing sentence was load-bearing: renaming "Tell us about your
+    # project" to "…your business" silently dropped that stage to 0% and sent
+    # the progress bar backwards, with nothing failing to say so. Copy is edited
+    # far more often than logic, and it should never have been able to do that.
     def completion_percentage
-      return 10 if next_step == "Choose what kind of business"
-      return 25 if next_step == "Tell us about your project"
-      return 50 if next_step == "Add your information"
-      return 75 if next_step == "Review and submit"
+      return 10 if business_category.blank?
+      return 25 if name.blank? || description.blank?
+      return 50 if address_country.blank?
+      return 75 if draft?
       return 100 if submitted? || under_review? || approved?
 
       0
@@ -436,7 +448,17 @@ class Event
         raise StandardError.new("Cannot create a contract for application #{hashid}: missing name and/or description")
       end
 
-      if cosigner_email.present? && !user.is_minor?
+      # `known_adult?` and not `!is_minor?`.
+      #
+      # `is_minor?` is a tri-state and returns nil when no date of birth is on file
+      # — which since 2026-08-20 is the ordinary state, because signup asks for a
+      # confirmation instead of a date (AddAgeAttestationToUsers). `!nil` is true,
+      # so this branch would have read every checkbox-only teenager as an adult and
+      # DELETED the parent's email address they had just supplied.
+      #
+      # `known_adult?` is the question this actually means: positively an adult,
+      # never merely unknown.
+      if cosigner_email.present? && user.known_adult?
         update!(cosigner_email: nil)
       end
 
@@ -656,7 +678,21 @@ class Event
       end
 
       USER_FIELD_LABELS.each do |field, label|
+        # Fuime: `birthday` is no longer a blanket requirement — signup asks for a
+        # confirmation instead (AddAgeAttestationToUsers), and the age answer is
+        # satisfied by EITHER source, which this all-or-nothing loop cannot express.
+        # It is checked once, below.
+        next if field == "birthday"
+
         blockers << label unless user[field].present?
+      end
+
+      # The age answer. Deliberately one blocker satisfied by either the checkbox or
+      # a date already on file, and deliberately computed the same way
+      # #user_ready_to_submit? computes it — a spec asserts those two agree, and a
+      # second definition here is how they would drift.
+      unless user.age_attestation.present? || user.birthday.present?
+        blockers << "Confirming you're 13 or older"
       end
 
       if address_country.present? && address_country.in?(DISALLOWED_COUNTRIES)
@@ -702,10 +738,14 @@ class Event
       "funding_source"         => "Source of your funding"
     }.freeze
 
+    # Fuime: `phone_number` is no longer required. Nothing in submission, the
+    # contract or Connect onboarding reads it, and Stripe collects its own where
+    # KYC needs one. `birthday` stays listed but is skipped by the loop that
+    # reads this hash — the age answer is satisfied by either source and is
+    # checked once, separately. See #submission_blockers.
     USER_FIELD_LABELS = {
-      "full_name"    => "Your full name",
-      "phone_number" => "Your phone number",
-      "birthday"     => "Your birthday"
+      "full_name" => "Your full name",
+      "birthday"  => "Your birthday"
     }.freeze
 
     def required_submission_fields
@@ -723,7 +763,15 @@ class Event
       # it: `business_category` is written exactly once, at activation, and appears
       # in no form, no strong-params list and no admin screen. A dead end reached
       # only after a founder had done everything right.
-      fields = ["name", "business_category", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
+      # Fuime: the street address is no longer required to submit — only
+      # `address_country`, which is the sanctions gate rather than an address
+      # question (see personal_info.html.erb). Street, city, state and zip are
+      # asked at the payout seam, where a payee and a 1099 actually exist.
+      #
+      # The columns stay on the table and stay writable: applications submitted
+      # before this keep their address, and the payout flow writes into the same
+      # place rather than inventing a second one.
+      fields = ["name", "business_category", "description", "address_country", "referrer", "previously_applied"]
 
       # A parent's email is required only while the guardian question is OPEN.
       # A second application from the same teen has nothing to ask — their
@@ -731,7 +779,12 @@ class Event
       # must never be asked for a parent at all (#37: the school vouches).
       # Requiring it unconditionally forced both to invent an answer for a
       # field the system would then ignore.
-      if user.is_minor? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+      # `minor_or_unknown_age?`, the fail-closed twin, for the reason spelled out at
+      # #cosigner_email above: `is_minor?` is nil without a date of birth, which is
+      # falsy, so this would have stopped asking checkbox-only teenagers for a
+      # parent's email — silently turning the guardian question off for exactly the
+      # population it exists for.
+      if user.minor_or_unknown_age? && !user.has_active_guardian? && !user.institutionally_vouched_for?
         fields.push("cosigner_email")
       end
 
@@ -762,11 +815,19 @@ class Event
     end
 
     def user_ready_to_submit?
-      required_fields = ["full_name", "phone_number", "birthday"]
+      # `phone_number` dropped alongside USER_FIELD_LABELS — a spec asserts this
+      # method and #submission_blockers agree on what is required, so the two
+      # lists move together or not at all.
+      required_fields = ["full_name"]
 
       missing_fields = required_fields.any? do |field|
         !user[field].present?
       end
+
+      # The age answer, which used to be `birthday` in the list above. A stored date
+      # of birth still satisfies it — users who applied before the switch answered in
+      # a more precise way and must not be sent back to re-answer.
+      missing_fields ||= user.age_attestation.blank? && user.birthday.blank?
 
       !missing_fields
     end

@@ -80,6 +80,27 @@ Rails.application.routes.draw do
   # the platform's own account and for connected accounts, and each has its own
   # signing secret. `stripe` takes payment events; `connect` takes the onboarding
   # lifecycle (`account.updated`).
+  # Fuime: /learn — starter templates and the money lessons. See LearnController.
+  #
+  # Declared HERE, above everything, and the position is load-bearing twice over.
+  #
+  #   * The venture-scoped Fuime routes below are all `/:event_slug/<word>` —
+  #     `/:event_slug/taxes`, `/:event_slug/payments`, `/:event_slug/offers`. A
+  #     lesson called "taxes" declared after those resolves to
+  #     `fuime/taxes#show` with an `event_slug` of "learn", which is a redirect
+  #     rather than an error and so fails quietly. That is not hypothetical; it
+  #     is what happened.
+  #   * `resources :events, path: "/"` further down claims every single-segment
+  #     path, so `/learn` declared after IT resolves to a venture named "learn".
+  #
+  # `learn` is therefore a reserved word: a venture may not take that slug, in
+  # the same way `pay` and `checkout` are reserved in Fuime::Offer. The
+  # `learn/start/...` route sits above `learn/:slug` for the ordinary reason —
+  # otherwise "start" reads as a lesson slug.
+  get "learn", to: "learn#index", as: :learn
+  get "learn/start/:slug", to: "learn#template", as: :learn_template
+  get "learn/:slug", to: "learn#show", as: :learn_lesson
+
   namespace :fuime do
     post "webhooks/stripe", to: "webhooks#stripe"
     post "webhooks/stripe/connect", to: "webhooks#connect"

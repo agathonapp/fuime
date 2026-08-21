@@ -349,6 +349,20 @@ class UsersController < ApplicationController
 
     @user.assign_attributes(user_params)
 
+    # Fuime: the age checkbox that replaced the date-of-birth field.
+    #
+    # Applied through #attest_minor_13_plus! rather than as an attribute, so this
+    # request can only ever produce the MINOR value however it is crafted. See the
+    # note in #user_params.
+    #
+    # Assigned, not saved — the controller saves once below, with
+    # `context: :onboarding`, and that single save is what the onboarding validation
+    # and the "was this the first profile?" redirect both read. See
+    # User#attest_minor_13_plus for what saving here broke.
+    if ActiveModel::Type::Boolean.new.cast(params.dig(:user, :age_attestation_confirmed))
+      @user.attest_minor_13_plus(ip: request.remote_ip, user_agent: request.user_agent)
+    end
+
     payout_method_type = params.dig(:user, :payout_method_type)
 
     if @user.use_two_factor_authentication_changed?
@@ -560,7 +574,17 @@ class UsersController < ApplicationController
       :full_name,
       :preferred_name,
       :phone_number,
-      :birthday,
+      # Fuime: :birthday is deliberately NOT permitted here any more.
+      #
+      # Signup asks for a confirmation instead of a date (see
+      # AddAgeAttestationToUsers), and the only flow that still needs a real date is
+      # Stripe card issuing, which collects it on its own form. Leaving it permitted
+      # would keep the F-02 hole open through a field nothing renders.
+      #
+      # :age_attestation is not permitted either, and that one is the load-bearing
+      # omission: the enum has a value that confers adulthood, and no parameter a
+      # user controls may set it. #attest_minor_13_plus! is the only door from this
+      # form, and it can express one value.
       :profile_picture,
       :seasonal_themes_enabled,
       # admin

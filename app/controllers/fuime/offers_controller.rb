@@ -28,7 +28,7 @@ module Fuime
 
       @offers = @event.fuime_offers.live.in_operator_order
       @archived = @event.fuime_offers.where(aasm_state: "archived").order(updated_at: :desc)
-      @offer = Fuime::Offer.new
+      @offer = Fuime::Offer.new(prefill_params)
       @can_manage = policy(@event).manage_offers?
 
       # Why publishing may be unavailable, in the operator's own terms. Rendered
@@ -37,6 +37,21 @@ module Fuime
       # spec/controllers/fuime/storefront_blocker_privacy_spec.rb).
       @selling_blockers = @event.selling_blockers
     end
+
+    # What a /learn starter template may put in this form, and what it may not.
+    #
+    # A template on /learn lists things a trade could sell — "Front and back lawn
+    # mow", "per visit" — and links here with them in the query string, so a
+    # founder reading about lawn care lands on their own form with the words
+    # already typed. See Fuime::ServiceCatalog#offer_ideas.
+    #
+    # `price` is deliberately absent from this list and must stay absent. It is
+    # the same rule as everywhere else — Fuime writes the words, the operator
+    # writes the number — and a query parameter is the easiest possible way to
+    # smuggle a suggested rate past it, because it needs no code change at all,
+    # just a link. Anything not named here is dropped, and nothing is saved until
+    # the operator submits the form themselves.
+    PREFILLABLE = %i[name unit_label description].freeze
 
     def create
       authorize @event, :manage_offers?
@@ -193,6 +208,17 @@ module Fuime
     end
 
     private
+
+    # See PREFILLABLE. Truncated to each field's own maximum so a hand-edited URL
+    # renders a form rather than a validation error on a page the operator never
+    # submitted.
+    def prefill_params
+      {
+        name: params[:name].presence&.first(Fuime::Offer::MAX_NAME_LENGTH),
+        unit_label: params[:unit_label].presence&.first(Fuime::Offer::MAX_UNIT_LABEL_LENGTH),
+        description: params[:description].presence&.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH)
+      }.compact.slice(*PREFILLABLE)
+    end
 
     # Deliberately three fields.
     #

@@ -35,6 +35,7 @@
 #  public_message                               :text
 #  public_reimbursement_page_enabled            :boolean          default(FALSE), not null
 #  public_reimbursement_page_message            :text
+#  publishes_ledger                             :boolean          default(FALSE), not null
 #  reimbursements_require_organizer_peer_review :boolean          default(FALSE), not null
 #  risk_level                                   :integer
 #  sale_terms_acknowledged_at                   :datetime
@@ -992,13 +993,26 @@ class Event < ApplicationRecord
   # guardians — and picking `.first` is how you end up asserting something about
   # the wrong family.
   def overseeing_guardians
-    User.where(
-      id: Guardianship
-            .active
-            .joins("INNER JOIN organizer_positions ON organizer_positions.user_id = guardianships.minor_id")
-            .where(organizer_positions: { event_id: id, deleted_at: nil })
-            .select(:guardian_id)
-    )
+    User.where(id: overseeing_guardianships.select(:guardian_id))
+  end
+
+  # Fuime: the guardianship RECORDS behind #overseeing_guardians.
+  #
+  # #overseeing_guardians answers "which adults", which is what a badge or a
+  # "who to ask" sentence needs. This answers "on what basis", which is what
+  # anything reasoning about the guardianship itself needs — chiefly
+  # Guardianship#self_signed_signals on the admin payout-batch review, where the
+  # question is whether the adult who approved a payout is the teen who asked for
+  # it.
+  #
+  # Extracted rather than added alongside, so the two cannot define "overseeing"
+  # differently: the definition (active guardianships of minors holding a live
+  # position here) now lives here once.
+  def overseeing_guardianships
+    Guardianship
+      .active
+      .joins("INNER JOIN organizer_positions ON organizer_positions.user_id = guardianships.minor_id")
+      .where(organizer_positions: { event_id: id, deleted_at: nil })
   end
 
   # Fuime: does a responsible adult exist for this venture at all?

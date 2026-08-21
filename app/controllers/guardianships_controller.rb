@@ -157,9 +157,30 @@ class GuardianshipsController < ApplicationController
       return
     end
 
-    # Preconditions for signing as the responsible adult — chiefly a confirmed
-    # 18+ date of birth. A guardian invited by email starts as a stub user with
-    # no birthday, so this is the common path, not an edge case.
+    # Fuime: that same tick is the 18+ assertion, so record it as one.
+    #
+    # The box reads "I confirm I am the parent or legal guardian of X, THAT I AM 18
+    # OR OLDER, and I agree to the guardian agreement" — one sentence, three claims.
+    # Since 2026-08-20 nobody is asked for a date of birth
+    # (AddAgeAttestationToUsers), so this is where `known_adult?` becomes true for a
+    # guardian, and it is deliberately the ONLY place: a user cannot reach
+    # `adult_18_plus` from a form they control.
+    #
+    # Before #activation_blockers, because the blocker it clears is the 18+ one and
+    # the whole point is that ticking the box is how you clear it.
+    #
+    # Written through `@guardianship.guardian` rather than `current_user`: they are
+    # the same record, but #attest_adult_18_plus! uses update_columns, so a write to
+    # the other instance would leave the object #activation_blockers is about to read
+    # holding a stale value — and the blocker would fire on the request that just
+    # cleared it.
+    @guardianship.guardian.attest_adult_18_plus!(
+      ip: request.remote_ip, user_agent: request.user_agent
+    )
+
+    # Remaining preconditions for signing as the responsible adult. The 18+ one is
+    # satisfied by the tick above; what is left is the structural check that a
+    # guardian exists and is not the minor themselves.
     blockers = @guardianship.activation_blockers
     if blockers.any?
       flash[:error] = blockers.to_sentence

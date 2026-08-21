@@ -1,0 +1,131 @@
+<% title "#{@service.name} | Learn | Fuime" %>
+
+<% content_for :head do %>
+  <meta name="description" content="<%= @service.blurb %> What to list, where your first customers come from, and what to watch out for.">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="Starting a <%= @service.name.downcase %> business">
+  <meta property="og:url" content="<%= learn_template_url(slug: @service.key) %>">
+<% end %>
+
+<%# Fuime: one starter template, from Fuime::ServiceCatalog.
+
+    Everything on this page comes from the catalog — the same object the
+    application flow reads — so a service edited for signup is edited here too.
+    See the catalog's header for why none of it carries a price, and for why
+    `offer_ideas` in particular is only ever a name and a unit. %>
+
+<div class="max-w-3xl mx-auto py-8 px-4">
+  <p class="mb-2">
+    <%= link_to "← All templates", learn_path(venture: @venture&.slug, anchor: "templates"), class: "muted text-sm" %>
+  </p>
+
+  <h1 class="text-3xl font-bold mb-2"><%= @service.name %></h1>
+  <p class="muted mt-0 mb-8 text-lg"><%= @service.blurb %></p>
+
+  <%# ── Things to list ─────────────────────────────────────────────────── %>
+
+  <% if @service.offer_ideas.present? %>
+    <div class="card mb-6">
+      <h2 class="mt-0 mb-1 text-lg">Things you could list</h2>
+      <p class="muted text-sm mt-0 mb-4">
+        Each of these is one line on your storefront with its own Buy button.
+        The price box is left empty on purpose, because your costs are not the
+        same as anybody else's.
+        <%= link_to "How to work out your own number", learn_lesson_path(slug: "pricing", venture: @venture&.slug), class: "underline" %>.
+      </p>
+
+      <ul class="list-none p-0 m-0 flex flex-col gap-2">
+        <% @service.offer_ideas.each do |idea| %>
+          <li class="flex items-center justify-between gap-3 flex-wrap">
+            <span>
+              <strong><%= idea[:name] %></strong>
+              <span class="muted text-sm"><%= idea[:unit_label] %></span>
+            </span>
+
+            <%# Only when the viewer can actually price this venture's offers —
+                LearnController#set_venture resolves that through the same policy
+                the offers page uses. Everyone else reads the list. %>
+            <% if @venture.present? %>
+              <%= link_to "Add to my storefront",
+                          fuime_offers_path(event_slug: @venture.slug,
+                                            name: idea[:name],
+                                            unit_label: idea[:unit_label],
+                                            anchor: "add"),
+                          class: "btn btn--sm" %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if @venture.blank? %>
+        <p class="muted text-sm mt-4 mb-0">
+          <%= link_to "Start a business", apply_path, class: "underline" %> and
+          you can add these to a storefront in one click.
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── Before you start ───────────────────────────────────────────────── %>
+
+  <div class="card mb-6">
+    <h2 class="mt-0 mb-1 text-lg">Decide these before your first customer</h2>
+    <p class="muted text-sm mt-0 mb-3">
+      Every one of these is cheap to settle now and expensive to settle during
+      an argument.
+    </p>
+    <ul class="m-0 pl-5 flex flex-col gap-1">
+      <% @service.checklist.each do |item| %>
+        <li><%= item %></li>
+      <% end %>
+    </ul>
+  </div>
+
+  <%# ── First customers ────────────────────────────────────────────────── %>
+
+  <% if @service.first_customers.present? %>
+    <div class="card mb-6">
+      <h2 class="mt-0 mb-1 text-lg">Where the first ones come from</h2>
+      <p class="muted text-sm mt-0 mb-3">
+        Almost never strangers on the internet.
+        <%= link_to "The longer version", learn_lesson_path(slug: "getting-customers", venture: @venture&.slug), class: "underline" %>.
+      </p>
+      <ul class="m-0 pl-5 flex flex-col gap-1">
+        <% @service.first_customers.each do |item| %>
+          <li><%= item %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Watch out ──────────────────────────────────────────────────────── %>
+
+  <% if @service.watch_out.present? %>
+    <div class="card mb-6">
+      <h2 class="mt-0 mb-1 text-lg">What goes wrong in this one</h2>
+      <p class="muted text-sm mt-0 mb-3">
+        Specific to <%= @service.name.downcase %>, and learned the expensive way
+        by somebody else.
+      </p>
+      <ul class="m-0 pl-5 flex flex-col gap-1">
+        <% @service.watch_out.each do |item| %>
+          <li><%= item %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Next ───────────────────────────────────────────────────────────── %>
+
+  <div class="card">
+    <h2 class="mt-0 mb-3 text-lg">Then read these</h2>
+    <ul class="list-none p-0 m-0 flex flex-col gap-2">
+      <% @lessons.each do |lesson| %>
+        <li>
+          <%= link_to lesson.title, learn_lesson_path(slug: lesson.key, venture: @venture&.slug), class: "underline" %>
+          <span class="muted text-sm block"><%= lesson.blurb %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>

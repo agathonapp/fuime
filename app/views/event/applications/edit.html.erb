@@ -123,32 +123,44 @@
         </div>
 
         <div class="md:flex items-center gap-2">
+          <%# Fuime: the mobile phone field is gone from both application surfaces.
+              Nothing read it, and Stripe collects its own where KYC needs one.
+              It is also no longer in USER_FIELD_LABELS, so leaving a `required`
+              input here would have blocked submission on a field the model had
+              stopped asking about. %>
+          <%# Fuime: a confirmation, not a date of birth (2026-08-20). See
+              AddAgeAttestationToUsers.
+
+              The Alpine `minor` flag used to be computed from the selected date, and
+              it drives whether a parent's email is asked for further down. A
+              checkbox cannot tell 14 from 17, so it stays at its fail-closed
+              default — we ask for a parent unless the user is a KNOWN adult, which
+              mirrors User#minor_or_unknown_age? on the server. Ticking the box
+              therefore leaves `minor` true, which is the safe direction: the cost of
+              being wrong is asking an 18-year-old for a parent's email, not letting
+              a 14-year-old past the guardian question. %>
           <div class="field flex-1">
-            <%= form.label :phone_number do %>
-              Mobile phone number <span class="text-primary">*</span>
-            <% end %>
-            <%= form.hidden_field :phone_number, value: @application.user.phone_number.presence, required: true, placeholder: "555-555-5555", id: "phone_number" %>
-            <input type="tel" id="phone_raw" style="max-width:100%;" value="<%= @application.user.phone_number.presence %>" required>
-          </div>
-          <div class="field flex-1">
-            <div class="inline-flex items-center justify-between w-full gap-1">
-              <%= form.label :birthday do %>
-                Birthday <span class="text-primary">*</span>
-              <% end %>
-              <div class="info tooltipped tooltipped--w h-[18px]" aria-label="We collect user birthdays because we work with financials and have a responsibility to know our users. We also work with teenagers and need to know which users are under 18 as there are certain laws that protect them.">
-                <%= inline_icon "info", size: 18 %>
+            <% if @application.user.age_attestation.present? || @application.user.birthday.present? %>
+              <%= form.label :age_attestation, "Your age" %>
+              <p class="h5 muted mt0 mb0">
+                <% if @application.user.known_adult? %>
+                  You've confirmed you're 18 or older.
+                <% else %>
+                  You've confirmed you're 13 or older.
+                <% end %>
+              </p>
+            <% else %>
+              <div class="field field--checkbox">
+                <%= check_box_tag "event_application[age_attestation_confirmed]", "1", false,
+                                  id: "application_age_attestation_confirmed", required: true %>
+                <%= label_tag "application_age_attestation_confirmed" do %>
+                  I'm 13 or older <span class="text-primary">*</span>
+                <% end %>
               </div>
-            </div>
-            <div class="flex gap-2 onboarding" x-on:change="minor = new Date() - new Date([...$el.children].map(c => c.selectedOptions[0].label).join(' ')) < 568_025_136_000">
-              <%= form.date_select :birthday,
-                                    { start_year: Date.today.year,
-                                      end_year: Date.today.year - 100,
-                                      order: [:month, :day, :year],
-                                      prompt: @application.user.birthday.nil?,
-                                      default: @application.user.birthday.presence
-                                    },
-                                    { required: true } %>
-            </div>
+              <p class="h5 muted mt0 mb0">
+                Fuime is for founders aged 13 and up.
+              </p>
+            <% end %>
           </div>
         </div>
 
@@ -158,42 +170,48 @@
 
         <hr class="col-span-2 mt-5 invisible mb-4">
 
+        <%# Fuime: country is required; the rest of the address is not.
+            Country is the sanctions gate (DISALLOWED_COUNTRIES), so it stays. The
+            street address is only needed once there is a payee — a 1099, a
+            Connect account, a payout destination — so it is collected at the
+            payout seam instead of in front of a business that has earned nothing.
+            The fields stay HERE, optional, because this is the admin-facing form:
+            an operator supplying a payout address later writes into these same
+            columns rather than a second copy of them. %>
         <div>
-          <h4 class="text-lg my-0 mb-4">Address</h4>
+          <h4 class="text-lg my-0 mb-4">Location</h4>
 
-          <%= form.label :address_line1 do %>
-            Street address <span class="text-primary">*</span>
-          <% end %>
           <div class="grid grid-cols-2 gap-3 mb-2">
-            <div class="field mb-0">
-              <%= form.text_field :address_line1, placeholder: "8605 Santa Monica Blvd", required: true %>
-            </div>
-            <div class="field mb-0">
-              <%= form.text_field :address_line2, placeholder: "Suite 86294" %>
-            </div>
-            <div class="field mb-0">
-              <%= form.label :address_city do %>
-                City <span class="text-primary">*</span>
-              <% end %>
-              <%= form.text_field :address_city, placeholder: "West Hollywood", required: true %>
-            </div>
-            <div class="field mb-0">
-              <%= form.label :address_state do %>
-                State <span class="text-primary">*</span>
-              <% end %>
-              <%= form.text_field :address_state, placeholder: "CA", required: true %>
-            </div>
-            <div class="field mb-0">
-              <%= form.label :address_postal_code do %>
-                Zip code <span class="text-primary">*</span>
-              <% end %>
-              <%= form.text_field :address_postal_code, placeholder: "90069", required: true %>
-            </div>
             <div class="field mb-0">
               <%= form.label :address_country do %>
                 Country <span class="text-primary">*</span>
               <% end %>
               <%= form.country_select :address_country, { priority_countries: ["US"], priority_countries_divider: "", include_blank: "Select a country", required: true }, { class: "!min-h-[36px]" } %>
+            </div>
+          </div>
+
+          <h4 class="text-lg mt-4 mb-1">Payout address</h4>
+          <p class="h5 muted mt0 mb2">Optional until this venture is ready to be paid out.</p>
+          <div class="grid grid-cols-2 gap-3 mb-2">
+            <div class="field mb-0">
+              <%= form.label :address_line1, "Street address" %>
+              <%= form.text_field :address_line1, placeholder: "8605 Santa Monica Blvd" %>
+            </div>
+            <div class="field mb-0">
+              <%= form.label :address_line2, "Line 2" %>
+              <%= form.text_field :address_line2, placeholder: "Suite 86294" %>
+            </div>
+            <div class="field mb-0">
+              <%= form.label :address_city, "City" %>
+              <%= form.text_field :address_city, placeholder: "West Hollywood" %>
+            </div>
+            <div class="field mb-0">
+              <%= form.label :address_state, "State" %>
+              <%= form.text_field :address_state, placeholder: "CA" %>
+            </div>
+            <div class="field mb-0">
+              <%= form.label :address_postal_code, "Zip code" %>
+              <%= form.text_field :address_postal_code, placeholder: "90069" %>
             </div>
           </div>
         </div>
@@ -220,7 +238,10 @@
             <%= form.text_area :accessibility_notes, class: "w-full max-w-full" %>
           </div>
 
-          <% if @application.user.is_minor? %>
+          <%# `minor_or_unknown_age?`, not `is_minor?`: the latter is nil without a
+              date of birth, so this whole block — the parent's email — would have
+              disappeared for every checkbox-only teenager. %>
+          <% if @application.user.minor_or_unknown_age? %>
             <div class="field col-span-2" x-show="minor">
               <%= form.label :cosigner_email do %>
                 Parent email <span class="text-primary">*</span>
@@ -234,24 +255,11 @@
 
     <% end %>
 
-    <%= turbo_frame_tag :affiliations_settings do %>
-      <h3 class="mb2">Affiliations</h3>
-
-      <div class="card mb3">
-        <% affiliation = Event::Affiliation.new(affiliable: @application) %>
-        <%= form_with(url: affiliations_path(affiliable_type: @application.class.name, affiliable_id: @application.id), local: true, html: { "x-data": "{ type: '', disabled: #{!policy(affiliation).update?} }" }) do |form| %>
-          <%= render "events/settings/affiliation_form", affiliation:, form: %>
-        <% end %>
-      </div>
-
-      <%= render partial: "events/settings/affiliation", collection: @application.affiliations.nonempty %>
-    <% end %>
+    <%# Fuime: Affiliations removed — see project_info.html.erb for why. %>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js" integrity="sha512-QMUqEPmhXq1f3DnAVdXvu40C8nbTgxvBGvNruP6RFacy3zWKbNTmx7rdQVVM2gkd2auCWhlPYtcW2tHwzso4SA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css" integrity="sha512-gxWow8Mo6q6pLa1XH/CcH8JyiSDEtiwJV78E+D+QP0EVasFs8wKXq16G8CLD4CJ2SnonHr4Lm/yY2fSI2+cbmw==" crossorigin="anonymous" referrerpolicy="no-referrer">
-<%= javascript_include_tag "phone_input.js" %>
+<%# Fuime: intl-tel-input and phone_input.js dropped with the phone field. %>
 
 <% content_for :footer do %>
   <%= link_to "← Back", submission_application_path(@application), class: "btn bg-muted" %>

@@ -46,6 +46,26 @@ FactoryBot.define do
     # guardian stub created from an email address.
     trait :unknown_age do
       birthday { nil }
+      age_attestation { nil }
+    end
+
+    # ── Fuime: the checkbox users, from 2026-08-20 on ────────────────────────
+    #
+    # Signup asks for a confirmation rather than a date of birth
+    # (AddAgeAttestationToUsers), so these are what a real new account looks like:
+    # no `birthday`, one attestation. The `:minor` / adult traits above keep their
+    # dates because plenty of specs want a specific age, and a stored date still
+    # wins — but a spec about the ORDINARY user should reach for these.
+    trait :attested_teen do
+      birthday { nil }
+      age_attestation { :minor_13_plus }
+      age_attested_at { Time.current }
+    end
+
+    trait :attested_adult do
+      birthday { nil }
+      age_attestation { :adult_18_plus }
+      age_attested_at { Time.current }
     end
   end
 end

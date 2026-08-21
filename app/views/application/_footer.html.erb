@@ -19,6 +19,11 @@
     <%= link_to "Guardian Agreement", guardian_agreement_path %>
     •
     <%= link_to "FAQ", faq_path %>
+    •
+    <%# Fuime: /learn is public and is as much an answer to "what is this?" as
+        the FAQ is, so it sits with the links that are always visible rather
+        than in the hover-only block below. %>
+    <%= link_to "Learn", learn_path %>
   </p>
 
   <%# Standing status disclosure. Fuime shows balances, ledgers and cards, which is

@@ -43,11 +43,17 @@ RSpec.describe "a family signs up and activates", type: :request do
     # ── The teen ──────────────────────────────────────────────────────────
     teen = login_as!("maya-family@example.com")
 
-    # Deferred onboarding: completing a profile with a minor's birthday no
-    # longer walls them behind the guardian invite — they land in the product
-    # with a heads-up, and the hard requirement waits at activation.
+    # Deferred onboarding: confirming they're old enough no longer walls them
+    # behind the guardian invite — they land in the product with a heads-up, and
+    # the hard requirement waits at activation.
+    #
+    # `age_attestation_confirmed` and not `birthday`: signup asks for a checkbox
+    # rather than a date (AddAgeAttestationToUsers). Posting a birthday here would
+    # now be silently dropped — `:birthday` is not a permitted parameter — and the
+    # onboarding validation would refuse with a 422, which is how this example
+    # caught the change.
     patch user_path(teen), params: {
-      user: { full_name: "Maya Family", birthday: 15.years.ago.to_date.to_s }
+      user: { full_name: "Maya Family", age_attestation_confirmed: "1" }
     }
     expect(response).to redirect_to(root_path)
     expect(flash[:info]).to include("invite a parent or guardian when your business is ready")
@@ -77,19 +83,33 @@ RSpec.describe "a family signs up and activates", type: :request do
     # the same code flow the teen used.
     parent = login_as!("pat-family@example.com")
 
-    # They must prove their age before the acceptance can go active
-    # (Guardianship#guardian_must_be_adult is fail-closed on unknown age).
+    # The parent completes their own profile with the same generic account gate
+    # every user gets — "I'm 13 or older", because that is the platform minimum and
+    # the settings form deliberately cannot offer anything stronger (a box a user
+    # controls must never be able to make them an adult).
+    #
+    # They used to have to enter a DATE OF BIRTH here, because Guardianship's 18+
+    # check was fail-closed on unknown age and a date was the only way to satisfy
+    # it. That is gone: the acceptance checkbox below already reads "I confirm I am
+    # the parent or legal guardian of X, that I am 18 or older", so ticking THAT is
+    # the assertion, and #accept promotes the attestation. This is the one
+    # legitimate minor_13_plus -> adult_18_plus transition, and this is the flow it
+    # exists for.
     patch user_path(parent), params: {
-      user: { full_name: "Pat Family", birthday: 40.years.ago.to_date.to_s }
+      user: { full_name: "Pat Family", age_attestation_confirmed: "1" }
     }
+    expect(parent.reload.known_adult?).to be(false)
 
     # The link from the invite email: token-addressed show, then accept.
     get guardianship_path(guardianship.invite_token)
     expect(response).to have_http_status(:ok)
 
     # The agreement checkbox is required server-side — skipping it is refused
-    # with a flash, which an earlier run of this spec proved by omitting it.
+    # with a flash, which an earlier run of this spec proved by omitting it. It now
+    # also carries the 18+ claim, so this one request is what makes the parent a
+    # known adult.
     post accept_guardianship_path(guardianship.invite_token), params: { agree: "1" }
+    expect(parent.reload.known_adult?).to be(true)
     expect(guardianship.reload).to be_active,
                                    "accept did not activate: #{flash.to_hash.inspect}"
 

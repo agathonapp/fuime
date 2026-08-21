@@ -640,6 +640,40 @@
         89
       ],
       "note": ""
+    },
+    {
+      "warning_type": "Dynamic Render Path",
+      "warning_code": 15,
+      "fingerprint": "74d5dd197daa876aa4a1e2e14664d94a2570e6dba275106fb90837708a7718f9",
+      "check_name": "Render",
+      "message": "Render path contains parameter value",
+      "file": "app/views/learn/show.html.erb",
+      "line": 25,
+      "link": "https://brakemanscanner.org/docs/warning_types/dynamic_render_path/",
+      "code": "render(action => Fuime::Playbook.find(params[:slug]).partial, { :venture => (begin\n  Event.friendly.find(params[:venture])\nrescue ActiveRecord::RecordNotFound\n  nil\nend) })",
+      "render_path": [
+        {
+          "type": "controller",
+          "class": "LearnController",
+          "method": "show",
+          "line": 58,
+          "file": "app/controllers/learn_controller.rb",
+          "rendered": {
+            "name": "learn/show",
+            "file": "app/views/learn/show.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "learn/show"
+      },
+      "user_input": "params[:slug]",
+      "confidence": "Weak",
+      "cwe_id": [
+        22
+      ],
+      "note": "False positive, and fixed upstream: Brakeman 8.x does not raise it. The render target is Fuime::Playbook::Lesson#partial, and Playbook.find returns nil for any slug outside the frozen LESSONS list -- LearnController#show redirects to /learn on nil, so no attacker-supplied string can reach render. Weak confidence. See spec/requests/learn_spec.rb."
     }
   ],
   "updated": "2026-06-22 12:31:41 -0400",

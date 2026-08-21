@@ -203,7 +203,23 @@ module Fuime
 
     def settle_one!(cpt)
       key = cpt.raw_pending_donation_transaction.donation_transaction_id
-      memo = "#{cpt.memo} [#{key}]"
+
+      # Built through VentureLedger.settled_memo rather than by re-interpolating
+      # the same string here.
+      #
+      # This line was `"#{cpt.memo} [#{key}]"` — the identical format, written out a
+      # second time — and that duplication is what made the memo-injection fix
+      # incomplete: sanitizing inside `.settled_memo` would have left this copy
+      # untouched, and this is the path every real sale settles through. One
+      # definition, so the classifier can only ever be fed cleaned prose.
+      #
+      # Pending memos written before that change may still carry brackets, so this
+      # is also where they get cleaned on their way to the settled side. A pending
+      # row whose memo changes shape between two sweeps cannot double-count: the
+      # unique indexes on canonical_pending_settled_mappings make a second settle of
+      # the same cpt raise (see the header), so at worst a crashed earlier run
+      # leaves an unreferenced raw row.
+      memo = ::Fuime::VentureLedger.settled_memo(key, cpt.memo)
 
       # Reuse an existing raw row rather than creating a duplicate — see the
       # idempotency note in the header.

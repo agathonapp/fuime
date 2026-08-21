@@ -1,0 +1,39 @@
+<% title "#{@lesson.title} | Learn | Fuime" %>
+
+<% content_for :head do %>
+  <meta name="description" content="<%= @lesson.blurb %>">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="<%= @lesson.title %>">
+  <meta property="og:url" content="<%= learn_lesson_url(slug: @lesson.key) %>">
+<% end %>
+
+<%# Fuime: the shell every Fuime::Playbook lesson renders inside.
+
+    The body is `@lesson.partial`, which is derived from the same key as the
+    URL — so a lesson listed on /learn cannot 500 when it is opened. See
+    Fuime::Playbook for why the prose lives in partials and not in Ruby. %>
+
+<div class="max-w-2xl mx-auto py-8 px-4">
+  <p class="mb-2">
+    <%= link_to "← All lessons", learn_path(venture: @venture&.slug, anchor: "lessons"), class: "muted text-sm" %>
+  </p>
+
+  <h1 class="text-3xl font-bold mb-2"><%= @lesson.title %></h1>
+  <p class="muted mt-0 mb-8 text-lg"><%= @lesson.blurb %></p>
+
+  <article class="learn-body flex flex-col gap-4">
+    <%= render @lesson.partial, venture: @venture %>
+  </article>
+
+  <div class="card mt-10">
+    <h2 class="mt-0 mb-3 text-lg">Keep going</h2>
+    <ul class="list-none p-0 m-0 flex flex-col gap-2">
+      <% @other_lessons.each do |lesson| %>
+        <li>
+          <%= link_to lesson.title, learn_lesson_path(slug: lesson.key, venture: @venture&.slug), class: "underline" %>
+          <span class="muted text-sm block"><%= lesson.blurb %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>

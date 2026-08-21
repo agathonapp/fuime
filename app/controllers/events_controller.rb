@@ -1403,6 +1403,9 @@ class EventsController < ApplicationController
       :donation_thank_you_message,
       :donation_reply_to_email,
       :is_public,
+      # Fuime: publishing the LEDGER, which used to ride on :is_public. See
+      # AddPublishesLedgerToEvents.
+      :publishes_ledger,
       :is_indexable,
       :holiday_features,
       :public_message,
@@ -1472,6 +1475,9 @@ class EventsController < ApplicationController
       :donation_thank_you_message,
       :donation_reply_to_email,
       :is_public,
+      # Fuime: publishing the LEDGER, which used to ride on :is_public. See
+      # AddPublishesLedgerToEvents.
+      :publishes_ledger,
       :is_indexable,
       :holiday_features,
       :public_message,

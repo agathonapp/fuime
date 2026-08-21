@@ -436,6 +436,31 @@ module EventsHelper
       symbol: :documentation,
       available_proc: ->(event) { policy(event).documentation? }
     },
+    # Fuime: /learn — the starter templates and the money lessons.
+    #
+    # In the org nav rather than only in the footer because the questions it
+    # answers arrive while somebody is looking at their own storefront wondering
+    # what to put on it, or at a sale wondering where the rest of the money went.
+    # The link carries `venture:` so the "things you could list" on a template
+    # become one-click adds to THIS venture's offers, and so the lessons can link
+    # back to this venture's Tax Tracker (LearnController#set_venture, which
+    # re-checks the policy rather than trusting the slug).
+    #
+    # No `policy(event)` call in `available_proc`: /learn is a public page with
+    # nothing venture-specific on it, so there is nothing here to authorize.
+    # `organizer_signed_in?` only keeps it out of a stranger's view of a public
+    # org, where a nav item pointing at a general reading list is noise.
+    #
+    # `idea.svg` is verified to exist in app/assets/images/icons — a missing icon
+    # 500s the whole org nav rather than just this entry (see the Taxes note).
+    {
+      name: "Learn",
+      path_proc: ->(event_id) { learn_path(venture: event_id) },
+      tooltip: "How to start and run a business, and ten templates",
+      icon: "idea",
+      symbol: :learn,
+      available_proc: ->(_event) { organizer_signed_in? }
+    },
     {
       name: "Sub-organizations",
       path_proc: ->(event_id) { event_sub_organizations_path(event_id:) },
@@ -486,13 +511,11 @@ module EventsHelper
           symbol: :settings_tags,
           available_proc: ->(event) { true }
         },
-        {
-          name: "Affiliations",
-          path_proc: ->(event_id) { edit_event_path(event_id, tab: "affiliations") },
-          tooltip: "Update organization affiliations",
-          symbol: :settings_affiliations,
-          available_proc: ->(event) { true }
-        },
+        # Fuime: the Affiliations tab is gone. Its only three options were FIRST
+        # Robotics, VEX and Hack Club — upstream HCB concepts, and the last two
+        # words of Hack Club branding a founder could still reach (Rule 7). The
+        # model, table and routes survive until the full removal; this is the
+        # entry point, so removing it makes the picker unreachable.
         {
           name: "Integrations",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "integrations") },

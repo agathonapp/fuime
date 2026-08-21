@@ -5118,3 +5118,349 @@ somebody at another company.
 283 mailer/view/request/invoice examples green after the change; 1100 across the wider set with
 one pre-existing ordering failure (`public_activity/user_session/create_spec`, listed in
 known-failures.md's standing remainder — passes in isolation, on a clean tree and with this diff).
+
+## Security review remediation — 2026-08-20
+
+A full-platform security review (whole app, not the branch diff) produced thirteen
+findings. This section is the change log; the reasoning for each lives in a comment at
+the site of the fix, because that is where the next person reads it.
+
+Baseline before: `3412 examples, 5 failures` — four `receipt_bin_mailbox` examples
+(`wkhtmltopdf` missing in the container) and one stale invoice-copy expectation. Both
+pre-existing and unrelated.
+
+### Authorization
+
+| Change | Why | Files |
+|--------|-----|-------|
+| New `events.publishes_ledger` column, default false | `is_public` meant BOTH "my storefront is public" (its Fuime label, and what the storefront/checkout gate on) and "my books are public" (what `EventPolicy` granted on). Every venture is created `is_public: true`, so ticking a storefront box published every sale, the running balance, and the names and photos of the minors running it. CLAUDE.md L7. | `db/migrate/20260820120000_add_publishes_ledger_to_events.rb` |
+| `EventPolicy` grants on `publishes_ledger?` (= `is_public? && publishes_ledger?`) instead of `is_public` | Covers `show?` and everything aliased to it — `transactions?`, `transactions_list?`, `team?`, `balance_transactions?`, `money_movement?`, `users_chart?`, `stats?`, `statements?`, `async_balance?` — plus `balance_by_date?`, `emburse_card_overview?`, `card_grant_overview?`, `sub_organizations?`. `announcement_overview?` deliberately unchanged: a published announcement is a deliberate publication. | `app/policies/event_policy.rb` |
+| Transparency toggle in org settings rebound to `:publishes_ledger` | It was labelled "Make …'s finances transparent" and set the same column as the offers page's "Show my storefront publicly". Each switch now sets the thing its own label names. | `app/views/events/settings/_details.html.erb`, `app/controllers/events_controller.rb` |
+| `/stats/:slug` requires `publishes_ledger` and `not_hidden` | An unauthenticated endpoint returning a venture's lifetime revenue, keyed on the storefront flag, linked from nothing. | `app/controllers/stats_controller.rb` |
+| `Event#overseeing_guardianships` extracted; `#overseeing_guardians` reads through it | One definition of "overseeing", now that the guardianship records themselves are needed. | `app/models/event.rb` |
+
+### Authentication & the guardianship structure
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `birthday` is write-once (`User#birthday_is_write_once`) | `:birthday` was permitted on the ordinary settings form. One PATCH setting it to 1990 turned off `GuardianshipEnforcement`, the FLSA 16+ operator floor, the payout guardian gate, and `Guardianship#activation_blockers` at once. Admins and no-session callers (console, jobs, seeds) may still change it. | `app/models/user.rb` |
+| `Errors::PrivilegedBirthdayChange`, reported on any change to an already-set DOB | A change to age is a change to eligibility to trade, so the privileged path is reviewable rather than merely permitted. | `app/lib/errors.rb`, `app/models/user.rb` |
+| `Guardianship#self_signed_signals` / `#self_signed_suspected?`, surfaced on the admin payout-batch review | `decide_payout?` resolves to `guardian_reader?` and `approver_must_not_be_the_requester` compares user IDs, so a teen with a second email address approves their own payouts. Signals, not a block: shared IP and fast acceptance are true of real families. Derived from already-persisted data, so no migration and so it applies to guardianships signed earlier. | `app/models/guardianship.rb`, `app/views/admin/payout_batch.html.erb` |
+
+### Money paths
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `financially_frozen?`, `hidden?` and `demo_mode?` added to `OperatorEligibility#blockers` | `accepts_payments?` asked about none of them. Frozen was the worst: `PayableAssessment` already skips a frozen venture from every payout run, so money went in and had no path out. | `app/services/fuime/operator_eligibility.rb` |
+| Storefront and checkout scoped `.not_hidden` | The payment page and directory already filtered it; these two used a bare `find_by!`, so hiding a venture left its Buy button working. | `app/controllers/fuime/storefronts_controller.rb`, `app/controllers/fuime/checkouts_controller.rb` |
+| Memo sanitization moved to the SINK — `VentureLedger.settled_memo` and `#post!` | `sanitize_memo_text` was called at two input boundaries only. `memo_for` falls back to `"Payment to #{venture.name}"` and `Event#name` validates presence alone, so an operator naming their venture `Acme [fuime_payout_` made their own sales classify as already paid out. Money was never reachable (`net_payable_cents` reads `balance_v2_cents`; the unsettled-fee sum keys off the raw row) but the breakdown a guardian reads was wrong. | `app/services/fuime/venture_ledger.rb` |
+| `ConnectSettlementSweep#settle_one!` calls `.settled_memo` instead of re-interpolating it | The duplicated format string is what would have left the fix above incomplete on the path every real sale settles through. | `app/services/fuime/connect_settlement_sweep.rb` |
+
+### Secrets
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Boot check: `SECRET_KEY_BASE` must be set and must differ from the committed credentials value | `config/master.key` is committed (upstream `8b96a8b45`, tracked despite `.gitignore`) and `credentials.yml.enc` holds `secret_key_base`. Without the env var, session and flash cookies are signed with a key anyone with a clone has. **Still to do by hand: confirm the deploy sets it, then rotate.** | `config/initializers/fuime_safety_check.rb` |
+| Freshly minted API keys render in the response that created them | The plaintext travelled in `flash`, and with no `session_store` initializer the session is Rails' default cookie store — a live credential written to the browser's cookie jar. A server-side cache was tried first and rejected: `Rails.cache` is `:null_store` in test and in development without `tmp/caching-dev.txt`. | `app/controllers/fuime/api_keys_controller.rb` |
+
+### Hardening
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Content Security Policy, **report-only** | The initializer was Rails' commented-out template. Report-only because `script_src` omits `:unsafe_inline` and there are 19 inline `<script>` blocks in `app/views` — enforcing today would break the checkout. Blocks nothing yet; the two steps to enforcement are written in the file. | `config/initializers/content_security_policy.rb` |
+| `json` 2.21.1 → 2.21.2 | CVE-2026-71847: freed-buffer dereference on truncated duplicate-key JSON. Relevant because the Fuime webhook endpoints parse untrusted JSON before anything else happens. No dependency churn. | `Gemfile.lock` |
+| **`blazer` 3.3.0 → 3.5.1 deliberately NOT taken** | GHSA-m5f6-4589-m89f (stored XSS) is real but Blazer is behind `AuditorConstraint`, so it is an auditor→admin path rather than a public one. The upgrade forces `safely_block` 0.5 → **1.0**, and `safely` is used inside `canonical_transaction.rb` and `canonical_pending_transaction.rb` — the ledger (CLAUDE.md Rule 3). Taking it turned five `user_session_spec` public-activity examples red, which is a change in exception-swallowing behaviour I did not chase down. A major bump in the ledger's error handling does not ride along with a security patch the day before real money. **Follow-up: upgrade Blazer on its own branch, and understand what `safely_block` 1.0 changed before merging.** | — |
+| IP allowlist for `/fuime/webhooks/stripe` and `…/connect` | Upstream protects `/stripe/webhook` this way; Fuime's own two Stripe endpoints were added without it. Depth only — signature verification is the real control and fails closed. | `config/initializers/rack_attack.rb` |
+| Throttles on checkout, guardian invites and the venture API | The public checkout creates a Stripe PaymentIntent per request (card testing); `POST /guardianships` creates a `User` row and sends mail per request (bombing, account squatting); the API had no per-key ceiling to make a leaked key's abuse visible. The API throttle key is SHA-256'd — a rate-limit key is not a place for a live secret. | `config/initializers/rack_attack.rb` |
+| Rack::Attack enabled in staging | Was production-only, so the environment where limits get exercised before they matter had none. | `config/initializers/rack_attack.rb` |
+| `FUIME_STRIPE_WEBHOOK_SECRET` missing is now fatal under merchant-of-record | Under MoR it is not a degraded ledger: money lands in Fuime's balance with no record of who it is owed to. Also added a warning for the previously unchecked `FUIME_STRIPE_CONNECT_WEBHOOK_SECRET`. | `config/initializers/fuime_safety_check.rb` |
+| Local Active Storage is fatal under merchant-of-record | The existing triggers (`STRIPE_MODE=live`, or blobs already stored) both fire only after there is something to lose. As seller of record Fuime owes receipts from the first sale. | `config/initializers/fuime_safety_check.rb` |
+| `X-Robots-Tag` allowlist | It was `none` on every response, so the public directory and storefronts could never be indexed and `Event#is_indexable` could have no effect. Allowlisted the three public commerce controllers, with `noai, noimageai` (L7); everything else stays `none`. | `app/controllers/application_controller.rb` |
+
+### Specs
+
+`spec/requests/fuime_security_review_fixes_spec.rb` covers F-01, F-02, F-03, F-05, F-08,
+F-09 and F-13. Each example asserts the hole is closed on the real object rather than
+that a guard exists — the F-09 examples run against `PayablesLedger`'s own classifier,
+because a spec asserting `sanitize_memo_text` strips brackets passes whether or not
+anything calls it, which is how the 2026-08-16 fix came to be incomplete.
+
+Two existing specs asserted the old behaviour and were rewritten, not deleted:
+`event_policy_spec.rb`'s `#sub_organizations?` block (parent now needs
+`publishes_ledger`; the child-visibility logic it actually tests is unchanged, and a new
+example covers the un-opted-in parent) and `api_keys_controller_spec.rb`'s minting
+example (now asserts the secret is in the page and in no cookie).
+
+### Not fixed here
+
+- **Rotating `secret_key_base`** and confirming the production env. Needs someone with
+  the deploy dashboard; the boot check will refuse to start if it is wrong.
+- **Enforcing the CSP.** Needs nonces on the 19 inline scripts and a pass over the money
+  paths.
+- **Verifying a guardian out of band.** `Fuime::RequirementCollectionService` already
+  forwards identity to Stripe and keeps only the consent record, so the machinery exists;
+  gating the first payout on it is a product decision, not a patch. The signals above are
+  the interim control.
+- **A full review of the 41 upstream controllers that `skip_before_action :signed_in_user`.**
+  This pass covered the Fuime surface exhaustively and sampled upstream.
+
+## Date of birth replaced by an age checkbox — 2026-08-20
+
+**Founder's call.** Signup asked every user for a full month, day and year,
+`required: true`, in three places. It now asks for a confirmation instead, the way
+most consumer sites gate age. No user is asked for a date of birth any more.
+
+### Why the column records a STATE and not a boolean
+
+A single "I'm 13+" boolean cannot run this platform, and the reason is arithmetic
+rather than caution — the code asks three different age questions:
+
+| Threshold | Read by | Purpose |
+|---|---|---|
+| ≥ 13 | `User#age_attestation_required_for_onboarding`, `minimum_age_requirement` | COPPA floor (L6) |
+| ≥ 16 | `Fuime::OperatorEligibility#age_blocker` | FLSA operator floor — configurable, **13 in production** |
+| ≥ 18 | `User#known_adult?` | who may be a GUARDIAN, i.e. the whole parent-signs structure (L2) |
+
+With one boolean, `minor_or_unknown_age?` (deliberately fail-closed) reads true for
+everybody, so `known_adult?` is never true for anybody and **no guardianship could
+ever activate** — every user, parents included, becomes a minor waiting for a
+parent. So `users.age_attestation` records *which* claim was made:
+`minor_13_plus` ("I am 13 or older" — the teen's box) or `adult_18_plus` ("I am 18
+or older, and their guardian" — the guardian's box). One tick per person, no date,
+three thresholds still resolve.
+
+Because the production operator floor is already 13, the checkbox satisfies it
+exactly and **nothing switched on today is lost.**
+
+### The load-bearing security property
+
+**The box a user can tick from a page they control can never make them an adult.**
+`attest_minor_13_plus!` is the only door from the user-facing forms and can express
+one value; `adult_18_plus` is reachable only from `GuardianshipsController#accept`.
+`age_attestation` is not a permitted parameter anywhere, and neither is `:birthday`
+any more. A spec asserts the allowlist directly.
+
+This preserves what `User#birthday_is_write_once` was added for hours earlier
+(security review F-02): before it, a teen could PATCH their birthday to 1990 and
+switch off guardianship enforcement, the operator floor and the payout guardian
+gate in one request. The attestation is write-once on the same terms, including the
+unverified-session case.
+
+### Files
+
+| Change | Why | Files |
+|---|---|---|
+| `users.age_attestation` + `age_attested_at` / `_ip` / `_user_agent` | The claim, and the consent record for it — mirroring `guardianships.agreement_*`. An unverified claim is still worth recording precisely. | `db/migrate/20260820170000_add_age_attestation_to_users.rb` |
+| `known_adult?` / `minor_or_unknown_age?` read both sources | A stored date of birth **wins outright** — it is the more specific fact, and otherwise a teen who supplied one for a card could tick their way out of being a minor. `is_minor?` stays birthday-only, because upstream call sites read it. | `app/models/user.rb` |
+| `attested_at_least?(years)` | Expresses the claim as a floor it clears. `minor_13_plus` clears 13 and nothing above — the checkbox genuinely cannot tell 14 from 17. | `app/models/user.rb` |
+| `OperatorEligibility#age_blocker` reads the attestation | Passes a 13+ tick against a floor of 13. Raise the floor to 16 and it refuses **with a sentence saying it would need a date of birth to tell** — a loud failure rather than a guess, on the control that exists to keep FLSA exposure out of the picture. | `app/services/fuime/operator_eligibility.rb` |
+| The guardian's existing tick now records `adult_18_plus` | The acceptance box already read "I confirm I am the parent or legal guardian of X, **that I am 18 or older**, and I agree to the guardian agreement". The assertion was always being made there; it is now recorded. `activation_blockers` no longer sends a parent to a settings page to enter a date that no longer has a field. | `app/controllers/guardianships_controller.rb`, `app/models/guardianship.rb` |
+| `is_teenager?` falls back to the attestation | Without it, dropping the date would silently zero every teen-count metric by reclassifying everybody as not-a-teenager. | `app/models/user.rb` |
+| **Four `is_minor?` holes in the application flow** | `is_minor?` is a tri-state returning **nil** with no date, which is falsy. So: the cosigner-email field would have vanished for every checkbox teen; `cosigner_email` would have been **deleted** on contract creation because `!nil` is true; the submit gate required a birthday nobody could supply. All four now use `known_adult?` / `minor_or_unknown_age?`. | `app/models/event/application.rb`, `app/views/event/applications/edit.html.erb` |
+| Onboarding, settings and application forms | Checkbox in place of `date_select`. The settings date field is now admin-only and read-only; `:birthday` is no longer permitted, so leaving an input would post a silently-dropped value. | `app/views/users/edit.html.erb`, `app/views/event/applications/edit.html.erb`, `app/controllers/users_controller.rb`, `app/controllers/event/applications_controller.rb` |
+| Guardianship-enforcement message | Said "please add your date of birth" and pointed at a field that no longer exists. | `app/controllers/concerns/fuime/guardianship_enforcement.rb` |
+| Admin displays | "age unknown" is now the *normal* state, so the vetting queue and the user panel distinguish "confirmed 13+" from "answered nothing". The reviewer approving an operator is the one person who can act on the difference. | `app/views/admin/operator_vetting.html.erb`, `app/views/users/_admin_guardianship.html.erb` |
+| **Privacy policy, terms and FAQ** | They said we collect a date of birth and that we ask for one at signup. Both false as of this change, and L8 is explicitly about not letting copy describe a product that does not exist. The privacy policy now also names the one case where a date IS taken. | `app/views/static_pages/privacy.html.erb`, `terms.html.erb`, `faq.html.erb` |
+
+### What still collects a real date of birth
+
+**Stripe, and only Stripe.** An Issuing cardholder and a Connect individual both
+legally require one, so `stripe_cards/_form` keeps its own prompt — it already only
+asks when the field is empty, and cards are behind a default-off flag. Connect
+onboarding degrades gracefully: `Fuime::ConnectOnboardingService` returns nil for
+the prefill and Stripe collects it directly. `users.birthday` is untouched and stays
+encrypted (Rule 2).
+
+### Not changed, and worth saying plainly
+
+**This is not a security improvement.** A typed date and a ticked box are both
+unverified claims — that is security-review F-02/F-03, and the write-once guard is
+what makes either durable. It is a data-minimisation change: Fuime now holds one
+boolean-ish fact where it used to hold a full date of birth for every minor on the
+platform.
+
+One trade accepted deliberately: **the checkbox does not age.** A date of birth
+made a 15-year-old eligible at 16 by itself. A `minor_13_plus` tick never becomes a
+16+ tick, so if `FUIME_MINIMUM_OPERATOR_AGE` is ever raised, every existing
+checkbox operator is blocked until they supply a date. `#age_blocker` says exactly
+that when it happens.
+
+Specs: `spec/models/fuime/age_attestation_spec.rb` (22 examples).
+
+---
+
+## /learn — starter templates and the money lessons (2026-08-20)
+
+A public, indexable education surface at `/learn`: fourteen browsable starter templates
+and seven lessons on how a small business actually works. Fuime-only; upstream HCB
+has no equivalent.
+
+### What the lessons are about, and what they are deliberately not about
+
+Founder's steer, given while this was being built: *"a lot of kids will be reading
+this... general business strategy... so kids actually learn things! Less of Fuime
+and us saying the same stuff over and over."*
+
+So the reading list is six lessons about **business** and one about **us**:
+
+1. `what-people-pay-for` — demand, problems vs ideas, testing cheaply, narrowing
+2. `pricing` — floor, ceiling, testing upward, quoting the job not the hour
+3. `the-numbers` — variable vs fixed costs, margin, break-even, a worked example
+4. `getting-customers` — the first five are people, then find the repeatable channel
+5. `keeping-customers` — expectations, recovery when it goes wrong, records
+6. `cash-and-records` — cash flow vs profit, separation, sales tax vs income tax
+7. `what-fuime-takes` — the fee, the payout, the approval. One page, and it says so.
+
+Two house rules, both asserted rather than trusted to a comment:
+
+- **No em dashes anywhere a reader can see one.** Explicitly asked for, on the
+  grounds that it reads as machine-written. `spec/requests/learn_spec.rb` renders
+  every page and checks `<main>`; en dashes used as punctuation are checked too.
+  Existing `ServiceCatalog` checklist copy was swept for the same reason, since it
+  renders on these pages.
+- **The "Fuime never sets your price" line appears once**, on the template page
+  where the pre-fill actually happens, rather than on every page. The constraint
+  is still enforced in code and spec; it is just no longer recited.
+
+### What was already there, and why this is not a second copy of it
+
+`Fuime::ServiceCatalog` already held ten starter templates — name, blurb,
+description prompt and a five-item checklist each — but they were reachable **only
+from inside the application flow**, at the moment somebody is asked "what is your
+business". That is the worst possible moment to read them for the first time, and
+it is behind a signup.
+
+So the templates were **extended in place** rather than re-authored in a content
+file. Three optional fields were added to `ServiceCatalog::Service`:
+
+| Field | What it is |
+|---|---|
+| `offer_ideas` | Things to list on a storefront, as `{name:, unit_label:}` — **names and units only** |
+| `first_customers` | Where the first few actually come from, for that trade |
+| `watch_out` | What goes wrong in that trade specifically, including the costs a first quote forgets |
+
+A parallel content file keyed by the same strings would have drifted: add a service,
+forget the other file, and the browsable catalog quietly disagrees with the one a
+teenager signs up through.
+
+### Four software templates, and the one thing they may not say
+
+Added on request ("teens vibecode software on Replit"): `web_apps` and
+`digital_downloads` under `digital`, `discord_bots` and `ai_automation` under
+`services`. Fourteen templates in total.
+
+These are only honest because `digital` became sellable earlier the same day
+(`Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES`). Before that they would have
+been an advert for a dead end, since `LearnController` renders `.sellable`.
+
+**Every one is shaped around a one-time payment, and that is a fact about Fuime
+rather than a view about software.** `Fuime::Offer` has no recurring concept and
+merchant-of-record checkout is `mode: "payment"`, so an operator can sell access
+to a tool and cannot bill for it monthly. The subscription machinery that does
+exist (`Fuime::Subscription`) bills the *family* for Fuime, not an operator's
+customers for the operator. `web_apps` says the limit out loud, because "a few
+dollars a month" is the first thing anybody thinks of when they think SaaS, and
+L8 is precisely about not letting copy describe a product that does not exist.
+
+Two specs hold it. One forbids any offer idea that renews itself; one requires
+`web_apps` to name the limit. **Both fail when recurring billing ships**, which is
+the intended behaviour: somebody has to come back and rewrite the copy rather than
+it silently having been wrong and then silently becoming right.
+
+The first version of that guard banned "per month" outright and immediately caught
+`lawn_and_garden` offering *"Weekly mow through the season, per month"*. That was a
+real defect in the copy, not a false positive, and it is now *"A month of weekly
+mows, paid up front"*. The guard was then narrowed to automatic renewal, since
+selling a month of something for one up-front payment is fine and is how the
+existing prepaid blocks already work.
+
+`the-numbers` gained a section on businesses whose marginal cost is near zero:
+almost all margin, costs that are fixed rather than variable, pricing by value
+rather than by effort, and all the risk moving to the front. Without it the
+lesson's arithmetic quietly assumed a business with per-job materials.
+
+### The price rule, and the new place it can be broken
+
+`offer_ideas` is the sharpest new pressure point on §8.3 D2. An offer is a name
+**and** a price everywhere else in the product, so an idea carrying only the name
+looks unfinished — it is not; it is the half Fuime is allowed to write.
+
+Each idea renders as a link into the operator's own new-offer form with the words
+pre-filled and the price box empty. That link is a **query string**, which is the
+easiest possible way to introduce a Fuime-suggested rate: no code change needed,
+just a URL. Hence `Fuime::OffersController::PREFILLABLE` — an allowlist of
+`name`/`unit_label`/`description`, with `price` deliberately absent, asserted by
+spec against `?price=` and `?price_cents=`.
+
+### Route ordering, which is load-bearing
+
+`/learn` is declared **above** the venture-scoped Fuime routes, not with the other
+public pages. Two collisions:
+
+- `/:event_slug/taxes` (and `/payments`, `/offers`, …) swallow `/learn/taxes` as
+  `fuime/taxes#show` with an `event_slug` of `"learn"`. That is a **redirect, not
+  an error**, so it fails silently. This actually happened during development.
+- `resources :events, path: "/"` claims every single-segment path further down.
+
+`learn` is therefore a reserved venture slug, in the same way `pay` and `checkout`
+are reserved in `Fuime::Offer`.
+
+### Files
+
+| Change | Why | Files |
+|---|---|---|
+| `offer_ideas` / `first_customers` / `watch_out` on every service | Makes a dropdown option into a browsable template. Optional at the struct level, read through `Array()`, so a service added without them renders a shorter page. | `app/lib/fuime/service_catalog.rb` |
+| `Fuime::Playbook` — seven lessons | Metadata only; each key is both the URL slug and the partial name, so a lesson on the index cannot 500 when opened. | `app/lib/fuime/playbook.rb` |
+| Lesson prose as ERB partials | The two lessons that cite figures read `Event::Plan::FALLBACK_REVENUE_FEE`, `MINIMUM_FEE_CENTS` and `TaxTrackerService::SELF_EMPLOYMENT_THRESHOLD_CENTS` rather than restating them. A Ruby array of heredocs would have hardcoded every one. | `app/views/learn/lessons/_*.html.erb` |
+| `LearnController`, three routes, three views | Public and indexable — nothing here names a venture, an operator or an amount. | `app/controllers/learn_controller.rb`, `config/routes.rb`, `app/views/learn/` |
+| `"learn"` added to `INDEXABLE_CONTROLLER_PATHS` | Written content only. Uses the existing allowlist rather than the ad-hoc `response.delete_header` the static pages use. | `app/controllers/application_controller.rb` |
+| `?venture=` pre-fill plumbing | Resolved through `manage_offers?` — the same split as the offers page, where a guardian reads and does not price. Dropped silently when it does not check out, because the page is reachable signed out. | `app/controllers/learn_controller.rb`, `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/index.html.erb` |
+| "Learn" in the org nav and the footer | The questions arrive while somebody is looking at their own storefront. The nav link carries the venture slug. | `app/helpers/events_helper.rb`, `app/views/application/_footer.html.erb` |
+
+### One lesson branches on the structural flag
+
+`what-fuime-takes` describes merchant-of-record and Connect
+differently, because the two models pay differently and a page describing the wrong
+one is worse than no page. The suite clears the flag per example, so the
+merchant-of-record halves — **the ones production runs** — are covered by
+`:merchant_of_record`-tagged examples rather than being rendered by nothing.
+
+### The worked example, and why it is allowed to contain figures
+
+`the-numbers` carries a fictional operator's costs and a price she picked. The
+§8.3 D2 rule forbids Fuime **suggesting** a rate; it does not forbid arithmetic,
+and a break-even lesson with no numbers in it teaches nothing. The example is
+labelled as an illustration, the figures are costs rather than rates, and the
+suggested-rate patterns in `spec/requests/learn_spec.rb` are written to catch
+advice ("most people charge about X") rather than digits.
+
+Specs: `spec/requests/learn_spec.rb` (22 examples), `spec/lib/fuime/playbook_spec.rb`
+(6), plus 8 added to `spec/lib/fuime/service_catalog_spec.rb`.
+
+## 2026-08-20 — The application funnel, end to end
+
+Six deferrals landed in the application flow (phone, birthday, street address,
+the videos step, the agreement step, the guardian gate) without the surfaces
+that *report* on those fields following them. The gap showed up in one place:
+the review page, which is the last thing a founder sees before Submit.
+
+| Change | Why | Files |
+|---|---|---|
+| `_summary` no longer renders phone, birthday, street, city, state or zip as **Missing** | These six moved to the payout seam or were dropped outright, so the summary printed five to six red "Missing" labels next to a Submit button that was enabled and correct — telling every founder their finished application was broken. Address rows still render when a value exists (pre-change submissions, and anyone who has since supplied one), as a single formatted "Payout address" block. | `app/views/event/applications/_summary.html.erb` |
+| Birthday row → an **Age** row reading the attestation | `user.birthday` is blank for everybody who came through the current flow. Now reads the same either-source test as `#submission_blockers`. | same |
+| Parent email block keyed on `minor_or_unknown_age?`, not `is_minor?` | `is_minor?` is nil without a date of birth, so the block hid the parent's email from exactly the founders it exists for — while `required_submission_fields` (which uses the fail-closed twin) listed it as a blocker. The review page named a missing field and refused to show it. Fourth site of this same fix. | same |
+| Business type added to the summary, with its own Edit link | `starting_point`/`service_type` are the first questions asked and the source of `business_category` — what `Fuime::OperatorEligibility` reads to decide whether the venture may sell at all. They appeared nowhere on the page whose job is checking answers. | same |
+| `@application` → the `application` local (3 sites) | The partial declares `locals: (application:, allow_edits: false)` and then read the ivar anyway. Correct only by coincidence of every caller naming it the same. | same |
+| The "Sign the Fuime agreement" step is guarded on `Event::Plan::Standard#contract_available?` | With `FUIME_DOCUSEAL_TEMPLATE_ID` unset — the current state, and why `#agreement` redirects away and `#send_contract` returns nil — every teen-led applicant was shown a signing step for an agreement that never arrived. It also poisoned the step below it: `contract_signed` is nil without a contract, so an approved teenager's "Await review" never completed and the progress bar sat unfinished on a finished application. | `app/controllers/event/applications_controller.rb` |
+| `completion_percentage` keyed on the same conditions as `next_step`, not on its return strings | It matched four founder-facing sentences literally, so renaming one silently dropped that stage to 0% and sent the progress bar backwards with nothing failing. Copy is edited far more often than logic and should never have been load-bearing. Behaviour is unchanged at every stage. | `app/models/event/application.rb` |
+| "What you can sell today" replaces "Services first" | The card told founders digital downloads were "coming later" after `ELIGIBLE_CATEGORIES` gained `digital` and the catalog gained three templates resolving to it. Copy that closes a door the app has opened is the same L8 failure as copy that opens one the app has closed. Physical goods and food really are still shut, so they stay named. | `app/views/event/applications/business_type.html.erb` |
+| `/learn` linked from inside the funnel | The templates existed behind the sign-up, surfaced at the moment somebody must answer "what is your business" — the worst possible moment to read them first. Now: the apply intro (before the under-18 question), the business-type info pane, and a per-service "Read the full template" link under each checklist. All `target="_blank"`, so a part-filled application is never lost. | `_begin.html.erb`, `business_type.html.erb` |
+| Copy: "organization" → "business", "Start spending" → "Start selling" | HCB-era vocabulary on the index, the status page and `next_step`, in a flow that otherwise consistently says *business*. | `index.html.erb`, `show.html.erb`, `application.rb`, `applications_controller.rb` |
+
+The final "Start selling!" step stays `completed: false` deliberately:
+`show.html.erb` renders that step's CTA inside `unless step[:completed]`, so
+marking it done on activation would hide the link to the venture it just created.
+
+**Not changed:** the optional "Payout address" block on `edit.html.erb`. That is
+the admin-facing form, and an operator supplying an address later writes into
+those same columns rather than a second copy of them.

@@ -200,7 +200,12 @@ RSpec.describe EventsController do
   describe "#sub_organizations" do
     render_views
 
-    let(:parent) { create(:event, is_public: true, name: "Parent Organization") }
+    # Fuime: `publishes_ledger` as well as `is_public`. These examples are about
+    # which CHILDREN a signed-out visitor may see, and that logic is untouched —
+    # but the page itself now requires the parent to have opted into publishing
+    # its ledger, because it carries per-sub-organization balances. See
+    # AddPublishesLedgerToEvents.
+    let(:parent) { create(:event, is_public: true, publishes_ledger: true, name: "Parent Organization") }
     let!(:transparent_sub) do
       create(:event, parent:, is_public: true, name: "Transparent Subsidiary", slug: "transparent-subsidiary")
     end
@@ -314,7 +319,7 @@ RSpec.describe EventsController do
   end
 
   describe "#async_sub_organizations_graph" do
-    let(:parent) { create(:event, is_public: true) }
+    let(:parent) { create(:event, is_public: true, publishes_ledger: true) }
     let!(:transparent_sub) { create(:event, parent:, is_public: true) }
     let!(:private_sub) { create(:event, parent:, is_public: false) }
 
@@ -350,7 +355,7 @@ RSpec.describe EventsController do
   describe "#async_sub_organization_balance" do
     render_views
 
-    let(:parent) { create(:event, is_public: true) }
+    let(:parent) { create(:event, is_public: true, publishes_ledger: true) }
     let!(:transparent_sub) { create(:event, :with_positive_balance, parent:, is_public: true) }
     let!(:private_sub) { create(:event, :with_positive_balance, parent:, is_public: false) }
 
@@ -375,12 +380,24 @@ RSpec.describe EventsController do
   end
 
   describe "#transactions_list" do
-    let(:event) { create(:event, is_public: true) }
+    # Opted into publishing, because these examples are ABOUT the anonymous
+    # reader. A venture that merely has a public storefront no longer reaches this
+    # action at all — pinned by the example below and by
+    # spec/requests/fuime_security_review_fixes_spec.rb.
+    let(:event) { create(:event, is_public: true, publishes_ledger: true) }
 
     it "serves the unfiltered list to an anonymous reader" do
       get(:transactions_list, params: { event_id: event.slug })
 
       expect(response).to have_http_status(:success)
+    end
+
+    it "refuses an anonymous reader on a venture that only has a public storefront" do
+      storefront_only = create(:event, is_public: true, publishes_ledger: false)
+
+      get(:transactions_list, params: { event_id: storefront_only.slug })
+
+      expect(response).not_to have_http_status(:success)
     end
 
     it "rejects a filter from an anonymous reader before reaching the transaction engines" do

@@ -48,14 +48,26 @@ RSpec.describe Guardianship do
       expect(guardianship).to be_activatable
     end
 
-    # The core §1.2 defect: a stub guardian with no birthday used to pass
-    # `is_minor?` (nil, falsy) and could sign as the responsible adult.
+    # The core §1.2 defect: a stub guardian who has told us nothing used to pass
+    # `is_minor?` (nil, falsy) and could sign as the responsible adult. Still
+    # fail-closed; the sentence now asks them to tick the 18+ box rather than to
+    # enter a date of birth, which since 2026-08-20 there is nowhere to enter.
     it "blocks activation when the guardian's age is unknown" do
       stub = create(:user, :unknown_age)
       guardianship = create(:guardianship, guardian: stub, minor: teen)
 
       expect(guardianship).not_to be_activatable
-      expect(guardianship.activation_blockers.join).to match(/date of birth/i)
+      expect(guardianship.activation_blockers.join).to match(/18 or older/i)
+    end
+
+    # The replacement route to the same assertion. See
+    # GuardianshipsController#accept: the acceptance box carries the 18+ claim.
+    it "is activatable once the guardian has confirmed they're 18 or older" do
+      stub = create(:user, :unknown_age)
+      guardianship = create(:guardianship, guardian: stub, minor: teen)
+
+      stub.attest_adult_18_plus!
+      expect(guardianship.reload).to be_activatable
     end
   end
 

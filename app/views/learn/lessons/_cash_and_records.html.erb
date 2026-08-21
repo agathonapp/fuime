@@ -1,0 +1,126 @@
+<%# locals: (venture: nil) %>
+<%# Hedged in the same way Fuime::TaxTrackerService is: Fuime is not a tax
+    preparer and must not state a reader's obligations as fact. The threshold is
+    read from that service rather than typed, so this page and the tracker cannot
+    drift apart. %>
+
+<p>
+  A business can be profitable on paper and still die, because profit and cash
+  are not the same thing. Profit is whether the work was worth doing. Cash is
+  whether you can pay for the next job. Running out of the second kills you even
+  when the first looks fine.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">How a profitable business runs out of money</h2>
+
+<p>
+  You buy materials in week one. You do the work in week two. The customer pays
+  in week four. Between week one and week four you are out of pocket, and if
+  three customers do that at once you cannot afford the materials for the fourth
+  job even though all four are profitable.
+</p>
+
+<p>The ways out of that are not complicated:</p>
+
+<ul class="m-0 pl-5 flex flex-col gap-1">
+  <li>Take a deposit before you buy anything.</li>
+  <li>Get paid on the day, not "whenever suits".</li>
+  <li>Do not take on a bigger job than you can afford to be out of pocket on.</li>
+  <li>Keep a small buffer that you never spend, so one late payment is not an emergency.</li>
+</ul>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Keep the business money separate</h2>
+
+<p>
+  Mixed up with your own spending, business money becomes impossible to think
+  about. You cannot tell whether the business is working, and at tax time you
+  cannot tell what was an expense.
+</p>
+
+<p>
+  Keeping it separate is the single habit that makes everything else on this page
+  easy. It is also the habit that makes the business feel real, which turns out
+  to matter more than it should.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Records: boring, and it pays you back</h2>
+
+<p>
+  Write down every sale and every expense while you still remember what it was
+  for, and keep the receipt. Not because somebody is going to check, though they
+  might. Because an expense you did not record makes your profit look bigger than
+  it was, and you may be taxed on the difference.
+</p>
+
+<p>
+  A photo of a receipt in the right place takes four seconds. Reconstructing a
+  year of them takes a weekend and you will get it wrong.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Tax, in plain terms</h2>
+
+<p>
+  Two different things get confused with each other constantly.
+</p>
+
+<p>
+  <strong>Sales tax</strong> is charged to your customer on what you sell, and
+  passed on. It was never yours at any point, which is why treating it as income
+  is expensive: you spend it, and then you owe it. Whether it applies depends on
+  your state and on what you sell. Physical goods are commonly taxable, services
+  often are not, digital products vary a lot. There is no national answer, and
+  anyone who gives you one without asking where you live is guessing. Your
+  state's department of revenue is the place to check, and it is worth checking
+  before your first sale rather than after your hundredth.
+</p>
+
+<p>
+  <strong>Income tax</strong> is charged on what the business actually made,
+  which is income minus legitimate expenses, not the total that passed through.
+  This is the practical reason to record everything.
+</p>
+
+<p>
+  Two things people assume that are not true. Being under 18 does not exempt you.
+  Being paid in small amounts by individuals does not either.
+</p>
+
+<p>
+  The line most likely to matter is self employment tax, which generally starts
+  once net earnings from self employment reach
+  <strong><%= number_to_currency(Fuime::TaxTrackerService::SELF_EMPLOYMENT_THRESHOLD_CENTS / 100.0) %></strong>
+  for the year. Net earnings are slightly less than profit, which is why the
+  tracker in your account watches that specific figure. You may also get a form
+  in the post about payments processed for you. It is not a bill. It is a copy of
+  what was reported, and you keep it with everything else.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">What to actually do</h2>
+
+<ul class="m-0 pl-5 flex flex-col gap-1">
+  <li>
+    Put a share of every payment aside on the day it arrives, somewhere you do
+    not spend from. What share is a question for a tax professional. Having the
+    habit costs you nothing either way.
+  </li>
+  <li>Record expenses with receipts, as they happen.</li>
+  <li>
+    Tell your parent or guardian early. Your business income is likely to touch
+    their tax return as well as yours, and they should not find out in the same
+    week it is due.
+  </li>
+  <li>Get a qualified person to look at it before anything is filed.</li>
+</ul>
+
+<% if venture.present? %>
+  <p>
+    <%= link_to "Your Tax Tracker adds this up as you go", fuime_taxes_path(event_slug: venture.slug), class: "underline" %>.
+    It only sees what is in your ledger, so cash somebody handed you and income
+    from anywhere else are outside it.
+  </p>
+<% end %>
+
+<p class="muted text-sm">
+  None of this is tax advice. It is the vocabulary you need to have a useful
+  conversation with somebody who can give you some.
+</p>

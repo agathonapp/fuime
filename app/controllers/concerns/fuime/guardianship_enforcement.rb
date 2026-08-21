@@ -13,7 +13,7 @@ module Fuime
   #   * Deny-by-default. Everything is blocked unless explicitly allowlisted, so
   #     a newly added controller is safe until someone thinks about it.
   #   * Unknown age counts as minor (User#minor_or_unknown_age?) — otherwise
-  #     omitting a birthday disables the control entirely.
+  #     skipping the age question disables the control entirely.
   #   * The allowlist covers only what a parked teen legitimately needs: reading
   #     Fuime's own static/legal pages, managing their profile, inviting a
   #     guardian, and signing out.
@@ -111,8 +111,14 @@ module Fuime
     end
 
     def guardianship_required_message
-      if current_user.birthday.blank?
-        "Please add your date of birth so we know whether you need a parent or guardian on your account."
+      # Fuime: keyed on the age ANSWER, not on a date of birth.
+      #
+      # This asked users to "add your date of birth", and since 2026-08-20 there is
+      # nowhere to add one — signup asks for a confirmation instead
+      # (AddAgeAttestationToUsers). The sentence would have pointed every new user at
+      # a field that no longer exists.
+      if current_user.age_attestation.blank? && current_user.birthday.blank?
+        "Please confirm your age so we know whether you need a parent or guardian on your account."
       else
         "Your parent or guardian needs to accept their invitation before you can run your venture on Fuime."
       end

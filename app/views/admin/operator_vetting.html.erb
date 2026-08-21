@@ -70,7 +70,22 @@
           <% event.users.each do |user| %>
             <div>
               <%= user_mention(user) %>
-              <span class="muted"><%= user.age ? user.age.to_s : "age unknown" %></span>
+              <%# Fuime: "age unknown" is now the normal state — signup asks for a
+                  confirmation rather than a date — so it has to distinguish
+                  "confirmed 13+" from "answered nothing". This is the vetting
+                  queue: the reviewer approving an operator is the one person who
+                  can act on the difference. %>
+              <span class="muted">
+                <% if user.age %>
+                  <%= user.age %>
+                <% elsif user.attested_adult_18_plus? %>
+                  18+ (confirmed)
+                <% elsif user.attested_minor_13_plus? %>
+                  13+ (confirmed)
+                <% else %>
+                  age not confirmed
+                <% end %>
+              </span>
             </div>
           <% end %>
         </td>

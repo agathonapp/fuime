@@ -102,17 +102,27 @@ RSpec.describe User, "Fuime age and guardianship rules" do
     end
   end
 
-  describe "date of birth required to finish onboarding" do
-    # The bypass: with no birthday the under-13 check never ran and the
+  describe "an age answer required to finish onboarding" do
+    # The bypass: with nothing on file the under-13 check never ran and the
     # guardian requirement never fired.
-    it "is invalid on the :onboarding context without a birthday" do
+    #
+    # Signup asks for a checkbox rather than a date now
+    # (AddAgeAttestationToUsers), so the requirement moved with it. The property is
+    # unchanged: onboarding cannot complete without an answer.
+    it "is invalid on the :onboarding context without an age answer" do
       user = create(:user, :unknown_age)
 
       expect(user.valid?(:onboarding)).to be false
-      expect(user.errors[:birthday].join).to match(/required/i)
+      expect(user.errors[:age_attestation].join).to match(/required/i)
     end
 
-    it "is valid on the :onboarding context with a birthday" do
+    it "is valid on the :onboarding context once the box is ticked" do
+      expect(create(:user, :attested_teen).valid?(:onboarding)).to be true
+    end
+
+    # Users who onboarded before the switch answered in a more precise way and must
+    # not be sent back to re-answer.
+    it "is valid on the :onboarding context with a birthday already on file" do
       expect(create(:user, birthday: 16.years.ago.to_date).valid?(:onboarding)).to be true
     end
 

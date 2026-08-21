@@ -110,9 +110,25 @@ RSpec.describe EventPolicy, type: :policy do
   end
 
   describe "#sub_organizations?" do
-    let(:event) { create(:event, is_public: true) }
+    # Fuime: `publishes_ledger` as well as `is_public`.
+    #
+    # This block's subject is which CHILDREN a viewer may see, and that logic is
+    # unchanged. What changed is the gate on the page itself: `sub_organizations?`
+    # aliases `async_sub_organization_balance?`, so a signed-out visitor reading it
+    # gets each sub-venture's balance — which on a school programme is a per-student
+    # figure. It now needs the parent to have opted into publishing its ledger, not
+    # merely to have a storefront. See AddPublishesLedgerToEvents.
+    let(:event) { create(:event, is_public: true, publishes_ledger: true) }
 
     subject { described_class.new(nil, event).sub_organizations? }
+
+    context "when the parent has not opted into publishing its ledger" do
+      let(:event) { create(:event, is_public: true, publishes_ledger: false) }
+
+      before { create(:event, parent: event, is_public: true) }
+
+      it { is_expected.to eq(false) }
+    end
 
     context "when the only sub-organization is private" do
       before { create(:event, parent: event, is_public: false) }

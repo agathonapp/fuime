@@ -82,17 +82,21 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       key = event.fuime_api_keys.sole
       expect(key.name).to eq("My website")
 
-      # Shown on the redirect, and never again — it lives in the flash because
-      # the record does not have it. See Fuime::ApiKey.mint!.
-      fresh = flash[:fuime_fresh_api_key]
-      expect(fresh).to start_with(Fuime::ApiKey::PREFIX)
+      # Shown in the response that CREATED it — not carried to a later request.
+      #
+      # This used to travel in `flash[:fuime_fresh_api_key]`, and the app has no
+      # session_store initializer, so the session is Rails' default COOKIE store:
+      # that wrote a live credential into the browser's cookie jar and replayed it
+      # on the next request. Security review 2026-08-20, F-08.
+      expect(response).to have_http_status(:ok)
+      fresh = response.body[/#{Regexp.escape(Fuime::ApiKey::PREFIX)}[A-Za-z0-9_-]+/]
+      expect(fresh).to be_present
       expect(Fuime::ApiKey.authenticate(fresh)).to eq(key)
 
-      # The first render after the redirect is where it is shown; the flash is
-      # consumed there, so the next load must not have it.
-      get :index, params: { event_slug: event.slug }
-      expect(response.body).to include(fresh)
+      # The assertion that matters: the secret is in the page, and in no cookie.
+      expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
 
+      # And still exactly once — a later load of the same page does not show it.
       get :index, params: { event_slug: event.slug }
       expect(response.body).not_to include(fresh)
     end

@@ -83,8 +83,37 @@ RSpec.describe Event::Application, type: :model do
       application = create(:event_application, user: teen, teen_led: true, name: nil)
 
       expect(application.submission_blockers).to include(
-        "Business name", "What your business does", "Street address", "City", "State"
+        "Business name", "What your business does", "Country"
       )
+    end
+
+    # Fuime: the street address moved to the payout seam, so it must NOT be named
+    # here. Asserted rather than merely dropped from the example above, because a
+    # blocker naming a field no form collects is a wizard step a founder can never
+    # clear — the specific failure this pair of examples exists to catch.
+    it "does not demand a street address, which is asked at payout" do
+      application = create(:event_application, user: teen, teen_led: true, name: nil)
+
+      expect(application.submission_blockers).not_to include(
+        "Street address", "City", "State", "Zip code"
+      )
+    end
+
+    # `address_country` is the sanctions gate rather than an address question, which
+    # is why it survived the move. If it ever stops being required, DISALLOWED_COUNTRIES
+    # silently stops being enforced in all three places that check it.
+    it "still demands the country" do
+      application = create(:event_application, user: teen, teen_led: true, address_country: nil)
+
+      expect(application.submission_blockers).to include("Country")
+    end
+
+    # Fuime: phone dropped from USER_FIELD_LABELS. Nothing read it, and a required
+    # blocker on a field no form renders is unclearable.
+    it "does not demand a phone number" do
+      application = create(:event_application, user: teen, teen_led: true, name: nil)
+
+      expect(application.submission_blockers).not_to include("Your phone number")
     end
 
     it "does not demand adult-only fields from a teen-led application" do

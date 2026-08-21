@@ -1,0 +1,86 @@
+<%# locals: (venture: nil) %>
+<%# Fuime: the only lesson that is about Fuime, kept deliberately short.
+
+    Every figure is read from the object that owns it. A learn page with "5%"
+    typed into it becomes a page that lies the first time pricing changes, and it
+    is the one page a founder would be entitled to be angry about. %>
+
+<p>
+  This is the short one, because it is the only part of the whole reading list
+  that is about us rather than about running a business.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">The fee</h2>
+
+<p>
+  Fuime keeps
+  <strong><%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>%</strong>
+  of what a customer pays. That is the standard rate. A school programme or a
+  waived venture can be lower, and the figure for your own business is shown on
+  your storefront and on every sale in your ledger.
+</p>
+
+<% if Fuime::Features.merchant_of_record? %>
+  <p>
+    There is a floor of
+    <strong><%= number_to_currency(Event::Plan::MINIMUM_FEE_CENTS / 100.0) %></strong>
+    per sale, because processing a card costs a fixed amount however small the
+    payment is. Worth knowing before you build a business on it: the smaller your
+    typical sale, the bigger a share of it the fee is. Selling one thing at a
+    larger price and selling ten things at a tenth of it are not the same
+    business.
+  </p>
+<% end %>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Where the money is until you are paid</h2>
+
+<% if Fuime::Features.merchant_of_record? %>
+  <p>
+    When somebody buys from your storefront they are buying from Fuime LLC, and
+    your business fulfils the order. That is why their receipt and their card
+    statement say Fuime, and it is why we handle a refund if they want one.
+    Expect to be asked about it. "Who is Fuime on my statement?" is a normal
+    question, and the answer is that they are the payment side of your business.
+  </p>
+  <p>
+    What that leaves you is money Fuime owes you and settles later. It is not a
+    balance sitting in an account of yours. Fuime is not a bank and does not hold
+    deposits. Your ledger shows what has been earned and what has been paid out,
+    and the difference is what you are owed.
+  </p>
+<% else %>
+  <p>
+    The money goes into a Stripe account your parent or guardian owns, in your
+    business's name, and Fuime never holds it. That structure is the reason
+    somebody under 18 can take card payments at all: the account belongs to an
+    adult who can legally sign for it, and you operate it.
+  </p>
+<% end %>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Getting it out</h2>
+
+<p>
+  Money leaving your business goes through a payout, and a payout needs your
+  guardian to approve it. They are the adult who signs for your business, and
+  money leaving it is exactly the thing they signed for.
+</p>
+
+<% unless StripeService.live? %>
+  <p class="muted text-sm">
+    Right now Fuime runs against Stripe's test mode. Payment pages work from end
+    to end so you can see all of this happen, but no real money moves and no real
+    card is charged. We will say so plainly, here and in the product, before that
+    changes.
+  </p>
+<% end %>
+
+<div class="card">
+  <p class="m-0 text-sm">
+    Work your own version out once: take a price you are thinking of charging,
+    subtract the fee above, then subtract what the job costs you. What is left is
+    what the job actually pays. If that number surprises you, the fix is almost
+    never selling more of them.
+    <%= link_to "The numbers lesson", learn_lesson_path(slug: "the-numbers", venture: venture&.slug), class: "underline" %>
+    covers why.
+  </p>
+</div>

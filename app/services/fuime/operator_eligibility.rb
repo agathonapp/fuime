@@ -148,6 +148,7 @@ module Fuime
     # So the same object answers a narrower question when Fuime is not the seller.
     def blockers
       @blockers ||= [
+        *administrative_blockers,
         vetting_blocker,
         *(umbrella_scope_blockers if Fuime::Features.merchant_of_record?)
       ].compact
@@ -205,6 +206,44 @@ module Fuime
       [category_blocker, *operator_blockers]
     end
 
+    # Fuime: the three states where an ADMIN, or the venture's own setup, has
+    # already said this venture is not trading — and which nothing was asking about.
+    #
+    # These bind in EVERY model, alongside vetting rather than inside
+    # #umbrella_scope_blockers, because none of them is about the liability Fuime
+    # inherits as seller. They are about whether this venture is supposed to be
+    # taking money at all, which is the same question under Connect.
+    #
+    # ── Each one was reachable, and each failed differently ────────────────────
+    #
+    # `financially_frozen?` was the worst of the three, because it was already
+    # checked on the way OUT: Fuime::PayableAssessment#compute_structural_skip_reason
+    # skips a frozen venture from every payout run. So a frozen venture kept
+    # selling, and every sale became money Fuime holds and has no path to release —
+    # the one combination worse than blocking either direction.
+    #
+    # `hidden_at` is HCB's admin suppression, used for abuse and spam. Fuime's
+    # public surfaces disagreed with each other about it: the payment page filters
+    # `.not_hidden` and the directory filters `.not_hidden`, while the storefront and
+    # the checkout both used a bare `Event.find_by!(slug:)`. So hiding a venture
+    # removed it from the directory and left its Buy button working.
+    #
+    # `demo_mode?` is a venture with fake seeded data for demos and screenshots.
+    # `Event#name` appends "(DEMO)" and the directory excludes it, but the checkout
+    # would have taken a real card number against it.
+    #
+    # Answered here rather than in the two controllers so there is one place that
+    # decides, which is the property this class was created for — and so the API
+    # (`require_selling_venture!`), the storefront, the payment page and the
+    # checkout cannot drift apart again.
+    def administrative_blockers
+      blockers = []
+      blockers << "Payments are frozen on this venture." if @event.financially_frozen?
+      blockers << "This venture has been hidden by Fuime and cannot accept payments." if @event.hidden?
+      blockers << "This is a demo venture and cannot take real payments." if @event.demo_mode?
+      blockers
+    end
+
     def vetting_blocker
       return nil if @event.operator_vetting_approved?
 
@@ -247,15 +286,38 @@ module Fuime
     end
 
     def age_blocker(user, who)
+      floor = self.class.minimum_operator_age
       age = user.age
 
-      # Unknown age is not an eligible age. Consistent with
-      # User#minor_or_unknown_age?, and load-bearing for the same reason: a
-      # missing birthday must not be the way past a floor that exists to keep
-      # FLSA hour limits out of the picture.
-      return "#{who} has no date of birth on file." if age.nil?
+      # ── No date of birth: read the checkbox ──────────────────────────────
+      #
+      # Signup stopped asking for a date of birth on 2026-08-20 and asks for a
+      # confirmation instead (see AddAgeAttestationToUsers), so for most users
+      # `age` is now nil and this is the ordinary path rather than an edge case.
+      #
+      # A "13 or older" tick clears a floor of 13 — which is the production value
+      # of FUIME_MINIMUM_OPERATOR_AGE — and clears nothing higher, because it
+      # genuinely does not distinguish a 14-year-old from a 17-year-old.
+      #
+      # So raising the floor back to 16 stops every checkbox-only operator from
+      # selling, with a sentence that says why. That is the correct failure and it
+      # is worth being explicit about: the alternative is guessing on behalf of a
+      # control that exists to keep FLSA child-labour exposure out of the picture
+      # (see MINIMUM_OPERATOR_AGE above), and a guess there is the one thing this
+      # class was created to stop.
+      if age.nil?
+        return nil if user.attested_at_least?(floor)
 
-      floor = self.class.minimum_operator_age
+        if user.age_attestation.present?
+          return "#{who} has confirmed they're 13 or older, but Fuime operators " \
+                 "must be at least #{floor} — we'd need their date of birth to tell."
+        end
+
+        return "#{who} hasn't confirmed their age yet."
+      end
+
+      # A stored date of birth still wins where one exists — a card or Connect
+      # onboarding collects a real one, and it is the more specific fact.
       return nil if age >= floor
 
       "#{who} is #{age}. Fuime operators must be at least #{floor}."

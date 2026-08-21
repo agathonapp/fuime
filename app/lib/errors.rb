@@ -25,4 +25,15 @@ module Errors
   class TwilioAbuseError < StandardError
   end
 
+  # Fuime: an already-set date of birth was changed.
+  #
+  # Not a failure — `User#birthday_is_write_once` refuses the self-service case, so
+  # reaching here means an admin, the console or a job did it legitimately. Reported
+  # because age is the input every protective control on the platform derives from
+  # (guardianship enforcement, the operator age floor, the payout guardian gate), so
+  # a change to it is a change to somebody's eligibility to trade and a human should
+  # see that it happened.
+  class PrivilegedBirthdayChange < StandardError
+  end
+
 end
