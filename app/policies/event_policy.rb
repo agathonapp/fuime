@@ -618,6 +618,26 @@ class EventPolicy < ApplicationPolicy
     auditor_or_reader?
   end
 
+  # Fuime: the developer API is a family-plan feature (2026-08-21).
+  #
+  # Reads `billing_plan`, not `plan` — that is the accessor that resolves a
+  # guardian's family subscription across every venture they sign for, so a
+  # paid family gets the API on all of theirs without a plan row per venture.
+  #
+  # Staff pass, as they do on every other gate here: an admin looking at a
+  # venture is not a customer being upsold.
+  def api_keys?
+    return false unless offers?
+
+    user&.admin? || record.billing_plan&.api_keys_enabled?
+  end
+
+  def manage_api_keys?
+    return false unless manage_offers?
+
+    user&.admin? || record.billing_plan&.api_keys_enabled?
+  end
+
   def manage_offers?
     return false if user.blank?
     return true if user.admin?

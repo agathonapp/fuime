@@ -22,13 +22,13 @@ module Fuime
     before_action :set_event
 
     def index
-      authorize @event, :offers?
+      authorize @event, :api_keys?
 
       load_index
     end
 
     def create
-      authorize @event, :manage_offers?
+      authorize @event, :manage_api_keys?
 
       if @event.fuime_api_keys.live.count >= ::Fuime::ApiKey::MAX_LIVE_KEYS
         return redirect_to fuime_api_keys_path(event_slug: @event.slug),
@@ -77,7 +77,7 @@ module Fuime
     end
 
     def destroy
-      authorize @event, :manage_offers?
+      authorize @event, :manage_api_keys?
 
       key = @event.fuime_api_keys.live.find(params[:id])
       key.revoke!
@@ -97,7 +97,7 @@ module Fuime
     # things.
     def load_index
       @keys = @event.fuime_api_keys.live.recent_first
-      @can_manage = policy(@event).manage_offers?
+      @can_manage = policy(@event).manage_api_keys?
       # The links programs have made, so an operator can see what their own
       # software has been asking people for. This is the screen where a runaway
       # agent becomes visible, so it is not hidden behind the key list.

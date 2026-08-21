@@ -58,7 +58,18 @@ class Event
       # Deliberately NOT applied here: pricing is the founder's decision and this
       # file should implement it, not quietly correct it. See
       # docs/fuime/MOR_MIGRATION_PLAN.md §8.6 for the numbers and the options.
-      REVENUE_FEE = 0.03
+      # Fuime: the same rate as Free (2026-08-21), deliberately.
+      #
+      # This was 3% against Free's 7%, which meant the family plan CUT Fuime's
+      # take by four points on every sale. A family doing $500/month of sales
+      # collected a $20 discount against a $19.99 subscription — Fuime did the
+      # work for nothing, and the discount was worth most to exactly the
+      # families generating the most cost.
+      #
+      # The plan now sells on what it actually gives: unlimited ventures and the
+      # paid features, at an unchanged rate. That is also easier to say out loud
+      # to a fifteen-year-old, which matters more here than in most products.
+      REVENUE_FEE = ::Event::Plan::Free::REVENUE_FEE
 
       def self.selectable?
         false

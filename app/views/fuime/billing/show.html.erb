@@ -31,12 +31,16 @@
       One venture, with Fuime keeping
       <strong><%= number_to_percentage(Event::Plan::Free::REVENUE_FEE * 100, precision: 1) %></strong> of what it collects.
       The family plan is
-      <strong>$<%= @pro_plan.monthly_fee_cents / 100 %>/month</strong> for
+      <%# Fuime: render_money, not integer division. `1999 / 100` is 19 in Ruby,
+          so this page advertised "$19/month" and Stripe charged $19.99 — a
+          price the product does not have, on the one screen whose entire job is
+          stating the price. %>
+      <strong><%= render_money(@pro_plan.monthly_fee_cents) %>/month</strong> for
       <strong>unlimited businesses</strong> at
       <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>.
     </p>
     <% if @is_adult %>
-      <%= button_to "Upgrade — $#{@pro_plan.monthly_fee_cents / 100}/mo", my_billing_subscribe_path, class: "btn bg-accent" %>
+      <%= button_to "Upgrade — #{render_money(@pro_plan.monthly_fee_cents)}/mo", my_billing_subscribe_path, class: "btn bg-accent" %>
       <p class="muted text-sm mt-1">Payment happens in Stripe's secure checkout — Fuime never sees your card.</p>
       <%# Staff reach the buttons without a birthday on file (User#staff?), so
           say whose card this is: the subscription belongs to the signed-in
