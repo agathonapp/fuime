@@ -424,7 +424,7 @@ when the branch history was rewritten. Restore with
 - [ ] Full security review of the guardianship and money paths
 - [ ] Rate limiting on auth and payment endpoints (rack_attack is configured but still
       references Hack Club office IPs)
-- [ ] Set `config.hosts` — currently commented out, so there is no host authorization
+- [x] Set `config.hosts` — `app.fuime.com` / `fuime.com` plus `LIVE_URL_HOST` and `RENDER_EXTERNAL_HOSTNAME`; `/up` excluded
 - [ ] Rotate every credential inherited from the fork
 - [ ] Penetration test before launch
 

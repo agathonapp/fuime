@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
+require_relative "../../app/lib/fuime/request_boundary"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -195,11 +196,11 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [:id]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
   #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Hosts confirmed from render.yaml (`APP_ORIGIN` / `LIVE_URL_HOST`),
+  # site/server.js, and Render's injected hostname. `/up` is excluded:
+  # Render's health checker hits the internal hostname over HTTP and may
+  # not send our public Host. The path is already SSL-excluded above.
+  config.hosts = Fuime::RequestBoundary.production_hosts
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

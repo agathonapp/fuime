@@ -42,13 +42,19 @@
 # execute script in a page showing somebody's card form.
 Rails.application.configure do
   config.content_security_policy do |policy|
-    policy.default_src :self, :https
+    # `:https` on default-src would allow any HTTPS host to satisfy an
+    # unspecified directive. Start from `'self'` and name every third party
+    # on the directive that actually needs it.
+    policy.default_src :self
 
-    # Stripe.js and the embedded Connect components; Plaid Link; DocuSeal.
+    # Stripe.js (`@stripe/stripe-js` → js.stripe.com) and Connect embedded
+    # (`@stripe/connect-js` injects https://connect-js.stripe.com/v1.0/connect.js).
     # The CDNs are inherited from upstream and are the entries most worth
     # removing — each is a third party with script execution on a payment page.
     policy.script_src :self,
                       "https://js.stripe.com",
+                      "https://*.js.stripe.com",
+                      "https://connect-js.stripe.com",
                       "https://cdn.plaid.com",
                       "https://cdn.docuseal.com",
                       "https://cdn.jsdelivr.net",
@@ -67,11 +73,14 @@ Rails.application.configure do
     policy.img_src    :self, :data, :blob, :https
 
     # Stripe's embedded components and hosted checkout render in iframes.
-    policy.frame_src  :self, "https://js.stripe.com", "https://hooks.stripe.com",
+    # `*.js.stripe.com` is Stripe.js's documented frame host (3DS / Elements).
+    policy.frame_src  :self, "https://js.stripe.com", "https://*.js.stripe.com",
+                      "https://connect-js.stripe.com", "https://hooks.stripe.com",
                       "https://checkout.stripe.com", "https://cdn.plaid.com",
                       "https://www.youtube.com"
 
-    policy.connect_src :self, "https://api.stripe.com", "https://*.appsignal-endpoint.net"
+    policy.connect_src :self, "https://api.stripe.com", "https://js.stripe.com",
+                      "https://connect-js.stripe.com", "https://*.appsignal-endpoint.net"
 
     # Nothing in Fuime needs a plugin or a <base> rewrite, and both are pure
     # attack surface.
