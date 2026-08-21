@@ -1304,6 +1304,18 @@ class EventsController < ApplicationController
   end
 
   def ledger
+    # Fuime: send people to the classic ledger rather than refusing them.
+    #
+    # EventPolicy#ledger? returns false while Fuime::Features.new_ledger? is off,
+    # so without this a bookmarked /ledger URL — or anyone already on the page —
+    # gets Pundit's "You are not authorized" and a bounce to the root. They did
+    # nothing wrong and the page they want still exists.
+    #
+    # Before `authorize`, because authorize is what would raise.
+    unless ::Fuime::Features.new_ledger?
+      redirect_to event_transactions_path(@event) and return
+    end
+
     authorize @event
     @per = (params[:per] || 100).to_i.clamp(1, 200)
 
@@ -1331,6 +1343,14 @@ class EventsController < ApplicationController
 
   def toggle_new_ledger
     authorize @event
+
+    # Fuime: the opt-in is closed, and this is the endpoint that has to close.
+    # It calls `Flipper.enable_actor`, so every click opted that user in
+    # permanently — turning the Flipper flags off would not have moved anybody
+    # while this stayed reachable.
+    unless ::Fuime::Features.new_ledger?
+      redirect_to event_transactions_path(@event) and return
+    end
 
     if params[:enabled] == "true"
       Flipper.enable_actor(:new_ledger_2026_07_17, current_user)

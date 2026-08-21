@@ -4,6 +4,19 @@ require "rails_helper"
 
 RSpec.describe LedgerPolicy, type: :policy do
   describe "#show?" do
+    # Fuime: these cover the rewritten ledger, which is closed by default since
+    # 2026-08-21 — it rendered an empty page for a venture that had taken money.
+    # The feature is PAUSED, not deleted (Rule 2), so its specs still run, with
+    # the switch in the state they describe. The closure itself is asserted in
+    # spec/policies/ledger_kill_switch_spec.rb.
+    around do |example|
+      previous = ENV["FUIME_NEW_LEDGER"]
+      ENV["FUIME_NEW_LEDGER"] = "true"
+      example.run
+    ensure
+      ENV["FUIME_NEW_LEDGER"] = previous
+    end
+
     let(:event) { create(:event) }
     let(:ledger) { event.ledger }
     let(:user) { create(:user) }

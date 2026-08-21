@@ -367,7 +367,11 @@ class EventPolicy < ApplicationPolicy
     signee?
   end
 
+  # Fuime: see LedgerPolicy#show? — same kill switch, same reason. Both gate the
+  # same route and must agree, or the nav offers a page the policy refuses.
   def ledger?
+    return false unless ::Fuime::Features.new_ledger?
+
     auditor? || (reader? && (Flipper.enabled?(:new_ledger_2026_06_30, record) || Flipper.enabled?(:new_ledger_2026_07_17, user)))
   end
 

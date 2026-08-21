@@ -146,6 +146,33 @@ module Fuime
         ENV[name].to_s.strip.downcase == "true"
       end
 
+      # Is the rewritten ledger reachable at all?
+      #
+      # OFF by default and deliberately not routed through `enabled?`'s
+      # FEATURE_* convention, because this is a kill switch over somebody else's
+      # feature flags rather than a flag of its own.
+      #
+      # The rewritten ledger (Flipper `new_ledger_2026_06_30` per event and
+      # `new_ledger_2026_07_17` per user) reads a different data path from the
+      # classic view, and on 2026-08-21 it rendered "This ledger has no items yet"
+      # for a venture whose classic ledger correctly showed a payment and its fee.
+      # Showing a founder an empty ledger for money they have actually taken is
+      # the worst failure this product has, so it is closed until that is
+      # understood.
+      #
+      # A kill switch rather than turning the Flipper flags off, because
+      # EventsController#toggle_new_ledger calls `Flipper.enable_actor` — the
+      # flags are PER USER and self-serve, so clearing them moves nobody
+      # permanently and the "Try the new ledger" button puts anyone straight back.
+      # Read at the two policies that gate the route, so no combination of flag
+      # state and actor list can reach it.
+      #
+      # Set FUIME_NEW_LEDGER=true to work on it again; the Flipper flags then
+      # behave exactly as before.
+      def new_ledger?
+        ENV["FUIME_NEW_LEDGER"].to_s.strip.downcase == "true"
+      end
+
       # May Fuime issue and authorise cards right now?
       #
       # Not a flag of its own, and deliberately not a second env var: it is a
