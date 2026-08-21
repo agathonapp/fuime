@@ -985,6 +985,11 @@ class AdminController < Admin::BaseController
   # The one write an admin is allowed to make to this model directly, and only on
   # a row Stripe is not billing — Fuime::Subscription.grant_family_plan! enforces
   # that and raises otherwise, which is why this rescues rather than pre-checks.
+  #
+  # Adult is checked here as well as in the model: the user-page button is hidden
+  # unless known_adult? / staff?, but this action is also the queue form, which
+  # takes any email. Hiding a button is not a control. A subscription is a
+  # contract (L2); BillingController refuses a minor for the same reason.
   def subscription_grant
     user = find_user_for_subscription(params[:user_id])
 
@@ -994,11 +999,20 @@ class AdminController < Admin::BaseController
       return
     end
 
+    unless user.known_adult? || user.staff?
+      redirect_back fallback_location: subscriptions_admin_index_path,
+                    alert: "The family plan can only be comped to a confirmed adult " \
+                           "(#{user.email} is #{user.account_type_label.downcase})."
+      return
+    end
+
     Fuime::Subscription.grant_family_plan!(user:, by: current_user, notes: params[:notes])
 
     redirect_back fallback_location: subscriptions_admin_index_path,
                   flash: { success: "#{user.email} is on the family plan, comped by Fuime." }
   rescue Fuime::Subscription::StripeBacked => e
+    redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
+  rescue Fuime::Subscription::NotAdult => e
     redirect_back fallback_location: subscriptions_admin_index_path, alert: e.message
   end
 

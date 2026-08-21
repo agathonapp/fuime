@@ -2,7 +2,18 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — the admin console can now do something about the family plan.**
+**2026-08-21 (latest) — two family-plan write holes on PR #87.**
+
+A subscription is a contract billed to a confirmed adult. `grant_family_plan!`
+now refuses anyone who is not `known_adult?` or `staff?`, and
+`Admin#subscription_grant` checks the same thing so the queue form cannot route
+around the user-page button. `BillingController#subscribe` refuses when the
+existing row is `stripe_backed?` (not just `#active?`) and sends that family to
+the billing portal — `past_due` / `unpaid` / `incomplete` were the leftover
+invisible-charge case. Comp vs Stripe-mirror split is unchanged: grant still
+refuses a billed row, cancel still does not write `status`.
+
+**2026-08-21 — the admin console can now do something about the family plan.**
 
 Two gaps, both the same shape: the model was finished and there was no surface.
 `Fuime::Subscription` had exactly one writer (Stripe), so **comping the plan meant

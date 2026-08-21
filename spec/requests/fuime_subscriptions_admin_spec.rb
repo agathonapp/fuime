@@ -91,6 +91,16 @@ RSpec.describe "admin subscriptions", type: :request do
       expect(Fuime::Subscription.count).to eq(0)
     end
 
+    it "refuses to comp a minor by email, so the queue cannot route around the user-page button" do
+      login_as!(admin)
+
+      post subscription_grant_admin_index_path, params: { user_id: teen.email, notes: "should not land" }
+
+      expect(Fuime::Subscription.family.find_by(billed_to: teen)).to be_nil
+      expect(Fuime::Subscription.count).to eq(0)
+      expect(flash[:alert]).to match(/confirmed adult/i)
+    end
+
     it "refuses to overwrite a Stripe-billed subscription" do
       Fuime::Subscription.create!(billed_to: guardian, status: "past_due",
                                   stripe_customer_id: "cus_r", stripe_subscription_id: "sub_r")

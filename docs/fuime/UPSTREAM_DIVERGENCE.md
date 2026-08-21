@@ -5535,19 +5535,19 @@ The design point is that comping and cancelling are different verbs:
 | `.grant_family_plan!`, `#revoke_grant!`, `#cancel_in_stripe!`, `#comped?`, `#stripe_backed?`, `#needs_attention?`, scopes `comped` / `needs_attention` | `#comped?` is `granted_by` present AND no Stripe subscription — so a comped family who later pays stops being comped at the webhook, which is the right answer for every caller. `#cancel_in_stripe!` deliberately does not write `status`. | `app/models/fuime/subscription.rb` |
 | `/admin/subscriptions` — the queue from ADMIN_OPS_QUEUES §4 | A `past_due` family (a failed card on the only thing Fuime charges for) was invisible everywhere in the app. `incomplete` is counted as needing attention too: that is a checkout opened and never paid, and the family thinks they bought it. Attention-first ordering, comp-by-email box, per-row revoke or cancel. | `app/controllers/admin_controller.rb`, `app/views/admin/subscriptions.html.erb`, `config/routes.rb` |
 | Family-plan panel on the admin user page | Next to the guardianship panel, because they answer adjacent questions. Status, source, grant history, and the one-click comp. | `app/views/users/_admin_family_plan.html.erb`, `edit_admin.html.erb` |
-| A comp may only be granted to a confirmed adult | A subscription is a contract (L2), and `BillingController` refuses a minor for that reason. Comping to a minor would route around that refusal from the inside. | `_admin_family_plan.html.erb` |
+| A comp may only be granted to a confirmed adult | A subscription is a contract (L2), and `BillingController` refuses a minor for that reason. Comping to a minor would route around that refusal from the inside. Enforced on the write (`grant_family_plan!` + `Admin#subscription_grant`), not the button: the queue form takes any email. | `app/models/fuime/subscription.rb`, `app/controllers/admin_controller.rb`, `_admin_family_plan.html.erb` |
 | Nav: "Subscriptions (Fuime)" and "Payout batches (Fuime)" | The payout-batch queue existed with **no link anywhere** — an admin had to know the URL, which is how a week of payouts gets missed. | `app/models/admin/nav.rb` |
 
 ### The double-subscribe hole
 
 | Change | Why | Files |
 |---|---|---|
-| `BillingController#subscribe` refuses when the family is already active | Nothing stopped a repeat POST. The Upgrade button is hidden once active, but the route was reachable — a double submit or a back-button re-post minted a SECOND Stripe subscription against the same customer. The webhook then overwrote `stripe_subscription_id` with the new one, so the first became invisible to Fuime **while continuing to charge the guardian's card every month, forever.** | `app/controllers/fuime/billing_controller.rb` |
+| `BillingController#subscribe` refuses when the family is already active **or stripe-backed** | Nothing stopped a repeat POST. The Upgrade button is hidden once active, but the route was reachable — a double submit or a back-button re-post minted a SECOND Stripe subscription against the same customer. The webhook then overwrote `stripe_subscription_id` with the new one, so the first became invisible to Fuime **while continuing to charge the guardian's card every month, forever.** `#active?` keeps the already-have-it copy (paid + comped). `#stripe_backed?` closes the same hole for `past_due` / `unpaid` / `incomplete` by sending them to the billing portal. | `app/controllers/fuime/billing_controller.rb`, `app/views/fuime/billing/show.html.erb` |
 | The billing page states a comped plan and hides "Manage billing" | A comp has no Stripe customer, so the portal had nothing to open and answered "nothing to manage yet". | `app/views/fuime/billing/show.html.erb` |
 
-Specs: `spec/models/fuime/subscription_grant_spec.rb` (10),
-`spec/requests/fuime_subscriptions_admin_spec.rb` (13),
-`spec/models/event/plan_labels_spec.rb` (8), 2 added to
+Specs: `spec/models/fuime/subscription_grant_spec.rb` (13),
+`spec/requests/fuime_subscriptions_admin_spec.rb` (15),
+`spec/models/event/plan_labels_spec.rb` (8), 4 added to
 `spec/requests/fuime_billing_spec.rb`. One expectation in
 `spec/models/event/plan_spec.rb` moved from `eq` to `include` because the Standard
 label now carries both halves of the price.

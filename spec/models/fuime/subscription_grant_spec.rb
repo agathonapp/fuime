@@ -67,6 +67,35 @@ RSpec.describe Fuime::Subscription do
 
       expect(described_class.family.find_by(billed_to: guardian).status).to eq("past_due")
     end
+
+    it "REFUSES to comp a minor, because a subscription is a contract" do
+      teen = create(:user, birthday: 15.years.ago.to_date)
+
+      expect {
+        described_class.grant_family_plan!(user: teen, by: admin)
+      }.to raise_error(described_class::NotAdult, /confirmed adult/)
+
+      expect(described_class.family.find_by(billed_to: teen)).to be_nil
+    end
+
+    it "fails closed when age is unknown" do
+      unknown = create(:user, :unknown_age)
+
+      expect {
+        described_class.grant_family_plan!(user: unknown, by: admin)
+      }.to raise_error(described_class::NotAdult)
+
+      expect(described_class.family.find_by(billed_to: unknown)).to be_nil
+    end
+
+    it "allows a staff account even without a birthday" do
+      staff = create(:user, :make_admin, :unknown_age)
+
+      record = described_class.grant_family_plan!(user: staff, by: admin)
+
+      expect(record).to be_comped
+      expect(record.billed_to).to eq(staff)
+    end
   end
 
   describe "#revoke_grant!" do

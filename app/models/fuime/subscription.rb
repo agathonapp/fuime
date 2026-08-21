@@ -51,6 +51,8 @@ module Fuime
     class NotComped < StandardError; end
     # Raised when a Stripe-only action is attempted on a comp.
     class NotStripeBacked < StandardError; end
+    # Raised when a comp is pointed at someone who is not a confirmed adult.
+    class NotAdult < StandardError; end
 
     self.table_name = "fuime_subscriptions"
 
@@ -108,11 +110,20 @@ module Fuime
 
     # Fuime: comp the family plan to a user, or re-comp a lapsed one.
     #
-    # Refuses outright on a Stripe-backed row rather than quietly flipping the
-    # status: the family is being charged, the webhook would overwrite whatever we
-    # wrote at the next event anyway, and "the admin page says active while Stripe
-    # says past_due" is precisely the failure this model is shaped to avoid.
+    # Two refusals, both fail-closed. A subscription is a contract (L2), so the
+    # billed-to — and therefore the person a comp is recorded against — has to be
+    # a confirmed adult; staff are the same exemption BillingController#adult?
+    # uses, because operators have no birthday on file. And a Stripe-backed row
+    # is never flipped locally: the family is being charged, the webhook would
+    # overwrite whatever we wrote at the next event anyway, and "the admin page
+    # says active while Stripe says past_due" is precisely the failure this
+    # model is shaped to avoid.
     def self.grant_family_plan!(user:, by:, notes: nil)
+      unless user.known_adult? || user.staff?
+        raise NotAdult, "#{user.email} is not a confirmed adult. The family plan is a contract " \
+                        "and can only be billed to, or comped to, an adult (L2)."
+      end
+
       record = family.find_or_initialize_by(billed_to: user)
 
       if record.stripe_backed?

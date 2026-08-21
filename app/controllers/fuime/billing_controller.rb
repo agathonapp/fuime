@@ -36,12 +36,20 @@ module Fuime
       # Fuime while continuing to charge the guardian's card every month, forever,
       # with no surface anywhere in the app that could see it.
       #
-      # A comped subscription is caught by the same check (`#active?`), which is
-      # correct: somebody who already has the plan for free should not be sold it.
+      # `#active?` covers the already-have-it case (paid active/trialing, and a
+      # comp). `#stripe_backed?` is the rest of the hole: past_due / unpaid /
+      # incomplete still have a live Stripe subscription, and opening Checkout
+      # would mint a second one the same way. Those go to the billing portal.
       existing = service.record
       if existing&.active?
         redirect_to my_billing_path,
                     alert: existing.comped? ? "You already have the family plan, comped by Fuime — there's nothing to buy." : "You're already on the family plan."
+        return
+      end
+
+      if existing&.stripe_backed?
+        session = service.portal_session(return_url: my_billing_url)
+        redirect_to session.url, allow_other_host: true
         return
       end
 
