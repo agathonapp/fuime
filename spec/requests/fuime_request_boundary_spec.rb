@@ -36,7 +36,9 @@ RSpec.describe "Request-boundary headers", type: :request do
 
   describe "Content-Security-Policy" do
     it "sends a report-only policy and does not enforce" do
-      get "/up"
+      # /api/current_user is JSON (no asset pipeline). /up is Rails::HealthController
+      # (ActionController::Metal) and does not run the CSP callback.
+      get "/api/current_user"
 
       report_only = response.headers["Content-Security-Policy-Report-Only"]
       expect(report_only).to include("default-src 'self'")
