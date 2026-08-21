@@ -63,6 +63,7 @@ module Fuime
       rescue URI::InvalidURIError
         nil
       end
+
     end
   end
 end

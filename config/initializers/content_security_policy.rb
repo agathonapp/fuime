@@ -80,7 +80,7 @@ Rails.application.configure do
                       "https://www.youtube.com"
 
     policy.connect_src :self, "https://api.stripe.com", "https://js.stripe.com",
-                      "https://connect-js.stripe.com", "https://*.appsignal-endpoint.net"
+                       "https://connect-js.stripe.com", "https://*.appsignal-endpoint.net"
 
     # Nothing in Fuime needs a plugin or a <base> rewrite, and both are pure
     # attack surface.
