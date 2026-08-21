@@ -57,7 +57,7 @@ class Event
                                "Our team will sign and finalize the contract soon."
                              end
 
-      # We allow teenagers to receive and sign the contract while applying. Adults must wait for HCB Operations' review.
+      # We allow teenagers to receive and sign the contract while applying. Adults must wait for Fuime Operations' review.
       contract_signed = @application.contract&.parties&.not_hcb&.all?(&:signed?) && (@application.teen_led? || @application.contract&.party(:hcb)&.signed?)
       contract_step = {
         label: "Sign agreement",
@@ -67,23 +67,42 @@ class Event
         completed: contract_signed
       }
 
+      # Fuime: no configured agreement means no signing step.
+      #
+      # This step was built unconditionally, so with FUIME_DOCUSEAL_TEMPLATE_ID
+      # unset — which is the current state, and the reason #agreement redirects
+      # away and Event::Application#send_contract returns nil — every teen-led
+      # applicant was shown "Sign the Fuime agreement / We'll send you the Fuime
+      # agreement" as step two of their status page, and then nothing ever
+      # arrived. It also poisoned the step BELOW it: `contract_signed` is nil
+      # without a contract, so an approved teenager's "Await review" never
+      # completed either, and the progress bar sat unfinished forever on an
+      # application that was finished.
+      #
+      # Guarded on the same predicate the sending path uses, so the step appears
+      # again by itself the moment a template is configured.
+      contract_expected = Event::Plan::Standard.new.contract_available?
+
       unless @application.draft?
         @steps = []
         @steps << { label: "Submit application", shorthand: "Submit", completed: true }
-        @steps << contract_step if @application.teen_led?
+        @steps << contract_step if contract_expected && @application.teen_led?
         @steps << {
           label: "Await review",
           shorthand: "Review",
           name: "Wait for a response from the Fuime team",
           description: "Our operations team will review your application and respond within #{helpers.pluralize(@application.response_business_days, "business day")}. You'll hear back soon on whether your application was approved or rejected.",
-          completed: @application.approved? && (contract_signed || !@application.teen_led?)
+          completed: @application.approved? && (!contract_expected || contract_signed || !@application.teen_led?)
         }
-        @steps << contract_step unless @application.teen_led?
+        @steps << contract_step if contract_expected && !@application.teen_led?
         @steps << {
           label: "Start spending",
           shorthand: "Spend",
-          name: "Start spending!",
-          description: "You'll have access to your organization to begin raising and spending money.",
+          name: "Start selling!",
+          description: "You'll have access to your business to start taking payments from customers.",
+          # Deliberately never complete: show.html.erb renders this step's CTA
+          # inside `unless step[:completed]`, so marking it done on activation
+          # would hide the link to the venture it just created.
           completed: false
         }
       end

@@ -141,18 +141,11 @@
 
 <% end %>
 
-<%= turbo_frame_tag :affiliations_settings do %>
-  <h3 class="mb2">Affiliations</h3>
-
-  <div class="card mb3">
-    <% affiliation = Event::Affiliation.new(affiliable: @application) %>
-    <%= form_with(url: affiliations_path(affiliable_type: @application.class.name, affiliable_id: @application.id), local: true, html: { "x-data": "{ type: '', disabled: #{!policy(affiliation).update?} }", "x-init": "$watch('type', val => (val ? document.getElementById('submit_application').setAttribute('data-turbo-confirm', 'You have an unsaved affiliation. Are you sure you want to continue?') : document.getElementById('submit_application').removeAttribute('data-turbo-confirm')))", "@turbo:submit-end": "type = ''" }) do |form| %>
-      <%= render "events/settings/affiliation_form", affiliation:, form: %>
-    <% end %>
-  </div>
-
-  <%= render partial: "events/settings/affiliation", collection: @application.affiliations.nonempty %>
-<% end %>
+<%# Fuime: the Affiliations block is gone from the application. Its three options
+    were FIRST Robotics, VEX and Hack Club, none of which describes a teen-run
+    business, and the last two carried Hack Club branding (Rule 7). Removing it
+    here also drops the unsaved-affiliation turbo-confirm that used to guard
+    #submit_application, which now has nothing to warn about. %>
 </div>
 
 <% content_for :footer do %>

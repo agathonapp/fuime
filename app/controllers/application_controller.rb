@@ -62,7 +62,10 @@ class ApplicationController < ActionController::Base
     "fuime/directory",
     "fuime/storefronts",
     "fuime/payment_pages",
-    "static_pages"
+    "static_pages",
+    # /learn is written content only — no venture, no operator, no amount ever
+    # renders here (LearnController, and the request spec that holds it).
+    "learn"
   ].freeze
 
   before_action do

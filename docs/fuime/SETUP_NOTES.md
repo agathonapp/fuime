@@ -2,7 +2,41 @@
 
 ## Handoff (most recent first)
 
-**2026-08-20 (latest) — signup stopped asking for a date of birth.**
+**2026-08-20 (latest) — /learn: how to run a business, plus the starter templates.**
+
+The ten starter templates in `Fuime::ServiceCatalog` were only reachable from inside
+the signup flow; they are now browsable at `/learn`, extended with `offer_ideas`,
+`first_customers` and `watch_out`, alongside seven lessons in `Fuime::Playbook`.
+Each "thing you could list" links into the operator's own new-offer form with the
+words pre-filled and **the price box empty** — `Fuime::OffersController::PREFILLABLE`
+is the allowlist that keeps a price out of that query string.
+
+**Two house rules on this surface, both spec-enforced, both from a direct founder
+steer:** the lessons teach general business strategy rather than Fuime mechanics
+(six pages about business, one about us, and it says so in its own title), and
+**no em dash may appear anywhere a reader can see one** because it reads as
+machine-written. `spec/requests/learn_spec.rb` renders every page and checks
+`<main>`. Confirmed the guard actually fails before relying on it.
+
+**Fourteen templates now, including four software ones** (`web_apps`,
+`discord_bots`, `ai_automation`, `digital_downloads`). They are only honest
+because `digital` became sellable the same day. **All four are shaped around a
+one-time payment because operators cannot bill monthly**: `Fuime::Offer` has no
+recurring concept and MoR checkout is `mode: "payment"`. Two specs fail the day
+recurring billing ships, on purpose, so the copy gets rewritten rather than
+silently becoming true.
+
+**The gotcha that cost time, and will again:** `/learn/taxes` was being swallowed by
+`get "/:event_slug/taxes"` declared earlier in routes.rb, which is a *redirect*, not
+an error — so it failed silently and the spec said "did not render". The `/learn`
+routes now sit above every venture-scoped route. Any new top-level path in this app
+has the same trap waiting for it, twice over (`resources :events, path: "/"` claims
+every single-segment path further down).
+
+Full write-up in UPSTREAM_DIVERGENCE.md under "/learn".
+
+
+**2026-08-20 — signup stopped asking for a date of birth.**
 
 Founder's call: a checkbox instead, like most consumer sites. No user is asked for a
 date any more; the only thing that still collects one is Stripe card issuing, which
@@ -42,7 +76,7 @@ birth, and L8 is specifically about not letting copy describe a product that doe
 not exist.
 
 
-**2026-08-20 (latest) — a full-platform security review, and its thirteen fixes.**
+**2026-08-20 — a full-platform security review, and its thirteen fixes.**
 
 Whole app, not the branch diff. The money paths held up: idempotency, price tampering,
 IDOR, payout segregation of duties and webhook signature verification are all correct,

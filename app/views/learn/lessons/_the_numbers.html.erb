@@ -1,0 +1,157 @@
+<%# locals: (venture: nil) %>
+<%# Fuime: the arithmetic lesson.
+
+    The worked example below carries real figures, and that is deliberate. The
+    §8.3 D2 rule forbids Fuime SUGGESTING what to charge; it does not forbid
+    arithmetic, and a break-even lesson with no numbers in it teaches nothing.
+    The figures are one fictional operator's COSTS, labelled as an illustration,
+    and the price in the example is presented as Maya's decision rather than as a
+    rate anybody should copy. Keep it that way if you edit this. %>
+
+<p>
+  Four words do most of the work in a small business: revenue, costs, margin and
+  break even. If you understand these you can tell whether a business works
+  before you have run it for a year.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Revenue is not profit</h2>
+
+<p>
+  Revenue is everything customers paid you. Profit is what is left after the
+  business has paid for itself. Confusing the two is how a busy month feels
+  brilliant and leaves you with nothing.
+</p>
+
+<p>Costs come in two shapes, and the difference matters more than it sounds:</p>
+
+<ul class="m-0 pl-5 flex flex-col gap-1">
+  <li>
+    <strong>Variable costs</strong> happen per job. Materials, postage, fuel.
+    Sell twice as much and you pay twice as much.
+  </li>
+  <li>
+    <strong>Fixed costs</strong> happen whether you sell anything or not. A
+    subscription, a domain, a tool you rent monthly. These get cheaper per job
+    the busier you are, which is why a business with high fixed costs is
+    dangerous when it is quiet and very good when it is busy.
+  </li>
+</ul>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Margin: what one sale is really worth</h2>
+
+<p>
+  Take the price of one sale and subtract only the variable costs of that sale.
+  What is left is your margin, sometimes called contribution. It is the amount
+  each sale contributes towards your fixed costs, and then towards profit.
+</p>
+
+<p>
+  Margin is the number to improve. You can raise it by charging more, by buying
+  materials better, or by getting faster. Selling more units does not raise it at
+  all, which is why "just sell more" is not a fix for a business with thin
+  margins. It only makes you busier at the same result.
+</p>
+
+<div class="card">
+  <h2 class="mt-0 mb-2 text-lg">Worked example</h2>
+  <p class="m-0 mb-2 text-sm">
+    Maya prints and posts sticker packs. These figures are made up to show the
+    arithmetic. Yours will be completely different, and the price is hers, not a
+    recommendation.
+  </p>
+  <p class="m-0 mb-2 text-sm">
+    Maya sells a pack for $8. Each pack costs her $1.40 in paper and ink, $0.30
+    in packaging and $1.10 in postage. That is $2.80 of variable cost, so her
+    margin is <strong>$5.20 a pack</strong>.
+  </p>
+  <p class="m-0 mb-2 text-sm">
+    She pays $15 a month for the design software she uses, and nothing else
+    fixed. So she needs $15 divided by $5.20, which is 2.9, rounded up to
+    <strong>three packs a month</strong> before the business has paid for
+    itself. Everything after the third pack is profit.
+  </p>
+  <p class="m-0 text-sm">
+    Now the important part. Maya spends about 20 minutes packing and posting each
+    pack. Ten packs is over three hours of work for $52 of margin, before she has
+    counted the time spent designing them. That is the real question her numbers
+    are asking, and no amount of selling more packs answers it. Charging more,
+    posting in batches, or selling a bigger pack does.
+  </p>
+</div>
+
+<h2 class="text-lg font-bold mt-2 mb-0">When one more copy costs you nothing</h2>
+
+<p>
+  Software and digital products break the arithmetic above in one specific way:
+  the variable cost is almost zero. Selling a template to a second person costs
+  you nothing. Ten more people using your tool might cost you a few cents of
+  hosting.
+</p>
+
+<p>That changes four things, and they are worth knowing before you start.</p>
+
+<ul class="m-0 pl-5 flex flex-col gap-1">
+  <li>
+    <strong>Almost the whole price is margin.</strong> So the question stops
+    being "what does each one cost me" and becomes "how many people want this".
+  </li>
+  <li>
+    <strong>Your real costs are fixed, not variable.</strong> Hosting, domains,
+    AI usage and any tool you pay for monthly. Those bills arrive whether you sell
+    anything or not, which is why a quiet month hurts a software business more
+    than it hurts a lawn business.
+  </li>
+  <li>
+    <strong>Pricing by effort is the wrong instinct.</strong> Nobody cares that
+    it took you three weekends. They care what it saves them. Two things that took
+    the same time to build are worth completely different amounts.
+  </li>
+  <li>
+    <strong>All the risk moves to the front.</strong> With mowing you find out in
+    an afternoon whether anyone will pay. With software you can spend two months
+    building before you learn anything at all, which is why
+    <%= link_to "testing the idea first", learn_lesson_path(slug: "what-people-pay-for", venture: venture&.slug), class: "underline" %>
+    matters so much more here.
+  </li>
+</ul>
+
+<p>
+  Break even still works the same way, you just measure it against those fixed
+  costs. If your hosting and tools come to a certain amount each month, that
+  divided by your price is how many sales you need before the thing pays for
+  itself.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Break even is a target, not a worry</h2>
+
+<p>
+  Fixed costs divided by margin per sale gives you the number of sales you need
+  each month before you make anything. Work it out once. It turns a vague anxiety
+  into a number you can count towards.
+</p>
+
+<p>
+  It also tells you something uncomfortable and useful. If the answer is more
+  sales than you could physically deliver in a month, the problem is not effort.
+  It is the price, or it is the fixed costs, and no amount of working harder will
+  fix either.
+</p>
+
+<h2 class="text-lg font-bold mt-2 mb-0">Count your own time even though nobody invoices you for it</h2>
+
+<p>
+  This is the mistake almost every first business makes. Leave your hours out and
+  a job looks profitable when it is actually paying you less than a normal
+  weekend job would. You are allowed to decide that is fine, because you are
+  learning something or building towards something. You are not allowed to not
+  know.
+</p>
+
+<div class="card">
+  <p class="m-0 text-sm">
+    <strong>Do this today:</strong> take your last sale. Write down the price,
+    everything that sale cost you, and honestly how long it took including
+    travel. That single calculation will tell you more about your business than
+    any advice will.
+  </p>
+</div>

@@ -25,11 +25,31 @@
     <%# The launch scope, said plainly rather than discovered at vetting. L8's
         failure mode is the site describing a product that does not exist, and a
         picker showing categories the app then blocks is that in miniature. %>
+    <%# Fuime: this said "services only, digital downloads coming later", which
+        stopped being true when Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES
+        gained `digital` and the catalog gained templates that resolve to it.
+        Copy that closes a door the app has opened is the same L8 failure as
+        copy that opens one the app has closed — it just costs a founder a
+        template instead of costing Fuime a promise. Physical goods and food
+        really are still shut, so those stay named. %>
     <div class="card card--outline mt-6">
-      <h3 class="text-base mt-0 mb-1">Services first</h3>
+      <h3 class="text-base mt-0 mb-1">What you can sell today</h3>
       <p class="text-sm muted mb-0">
-        Fuime is open to service businesses right now — work you do for someone.
-        Selling physical products and digital downloads is coming later.
+        Services — work you do for someone — and digital things you make, like a
+        design, an edit, or a small piece of software. Physical products and food
+        are coming later.
+      </p>
+    </div>
+
+    <%# The same ten templates, in full, for somebody who does not yet know what
+        to pick. /learn is public, so this link works before and after sign-up. %>
+    <div class="mt-4">
+      <p class="text-sm muted mb-0">
+        Not sure yet?
+        <%= link_to "Browse all the starter templates", learn_path(anchor: "templates"),
+                    target: "_blank", rel: "noopener", class: "underline" %> —
+        each one covers what to offer, where the first customers come from, and
+        what tends to go wrong. Your application is saved; you won't lose it.
       </p>
     </div>
   </div>
@@ -91,6 +111,11 @@
             <li><%= item %></li>
           <% end %>
         </ul>
+        <p class="text-sm mb-0 mt-2">
+          <%= link_to "Read the full #{service.name.downcase} template →",
+                      learn_template_path(slug: service.key),
+                      target: "_blank", rel: "noopener", class: "underline" %>
+        </p>
       </div>
     <% end %>
   </div>

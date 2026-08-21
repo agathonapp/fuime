@@ -386,12 +386,16 @@ class Event
 
     def next_step
       return "Choose what kind of business" if business_category.blank?
-      return "Tell us about your project" if name.blank? || description.blank?
-      return "Add your information" if address_line1.blank? || address_city.blank? || address_country.blank? || address_postal_code.blank?
+      return "Tell us about your business" if name.blank? || description.blank?
+      # Fuime: keyed on `address_country` alone, matching what the step now asks
+      # for. Left on the street-address fields it would have sent every founder
+      # back to a page that no longer collects them — a step the wizard could
+      # never advance past.
+      return "Add your information" if address_country.blank?
       return "Review and submit" if draft?
       return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
       return "We're reviewing your application" if submitted? || under_review?
-      return "Start spending!" if event.present?
+      return "Start selling!" if event.present?
       return "" if rejected?
       # Approved but not yet activated. Without this the method returns nil and
       # the application card falls back to its "We're reviewing your
@@ -399,11 +403,19 @@ class Event
       return "Waiting on Fuime to finish setting up your account" if approved?
     end
 
+    # Fuime: keyed on the same conditions #next_step uses, not on the sentences
+    # it returns.
+    #
+    # This matched `next_step` against four hardcoded strings, so the wording of
+    # a founder-facing sentence was load-bearing: renaming "Tell us about your
+    # project" to "…your business" silently dropped that stage to 0% and sent
+    # the progress bar backwards, with nothing failing to say so. Copy is edited
+    # far more often than logic, and it should never have been able to do that.
     def completion_percentage
-      return 10 if next_step == "Choose what kind of business"
-      return 25 if next_step == "Tell us about your project"
-      return 50 if next_step == "Add your information"
-      return 75 if next_step == "Review and submit"
+      return 10 if business_category.blank?
+      return 25 if name.blank? || description.blank?
+      return 50 if address_country.blank?
+      return 75 if draft?
       return 100 if submitted? || under_review? || approved?
 
       0
@@ -726,10 +738,14 @@ class Event
       "funding_source"         => "Source of your funding"
     }.freeze
 
+    # Fuime: `phone_number` is no longer required. Nothing in submission, the
+    # contract or Connect onboarding reads it, and Stripe collects its own where
+    # KYC needs one. `birthday` stays listed but is skipped by the loop that
+    # reads this hash — the age answer is satisfied by either source and is
+    # checked once, separately. See #submission_blockers.
     USER_FIELD_LABELS = {
-      "full_name"    => "Your full name",
-      "phone_number" => "Your phone number",
-      "birthday"     => "Your birthday"
+      "full_name" => "Your full name",
+      "birthday"  => "Your birthday"
     }.freeze
 
     def required_submission_fields
@@ -747,7 +763,15 @@ class Event
       # it: `business_category` is written exactly once, at activation, and appears
       # in no form, no strong-params list and no admin screen. A dead end reached
       # only after a founder had done everything right.
-      fields = ["name", "business_category", "description", "address_line1", "address_city", "address_state", "address_postal_code", "address_country", "referrer", "previously_applied"]
+      # Fuime: the street address is no longer required to submit — only
+      # `address_country`, which is the sanctions gate rather than an address
+      # question (see personal_info.html.erb). Street, city, state and zip are
+      # asked at the payout seam, where a payee and a 1099 actually exist.
+      #
+      # The columns stay on the table and stay writable: applications submitted
+      # before this keep their address, and the payout flow writes into the same
+      # place rather than inventing a second one.
+      fields = ["name", "business_category", "description", "address_country", "referrer", "previously_applied"]
 
       # A parent's email is required only while the guardian question is OPEN.
       # A second application from the same teen has nothing to ask — their
@@ -791,7 +815,10 @@ class Event
     end
 
     def user_ready_to_submit?
-      required_fields = ["full_name", "phone_number"]
+      # `phone_number` dropped alongside USER_FIELD_LABELS — a spec asserts this
+      # method and #submission_blockers agree on what is required, so the two
+      # lists move together or not at all.
+      required_fields = ["full_name"]
 
       missing_fields = required_fields.any? do |field|
         !user[field].present?

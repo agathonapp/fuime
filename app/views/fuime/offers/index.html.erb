@@ -82,9 +82,19 @@
 
 <%# ── Add one ──────────────────────────────────────────────────────────── %>
 
+<%# `id="add"` is the anchor /learn starter templates link to — see
+    Fuime::OffersController::PREFILLABLE. A template can fill the words in; the
+    price box below is always empty. %>
 <% if @can_manage %>
-  <div class="card mb2">
+  <div class="card mb2" id="add">
     <h2 class="mt0 text-lg">Add something you sell</h2>
+
+    <% if @offer.name.present? %>
+      <p class="muted text-sm mt-0">
+        Filled in from a starter template. Change any of it. The price is blank
+        because that part is yours.
+      </p>
+    <% end %>
     <%= form_with model: @offer, url: fuime_offers_create_path(event_slug: @event.slug),
                   method: :post, scope: :fuime_offer, local: true do |form| %>
       <div class="field">

@@ -1,0 +1,130 @@
+<% title "Learn | Fuime" %>
+
+<% content_for :head do %>
+  <meta name="description" content="How to start and run a small business: finding something people will pay for, setting a price, working out whether the numbers add up, getting customers and keeping them.">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="How to start and run a small business">
+  <meta property="og:url" content="<%= learn_url %>">
+<% end %>
+
+<%# Fuime: /learn. See LearnController for why this is public and indexable.
+
+    Two rules this page shares with everything else that touches pricing:
+    nothing here names a number a founder should charge, and nothing here ranks
+    one template above another. The templates are in Fuime::ServiceCatalog's own
+    order and the lessons are in Fuime::Playbook's — no "most popular", no
+    "recommended", because a platform that recommends is a platform that
+    directs (§8.3 D2). %>
+
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">How to start and run a small business</h1>
+    <p class="muted m-0 max-w-2xl">
+      Seven lessons on how businesses actually work, and ten starter templates
+      for things you could begin this month. Written for people starting their
+      first one, with nothing assumed.
+    </p>
+  </div>
+
+  <%# ── Templates ──────────────────────────────────────────────────────── %>
+
+  <h2 class="text-xl font-bold mb-1" id="templates">Start from a template</h2>
+  <p class="muted mt-0 mb-4 max-w-2xl">
+    Ten businesses you could actually run. Each one covers what to offer, where
+    the first customers come from, and the mistakes that are specific to that
+    trade. What to charge is left to you, because your costs are not anybody
+    else's.
+  </p>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+    <% @services.each do |service| %>
+      <%= link_to learn_template_path(slug: service.key, venture: @venture&.slug),
+                  class: "card flex flex-col gap-1 no-underline" do %>
+        <strong class="block"><%= service.name %></strong>
+        <p class="m-0 text-sm muted"><%= service.blurb %></p>
+        <% if service.offer_ideas.present? %>
+          <span class="text-sm mt-1">
+            <%= pluralize(service.offer_ideas.length, "thing") %> to list &rarr;
+          </span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# ── Lessons ────────────────────────────────────────────────────────── %>
+
+  <h2 class="text-xl font-bold mb-1" id="lessons">The lessons</h2>
+  <p class="muted mt-0 mb-4 max-w-2xl">
+    These work the same whether you mow lawns or edit video. If you have never
+    run anything before, read them in order. They are written in the order the
+    questions actually turn up.
+  </p>
+
+  <div class="flex flex-col gap-3 mb-10">
+    <% @lessons.each_with_index do |lesson, index| %>
+      <%= link_to learn_lesson_path(slug: lesson.key, venture: @venture&.slug),
+                  class: "card flex items-start gap-4 no-underline" do %>
+        <span class="muted text-lg font-bold shrink-0 w-6 text-right"><%= index + 1 %></span>
+        <span class="min-w-0">
+          <strong class="block"><%= lesson.title %></strong>
+          <span class="text-sm muted"><%= lesson.blurb %></span>
+        </span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# ── Where to go next ───────────────────────────────────────────────── %>
+
+  <h2 class="text-xl font-bold mb-1" id="resources">The rest of it</h2>
+  <p class="muted mt-0 mb-4 max-w-2xl">
+    The things people ask about next.
+  </p>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+    <%# Deliberately the real pages rather than a summary of them: the FAQ and
+        the Guardian Agreement are the documents a parent is actually asked to
+        accept, and a learn-page paraphrase of a legal document is a second
+        version of it that nobody updates. %>
+    <div class="card">
+      <strong class="block mb-1">Why a parent has to be on your account</strong>
+      <p class="text-sm muted m-0 mb-2">
+        Under 18, a contract you sign can be cancelled at your own option. That
+        is why almost nobody will open an account for you, and why a guardian's
+        signature is what makes your business real to the people you deal with.
+      </p>
+      <%= link_to "Read the FAQ", faq_path, class: "text-sm underline" %>
+      &middot;
+      <%= link_to "The Guardian Agreement", guardian_agreement_path, class: "text-sm underline" %>
+    </div>
+
+    <div class="card">
+      <strong class="block mb-1">See what other people are running</strong>
+      <p class="text-sm muted m-0 mb-2">
+        The fastest way to understand what a finished business looks like is to
+        look at some. Every one in the directory is run by somebody your age.
+      </p>
+      <%= link_to "Open the directory", fuime_directory_path, class: "text-sm underline" %>
+    </div>
+
+    <% if @venture.present? %>
+      <div class="card">
+        <strong class="block mb-1">Your own business</strong>
+        <p class="text-sm muted m-0 mb-2">
+          What <%= @venture.name %> sells, and what it might owe at tax time.
+        </p>
+        <%= link_to "What you sell", fuime_offers_path(event_slug: @venture.slug), class: "text-sm underline" %>
+        &middot;
+        <%= link_to "Tax Tracker", fuime_taxes_path(event_slug: @venture.slug), class: "text-sm underline" %>
+      </div>
+    <% else %>
+      <div class="card">
+        <strong class="block mb-1">Ready to start one</strong>
+        <p class="text-sm muted m-0 mb-2">
+          Applying takes a few minutes. You pick what you do, describe it in a
+          sentence, and invite the parent or guardian who signs for it.
+        </p>
+        <%= link_to "Start a business", apply_path, class: "text-sm underline" %>
+      </div>
+    <% end %>
+  </div>
+</div>

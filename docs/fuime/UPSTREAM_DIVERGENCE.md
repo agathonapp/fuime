@@ -5286,3 +5286,181 @@ checkbox operator is blocked until they supply a date. `#age_blocker` says exact
 that when it happens.
 
 Specs: `spec/models/fuime/age_attestation_spec.rb` (22 examples).
+
+---
+
+## /learn — starter templates and the money lessons (2026-08-20)
+
+A public, indexable education surface at `/learn`: fourteen browsable starter templates
+and seven lessons on how a small business actually works. Fuime-only; upstream HCB
+has no equivalent.
+
+### What the lessons are about, and what they are deliberately not about
+
+Founder's steer, given while this was being built: *"a lot of kids will be reading
+this... general business strategy... so kids actually learn things! Less of Fuime
+and us saying the same stuff over and over."*
+
+So the reading list is six lessons about **business** and one about **us**:
+
+1. `what-people-pay-for` — demand, problems vs ideas, testing cheaply, narrowing
+2. `pricing` — floor, ceiling, testing upward, quoting the job not the hour
+3. `the-numbers` — variable vs fixed costs, margin, break-even, a worked example
+4. `getting-customers` — the first five are people, then find the repeatable channel
+5. `keeping-customers` — expectations, recovery when it goes wrong, records
+6. `cash-and-records` — cash flow vs profit, separation, sales tax vs income tax
+7. `what-fuime-takes` — the fee, the payout, the approval. One page, and it says so.
+
+Two house rules, both asserted rather than trusted to a comment:
+
+- **No em dashes anywhere a reader can see one.** Explicitly asked for, on the
+  grounds that it reads as machine-written. `spec/requests/learn_spec.rb` renders
+  every page and checks `<main>`; en dashes used as punctuation are checked too.
+  Existing `ServiceCatalog` checklist copy was swept for the same reason, since it
+  renders on these pages.
+- **The "Fuime never sets your price" line appears once**, on the template page
+  where the pre-fill actually happens, rather than on every page. The constraint
+  is still enforced in code and spec; it is just no longer recited.
+
+### What was already there, and why this is not a second copy of it
+
+`Fuime::ServiceCatalog` already held ten starter templates — name, blurb,
+description prompt and a five-item checklist each — but they were reachable **only
+from inside the application flow**, at the moment somebody is asked "what is your
+business". That is the worst possible moment to read them for the first time, and
+it is behind a signup.
+
+So the templates were **extended in place** rather than re-authored in a content
+file. Three optional fields were added to `ServiceCatalog::Service`:
+
+| Field | What it is |
+|---|---|
+| `offer_ideas` | Things to list on a storefront, as `{name:, unit_label:}` — **names and units only** |
+| `first_customers` | Where the first few actually come from, for that trade |
+| `watch_out` | What goes wrong in that trade specifically, including the costs a first quote forgets |
+
+A parallel content file keyed by the same strings would have drifted: add a service,
+forget the other file, and the browsable catalog quietly disagrees with the one a
+teenager signs up through.
+
+### Four software templates, and the one thing they may not say
+
+Added on request ("teens vibecode software on Replit"): `web_apps` and
+`digital_downloads` under `digital`, `discord_bots` and `ai_automation` under
+`services`. Fourteen templates in total.
+
+These are only honest because `digital` became sellable earlier the same day
+(`Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES`). Before that they would have
+been an advert for a dead end, since `LearnController` renders `.sellable`.
+
+**Every one is shaped around a one-time payment, and that is a fact about Fuime
+rather than a view about software.** `Fuime::Offer` has no recurring concept and
+merchant-of-record checkout is `mode: "payment"`, so an operator can sell access
+to a tool and cannot bill for it monthly. The subscription machinery that does
+exist (`Fuime::Subscription`) bills the *family* for Fuime, not an operator's
+customers for the operator. `web_apps` says the limit out loud, because "a few
+dollars a month" is the first thing anybody thinks of when they think SaaS, and
+L8 is precisely about not letting copy describe a product that does not exist.
+
+Two specs hold it. One forbids any offer idea that renews itself; one requires
+`web_apps` to name the limit. **Both fail when recurring billing ships**, which is
+the intended behaviour: somebody has to come back and rewrite the copy rather than
+it silently having been wrong and then silently becoming right.
+
+The first version of that guard banned "per month" outright and immediately caught
+`lawn_and_garden` offering *"Weekly mow through the season, per month"*. That was a
+real defect in the copy, not a false positive, and it is now *"A month of weekly
+mows, paid up front"*. The guard was then narrowed to automatic renewal, since
+selling a month of something for one up-front payment is fine and is how the
+existing prepaid blocks already work.
+
+`the-numbers` gained a section on businesses whose marginal cost is near zero:
+almost all margin, costs that are fixed rather than variable, pricing by value
+rather than by effort, and all the risk moving to the front. Without it the
+lesson's arithmetic quietly assumed a business with per-job materials.
+
+### The price rule, and the new place it can be broken
+
+`offer_ideas` is the sharpest new pressure point on §8.3 D2. An offer is a name
+**and** a price everywhere else in the product, so an idea carrying only the name
+looks unfinished — it is not; it is the half Fuime is allowed to write.
+
+Each idea renders as a link into the operator's own new-offer form with the words
+pre-filled and the price box empty. That link is a **query string**, which is the
+easiest possible way to introduce a Fuime-suggested rate: no code change needed,
+just a URL. Hence `Fuime::OffersController::PREFILLABLE` — an allowlist of
+`name`/`unit_label`/`description`, with `price` deliberately absent, asserted by
+spec against `?price=` and `?price_cents=`.
+
+### Route ordering, which is load-bearing
+
+`/learn` is declared **above** the venture-scoped Fuime routes, not with the other
+public pages. Two collisions:
+
+- `/:event_slug/taxes` (and `/payments`, `/offers`, …) swallow `/learn/taxes` as
+  `fuime/taxes#show` with an `event_slug` of `"learn"`. That is a **redirect, not
+  an error**, so it fails silently. This actually happened during development.
+- `resources :events, path: "/"` claims every single-segment path further down.
+
+`learn` is therefore a reserved venture slug, in the same way `pay` and `checkout`
+are reserved in `Fuime::Offer`.
+
+### Files
+
+| Change | Why | Files |
+|---|---|---|
+| `offer_ideas` / `first_customers` / `watch_out` on every service | Makes a dropdown option into a browsable template. Optional at the struct level, read through `Array()`, so a service added without them renders a shorter page. | `app/lib/fuime/service_catalog.rb` |
+| `Fuime::Playbook` — seven lessons | Metadata only; each key is both the URL slug and the partial name, so a lesson on the index cannot 500 when opened. | `app/lib/fuime/playbook.rb` |
+| Lesson prose as ERB partials | The two lessons that cite figures read `Event::Plan::FALLBACK_REVENUE_FEE`, `MINIMUM_FEE_CENTS` and `TaxTrackerService::SELF_EMPLOYMENT_THRESHOLD_CENTS` rather than restating them. A Ruby array of heredocs would have hardcoded every one. | `app/views/learn/lessons/_*.html.erb` |
+| `LearnController`, three routes, three views | Public and indexable — nothing here names a venture, an operator or an amount. | `app/controllers/learn_controller.rb`, `config/routes.rb`, `app/views/learn/` |
+| `"learn"` added to `INDEXABLE_CONTROLLER_PATHS` | Written content only. Uses the existing allowlist rather than the ad-hoc `response.delete_header` the static pages use. | `app/controllers/application_controller.rb` |
+| `?venture=` pre-fill plumbing | Resolved through `manage_offers?` — the same split as the offers page, where a guardian reads and does not price. Dropped silently when it does not check out, because the page is reachable signed out. | `app/controllers/learn_controller.rb`, `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/index.html.erb` |
+| "Learn" in the org nav and the footer | The questions arrive while somebody is looking at their own storefront. The nav link carries the venture slug. | `app/helpers/events_helper.rb`, `app/views/application/_footer.html.erb` |
+
+### One lesson branches on the structural flag
+
+`what-fuime-takes` describes merchant-of-record and Connect
+differently, because the two models pay differently and a page describing the wrong
+one is worse than no page. The suite clears the flag per example, so the
+merchant-of-record halves — **the ones production runs** — are covered by
+`:merchant_of_record`-tagged examples rather than being rendered by nothing.
+
+### The worked example, and why it is allowed to contain figures
+
+`the-numbers` carries a fictional operator's costs and a price she picked. The
+§8.3 D2 rule forbids Fuime **suggesting** a rate; it does not forbid arithmetic,
+and a break-even lesson with no numbers in it teaches nothing. The example is
+labelled as an illustration, the figures are costs rather than rates, and the
+suggested-rate patterns in `spec/requests/learn_spec.rb` are written to catch
+advice ("most people charge about X") rather than digits.
+
+Specs: `spec/requests/learn_spec.rb` (22 examples), `spec/lib/fuime/playbook_spec.rb`
+(6), plus 8 added to `spec/lib/fuime/service_catalog_spec.rb`.
+
+## 2026-08-20 — The application funnel, end to end
+
+Six deferrals landed in the application flow (phone, birthday, street address,
+the videos step, the agreement step, the guardian gate) without the surfaces
+that *report* on those fields following them. The gap showed up in one place:
+the review page, which is the last thing a founder sees before Submit.
+
+| Change | Why | Files |
+|---|---|---|
+| `_summary` no longer renders phone, birthday, street, city, state or zip as **Missing** | These six moved to the payout seam or were dropped outright, so the summary printed five to six red "Missing" labels next to a Submit button that was enabled and correct — telling every founder their finished application was broken. Address rows still render when a value exists (pre-change submissions, and anyone who has since supplied one), as a single formatted "Payout address" block. | `app/views/event/applications/_summary.html.erb` |
+| Birthday row → an **Age** row reading the attestation | `user.birthday` is blank for everybody who came through the current flow. Now reads the same either-source test as `#submission_blockers`. | same |
+| Parent email block keyed on `minor_or_unknown_age?`, not `is_minor?` | `is_minor?` is nil without a date of birth, so the block hid the parent's email from exactly the founders it exists for — while `required_submission_fields` (which uses the fail-closed twin) listed it as a blocker. The review page named a missing field and refused to show it. Fourth site of this same fix. | same |
+| Business type added to the summary, with its own Edit link | `starting_point`/`service_type` are the first questions asked and the source of `business_category` — what `Fuime::OperatorEligibility` reads to decide whether the venture may sell at all. They appeared nowhere on the page whose job is checking answers. | same |
+| `@application` → the `application` local (3 sites) | The partial declares `locals: (application:, allow_edits: false)` and then read the ivar anyway. Correct only by coincidence of every caller naming it the same. | same |
+| The "Sign the Fuime agreement" step is guarded on `Event::Plan::Standard#contract_available?` | With `FUIME_DOCUSEAL_TEMPLATE_ID` unset — the current state, and why `#agreement` redirects away and `#send_contract` returns nil — every teen-led applicant was shown a signing step for an agreement that never arrived. It also poisoned the step below it: `contract_signed` is nil without a contract, so an approved teenager's "Await review" never completed and the progress bar sat unfinished on a finished application. | `app/controllers/event/applications_controller.rb` |
+| `completion_percentage` keyed on the same conditions as `next_step`, not on its return strings | It matched four founder-facing sentences literally, so renaming one silently dropped that stage to 0% and sent the progress bar backwards with nothing failing. Copy is edited far more often than logic and should never have been load-bearing. Behaviour is unchanged at every stage. | `app/models/event/application.rb` |
+| "What you can sell today" replaces "Services first" | The card told founders digital downloads were "coming later" after `ELIGIBLE_CATEGORIES` gained `digital` and the catalog gained three templates resolving to it. Copy that closes a door the app has opened is the same L8 failure as copy that opens one the app has closed. Physical goods and food really are still shut, so they stay named. | `app/views/event/applications/business_type.html.erb` |
+| `/learn` linked from inside the funnel | The templates existed behind the sign-up, surfaced at the moment somebody must answer "what is your business" — the worst possible moment to read them first. Now: the apply intro (before the under-18 question), the business-type info pane, and a per-service "Read the full template" link under each checklist. All `target="_blank"`, so a part-filled application is never lost. | `_begin.html.erb`, `business_type.html.erb` |
+| Copy: "organization" → "business", "Start spending" → "Start selling" | HCB-era vocabulary on the index, the status page and `next_step`, in a flow that otherwise consistently says *business*. | `index.html.erb`, `show.html.erb`, `application.rb`, `applications_controller.rb` |
+
+The final "Start selling!" step stays `completed: false` deliberately:
+`show.html.erb` renders that step's CTA inside `unless step[:completed]`, so
+marking it done on activation would hide the link to the venture it just created.
+
+**Not changed:** the optional "Payout address" block on `edit.html.erb`. That is
+the admin-facing form, and an operator supplying an address later writes into
+those same columns rather than a second copy of them.

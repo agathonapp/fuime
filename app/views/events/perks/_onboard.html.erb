@@ -1,6 +1,9 @@
 <%# locals: (event:) %>
 
-<% if event.robotics_team? || event.affiliations.robotics.any? %>
+<%# Fuime: the `affiliations.robotics` half of this condition is gone with the
+    affiliation picker — no venture can acquire a FIRST or VEX affiliation any
+    more, so it could only ever match legacy rows. The EventTag remains. %>
+<% if event.robotics_team? %>
   <div class="card pb0 mb3 promo-onboard" id="bin">
     <div class="card__banner card__banner--top flex justify-between items-center">
       <h3 class="h1 py-4 my0 flex items-start smoke justify-center">

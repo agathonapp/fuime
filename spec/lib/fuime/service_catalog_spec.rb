@@ -6,11 +6,16 @@ require "rails_helper"
 # being helpful.
 RSpec.describe Fuime::ServiceCatalog do
   describe "the catalog" do
+    # `digital` was opened on 2026-08-20; `crafts`, `food` and `other` are still
+    # closed. The assertion is against the eligibility list rather than a literal,
+    # so closing a category makes this fail loudly instead of leaving templates on
+    # /learn for something nobody can sell.
     it "offers only categories a venture can actually sell under today" do
       categories = described_class.services.map(&:category).uniq
 
-      expect(categories).to eq(["services"])
+      expect(categories).to contain_exactly("services", "digital")
       expect(categories - Event::BUSINESS_CATEGORIES).to be_empty
+      expect(categories - Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES).to be_empty
     end
 
     it "keeps every service key unique" do
@@ -74,6 +79,37 @@ RSpec.describe Fuime::ServiceCatalog do
       end
     end
 
+    # The /learn fields, where the pressure now lands hardest: an offer is a name
+    # AND a price everywhere else in the product, so an idea carrying only the
+    # name looks unfinished. It is not unfinished — it is the half Fuime is
+    # allowed to write. See the class header.
+    it "never puts one in an offer idea, a customer source, or a warning" do
+      described_class.services.each do |service|
+        copy = Array(service.offer_ideas).flat_map { |idea| [idea[:name], idea[:unit_label]] } +
+               Array(service.first_customers) + Array(service.watch_out)
+
+        copy.compact.each do |line|
+          price_shaped.each do |pattern|
+            expect(line).not_to match(pattern), "#{service.key} suggests a price: #{line.inspect}"
+          end
+        end
+      end
+    end
+
+    # A price cannot arrive through the pre-fill link either. `offer_ideas` is
+    # rendered into a query string that opens the new-offer form, and
+    # Fuime::OffersController::PREFILLABLE is what decides which keys survive —
+    # so an idea growing a `price:` key must fail here rather than quietly
+    # becoming a Fuime-written number in an operator's price box.
+    it "carries no key the offer form would accept as a price" do
+      described_class.services.each do |service|
+        Array(service.offer_ideas).each do |idea|
+          expect(idea.keys).to contain_exactly(:name, :unit_label),
+                               "#{service.key} has an offer idea with unexpected keys: #{idea.keys.inspect}"
+        end
+      end
+    end
+
     # The positive half — the checklists should actively tell an operator the
     # number is theirs. Without this, "no price" could be satisfied by saying
     # nothing at all, which leaves a 16-year-old with no idea it is their call.
@@ -82,6 +118,84 @@ RSpec.describe Fuime::ServiceCatalog do
         expect(service.checklist.join(" ")).to match(/your own rate/i),
                                                "#{service.key} never says the rate is the operator's"
       end
+    end
+  end
+
+  # ── The /learn half of a template ─────────────────────────────────────────
+  #
+  # These three fields are what makes a catalog entry a browsable starter
+  # template rather than a dropdown option (LearnController). They are optional
+  # at the struct level so a service added without them degrades to a shorter
+  # page — but every service that ships today has them, and this is what says so.
+  describe "every template is worth opening" do
+    it "lists things to sell, as a name and a unit and nothing else" do
+      described_class.services.each do |service|
+        expect(service.offer_ideas).to be_present, "#{service.key} has nothing to list"
+
+        service.offer_ideas.each do |idea|
+          expect(idea[:name]).to be_present
+          expect(idea[:name].length).to be <= Fuime::Offer::MAX_NAME_LENGTH
+          expect(idea[:unit_label].to_s.length).to be <= Fuime::Offer::MAX_UNIT_LABEL_LENGTH
+        end
+      end
+    end
+
+    it "says where the first customers come from" do
+      described_class.services.each do |service|
+        expect(service.first_customers).to be_present, "#{service.key} has no customer sources"
+        expect(service.first_customers.length).to be >= 3
+      end
+    end
+
+    it "says what goes wrong in that particular trade" do
+      described_class.services.each do |service|
+        expect(service.watch_out).to be_present, "#{service.key} has no warnings"
+        expect(service.watch_out.length).to be >= 3
+      end
+    end
+
+  end
+
+  # ── The thing Fuime cannot do, asserted so no template promises it ────────
+  #
+  # `Fuime::Offer` has no recurring concept and merchant-of-record checkout is
+  # `mode: "payment"`. An operator can sell access to software; they cannot bill
+  # a customer monthly for it. A template saying otherwise would be describing a
+  # product that does not exist, which is the L8 failure exactly.
+  #
+  # When recurring billing ships, these two examples fail. That is the intended
+  # behaviour: somebody has to come back and rewrite the copy, rather than the
+  # copy silently having been wrong and then silently becoming right.
+  describe "no template offers to bill a customer monthly" do
+    # The line is automatic renewal, not the word "month". Selling a month of
+    # something for a single up-front payment is fine and is how a prepaid block
+    # already works ("Block of four sessions"). What Fuime cannot do is charge
+    # the customer again by itself, so that is what the copy may not promise.
+    #
+    # This started life as a blanket ban on "per month" and immediately caught
+    # `lawn_and_garden` offering "Weekly mow through the season, per month" —
+    # which was a real problem in the copy rather than a false positive, and is
+    # now "A month of weekly mows, paid up front".
+    it "lists nothing that renews itself" do
+      described_class.services.each do |service|
+        Array(service.offer_ideas).each do |idea|
+          text = "#{idea[:name]} #{idea[:unit_label]}"
+
+          expect(text).not_to match(/subscription|recurring|auto.?renew|billed monthly|every month/i),
+                              "#{service.key} lists a recurring charge Fuime cannot bill: #{text.inspect}"
+        end
+
+        expect(service.description_prompt).not_to match(/subscription|recurring|auto.?renew/i)
+      end
+    end
+
+    # The positive half. "Nothing promises a subscription" is satisfied by saying
+    # nothing at all, which leaves somebody building a SaaS product and finding
+    # out at launch. The template most likely to assume monthly billing says so.
+    it "warns the one template that would otherwise assume it" do
+      web_apps = described_class.find("web_apps")
+
+      expect(web_apps.watch_out.join(" ")).to match(/cannot charge your customers monthly/i)
     end
   end
 
@@ -110,9 +224,18 @@ RSpec.describe Fuime::ServiceCatalog do
     # later should be able to widen the catalog without also widening the picker
     # on the same commit.
     it "narrows when the eligible categories narrow" do
-      stub_const("Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES", %w[digital].freeze)
+      # `food` rather than `digital`: digital became sellable on 2026-08-20 and
+      # four templates now resolve to it, so it is no longer the empty case.
+      stub_const("Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES", %w[food].freeze)
 
       expect(described_class.sellable).to be_empty
+    end
+
+    it "drops the software templates if digital ever closes again" do
+      stub_const("Fuime::OperatorEligibility::ELIGIBLE_CATEGORIES", %w[services].freeze)
+
+      expect(described_class.sellable.map(&:key)).not_to include("web_apps", "digital_downloads")
+      expect(described_class.sellable).not_to be_empty
     end
   end
 

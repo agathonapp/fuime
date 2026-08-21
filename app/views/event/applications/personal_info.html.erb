@@ -14,7 +14,13 @@
 <% end %>
 
 <%= form_with model: @application, url: application_path(@application), method: :patch, id: "edit_application_#{@application.id}", class: "mt-7", data: { action: "input->application-autosave#save", "application-autosave-target": "form" } do |form| %>
-  <div class="card mb-6" x-data="{ minor: <%= @application.user.is_minor? || false %>, country: '<%= @application.address_country.presence %>', disallowed_countries: '<%= Event::Application::DISALLOWED_COUNTRIES.join(",") %>'.split(',') }">
+<%# Fuime: `minor` is no longer derived from a birthday the form stops asking for.
+    It reads #minor_or_unknown_age?, which is the SAME fail-closed test
+    Event::Application#required_submission_fields uses to decide whether
+    cosigner_email is required — so the field the founder sees and the field the
+    model demands can no longer disagree. A checkbox-only applicant is treated as
+    a minor, which is the correct default for a platform whose users are teens. %>
+  <div class="card mb-6" x-data="{ minor: <%= @application.user.minor_or_unknown_age? || false %>, country: '<%= @application.address_country.presence %>', disallowed_countries: '<%= Event::Application::DISALLOWED_COUNTRIES.join(",") %>'.split(',') }">
     <div class="md:flex items-end gap-2">
       <div class="field flex-1">
         <%= form.label :full_name do %>
@@ -28,36 +34,36 @@
       </div>
     </div>
 
-    <div class="md:flex items-end gap-2">
-      <div class="field flex-1">
-        <%= form.label :phone_number do %>
-          Mobile phone number <span class="text-primary">*</span>
-        <% end %>
+    <%# Fuime: the mobile phone field is gone.
+        Nothing in the application, the contract or Connect onboarding reads it —
+        it was an HCB inheritance, and it is one more required field between a
+        teenager and finding out whether anyone will buy their thing. Stripe
+        collects a phone number itself where KYC actually needs one.
 
-        <%= form.hidden_field :phone_number, value: @application.user.phone_number.presence, required: true, placeholder: "555-555-5555", id: "phone_number" %>
-        <input type="tel" id="phone_raw" style="max-width:100%;" value="<%= @application.user.phone_number.presence %>" autocomplete="on" required>
-      </div>
-      <div class="field flex-1">
+        The birthday date-select is gone too, replaced by the confirmation the
+        controller has accepted since AddAgeAttestationToUsers. The view was the
+        stale half of that change: #update already routes the answer through
+        #attest_minor_13_plus! and `:birthday` is already dropped from
+        `user_params`, so this select had been submitting a field nothing read.
+
+        Deliberately NOT a date of birth: an exact age is only needed where a
+        floor above 13 applies, and Fuime::OperatorEligibility says so in the one
+        sentence it shows the founder if that ever becomes true again. %>
+    <% unless @application.user.age_attestation.present? || @application.user.birthday.present? %>
+      <div class="field">
         <div class="inline-flex items-center justify-between w-full gap-1">
-          <%= form.label :birthday do %>
-            Birthday <span class="text-primary">*</span>
-          <% end %>
-          <div class="info tooltipped tooltipped--w h-[18px]" aria-label="We collect user birthdays because we work with financials and have a responsibility to know our users. We also work with teenagers and need to know which users are under 18 as there are certain laws that protect them.">
+          <%= form.label :age_attestation_confirmed, "Your age" %>
+          <div class="info tooltipped tooltipped--w h-[18px]" aria-label="Fuime works with money, so we need to know whether you're a minor — that's what decides if a parent or guardian has to be on the account. We don't need your exact birthday for that.">
             <%= inline_icon "info", size: 18 %>
           </div>
         </div>
-        <div class="flex gap-2 onboarding" x-on:change="minor = new Date() - new Date([...$el.children].map(c => c.selectedOptions[0].label).join(' ')) < 568_025_136_000">
-          <%= form.date_select :birthday,
-                                { start_year: Date.today.year,
-                                  end_year: Date.today.year - 100,
-                                  order: [:month, :day, :year],
-                                  prompt: @application.user.birthday.nil?,
-                                  default: @application.user.birthday.presence
-                                },
-                                { required: true } %>
+        <div class="flex items-center gap-2">
+          <%= check_box_tag "event_application[age_attestation_confirmed]", "1", false,
+                            id: "event_application_age_attestation_confirmed", required: true %>
+          <%= label_tag "event_application_age_attestation_confirmed", "I'm 13 or older" %>
         </div>
       </div>
-    </div>
+    <% end %>
 
     <% if @application.user.applications.many? || @application.user.events.any? %>
       <div class="mt-[-0.25rem] mb-4 rounded-b-lg h-2 border-solid border-smoke dark:border-slate border-t-0 w-full relative">
@@ -67,34 +73,20 @@
 
     <hr class="col-span-2 mt-2 invisible mb-4">
 
-    <%= form.label :address_line1 do %>
-      Street address <span class="text-primary">*</span>
-    <% end %>
+    <%# Fuime: street, city, state and zip moved to the payout flow.
+        Country stays, and stays required, because it is not really an address
+        question — it is the sanctions/unsupported-country gate. DISALLOWED_COUNTRIES
+        is checked here, in #submission_blockers and again in
+        #application_ready_to_submit?, and dropping the field would silently
+        disable all three (`nil.in?(array)` is false, so every application would
+        pass). One dropdown is the cheapest way to keep that control honest.
+
+        The rest is asked at the payout seam instead, which is where it is first
+        genuinely needed — a payee, a 1099, a Connect account — and which is the
+        principle CreateFuimePayoutMethods already applies to the guardian:
+        ask for the paperwork at the moment the paperwork matters, not before a
+        business has earned anything. %>
     <div class="grid grid-cols-2 gap-3 mb-2">
-      <div class="field mb-0">
-        <%= form.text_field :address_line1, placeholder: "8605 Santa Monica Blvd", required: true %>
-      </div>
-      <div class="field mb-0">
-        <%= form.text_field :address_line2, placeholder: "Suite 86294" %>
-      </div>
-      <div class="field mb-0">
-        <%= form.label :address_city do %>
-          City <span class="text-primary">*</span>
-        <% end %>
-        <%= form.text_field :address_city, placeholder: "West Hollywood", required: true %>
-      </div>
-      <div class="field mb-0">
-        <%= form.label :address_state do %>
-          State <span class="text-primary">*</span>
-        <% end %>
-        <%= form.text_field :address_state, placeholder: "CA", required: true %>
-      </div>
-      <div class="field mb-0">
-        <%= form.label :address_postal_code do %>
-          Zip code <span class="text-primary">*</span>
-        <% end %>
-        <%= form.text_field :address_postal_code, placeholder: "90069", required: true %>
-      </div>
       <div class="field mb-0">
         <%= form.label :address_country do %>
           Country <span class="text-primary">*</span>
@@ -134,9 +126,9 @@
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js" integrity="sha512-QMUqEPmhXq1f3DnAVdXvu40C8nbTgxvBGvNruP6RFacy3zWKbNTmx7rdQVVM2gkd2auCWhlPYtcW2tHwzso4SA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css" integrity="sha512-gxWow8Mo6q6pLa1XH/CcH8JyiSDEtiwJV78E+D+QP0EVasFs8wKXq16G8CLD4CJ2SnonHr4Lm/yY2fSI2+cbmw==" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <%= javascript_include_tag "phone_input.js" %>
+  <%# Fuime: intl-tel-input and phone_input.js dropped with the phone field —
+      they existed only to format it. Also removes the last two third-party CDN
+      script tags from this page. %>
 <% end %>
 
 <% content_for :footer do %>
