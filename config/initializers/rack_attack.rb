@@ -254,7 +254,7 @@ class Rack::Attack
   # 20 in 5 minutes is far above a real buyer — who starts one checkout, maybe
   # retries once — and low enough that automation hits it in seconds.
   throttle("fuime/checkout/ip", limit: 20, period: 5.minutes) do |req|
-    req.ip if req.post? && req.path.match?(%r{\A/b/[^/]+/pay\z})
+    req.ip if req.post? && req.path.match?(/\A\/b\/[^\/]+\/pay\z/)
   end
 
   # Fuime: inviting a guardian.
@@ -295,6 +295,7 @@ class Rack::Attack
       Digest::SHA256.hexdigest(presented) if presented.present?
     end
   end
+
 end
 
 # Fuime: on in staging too.

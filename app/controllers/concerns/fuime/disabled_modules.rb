@@ -56,7 +56,7 @@ module Fuime
       # product statement rather than a licensing one and no partner bank changes
       # it.
       "donations",
-      "donation",      # namespace
+      "donation", # namespace
       "recurring_donations",
 
       # FUIME 2026-08-20: invoices, and this one is a MONEY-CORRECTNESS decision
@@ -84,7 +84,7 @@ module Fuime
       # capability open on a different path — asserted by disabled_modules_spec.
       "api/v4/invoices",
       "card_grants",
-      "card_grant",    # namespace
+      "card_grant", # namespace
 
       # Google Workspace provisioning for fiscally-sponsored orgs.
       "g_suite",

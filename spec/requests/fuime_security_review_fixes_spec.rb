@@ -38,19 +38,26 @@ RSpec.describe "Security review fixes (2026-08-20)", type: :request do
     let(:event) { create(:event, is_public: true) }
 
     # Every predicate that was aliased to, or copied, `show?`.
-    LEDGER_QUERIES = %i[
-      show? transactions? transactions_list? team? balance_transactions?
-      money_movement? users_chart? stats? balance_by_date? statements?
-      async_balance? transaction_heatmap?
-    ].freeze
+    #
+    # A `let` rather than a constant: a constant defined inside a describe block
+    # leaks into the enclosing namespace for the whole suite, so two specs that
+    # each name their own LEDGER_QUERIES would silently share whichever loaded
+    # last (Lint/ConstantDefinitionInBlock).
+    let(:ledger_queries) do
+      %i[
+        show? transactions? transactions_list? team? balance_transactions?
+        money_movement? users_chart? stats? balance_by_date? statements?
+        async_balance? transaction_heatmap?
+      ]
+    end
 
     it "keeps the books private from a stranger even with the storefront on" do
       policy = EventPolicy.new(nil, event)
 
-      LEDGER_QUERIES.each do |query|
+      ledger_queries.each do |query|
         expect(policy.public_send(query)).to be(false),
-                                            "expected #{query} to be private for a signed-out visitor, " \
-                                            "but a public storefront still granted it"
+          "expected #{query} to be private for a signed-out visitor, " \
+          "but a public storefront still granted it"
       end
     end
 
@@ -59,7 +66,7 @@ RSpec.describe "Security review fixes (2026-08-20)", type: :request do
       create(:organizer_position, event:, user: member, role: :member)
 
       policy = EventPolicy.new(member, event)
-      LEDGER_QUERIES.each do |query|
+      ledger_queries.each do |query|
         expect(policy.public_send(query)).to be(true), "expected #{query} to stay readable by a member"
       end
     end
