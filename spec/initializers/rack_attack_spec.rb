@@ -19,8 +19,8 @@ RSpec.describe Rack::Attack, type: :request do
     end
   end
 
-  def discriminator(throttle, path, session_token: nil)
-    env = Rack::MockRequest.env_for(path, "REMOTE_ADDR" => "203.0.113.7")
+  def discriminator(throttle, path, session_token: nil, method: "GET")
+    env = Rack::MockRequest.env_for(path, "REMOTE_ADDR" => "203.0.113.7", method: method)
     env["HTTP_COOKIE"] = "session_token=#{session_token}" if session_token
     Rack::Attack.throttles.fetch(throttle).block.call(Rack::Attack::Request.new(env))
   end
@@ -158,6 +158,45 @@ RSpec.describe Rack::Attack, type: :request do
         get "/an-organization/transactions_list", headers: forged
         expect(response).to have_http_status(:too_many_requests)
       end
+    end
+  end
+
+  # Public, unauthenticated, and every request creates a Stripe PaymentIntent.
+  # The matcher has to be the real storefront-pay route — a wrong path here is
+  # an unthrottled card-testing hole, not a missed log line.
+  describe "fuime/checkout/ip" do
+    it "throttles POST to the storefront pay path" do
+      expect(discriminator("fuime/checkout/ip", "/b/sunset-lawn-care/pay", method: "POST")).to eq("203.0.113.7")
+    end
+
+    it "covers the format suffix Rails adds to every route" do
+      expect(discriminator("fuime/checkout/ip", "/b/sunset-lawn-care/pay.json", method: "POST")).to eq("203.0.113.7")
+    end
+
+    it "does not throttle GET, the storefront itself, or Stripe webhooks" do
+      expect(discriminator("fuime/checkout/ip", "/b/sunset-lawn-care/pay")).to be_nil
+      expect(discriminator("fuime/checkout/ip", "/b/sunset-lawn-care", method: "POST")).to be_nil
+      expect(discriminator("fuime/checkout/ip", "/fuime/webhooks/stripe", method: "POST")).to be_nil
+      expect(discriminator("fuime/checkout/ip", "/fuime/webhooks/stripe/connect", method: "POST")).to be_nil
+      expect(discriminator("fuime/checkout/ip", "/stripe/webhook", method: "POST")).to be_nil
+    end
+
+    it "keys on CF-Connecting-IP when present" do
+      env = Rack::MockRequest.env_for(
+        "/b/sunset-lawn-care/pay",
+        "REMOTE_ADDR" => "172.67.164.168",
+        method: "POST"
+      )
+      env["HTTP_CF_CONNECTING_IP"] = "203.0.113.7"
+      expect(
+        Rack::Attack.throttles.fetch("fuime/checkout/ip").block.call(Rack::Attack::Request.new(env))
+      ).to eq("203.0.113.7")
+    end
+
+    it "keeps the 20-per-5-minutes cap" do
+      throttle = Rack::Attack.throttles.fetch("fuime/checkout/ip")
+      expect(throttle.limit).to eq(20)
+      expect(throttle.period).to eq(5.minutes)
     end
   end
 end

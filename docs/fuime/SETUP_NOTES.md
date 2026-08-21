@@ -2,7 +2,16 @@
 
 ## Handoff (most recent first)
 
-**2026-08-20 (latest) — /learn: how to run a business, plus the starter templates.**
+**2026-08-21 (latest) — waitlist limiter fails closed; checkout throttle path.**
+
+`site/api/waitlist.js` `underRateLimit` no longer fails open. If Redis is
+configured and the limiter throws, the handler 429s and does not mail. Memory
+limiter is still used when Redis is not configured. Run
+`node test/waitlist.test.mjs` from `site/`. Checkout throttle
+`fuime/checkout/ip` still 20/5min on `POST /b/:slug/pay`; matcher now includes
+Rails' optional format suffix. Did not touch CORS/CSP/hosts/sudo-mode.
+
+**2026-08-20 — /learn: how to run a business, plus the starter templates.**
 
 The ten starter templates in `Fuime::ServiceCatalog` were only reachable from inside
 the signup flow; they are now browsable at `/learn`, extended with `offer_ideas`,

@@ -13,18 +13,25 @@ let calls = []
 const realFetch = globalThis.fetch
 
 // Enough of ioredis for this handler: multi() chains, exec() resolves to
-// ioredis' [[err, reply], ...] shape. `fail` makes exec reject (connection
-// down); `replyErr` makes it resolve with a per-command error, which is the
-// subtler shape and the one a naive implementation reports as success.
-function fakeRedis({ members = new Set(), counters = {}, fail = false, replyErr = false } = {}) {
+// ioredis' [[err, reply], ...] shape. `fail` makes a store exec reject
+// (connection down); `failLimiter` does the same for the incr+expire
+// ceiling. `replyErr` makes exec resolve with a per-command error, which
+// is the subtler shape and the one a naive implementation reports as success.
+function fakeRedis({ members = new Set(), counters = {}, fail = false, replyErr = false, failLimiter = false } = {}) {
   const r = {
     members,
     counters,
     hashes: {},
     multi() {
       const queued = []
+      // Limiter transactions are incr+expire; store transactions are sadd+hset.
+      // `fail` is the store being down, not the limiter — a store-down test
+      // must still get past the ceiling or it is testing the wrong path.
+      let sawStore = false
+      let sawLimiter = false
       const chain = {
         incr(key) {
+          sawLimiter = true
           counters[key] = (counters[key] ?? 0) + 1
           queued.push(counters[key])
           return chain
@@ -34,18 +41,21 @@ function fakeRedis({ members = new Set(), counters = {}, fail = false, replyErr 
           return chain
         },
         sadd(_key, member) {
+          sawStore = true
           const isNew = !members.has(member)
           members.add(member)
           queued.push(isNew ? 1 : 0)
           return chain
         },
         hset(key, obj) {
+          sawStore = true
           r.hashes[key] = obj
           queued.push(1)
           return chain
         },
         async exec() {
-          if (fail) throw new Error('connection refused')
+          if (failLimiter && sawLimiter) throw new Error('connection refused')
+          if (fail && sawStore) throw new Error('connection refused')
           if (replyErr) return queued.map(() => [new Error('READONLY'), null])
           return queued.map(v => [null, v])
         },
@@ -319,28 +329,39 @@ results.push(
 )
 
 results.push(
-  await run('rate limiter failing open still accepts the signup', async () => {
+  await run('rate limiter failing closed refuses the signup', async () => {
     setEnv({ WAITLIST_REDIS_URL: 'redis://x' })
-    // The limiter throws but the store works: a limiter blip must not cost a
-    // real signup.
-    const fake = fakeRedis()
-    let first = true
-    const originalMulti = fake.multi.bind(fake)
-    fake.multi = () => {
-      if (first) {
-        first = false
-        return { incr: () => ({ expire: () => ({ exec: async () => { throw new Error('down') } }) }) }
-      }
-      return originalMulti()
-    }
+    // The limiter throws but the store would work: a limiter blip must not
+    // become an unmetered write.
+    const fake = fakeRedis({ failLimiter: true })
     setRedis(fake)
     const res = mockRes()
     await handler(
       { method: 'POST', headers: { 'x-forwarded-for': '7.7.7.7' }, body: { email: 'ok@b.com' } },
       res
     )
-    assert.equal(res.statusCode, 200)
-    assert.equal(fake.members.has('ok@b.com'), true)
+    assert.equal(res.statusCode, 429)
+    assert.equal(res.payload.error, 'rate_limited')
+    assert.equal(fake.members.has('ok@b.com'), false)
+  })
+)
+
+results.push(
+  await run('a Redis limiter error does not send mail', async () => {
+    setEnv({ WAITLIST_REDIS_URL: 'redis://x', RESEND_API_KEY: 'k', WAITLIST_NOTIFY_TO: 'a@b.com' })
+    // The hole: Redis configured, limiter throws, Resend still wired. Fail
+    // open plus "mail anyway when the store errors" is an open mail relay.
+    const fake = fakeRedis({ failLimiter: true })
+    setRedis(fake)
+    stubResend()
+    const res = mockRes()
+    await handler(
+      { method: 'POST', headers: { 'x-forwarded-for': '8.8.8.8' }, body: { email: 'relay@b.com' } },
+      res
+    )
+    assert.equal(res.statusCode, 429)
+    assert.equal(calls.length, 0, 'a limiter blip plus Resend must not become a mail relay')
+    assert.equal(fake.members.has('relay@b.com'), false)
   })
 )
 

@@ -5464,3 +5464,15 @@ marking it done on activation would hide the link to the venture it just created
 **Not changed:** the optional "Payout address" block on `edit.html.erb`. That is
 the admin-facing form, and an operator supplying an address later writes into
 those same columns rather than a second copy of them.
+
+## 2026-08-21 — Fail-closed waitlist limiter; checkout throttle matches the real route
+
+Two public money/mail edges. Neither touches CORS, CSP, hosts, sudo-mode, or
+payment custody.
+
+| Change | Why | Files |
+|---|---|---|
+| `underRateLimit` fails CLOSED | Catch used to return `true`. A Redis blip plus Resend still configured mailed anyway (`isNew` is truthy on `storeErr`), which is an open mail relay. Redis configured + limiter throw now 429s and does not send. In-process memory limiter unchanged when Redis is not configured. | `site/api/waitlist.js` |
+| Waitlist coverage for limiter-error-does-not-mail | Existing store-down-still-mails tests stay; the fake's `fail` is store-only so they keep testing that path. New case: Redis limiter throw + Resend wired → 429, zero mail. | `site/test/waitlist.test.mjs` |
+| Checkout throttle matcher accepts Rails `(.:format)` | The rule already keyed `POST /b/:slug/pay` at 20/5min via `client_ip`. The exact-path regex missed `/b/slug/pay.json`, which Rails routes to the same action. Webhook paths and CF-Connecting-IP handling unchanged. | `config/initializers/rack_attack.rb` |
+| Rack::Attack spec for the checkout throttle | Asserts the real storefront-pay path, the format suffix, that webhooks are ignored, and that the key is `CF-Connecting-IP` when present. | `spec/initializers/rack_attack_spec.rb` |

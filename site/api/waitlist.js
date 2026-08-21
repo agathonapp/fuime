@@ -147,9 +147,11 @@ export function setRedis(c) {
   clientResolved = c !== null && c !== undefined
 }
 
-// Fails OPEN: if the limiter itself errors we take the signup rather than
-// lose a real one to a store blip. The isNew gate below is the backstop that
-// keeps a flood from becoming a mailstorm even when this is unavailable.
+// Fails CLOSED: if the limiter itself errors we refuse the signup rather than
+// become an open mail relay. A Redis blip plus Resend still configured used
+// to take the request (catch returned true). The isNew gate is not a backstop
+// when the store is also down — that path mails anyway, which is the hole.
+// Refusing is the only ceiling that still holds.
 async function underRateLimit(redis, ip) {
   if (!ip) return true
   const key = `fuime:waitlist:rl:${ip}`
@@ -160,8 +162,9 @@ async function underRateLimit(redis, ip) {
       .expire(key, RATE_WINDOW_S, 'NX')
       .exec()
     return Number(n ?? 0) <= RATE_MAX
-  } catch {
-    return true
+  } catch (e) {
+    console.error('waitlist limiter failed:', e?.message ?? e)
+    return false
   }
 }
 
