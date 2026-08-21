@@ -82,6 +82,104 @@ RSpec.describe Event::ApplicationsController, type: :controller do
     end
   end
 
+  # Fuime: the outage of 2026-08-21 — activation 500ing instead of explaining.
+  #
+  # `activate_event!` deliberately refuses four ordinary situations, and
+  # `admin_activate` rescued none of them, so the commonest one of all — the
+  # applicant already has their one free venture, which is every account anybody
+  # has tested the funnel on — reached the operator as the generic error page
+  # with a reference code and no reason.
+  #
+  # Asserts the hole is closed on the real controller action rather than that a
+  # guard method exists, per the rule in fuime_security_review_fixes_spec.
+  describe "POST #admin_activate when activation is not possible" do
+    let(:founder) { create(:user, birthday: 16.years.ago.to_date) }
+
+    let(:application) do
+      create(:event_application, user: founder, teen_led: true, description: "Prints").tap do |app|
+        app.update!(aasm_state: :approved, address_country: "US")
+      end
+    end
+
+    # The free plan includes one venture. Giving the founder one makes the
+    # second application unactivatable — the exact case that 500'd.
+    # `create(:organizer_position, ...)` is how the rest of the suite attaches a
+    # user to a venture, and it is what User#events reads through.
+    before { create(:organizer_position, event: create(:event), user: founder) }
+
+    it "reports the reason instead of raising" do
+      expect(application.activation_blockers).to include(a_string_matching(/free plan includes one venture/))
+
+      expect {
+        post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
+      }.not_to raise_error
+
+      expect(response).to redirect_to(submission_application_path(application))
+      expect(flash[:error]).to match(/free plan includes one venture/)
+    end
+
+    it "does not create a business" do
+      expect {
+        post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
+      }.not_to change { Event.count }
+
+      expect(application.reload.event).to be_nil
+    end
+
+    # The blocker list and the raise must not drift: the view promises a button
+    # will work based on the first, and the second is what actually decides.
+    it "keeps #activation_blockers and #activate_event! in agreement" do
+      expect(application.activation_blockers).to be_present
+
+      expect {
+        application.activate_event!(risk_level: 0, point_of_contact: admin)
+      }.to raise_error(ArgumentError, /free plan includes one venture/)
+    end
+
+    # Fuime: the asymmetry that actually broke activation for a superadmin.
+    # `staff?` covers superadmin and exempted them from the guardian gate, but
+    # nothing exempted them from the one-venture free-plan limit — a commercial
+    # rule about families that a Fuime admin is not subject to.
+    it "exempts a staff account from the free-plan venture limit" do
+      staff = create(:user, :make_admin)
+      create(:organizer_position, event: create(:event), user: staff)
+      expect(staff.venture_slot_available?).to be false
+
+      staff_app = create(:event_application, user: staff, teen_led: true, description: "Demo").tap do |app|
+        app.update!(aasm_state: :approved, address_country: "US")
+      end
+
+      expect(staff_app.activation_blockers).to be_empty
+    end
+
+    # ...but an admin who has asked to be treated as an ordinary user still is.
+    it "still applies the limit to an admin pretending not to be one" do
+      staff = create(:user, :make_admin)
+      create(:organizer_position, event: create(:event), user: staff)
+      staff.update!(pretend_is_not_admin: true)
+
+      pretending = create(:event_application, user: staff.reload, teen_led: true, description: "Demo").tap do |app|
+        app.update!(aasm_state: :approved, address_country: "US")
+      end
+
+      expect(pretending.activation_blockers).to include(a_string_matching(/free plan includes one venture/))
+    end
+
+    # The mirror case, on a founder who has NOT used their free slot, so the
+    # guard is shown to block the right thing rather than everything.
+    it "still activates a founder whose first venture this is" do
+      first_timer = create(:user, birthday: 16.years.ago.to_date)
+      unblocked = create(:event_application, user: first_timer, teen_led: true, description: "Prints").tap do |app|
+        app.update!(aasm_state: :approved, address_country: "US")
+      end
+      expect(unblocked.activation_blockers).to be_empty
+
+      expect {
+        post :admin_activate, params: { id: unblocked.to_param, risk_level: "zero" }
+      }.to change { Event.count }.by(1)
+    end
+  end
+
   describe "Event::Application#next_step" do
     # The application card renders `next_step`, falling back to "We're reviewing
     # your application" when it returns nil. Approved-but-not-yet-activated hit

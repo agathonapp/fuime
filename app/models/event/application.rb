@@ -511,6 +511,74 @@ class Event
       update!(last_viewed_at: Time.current, last_page_viewed:)
     end
 
+    # Why activation would refuse, in words an operator can act on.
+    #
+    # ── Why this exists ─────────────────────────────────────────────────────
+    #
+    # Every refusal below used to live only as a `raise` inside #activate_event!,
+    # and ApplicationsController#admin_activate rescues nothing — so the ordinary,
+    # expected cases (this founder already has their one free venture; their
+    # parent has not accepted yet) reached the admin as a 500 error page with a
+    # reference code and no reason. The model was right to refuse and the operator
+    # had no way to learn what to fix.
+    #
+    # Same shape as #submission_blockers, for the same reason: a boolean cannot
+    # tell anyone what to do about it.
+    #
+    # #activate_event! raises FROM this list rather than repeating the conditions,
+    # so the two can never disagree about what blocks activation — the drift that
+    # `submission_blockers` and `ready_to_submit?` have a spec to prevent.
+    #
+    # Deliberately does NOT sync the contract with DocuSeal: this is a read, called
+    # to render a page, and a network round-trip per page view is not something a
+    # predicate should do. #activate_event! syncs first and then asks, so the
+    # authoritative check still sees fresh signature state.
+    def activation_blockers
+      blockers = []
+
+      blockers << "this application already has a business" if event.present?
+
+      if contract.present? && !contract.signed?
+        blockers << "the contract must be signed before activation"
+      end
+
+      # Under merchant-of-record the guardian requirement moves to the payout
+      # seam; see the note in #activate_event! below.
+      if !::Fuime::Features.merchant_of_record? &&
+         user.minor_or_unknown_age? && !user.has_active_guardian? &&
+         !user.institutionally_vouched_for? && !user.staff?
+        blockers << "#{user.email} is a minor with no active guardian — their " \
+                    "parent or guardian must accept the guardianship invite first (L2)"
+      end
+
+      # Fuime: staff are exempt, which the guardian gate above already was and
+      # this one was not (2026-08-21).
+      #
+      # The asymmetry is what broke activation for a superadmin. `staff?` covers
+      # `superadmin`, so the guardian gate let them through and this one did not,
+      # and there is no staff carve-out anywhere in `venture_slot_available?` —
+      # so a Fuime admin who had already stood up one demo venture could not
+      # activate a second one, and (before the fix above) learned that from a 500.
+      #
+      # Justified rather than convenient: the one-venture limit is a COMMERCIAL
+      # rule about families on the free plan, and a staff account is not a family
+      # — nobody is going to sell them the $#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo upgrade. It is
+      # pretend-aware through `staff?`, so an admin who has switched on
+      # `pretend_is_not_admin` to test the real founder experience still hits the
+      # limit, which is the whole point of that switch.
+      #
+      # Deliberately applied HERE and not in `User#venture_slot_available?`: that
+      # predicate is also read by billing and by the family-plan banner, and
+      # widening it would quietly change what those two believe about a paid plan.
+      unless user.institutionally_vouched_for? || user.staff? || free_venture_slot_available?
+        blockers << "the free plan includes one venture and #{user.email} already " \
+                    "has one — the family plan ($#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo) " \
+                    "covers unlimited businesses"
+      end
+
+      blockers
+    end
+
     # `tags` arrives straight from `params[:tags]`, which is nil when the admin
     # selects none — the default only applies to an omitted argument, not an
     # explicit nil, so this raised `undefined method 'filter' for nil`.
@@ -519,10 +587,12 @@ class Event
       # With no Fuime agreement configured there is no contract to sign, so
       # activation proceeds on admin approval alone. Once a real template is
       # set, contracts exist again and the signed check below applies as before.
+      #
+      # Synced BEFORE #activation_blockers reads `contract.signed?`, so the check
+      # sees DocuSeal's current answer rather than a stale local one.
       if contract.present?
         contract.party(:hcb).sync_with_docuseal
         contract.reload
-        raise "Contract must be signed before activation" unless contract.signed?
       end
 
       # Fuime: THE guardian gate for the deferred-onboarding flow. Signup and
@@ -560,25 +630,20 @@ class Event
       # Under Connect the original gate stands unchanged: there the guardian owns
       # the Stripe account, so a venture without one is a venture whose owner
       # genuinely cannot act, which is the case this was written for.
-      if !::Fuime::Features.merchant_of_record? &&
-         user.minor_or_unknown_age? && !user.has_active_guardian? &&
-         !user.institutionally_vouched_for? && !user.staff?
-        raise ArgumentError,
-              "Cannot activate #{hashid}: #{user.email} is a minor with no active guardian. " \
-              "Their parent or guardian must accept the guardianship invite first (L2)."
-      end
-
+      #
       # The free tier includes ONE venture; the family plan (Pro) is unlimited.
-      # Enforced here at activation — the same seam as the guardian gate above —
-      # because this is where a venture comes into existence, and an admin
-      # reading the error knows exactly what unblocks it. School ventures never
-      # consume the slot and school students are never limited: the school's
-      # contract is per-student, not per-venture.
-      unless user.institutionally_vouched_for? || free_venture_slot_available?
-        raise ArgumentError,
-              "Cannot activate #{hashid}: the free plan includes one venture, and " \
-              "#{user.email} already has one. The family plan ($#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo) " \
-              "covers unlimited businesses."
+      # Enforced at this same seam because this is where a venture comes into
+      # existence. School ventures never consume the slot and school students are
+      # never limited: the school's contract is per-student, not per-venture.
+      #
+      # Both conditions, and the contract and already-activated ones, now live in
+      # #activation_blockers so the page that warns about them and the method that
+      # enforces them read the same list. Still ArgumentError, and the guardian
+      # text still contains "is a minor with no active guardian", which
+      # spec/requests/family_signup_flow_spec.rb matches on.
+      blockers = activation_blockers
+      if blockers.any?
+        raise ArgumentError, "Cannot activate #{hashid}: #{blockers.to_sentence}."
       end
 
       self.with_lock do

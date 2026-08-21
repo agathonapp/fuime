@@ -136,10 +136,43 @@ class Event
       redirect_back_or_to application_path(@application)
     end
 
+    # Fuime: a refusal is a message, not a 500.
+    #
+    # This rescued nothing, and Event::Application#activate_event! deliberately
+    # raises on four ordinary situations — the founder already has their one free
+    # venture, their guardian has not accepted yet, the contract is unsigned, the
+    # business already exists. Every one of those reached the operator as the
+    # generic error page with a reference code and no reason, which is
+    # indistinguishable from the product being broken. It is the case that
+    # actually happens: anybody testing the funnel activates a second venture on
+    # the same account and hits the free-plan limit.
+    #
+    # Checked before the call so the common path never raises at all, and rescued
+    # around it for the two cases a pre-flight check cannot close: a second click
+    # arriving while the first is mid-flight (the `event.present?` guard inside
+    # the lock), and DocuSeal reporting a signature state that differs from the
+    # local one after the sync.
     def admin_activate
       authorize @application
 
-      @application.activate_event!(tags: params[:tags], risk_level: params[:risk_level], point_of_contact: current_user)
+      blockers = @application.activation_blockers
+      if blockers.any?
+        flash[:error] = "Cannot activate: #{blockers.to_sentence}."
+        redirect_to submission_application_path(@application)
+        return
+      end
+
+      begin
+        @application.activate_event!(tags: params[:tags], risk_level: params[:risk_level], point_of_contact: current_user)
+      rescue ArgumentError => e
+        # Reported as handled rather than swallowed: a raise that gets past the
+        # pre-flight check is either a race or a condition nobody has modelled,
+        # and the second kind should still reach monitoring.
+        Rails.error.report(e, handled: true, context: { application: @application.hashid })
+        flash[:error] = e.message
+        redirect_to submission_application_path(@application)
+        return
+      end
 
       redirect_to event_path(@application.event), flash: { success: "Successfully activated #{@application.event.name}!" }
     end
