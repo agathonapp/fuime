@@ -204,6 +204,12 @@ try {
         'strict-origin-when-cross-origin',
         p
       )
+      const csp = r.headers.get('content-security-policy-report-only')
+      assert.ok(csp, `${p} missing CSP report-only`)
+      assert.match(csp, /default-src 'self'/, p)
+      assert.match(csp, /object-src 'none'/, p)
+      assert.match(csp, /frame-ancestors 'self'/, p)
+      assert.equal(r.headers.get('content-security-policy'), null, p)
     }
   })
 

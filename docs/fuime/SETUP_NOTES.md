@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — waitlist limiter fails closed; checkout throttle path.**
+**2026-08-21 (latest) — request-boundary hardening (CORS, CSP, config.hosts).**
+
+CORS no longer treats `Array#each` as a match; leftover HCB origins are gone;
+`resource "*"` is gone; cookies stay only on `/api/current_user`. Rails CSP is
+still report-only (`default-src 'self'` plus the Stripe/CDN hosts the app
+already loads). Production `config.hosts` is on for `app.fuime.com` /
+`fuime.com` plus `LIVE_URL_HOST` and `RENDER_EXTERNAL_HOSTNAME`; `/up` is
+excluded. Marketing site sends a report-only CSP. Waitlist and checkout
+throttling were left for Eph.
+
+**2026-08-21 — waitlist limiter fails closed; checkout throttle path.**
 
 `site/api/waitlist.js` `underRateLimit` no longer fails open. If Redis is
 configured and the limiter throws, the handler 429s and does not mail. Memory

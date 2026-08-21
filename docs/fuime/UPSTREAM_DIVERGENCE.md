@@ -5476,3 +5476,17 @@ payment custody.
 | Waitlist coverage for limiter-error-does-not-mail | Existing store-down-still-mails tests stay; the fake's `fail` is store-only so they keep testing that path. New case: Redis limiter throw + Resend wired → 429, zero mail. | `site/test/waitlist.test.mjs` |
 | Checkout throttle matcher accepts Rails `(.:format)` | The rule already keyed `POST /b/:slug/pay` at 20/5min via `client_ip`. The exact-path regex missed `/b/slug/pay.json`, which Rails routes to the same action. Webhook paths and CF-Connecting-IP handling unchanged. | `config/initializers/rack_attack.rb` |
 | Rack::Attack spec for the checkout throttle | Asserts the real storefront-pay path, the format suffix, that webhooks are ignored, and that the key is `CF-Connecting-IP` when present. | `spec/initializers/rack_attack_spec.rb` |
+
+## Request-boundary hardening — 2026-08-21
+
+Three leftover HCB request-boundary holes. One PR, no expansion into waitlist
+or checkout throttling.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| CORS `origins` uses `any?` via `Fuime::RequestBoundary.allowed_cors_origin?` | `domains.each` returned the array (always truthy), so every Origin was allowed | `config/initializers/cors.rb`, `app/lib/fuime/request_boundary.rb` |
+| CORS allowlist is Fuime only (`https://app.fuime.com`, `https://fuime.com`, localhost in local env) | Leftover HCB hosts (`hackclub.com`, `bank.engineering`, `hcb-engr.hackclub.dev`) | same |
+| Dropped `resource "*"`; `credentials: true` only on `/api/current_user` | Session cookie is only needed there; v3/v4 use bearer tokens | `config/initializers/cors.rb` |
+| CSP `default-src` tightened to `'self'`; added `connect-js.stripe.com` / `*.js.stripe.com` | Still report-only. Hosts are what `@stripe/stripe-js` and `@stripe/connect-js` already load, plus the CDNs already grepped from views | `config/initializers/content_security_policy.rb` |
+| Marketing site CSP, report-only | Same first step as Rails; Fontshare is the only third party the HTML preconnects to | `site/server.js` |
+| Production `config.hosts` from canonical Fuime hosts + `LIVE_URL_HOST` + `RENDER_EXTERNAL_HOSTNAME`; `/up` excluded | Host authorization was commented out | `config/environments/production.rb` |

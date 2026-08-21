@@ -47,10 +47,28 @@ const TYPES = {
 }
 
 // Was the "headers" block in vercel.json.
+//
+// CSP is report-only, matching the Rails app. The dive injects <style>
+// tags (fx/roll.js) and the pages ship an inline importmap, so enforcing
+// script-src/style-src without those allowances would blank the front door.
+// Fontshare is the only third party the HTML actually preconnects to.
+const MARKETING_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
+  "font-src 'self' https://cdn.fontshare.com",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'self'",
+].join('; ')
+
 function securityHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('X-Frame-Options', 'SAMEORIGIN')
+  res.setHeader('Content-Security-Policy-Report-Only', MARKETING_CSP)
 }
 
 // Was the "redirects" block. 307 and not 308 for the same reason as before: a
