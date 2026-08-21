@@ -1,6 +1,45 @@
 # frozen_string_literal: true
 
 class Rack::Attack
+  # Fuime: the real client IP, not Cloudflare's edge address.
+  #
+  # ── The outage this fixes (2026-08-21) ──────────────────────────────────────
+  #
+  # app.fuime.com is proxied through Cloudflare, with Render behind it. Rack's
+  # `Request#ip` returns the LAST untrusted entry in X-Forwarded-For, and
+  # Cloudflare appends its own edge address after the real client's — so `req.ip`
+  # on an inbound Stripe webhook was a Cloudflare IP (104.21.x / 172.67.x). It
+  # matched nothing in stripe_ips_webhooks.txt, and the blocklist below returned
+  # 403 to Stripe before Fuime::WebhooksController could verify the signature.
+  #
+  # Every live payment therefore vanished: Stripe took the money, the webhook was
+  # refused at the door, no CanonicalPendingTransaction was written, and the
+  # venture's ledger stayed empty with nothing in any log to point at. The IP
+  # allowlist file was correct and current the whole time — it was being compared
+  # against the wrong address.
+  #
+  # ── It was also breaking every throttle ─────────────────────────────────────
+  #
+  # The same `req.ip` keys `throttle("req/ip", limit: 1000, period: 5.minutes)`
+  # and the login limiters. Behind Cloudflare that is ONE bucket for the entire
+  # internet, so the general limit was a site-wide ceiling rather than a per-user
+  # one, and the brute-force limiters counted every visitor's attempts together.
+  #
+  # ── Why trusting this header is acceptable here ─────────────────────────────
+  #
+  # CF-Connecting-IP is set by Cloudflare and cannot be forged by a client whose
+  # traffic goes through Cloudflare. It CAN be forged by anything that reaches the
+  # Render origin directly, so this should be paired with restricting the origin
+  # to Cloudflare's ranges — see docs/fuime/PRODUCTION_READINESS.md.
+  #
+  # Even unpaired it is the safer of the two failure modes for the rules below:
+  # for the webhook paths the signature check is the real authentication and a
+  # spoofed IP gains an attacker nothing, and for the throttles a forgeable
+  # per-IP key is strictly better than the single shared bucket it replaces.
+  def self.client_ip(req)
+    req.get_header("HTTP_CF_CONNECTING_IP").presence || Rack::Attack.client_ip(req)
+  end
+
   ### Configure Cache ###
 
   # If you don't want to use Rails.cache (Rack::Attack's default), then
@@ -15,7 +54,7 @@ class Rack::Attack
   # Blacklist
   bad_ips = Credentials.fetch("BLOCKED_IPS")&.split(",")&.map(&:strip)
   Rack::Attack.blocklist "Block IPs from Environment Variable" do |req|
-    bad_ips&.include?(req.ip)
+    bad_ips&.include?(Rack::Attack.client_ip(req))
   end
 
   # Safelist Hack Club Office(s)
@@ -30,23 +69,23 @@ class Rack::Attack
 
   # Allow those IP addresses to send us as many webhooks as they like, but block all others
   safelist("always allow Stripe IPs to send webhooks") do |req|
-    req.post? && stripe_ips_webhooks.include?(req.ip) && req.path == "/stripe/webhook"
+    req.post? && stripe_ips_webhooks.include?(Rack::Attack.client_ip(req)) && req.path == "/stripe/webhook"
   end
 
   safelist("always allow Column IPs to send webhooks") do |req|
-    req.post? && column_ips_webhooks.include?(req.ip) && req.path == "/webhooks/column"
+    req.post? && column_ips_webhooks.include?(Rack::Attack.client_ip(req)) && req.path == "/webhooks/column"
   end
 
   blocklist("block Stripe webhooks from non-Stripe IPs") do |req|
     next false unless req.path == "/stripe/webhook"
 
-    !stripe_ips_webhooks.include?(req.ip)
+    !stripe_ips_webhooks.include?(Rack::Attack.client_ip(req))
   end
 
   blocklist("block Column webhooks from non-Column IPs") do |req|
     next false unless req.path == "/webhooks/column"
 
-    !column_ips_webhooks.include?(req.ip)
+    !column_ips_webhooks.include?(Rack::Attack.client_ip(req))
   end
 
   # Fuime: the same treatment for Fuime's OWN Stripe endpoints.
@@ -65,14 +104,14 @@ class Rack::Attack
   ].freeze
 
   safelist("always allow Stripe IPs to send Fuime webhooks") do |req|
-    req.post? && stripe_ips_webhooks.include?(req.ip) &&
+    req.post? && stripe_ips_webhooks.include?(Rack::Attack.client_ip(req)) &&
       FUIME_STRIPE_WEBHOOK_PATHS.include?(req.path)
   end
 
   blocklist("block Fuime Stripe webhooks from non-Stripe IPs") do |req|
     next false unless FUIME_STRIPE_WEBHOOK_PATHS.include?(req.path)
 
-    !stripe_ips_webhooks.include?(req.ip)
+    !stripe_ips_webhooks.include?(Rack::Attack.client_ip(req))
   end
 
   ### Throttle Spammy Clients ###
@@ -89,7 +128,7 @@ class Rack::Attack
   #
   # Key: "rack::attack:#{Time.now.to_i/:period}:req/ip:#{req.ip}"
   throttle("req/ip", limit: 1000, period: 5.minutes) do |req|
-    req.ip unless req.path.start_with?("/assets") ||
+    Rack::Attack.client_ip(req) unless req.path.start_with?("/assets") ||
                   req.path.start_with?("/admin") ||
                   req.path.start_with?("/stats")
   end
@@ -113,7 +152,7 @@ class Rack::Attack
   # Key: "rack::attack:#{Time.now.to_i/:period}:logins/ip:#{req.ip}"
   throttle("logins/ip", limit: 5, period: 20.seconds) do |req|
     if LOGIN_INITIATION_PATHS.include?(req.path) && req.post?
-      req.ip
+      Rack::Attack.client_ip(req)
     end
   end
 
@@ -142,7 +181,7 @@ class Rack::Attack
 
   throttle("logins/factor-trigger/ip", limit: 5, period: 20.seconds) do |req|
     if req.post? && LOGIN_FACTOR_TRIGGER_PATH.match?(req.path)
-      req.ip
+      Rack::Attack.client_ip(req)
     end
   end
 
@@ -155,7 +194,7 @@ class Rack::Attack
   # Throttle POST requests to SMS verification by IP address
   throttle("sms_verify/ip", limit: 5, period: 8.hours) do |req|
     if req.path == "/users/start_sms_auth_verification" && req.post?
-      req.ip
+      Rack::Attack.client_ip(req)
     end
   end
 
@@ -191,13 +230,13 @@ class Rack::Attack
   # Key: "rack::attack:#{Time.now.to_i/:period}:logins/ip:#{req.ip}"
   throttle("donations/start/ip", limit: 100, period: 20.seconds) do |req|
     if req.path.start_with?("/donations/start")
-      req.ip
+      Rack::Attack.client_ip(req)
     end
   end
 
   throttle("donations/hq/ip", limit: 100, period: 20.seconds) do |req|
     if req.path.start_with?("/donations/hq")
-      req.ip
+      Rack::Attack.client_ip(req)
     end
   end
 
@@ -221,13 +260,13 @@ class Rack::Attack
   # `Rack::Request#cookies` is string-keyed; a symbol reads as nil every time and
   # throttles signed-in organizers too.
   throttle("transparency/ledger/ip", limit: 25, period: 1.minute) do |req|
-    req.ip if req.path.match?(ledger_path) && req.cookies["session_token"].nil?
+    Rack::Attack.client_ip(req) if req.path.match?(ledger_path) && req.cookies["session_token"].nil?
   end
 
   # Set far above what clicking through pages reaches, so it only catches
   # automation sending an unverified `session_token`.
   throttle("ledger/ip", limit: 100, period: 1.minute) do |req|
-    req.ip if req.path.match?(ledger_path)
+    Rack::Attack.client_ip(req) if req.path.match?(ledger_path)
   end
 
   # Lockout IP addresses that are hammering your donation page.
@@ -236,7 +275,7 @@ class Rack::Attack
     # `filter` returns false value if request is to your donation page (but still
     # increments the count) so request below the limit are not blocked until
     # they hit the limit.  At that point, filter will return true and block.
-    Rack::Attack::Allow2Ban.filter(req.ip, maxretry: 100, findtime: 30.seconds, bantime: 3.minutes) do
+    Rack::Attack::Allow2Ban.filter(Rack::Attack.client_ip(req), maxretry: 100, findtime: 30.seconds, bantime: 3.minutes) do
       # The count for the IP is incremented if the return value is truthy.
       req.path.start_with?("/donations/start", "/donations/hq")
     end
@@ -254,7 +293,7 @@ class Rack::Attack
   # 20 in 5 minutes is far above a real buyer — who starts one checkout, maybe
   # retries once — and low enough that automation hits it in seconds.
   throttle("fuime/checkout/ip", limit: 20, period: 5.minutes) do |req|
-    req.ip if req.post? && req.path.match?(/\A\/b\/[^\/]+\/pay\z/)
+    Rack::Attack.client_ip(req) if req.post? && req.path.match?(/\A\/b\/[^\/]+\/pay\z/)
   end
 
   # Fuime: inviting a guardian.

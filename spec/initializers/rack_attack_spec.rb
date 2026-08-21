@@ -25,6 +25,72 @@ RSpec.describe Rack::Attack, type: :request do
     Rack::Attack.throttles.fetch(throttle).block.call(Rack::Attack::Request.new(env))
   end
 
+  # Fuime: the outage of 2026-08-21. Stripe's webhooks were 403'd for two days
+  # because app.fuime.com sits behind Cloudflare and `req.ip` resolved to a
+  # Cloudflare edge address, which is in no allowlist. Every live payment was
+  # refused at the door before the signature check, so the ledger stayed empty
+  # while Stripe held the money.
+  #
+  # Asserted against the real blocklist block, with the header shape Cloudflare
+  # actually sends: the true client in CF-Connecting-IP, and Cloudflare's own
+  # address last in X-Forwarded-For, which is the entry Rack's `#ip` picks.
+  describe "Stripe webhooks behind Cloudflare" do
+    # Methods rather than constants: a constant defined inside a describe block
+    # leaks into the enclosing namespace for the whole suite
+    # (Lint/ConstantDefinitionInBlock), and `let` is not visible inside the `def`
+    # below.
+    def stripe_ip = "3.18.12.63" # first line of config/stripe_ips_webhooks.txt
+    def cloudflare_ip = "172.67.164.168"
+
+    def blocked?(path, connecting_ip:, forwarded_for: nil)
+      env = Rack::MockRequest.env_for(
+        path,
+        "REMOTE_ADDR" => cloudflare_ip,
+        method: "POST"
+      )
+      env["HTTP_CF_CONNECTING_IP"] = connecting_ip if connecting_ip
+      env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
+      !!Rack::Attack.blocklists
+                    .fetch("block Fuime Stripe webhooks from non-Stripe IPs")
+                    .block.call(Rack::Attack::Request.new(env))
+    end
+
+    it "lets a real Stripe webhook through when Cloudflare is the peer" do
+      expect(
+        blocked?("/fuime/webhooks/stripe",
+                 connecting_ip: stripe_ip,
+                 forwarded_for: "#{stripe_ip}, #{cloudflare_ip}")
+      ).to be false
+    end
+
+    it "covers the connect path the same way" do
+      expect(
+        blocked?("/fuime/webhooks/stripe/connect", connecting_ip: stripe_ip)
+      ).to be false
+    end
+
+    # The regression itself: without CF-Connecting-IP, Rack's #ip returns the
+    # LAST untrusted forwarded entry — Cloudflare — and the request is refused.
+    # This is what production was doing to every payment.
+    it "blocks when only Cloudflare's address is visible" do
+      expect(
+        blocked?("/fuime/webhooks/stripe",
+                 connecting_ip: nil,
+                 forwarded_for: "#{stripe_ip}, #{cloudflare_ip}")
+      ).to be true
+    end
+
+    it "still blocks a genuine non-Stripe sender" do
+      expect(
+        blocked?("/fuime/webhooks/stripe", connecting_ip: "203.0.113.7")
+      ).to be true
+    end
+
+    it "ignores paths that are not the webhook endpoints" do
+      expect(blocked?("/some/other/path", connecting_ip: "203.0.113.7")).to be false
+    end
+  end
+
   describe "transparency/ledger/ip" do
     it "throttles anonymous reads of any organization's transactions" do
       [
