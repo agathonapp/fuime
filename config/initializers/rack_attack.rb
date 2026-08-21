@@ -308,7 +308,7 @@ class Rack::Attack
   # same action and must count. A matcher that only accepts the extension-less
   # path is a bypass, not a ceiling.
   throttle("fuime/checkout/ip", limit: 20, period: 5.minutes) do |req|
-    Rack::Attack.client_ip(req) if req.post? && req.path.match?(%r{\A/b/[^/]+/pay(\.[^/]*)?/?\z})
+    Rack::Attack.client_ip(req) if req.post? && req.path.match?(/\A\/b\/[^\/]+\/pay(\.[^\/]*)?\/?\z/)
   end
 
   # Fuime: inviting a guardian.
