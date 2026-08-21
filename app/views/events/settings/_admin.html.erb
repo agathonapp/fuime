@@ -39,6 +39,39 @@
     </details>
   <% end %>
 
+  <%# Fuime: actually CHANGE the plan (2026-08-21).
+      This block listed the available plans and offered no way to assign one, so
+      comping a venture — a fee waiver, a founder deal, a school — meant opening
+      a Rails console. Everything behind it already existed:
+      EventsController#update reads `event_params[:plan]` and calls
+      `plan.mark_inactive!(new_type)`, and `:plan` is already in the admin-only
+      permitted list. The only missing piece was the control.
+
+      Its own form, deliberately, and not a field on the big settings form
+      below: switching a plan changes what a venture is CHARGED, and it should
+      not be possible to do it by accident while editing a logo. %>
+  <% admin_tool "p-3" do %>
+    <%= form_with(model: event, local: true) do |plan_form| %>
+      <div class="field">
+        <%= plan_form.label :plan, "Plan" %>
+        <p class="muted text-sm mt-0 mb-2">
+          Currently <strong><%= event.plan.label %></strong>
+          <% if event.family_pro? %>
+            — but a guardian's family subscription is overriding it, so this venture bills as
+            <strong><%= event.billing_plan.label %></strong>.
+          <% end %>
+        </p>
+        <%= plan_form.select :plan,
+                             Event::Plan.selectable_plans_by_popularity.map { |plan| [plan.new.label, plan.name] },
+                             { selected: event.plan.type },
+                             { class: "w-full max-w-full" } %>
+      </div>
+      <%= plan_form.submit "Change plan",
+                           class: "btn bg-accent",
+                           data: { turbo_confirm: "Change #{event.name} to the selected plan? This changes what they are charged." } %>
+    <% end %>
+  <% end %>
+
   <%= form_with(model: event, local: true, html: { "x-data" => "{ship_type: '#{event.stripe_card_shipping_type}'}" }) do |form| %>
     <%= form_errors event, "organization" %>
     <% admin_tool "p-3" do %>

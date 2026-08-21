@@ -129,7 +129,9 @@ module EventsHelper
       tooltip: "Let your own website or AI create payment links",
       icon: "terminal",
       symbol: :api_keys,
-      available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
+      # Fuime: family-plan feature. Same predicate the controller authorizes on,
+      # so the nav never offers a page the policy then refuses.
+      available_proc: ->(event) { policy(event).api_keys? && organizer_signed_in? }
     },
     # Fuime: Payouts — moving money to the family's bank.
     #

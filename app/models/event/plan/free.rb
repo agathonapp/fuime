@@ -32,6 +32,16 @@ class Event
     class Free < Standard
       REVENUE_FEE = 0.07
 
+      # Fuime: everything Standard has, minus the developer API.
+      #
+      # The one feature the family plan sells beyond unlimited ventures. See
+      # Event::Plan.available_features for why the list of safe-to-gate things
+      # is so short.
+      def features
+        super - %w[api_keys]
+      end
+
+
       def self.selectable?
         true
       end

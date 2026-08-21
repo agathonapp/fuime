@@ -178,7 +178,19 @@ class Event
 
     def self.available_features
       # this must contain every HCB feature that we want enable / disable with plans.
-      %w[cards invoices donations account_number check_deposits transfers promotions google_workspace documentation reimbursements card_grants unrestricted_disbursements front_disbursements]
+      # Fuime: `api_keys` added 2026-08-21 as the first paid-only feature.
+      #
+      # What is safe to put behind the family plan is narrower than it looks.
+      # Not payouts, the ledger or taxes — withholding those strands a
+      # teenager's own money or their tax position. Not guardian visibility:
+      # that is the L2 legal control the whole model rests on, not a feature.
+      # Not the storefront or offers, which ARE the product a founder came for.
+      #
+      # The developer API is none of those. It is a power feature for somebody
+      # already running something real, it costs Fuime support and abuse
+      # surface, and a founder without it loses nothing they could not do by
+      # hand in the app.
+      %w[cards invoices donations account_number check_deposits transfers promotions google_workspace documentation reimbursements card_grants unrestricted_disbursements front_disbursements api_keys]
     end
 
     self.available_features.each do |feature|
