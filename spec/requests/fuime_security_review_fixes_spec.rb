@@ -55,9 +55,9 @@ RSpec.describe "Security review fixes (2026-08-20)", type: :request do
       policy = EventPolicy.new(nil, event)
 
       ledger_queries.each do |query|
-        expect(policy.public_send(query)).to be(false),
-          "expected #{query} to be private for a signed-out visitor, " \
-          "but a public storefront still granted it"
+        message = "expected #{query} to be private for a signed-out visitor, " \
+                  "but a public storefront still granted it"
+        expect(policy.public_send(query)).to be(false), message
       end
     end
 

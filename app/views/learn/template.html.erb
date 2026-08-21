@@ -16,7 +16,7 @@
 
 <div class="max-w-3xl mx-auto py-8 px-4">
   <p class="mb-2">
-    <%= link_to "&larr; All templates".html_safe, learn_path(venture: @venture&.slug, anchor: "templates"), class: "muted text-sm" %>
+    <%= link_to "← All templates", learn_path(venture: @venture&.slug, anchor: "templates"), class: "muted text-sm" %>
   </p>
 
   <h1 class="text-3xl font-bold mb-2"><%= @service.name %></h1>

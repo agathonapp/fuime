@@ -35,7 +35,11 @@ RSpec.describe Event::ApplicationsController, type: :controller do
       get :business_type, params: { id: application.id }
 
       body = CGI.unescapeHTML(response.body)
-      expect(body).to include("Services first")
+      # The scope card. Its heading stopped being "Services first" when
+      # OperatorEligibility::ELIGIBLE_CATEGORIES gained `digital` and the catalog
+      # gained templates resolving to it — copy that closes a door the app has
+      # opened is the same L8 failure as copy that opens one the app has closed.
+      expect(body).to include("What you can sell today")
       expect(body).not_to match(/babysit/i)
     end
   end

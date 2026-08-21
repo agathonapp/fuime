@@ -191,16 +191,15 @@
         submissions, and anyone who has since supplied one for a payout. %>
     <% if application.address_line1.present? || application.address_city.present? ||
           application.address_state.present? || application.address_postal_code.present? %>
+      <% address_lines = [
+           application.address_line1,
+           application.address_line2,
+           [application.address_city, application.address_state].compact_blank.join(", ").presence,
+           application.address_postal_code
+         ].compact_blank %>
       <div>
         <p class="text-sm muted mb-1">Payout address</p>
-        <p class="mb-0 whitespace-pre-line"><%= safe_join(
-          [
-            application.address_line1,
-            application.address_line2,
-            [application.address_city, application.address_state].compact_blank.join(", ").presence,
-            application.address_postal_code
-          ].compact_blank, tag.br
-        ) %></p>
+        <p class="mb-0"><%= safe_join(address_lines, tag.br) %></p>
       </div>
     <% end %>
 

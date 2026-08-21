@@ -15,7 +15,7 @@
 
 <div class="max-w-2xl mx-auto py-8 px-4">
   <p class="mb-2">
-    <%= link_to "&larr; All lessons".html_safe, learn_path(venture: @venture&.slug, anchor: "lessons"), class: "muted text-sm" %>
+    <%= link_to "← All lessons", learn_path(venture: @venture&.slug, anchor: "lessons"), class: "muted text-sm" %>
   </p>
 
   <h1 class="text-3xl font-bold mb-2"><%= @lesson.title %></h1>
