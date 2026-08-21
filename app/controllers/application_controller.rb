@@ -60,6 +60,7 @@ class ApplicationController < ActionController::Base
   # transparency is opting into human readers, not into search results.
   INDEXABLE_CONTROLLER_PATHS = [
     "fuime/directory",
+    "fuime/discover",
     "fuime/storefronts",
     "fuime/payment_pages",
     "static_pages",
