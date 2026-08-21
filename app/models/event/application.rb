@@ -562,7 +562,7 @@ class Event
       #
       # Justified rather than convenient: the one-venture limit is a COMMERCIAL
       # rule about families on the free plan, and a staff account is not a family
-      # — nobody is going to sell them the $#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo upgrade. It is
+      # — nobody is going to sell them the family-plan upgrade. It is
       # pretend-aware through `staff?`, so an admin who has switched on
       # `pretend_is_not_admin` to test the real founder experience still hits the
       # limit, which is the whole point of that switch.
@@ -572,7 +572,7 @@ class Event
       # widening it would quietly change what those two believe about a paid plan.
       unless user.institutionally_vouched_for? || user.staff? || free_venture_slot_available?
         blockers << "the free plan includes one venture and #{user.email} already " \
-                    "has one — the family plan ($#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo) " \
+                    "has one — the family plan (#{format('$%.2f', Event::Plan::Pro.new.monthly_fee_cents / 100.0)}/mo) " \
                     "covers unlimited businesses"
       end
 

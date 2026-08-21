@@ -6,7 +6,7 @@
   <%= render "application/callout", type: "info", title: "This one needs the family plan" do %>
     <p class="mb-1">
       The free plan includes one venture, and you already have one.
-      The family plan is <strong>$<%= Event::Plan::Pro.new.monthly_fee_cents / 100 %>/month</strong> for
+      The family plan is <strong><%= render_money(Event::Plan::Pro.new.monthly_fee_cents) %>/month</strong> for
       <strong>unlimited businesses</strong> at
       <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %> —
       you can apply now either way; approval just waits on the upgrade.
@@ -25,7 +25,7 @@
         <% end %>
       </p>
     <% else %>
-      <%= link_to "Upgrade — $#{Event::Plan::Pro.new.monthly_fee_cents / 100}/mo", my_billing_path, class: "btn bg-accent" %>
+      <%= link_to "Upgrade — #{render_money(Event::Plan::Pro.new.monthly_fee_cents)}/mo", my_billing_path, class: "btn bg-accent" %>
     <% end %>
   <% end %>
 <% end %>
