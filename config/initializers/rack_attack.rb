@@ -36,8 +36,16 @@ class Rack::Attack
   # for the webhook paths the signature check is the real authentication and a
   # spoofed IP gains an attacker nothing, and for the throttles a forgeable
   # per-IP key is strictly better than the single shared bucket it replaces.
+  #
+  # `req.ip` on the fallback is Rack's own, and must stay that way: the
+  # search-and-replace that introduced this helper rewrote every `req.ip` in the
+  # file INCLUDING the one in its own body, so this method called itself and any
+  # request without the header died of SystemStackError. Production survived only
+  # because Cloudflare always sets the header, which meant the recursion was
+  # unreachable for real traffic and reachable for everything else — health
+  # checks, direct-to-origin requests, and the whole test suite.
   def self.client_ip(req)
-    req.get_header("HTTP_CF_CONNECTING_IP").presence || Rack::Attack.client_ip(req)
+    req.get_header("HTTP_CF_CONNECTING_IP").presence || req.ip
   end
 
   ### Configure Cache ###
@@ -128,9 +136,11 @@ class Rack::Attack
   #
   # Key: "rack::attack:#{Time.now.to_i/:period}:req/ip:#{req.ip}"
   throttle("req/ip", limit: 1000, period: 5.minutes) do |req|
-    Rack::Attack.client_ip(req) unless req.path.start_with?("/assets") ||
-                  req.path.start_with?("/admin") ||
-                  req.path.start_with?("/stats")
+    next if req.path.start_with?("/assets") ||
+            req.path.start_with?("/admin") ||
+            req.path.start_with?("/stats")
+
+    Rack::Attack.client_ip(req)
   end
 
   ### Prevent Brute-Force Login Attacks ###
