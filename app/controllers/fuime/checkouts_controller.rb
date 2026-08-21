@@ -9,10 +9,21 @@
 #
 # Public and unauthenticated by design: the payer is a customer, not a Fuime
 # user. The business is identified by slug, exactly as the storefront is.
+#
+# A signed-in buyer is a different case. Fuime already treats unknown age as
+# minor (User#known_adult?). If we know the session belongs to a minor, we
+# refuse to open a Stripe session — same predicate as BillingController#adult?.
+# Guests (no session) still check out; the pay link a teen texts to a customer
+# they know must keep working without a Fuime account.
 module Fuime
   class CheckoutsController < ApplicationController
     skip_before_action :signed_in_user
     skip_after_action :verify_authorized
+    # Checkout is a customer action, not operating a business. Without this, a
+    # parked teen's POST is swallowed by the guardian-invite redirect and never
+    # reaches the buyer-age rule below.
+    skip_before_action :enforce_guardianship_requirement
+    before_action :refuse_minor_buyer
 
     # Guardrails on a public, unauthenticated endpoint that talks to Stripe.
     MINIMUM_AMOUNT_CENTS = 1_00
@@ -92,6 +103,34 @@ module Fuime
     end
 
     private
+
+    # Same rule as BillingController#adult?: a signed-in buyer may open a
+    # Stripe session only if we positively know they are an adult, or they
+    # are staff. Unknown age is fail-closed (User#known_adult?). Guests skip
+    # this — there is no session to judge.
+    def refuse_minor_buyer
+      return unless current_user
+      return if adult?
+
+      refuse_minor
+    end
+
+    def adult?
+      current_user.known_adult? || current_user.staff?
+    end
+
+    def refuse_minor
+      redirect_to refuse_destination,
+                  alert: "Checkout is billed to an adult. Sign out to pay as a guest, or ask a parent or guardian to complete this payment."
+    end
+
+    def refuse_destination
+      event = ::Event.not_hidden.find_by(slug: params[:slug])
+      return root_path unless event
+
+      offer = find_offer(event)
+      return_url(event, offer)
+    end
 
     # The payer types this, and it ends up on the Stripe product and then in the
     # ledger memo a teenager reads. Bound the length and strip control
