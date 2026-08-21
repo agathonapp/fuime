@@ -93,7 +93,11 @@ RSpec.describe Event::ApplicationsController, type: :controller do
   # Asserts the hole is closed on the real controller action rather than that a
   # guard method exists, per the rule in fuime_security_review_fixes_spec.
   describe "POST #admin_activate when activation is not possible" do
-    let(:founder) { create(:user, birthday: 16.years.ago.to_date) }
+    # An ADULT founder, so the only thing standing between this application and
+    # activation is the venture limit. A minor here would also trip the guardian
+    # blocker and these examples would be quietly testing two gates at once —
+    # the exact trap spec/factories/user_factory.rb warns about.
+    let(:founder) { create(:user) }
 
     let(:application) do
       create(:event_application, user: founder, teen_led: true, description: "Prints").tap do |app|
@@ -108,7 +112,9 @@ RSpec.describe Event::ApplicationsController, type: :controller do
     before { create(:organizer_position, event: create(:event), user: founder) }
 
     it "reports the reason instead of raising" do
-      expect(application.activation_blockers).to include(a_string_matching(/free plan includes one venture/))
+      expect(application.activation_blockers).to contain_exactly(
+        a_string_matching(/free plan includes one venture/)
+      )
 
       expect {
         post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
@@ -121,7 +127,7 @@ RSpec.describe Event::ApplicationsController, type: :controller do
     it "does not create a business" do
       expect {
         post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
-      }.not_to change { Event.count }
+      }.not_to(change { Event.count })
 
       expect(application.reload.event).to be_nil
     end
@@ -167,9 +173,14 @@ RSpec.describe Event::ApplicationsController, type: :controller do
 
     # The mirror case, on a founder who has NOT used their free slot, so the
     # guard is shown to block the right thing rather than everything.
+    #
+    # Deliberately the default factory applicant rather than an explicit
+    # 16-year-old: a minor with no accepted guardian trips the OTHER blocker, so
+    # asserting `be_empty` on one would be asserting the absence of a gate this
+    # example is not about. (That is what the first version of this spec did, and
+    # CI caught it.)
     it "still activates a founder whose first venture this is" do
-      first_timer = create(:user, birthday: 16.years.ago.to_date)
-      unblocked = create(:event_application, user: first_timer, teen_led: true, description: "Prints").tap do |app|
+      unblocked = create(:event_application, teen_led: true, description: "Prints").tap do |app|
         app.update!(aasm_state: :approved, address_country: "US")
       end
       expect(unblocked.activation_blockers).to be_empty

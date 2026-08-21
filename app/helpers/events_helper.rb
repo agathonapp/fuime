@@ -111,6 +111,7 @@ module EventsHelper
       path_proc: ->(event_id) { fuime_offers_path(event_slug: event_id) },
       tooltip: "List what you sell and set your prices",
       icon: "bag",
+      data: { tour_step: "offers" },
       symbol: :offers,
       available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
     },
@@ -146,6 +147,7 @@ module EventsHelper
       path_proc: ->(event_id) { fuime_payouts_path(event_slug: event_id) },
       tooltip: "Move money to your bank account",
       icon: "cash",
+      data: { tour_step: "payouts" },
       symbol: :payouts,
       available_proc: ->(event) { policy(event).payouts? && organizer_signed_in? }
     },
@@ -243,6 +245,7 @@ module EventsHelper
       # missing, which 500s every page rendering the org nav — not just the
       # Taxes item. "money-dollar-box" does not exist in app/assets/images/icons.
       icon: "calculator",
+      data: { tour_step: "taxes" },
       symbol: :taxes,
       available_proc: ->(event) { policy(event).show? && organizer_signed_in? }
     },
@@ -395,6 +398,7 @@ module EventsHelper
       path_proc: ->(event_id) { event_team_path(event_id:) },
       tooltip: "Manage your team",
       icon: "people-2",
+      data: { tour_step: "team" },
       symbol: :team,
       available_proc: ->(event) { policy(event).team? }
     },
@@ -458,6 +462,7 @@ module EventsHelper
       path_proc: ->(event_id) { learn_path(venture: event_id) },
       tooltip: "How to start and run a business, and ten templates",
       icon: "idea",
+      data: { tour_step: "learn" },
       symbol: :learn,
       available_proc: ->(_event) { organizer_signed_in? }
     },

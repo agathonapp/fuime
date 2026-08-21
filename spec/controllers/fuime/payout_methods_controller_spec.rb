@@ -57,7 +57,12 @@ RSpec.describe Fuime::PayoutMethodsController do
       get :show, params: { event_slug: venture.slug }
 
       expect(response.body).not_to include("data-controller=\"plaid-link\"")
-      expect(response.body).to include(guardian.name.presence || guardian.email)
+      # Escaped, because the name renders through `<%= %>` and the factory name
+      # comes from Faker — which produces an apostrophe often enough
+      # ("Dee D'Amore" -> "Dee D&#39;Amore") that the raw comparison was a coin
+      # flip on the seed, and it is what made this spec fail on 2026-08-21.
+      # Same idiom as subscription_service_spec, which asserts the same name.
+      expect(response.body).to include(ERB::Util.html_escape(guardian.name.presence || guardian.email))
     end
 
     it "offers the guardian the connect flow" do

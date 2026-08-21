@@ -28,6 +28,29 @@
           </span>
         <% end %>
       </div>
+
+      <%# Fuime: money taken but not yet released, said HERE and not only on the
+          payouts page.
+
+          "Owed to you" is `net_payable_cents`, which is settled lines only —
+          correct, because Fuime posts incoming money `fronted: false` and has no
+          reserves to advance against it (Fuime::VentureLedger#post!). But it
+          meant a founder who had just been paid saw this number not move, on the
+          one screen they actually look at, and concluded the payment had failed.
+          The figure already existed; it was rendered on /payouts and nowhere else.
+
+          Deliberately NOT added to the number above, and phrased as a separate
+          sentence, for the reason spelled out in fuime/payouts/index.html.erb:
+          money Stripe has taken and not released is coming, not owed today, and
+          merging the two is how a reader concludes Fuime is holding a balance for
+          them — which is the product Fuime may not offer (L1/L5). %>
+      <% pending_sales = payables_for(@event).pending_sales_cents %>
+      <% if pending_sales.positive? %>
+        <p class="muted text-sm mt-1 mb-0">
+          <%= render_money(pending_sales) %> more from recent sales — Stripe
+          usually releases it within a couple of days.
+        </p>
+      <% end %>
     </div>
     <div class="flex-grow"></div>
     <div style="height: <%= (@recent_transactions.size - 1) * 60 %>px;z-index:1">
