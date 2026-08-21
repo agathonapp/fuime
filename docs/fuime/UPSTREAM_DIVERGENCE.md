@@ -5490,3 +5490,71 @@ or checkout throttling.
 | CSP `default-src` tightened to `'self'`; added `connect-js.stripe.com` / `*.js.stripe.com` | Still report-only. Hosts are what `@stripe/stripe-js` and `@stripe/connect-js` already load, plus the CDNs already grepped from views | `config/initializers/content_security_policy.rb` |
 | Marketing site CSP, report-only | Same first step as Rails; Fontshare is the only third party the HTML preconnects to | `site/server.js` |
 | Production `config.hosts` from canonical Fuime hosts + `LIVE_URL_HOST` + `RENDER_EXTERNAL_HOSTNAME`; `/up` excluded | Host authorization was commented out | `config/environments/production.rb` |
+
+## 2026-08-21 — What an admin can actually do about the family plan, and what the plan picker says
+
+Two gaps found by looking at one screenshot of the admin plan dropdown and asking
+where subscriptions get set. Both were the same shape: the *model* was finished
+and the *console* had no surface for it.
+
+### The plan picker
+
+The dropdown read `Fuime internal organization / Fuime standard (5.0%) /
+Fuime free (7.0%) / terminated / card-only / spend-only / school /
+Fuime founders (0.0%)`. Four of the eight wore HCB's lowercase labels, in the one
+control that decides what a venture is charged.
+
+| Change | Why | Files |
+|---|---|---|
+| `Terminated`, `CardsOnly`, `SpendOnly`, `School` relabelled to `Fuime …` | An admin comping a school on launch day should not have to guess whether "school" is a Fuime plan or something inherited from a fiscal-sponsorship product. `Fuime for schools (0.0%)`, `Fuime spend down (0.0%, no money in)`, `Fuime cards only (no money in)`, `Fuime terminated (frozen and hidden)`. A spec now asserts every selectable plan's label starts with "Fuime". | `app/models/event/plan/{terminated,cards_only,spend_only,school}.rb` |
+| No rate in the `Terminated` / `CardsOnly` labels | Both inherit Standard's `revenue_fee` and would print "5.0%" against revenue they can never collect. `SpendOnly` genuinely is 0% and says so. | same |
+| `Plan#monthly_fee_label` + `#price_label`; `Standard` label is now `Fuime standard (5.0% + $15.00/mo)` | A plan's price has two dials and the picker showed one, so moving a venture onto Standard silently started a $15/month bill. `#price_label` collapses to just the rate on every plan that charges nothing monthly, so no other label changed shape. `Pro` now reads `Fuime family (7.0% + $19.99/mo)` instead of "+ monthly". | `app/models/event/plan.rb`, `standard.rb`, `pro.rb` |
+| `Internal` → `Fuime internal (engineering only)` | It backs the ledger's own clearing accounts. A misclick on launch day should be obvious in the dropdown, not in the description nobody opens. | `internal.rb` |
+| **Bug:** the dedicated "Change plan" form used `selectable_plans_by_popularity` | A venture on a retired plan is not in that list, so the browser rendered the FIRST option as selected and pressing "Change plan" silently migrated it. `Plan.select_options(current)` exists precisely to prevent this and the big settings form was already using it. Introduced yesterday (`aad0999e7`); one line. | `app/views/events/settings/_admin.html.erb` |
+| The duplicate `:plan` `<select>` in the big settings form is now read-only text | Two controls for one attribute on one page: submitting the *settings* form to change a postal code also posted a plan. The dedicated form is the single writer. | same |
+| The panel names the family plan and says it is not assignable here | Pro is resolved from the FAMILY at read time (`Event#billing_plan`), so it is in no picker and an admin reading the panel was left thinking Fuime has no paid tier. | same |
+
+### Subscriptions: an admin surface, and the line it must not cross
+
+`Fuime::Subscription` had exactly one writer — Stripe — which is the right
+default and is why `ADMIN_OPS_QUEUES.md` §4 called it read-only. But it left **no
+way to give anybody the plan**: comping a founder, a school partner or a demo
+account meant a Rails console, which records neither who decided nor why.
+
+The design point is that comping and cancelling are different verbs:
+
+* a **comped** plan is Fuime's own gift with no Stripe side, so an admin may
+  grant and revoke it locally;
+* a **paid** plan is a mirror. It is never edited here — "Cancel at Stripe" calls
+  Stripe and the existing webhook mirrors the result back, because a console
+  showing `active` while the card is failing is worse than no console.
+
+| Change | Why | Files |
+|---|---|---|
+| `granted_by_id`, `granted_at`, `grant_notes` on `fuime_subscriptions`; `has_paper_trail` | A comp gives away $19.99/month of Fuime's own revenue, so who/when/why has to be reconstructable — same argument and same shape as `Event#record_vetting_decision!`. Notes accumulate rather than overwrite. | `db/migrate/20260821120000_add_grant_to_fuime_subscriptions.rb`, `app/models/fuime/subscription.rb` |
+| `.grant_family_plan!`, `#revoke_grant!`, `#cancel_in_stripe!`, `#comped?`, `#stripe_backed?`, `#needs_attention?`, scopes `comped` / `needs_attention` | `#comped?` is `granted_by` present AND no Stripe subscription — so a comped family who later pays stops being comped at the webhook, which is the right answer for every caller. `#cancel_in_stripe!` deliberately does not write `status`. | `app/models/fuime/subscription.rb` |
+| `/admin/subscriptions` — the queue from ADMIN_OPS_QUEUES §4 | A `past_due` family (a failed card on the only thing Fuime charges for) was invisible everywhere in the app. `incomplete` is counted as needing attention too: that is a checkout opened and never paid, and the family thinks they bought it. Attention-first ordering, comp-by-email box, per-row revoke or cancel. | `app/controllers/admin_controller.rb`, `app/views/admin/subscriptions.html.erb`, `config/routes.rb` |
+| Family-plan panel on the admin user page | Next to the guardianship panel, because they answer adjacent questions. Status, source, grant history, and the one-click comp. | `app/views/users/_admin_family_plan.html.erb`, `edit_admin.html.erb` |
+| A comp may only be granted to a confirmed adult | A subscription is a contract (L2), and `BillingController` refuses a minor for that reason. Comping to a minor would route around that refusal from the inside. | `_admin_family_plan.html.erb` |
+| Nav: "Subscriptions (Fuime)" and "Payout batches (Fuime)" | The payout-batch queue existed with **no link anywhere** — an admin had to know the URL, which is how a week of payouts gets missed. | `app/models/admin/nav.rb` |
+
+### The double-subscribe hole
+
+| Change | Why | Files |
+|---|---|---|
+| `BillingController#subscribe` refuses when the family is already active | Nothing stopped a repeat POST. The Upgrade button is hidden once active, but the route was reachable — a double submit or a back-button re-post minted a SECOND Stripe subscription against the same customer. The webhook then overwrote `stripe_subscription_id` with the new one, so the first became invisible to Fuime **while continuing to charge the guardian's card every month, forever.** | `app/controllers/fuime/billing_controller.rb` |
+| The billing page states a comped plan and hides "Manage billing" | A comp has no Stripe customer, so the portal had nothing to open and answered "nothing to manage yet". | `app/views/fuime/billing/show.html.erb` |
+
+Specs: `spec/models/fuime/subscription_grant_spec.rb` (10),
+`spec/requests/fuime_subscriptions_admin_spec.rb` (13),
+`spec/models/event/plan_labels_spec.rb` (8), 2 added to
+`spec/requests/fuime_billing_spec.rb`. One expectation in
+`spec/models/event/plan_spec.rb` moved from `eq` to `include` because the Standard
+label now carries both halves of the price.
+
+**Still true after this, and worth saying:** no family-plan purchase has ever
+completed. Stripe test mode holds five subscription Checkout sessions, all
+expired unpaid, and zero subscriptions. The platform webhook endpoint *is*
+registered for `customer.subscription.created/updated/deleted`, so the wiring is
+in place — but the completion → webhook → `active` path is proven only by stubs.
+The comp path added here is exercised end to end and does not depend on it.

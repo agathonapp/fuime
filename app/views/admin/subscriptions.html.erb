@@ -1,0 +1,148 @@
+<% title "Subscriptions (Fuime)" %>
+
+<%# FUIME: the family-plan queue.
+
+    Fuime's own revenue, which makes it the one money surface here that is not
+    somebody else's money. Specified in docs/fuime/ADMIN_OPS_QUEUES.md §4 and
+    unbuilt until 2026-08-21, so a card that failed on the only thing Fuime
+    charges for produced no signal anywhere in the app.
+
+    Two verbs, deliberately different (see Fuime::Subscription#comped?):
+    a COMPED plan is Fuime's gift and an admin may revoke it here; a PAID plan is
+    mirrored from Stripe and can only be cancelled AT Stripe, from where the
+    webhook mirrors the result back. There is no button that edits a paid
+    subscription locally, because a mirror that disagrees with the account being
+    charged is worse than no mirror at all. %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <%= link_to subscriptions_admin_index_path, class: "badge #{@filter.nil? ? 'bg-info' : 'bg-muted'}" do %>
+    All: <%= @counts[:all] %>
+  <% end %>
+  <%= link_to subscriptions_admin_index_path(filter: "attention"), class: "badge #{@counts[:attention].positive? ? 'bg-warning' : 'bg-muted'}" do %>
+    Needs attention: <%= @counts[:attention] %>
+  <% end %>
+  <%= link_to subscriptions_admin_index_path(filter: "active"), class: "badge bg-muted" do %>
+    Active: <%= @counts[:active] %>
+  <% end %>
+  <%= link_to subscriptions_admin_index_path(filter: "comped"), class: "badge bg-muted" do %>
+    Comped: <%= @counts[:comped] %>
+  <% end %>
+</div>
+
+<div class="card mb2">
+  <h3 class="mt0 mb1">Comp the family plan</h3>
+  <p class="muted text-sm mt-0">
+    Gives <strong><%= Event::Plan::Pro.new.label %></strong> to an adult account for free — unlimited ventures
+    and the developer API across every venture they sign for. Nothing is charged and no card is collected.
+    Refused if Stripe is already billing them.
+  </p>
+  <%= form_with url: subscription_grant_admin_index_path, method: :post, local: true, data: { turbo_frame: "_top" } do |form| %>
+    <div class="flex flex-col sm:flex-row gap-2">
+      <%= text_field_tag :user_id, nil, placeholder: "email, user id, or usr_… public id", required: true, class: "flex-grow" %>
+      <%= text_field_tag :notes, nil, placeholder: "why (recorded)", class: "flex-grow" %>
+      <%= form.submit "Comp it", class: "btn bg-accent" %>
+    </div>
+  <% end %>
+  <p class="muted text-sm mb-0">
+    Easier route: open the person's admin page and use the Family plan panel there — it knows who they are.
+  </p>
+</div>
+
+<div class="flex items-center mb2 flex-col sm:flex-row">
+  <div class="flex-grow">
+    <%= page_entries_info @subscriptions, entry_name: "subscriptions" %>
+  </div>
+  <%= paginate @subscriptions %>
+</div>
+
+<table class="min-w-0">
+  <thead>
+    <tr>
+      <th>Billed to</th>
+      <th>Scope</th>
+      <th>Status</th>
+      <th>Source</th>
+      <th>Period end</th>
+      <th class="w-64">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @subscriptions.each do |subscription| %>
+      <tr>
+        <td>
+          <%= user_mention subscription.billed_to %>
+          <div class="muted text-sm"><%= subscription.billed_to.email %></div>
+        </td>
+        <td>
+          <% if subscription.event.present? %>
+            <%= link_to subscription.event.name, event_path(subscription.event) %>
+            <div class="muted text-sm">one venture</div>
+          <% else %>
+            Family
+            <div class="muted text-sm">every venture they sign for</div>
+          <% end %>
+        </td>
+        <td>
+          <%= badge_for subscription.status.humanize,
+                        class: if subscription.active?
+                                 "bg-success"
+                               elsif subscription.needs_attention?
+                                 "bg-warning"
+                               else
+                                 "bg-muted"
+                               end %>
+          <% if subscription.cancel_at_period_end? %>
+            <div class="muted text-sm">set to cancel</div>
+          <% end %>
+        </td>
+        <td>
+          <% if subscription.comped? %>
+            <%= badge_for "Comped", class: "bg-info" %>
+            <div class="muted text-sm">
+              by <%= subscription.granted_by ? user_mention(subscription.granted_by) : "—" %>
+              <%= "on #{format_date subscription.granted_at}" if subscription.granted_at %>
+            </div>
+            <% if subscription.grant_notes.present? %>
+              <details><summary class="muted text-sm">notes</summary>
+                <p class="muted text-sm mb-0"><%= simple_format subscription.grant_notes %></p>
+              </details>
+            <% end %>
+          <% elsif subscription.stripe_backed? %>
+            Stripe
+            <div class="muted text-sm"><%= subscription.stripe_subscription_id %></div>
+          <% else %>
+            <span class="muted">checkout never completed</span>
+          <% end %>
+        </td>
+        <td><%= subscription.current_period_end ? format_date(subscription.current_period_end) : "—" %></td>
+        <td>
+          <% if subscription.comped? && subscription.active? %>
+            <%= button_to "Revoke comp",
+                          subscription_revoke_admin_index_path(subscription),
+                          method: :post,
+                          class: "btn bg-error",
+                          data: {
+                            turbo_confirm: "Revoke the comped family plan for #{subscription.billed_to.email}? They drop back to one venture and lose the API.",
+                            turbo_confirm_danger: true,
+                          } %>
+          <% elsif subscription.stripe_backed? %>
+            <%= button_to "Cancel at Stripe",
+                          subscription_cancel_in_stripe_admin_index_path(subscription),
+                          method: :post,
+                          class: "btn bg-error",
+                          data: {
+                            turbo_confirm: "Cancel this subscription at Stripe? #{subscription.billed_to.email} stops being billed. The status here updates when Stripe's webhook lands.",
+                            turbo_confirm_danger: true,
+                          } %>
+          <% else %>
+            <span class="muted">—</span>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+
+    <% if @subscriptions.empty? %>
+      <tr><td colspan="6" class="muted center">Nothing here yet.</td></tr>
+    <% end %>
+  </tbody>
+</table>

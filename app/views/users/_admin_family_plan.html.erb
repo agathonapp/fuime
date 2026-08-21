@@ -1,0 +1,133 @@
+<%# locals: (user:) %>
+<%#
+  Fuime: the family-plan panel on the admin user page.
+
+  Answers "what is this family paying, and can I give it to them?" — a question
+  the admin console could not answer at all before 2026-08-21. `Fuime::Subscription`
+  had exactly one writer (Stripe), so comping the plan meant a Rails console and
+  left no record of who decided.
+
+  The two actions are deliberately different verbs, and the difference is the
+  whole design (see Fuime::Subscription#comped?):
+
+    * a COMPED plan is Fuime's own gift, has no Stripe side, and may be granted
+      and revoked right here;
+    * a PAID plan is a mirror of Stripe. It is never edited locally — cancelling
+      goes to Stripe and the webhook mirrors the result back.
+%>
+
+<% subscription = Fuime::Subscription.family.find_by(billed_to: user) %>
+
+<% admin_tool "p-3" do %>
+  <h3 class="mb2 mt1">Family plan</h3>
+  <section>
+    <p>
+      <strong>Status:</strong>
+      <% if subscription.nil? %>
+        <%= badge_for "Free", class: "bg-muted" %>
+        <span class="muted">no subscription — one venture, no developer API</span>
+      <% else %>
+        <%= badge_for subscription.status.humanize,
+                      class: if subscription.active?
+                               "bg-success"
+                             elsif subscription.needs_attention?
+                               "bg-warning"
+                             else
+                               "bg-muted"
+                             end %>
+        <% if subscription.comped? %>
+          <%= badge_for "Comped by Fuime", class: "bg-info" %>
+        <% elsif subscription.stripe_backed? %>
+          <span class="muted">Stripe <%= subscription.stripe_subscription_id %></span>
+        <% else %>
+          <span class="muted">checkout was opened and never paid</span>
+        <% end %>
+      <% end %>
+    </p>
+
+    <% if subscription&.active? %>
+      <p class="muted">
+        Covers every venture <%= user.name.presence || user.email %> signs for:
+        unlimited ventures at <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %>,
+        plus the developer API.
+        <% if subscription.current_period_end %>
+          Period ends <%= format_date subscription.current_period_end %><%= " (set to cancel)" if subscription.cancel_at_period_end? %>.
+        <% end %>
+      </p>
+    <% end %>
+
+    <% if subscription&.granted_at.present? %>
+      <p class="muted">
+        Comped <%= format_datetime subscription.granted_at %>
+        <%= "by #{subscription.granted_by.name.presence || subscription.granted_by.email}" if subscription.granted_by %>
+      </p>
+      <% if subscription.grant_notes.present? %>
+        <details><summary class="muted">Grant history</summary>
+          <%= simple_format subscription.grant_notes, class: "muted text-sm" %>
+        </details>
+      <% end %>
+    <% end %>
+
+    <%# The ventures this actually affects, because "unlimited ventures" is
+        abstract and a list is not. %>
+    <% wards = user.active_wards.to_a %>
+    <% if wards.any? %>
+      <p class="muted mb1">
+        Applies through <%= wards.map { |w| w.name.presence || w.email }.to_sentence %>.
+      </p>
+    <% end %>
+
+    <% if admin_signed_in? %>
+      <% if subscription&.stripe_backed? %>
+        <p class="muted text-sm">
+          Stripe is billing this. It is a mirror here, so there is nothing to edit —
+          cancelling happens at Stripe and the status updates when the webhook lands.
+        </p>
+        <%= button_to "Cancel at Stripe",
+                      subscription_cancel_in_stripe_admin_index_path(subscription),
+                      method: :post,
+                      class: "btn bg-error",
+                      form: { data: { turbo_frame: "_top" } },
+                      data: {
+                        turbo_confirm: "Cancel this subscription at Stripe? #{user.email} stops being billed.",
+                        turbo_confirm_danger: true,
+                      } %>
+      <% elsif subscription&.comped? && subscription.active? %>
+        <%= button_to "Revoke comped plan",
+                      subscription_revoke_admin_index_path(subscription),
+                      method: :post,
+                      class: "btn bg-error",
+                      form: { data: { turbo_frame: "_top" } },
+                      data: {
+                        turbo_confirm: "Revoke the comped family plan? #{user.name.presence || user.email} drops back to one venture and loses the developer API.",
+                        turbo_confirm_danger: true,
+                      } %>
+      <% else %>
+        <%# Fuime: the age check is not decoration. A subscription is a contract, so
+            the payer — and therefore the person a comp is recorded against — has to
+            be an adult (L2). BillingController refuses a minor for the same reason;
+            comping to a minor would route around that refusal from the inside. %>
+        <% if user.known_adult? || user.staff? %>
+          <%= form_with url: subscription_grant_admin_index_path, method: :post, local: true,
+                        data: { turbo_frame: "_top" } do |form| %>
+            <%= hidden_field_tag :user_id, user.id %>
+            <div class="flex flex-col sm:flex-row gap-2 items-start">
+              <%= text_field_tag :notes, nil, placeholder: "why we're comping this (recorded)", class: "flex-grow" %>
+              <%= form.submit "Comp the family plan", class: "btn bg-accent",
+                              data: { turbo_confirm: "Give #{user.email} the family plan for free?" } %>
+            </div>
+          <% end %>
+          <p class="muted text-sm mb-0">
+            Free, no card collected, effective immediately across every venture they sign for.
+          </p>
+        <% else %>
+          <p class="muted mb-0">
+            The family plan is billed to an adult, so it can only be comped to a confirmed
+            adult account (L2 — a minor's payment authorisation is voidable). This account is
+            <%= user.account_type_label.downcase %>.
+          </p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>

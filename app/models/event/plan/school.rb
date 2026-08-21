@@ -53,7 +53,7 @@ class Event
       end
 
       def label
-        "school"
+        "Fuime for schools (#{revenue_fee_label})"
       end
 
       def description

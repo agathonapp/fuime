@@ -50,8 +50,15 @@ class Event
         ENV.fetch("FUIME_STANDARD_MONTHLY_CENTS", "1500").to_i
       end
 
+      # Fuime: both halves of the price (2026-08-21).
+      #
+      # Standard is the one plan that charges a percentage AND a subscription, and
+      # the picker printed only the percentage — so an admin moving a venture onto
+      # it could not see that they were also starting a $15/month bill. #price_label
+      # collapses to just the rate on every subclass that charges nothing monthly,
+      # so no other label changes shape.
       def label
-        "Fuime standard (#{revenue_fee_label})"
+        "Fuime standard (#{price_label})"
       end
 
       def description

@@ -93,4 +93,35 @@ RSpec.describe "billing page", type: :request do
     post my_billing_portal_path
     expect(response).to redirect_to("https://billing.stripe.com/p")
   end
+
+  # Fuime: the double-subscribe hole. Before the guard, a repeat POST here — a
+  # double submit, a back-button re-post — minted a SECOND Stripe subscription
+  # against the same customer. The webhook then overwrote stripe_subscription_id,
+  # so the first kept charging the card every month with nothing in Fuime able to
+  # see it.
+  it "refuses to sell the plan twice to the same family" do
+    Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_dupe")
+    expect(Stripe::Checkout::Session).not_to receive(:create)
+
+    login_as!(guardian)
+    post my_billing_subscribe_path
+
+    expect(response).to redirect_to(my_billing_path)
+    expect(flash[:alert]).to include("already on the family plan")
+  end
+
+  it "tells a comped family there is nothing to buy, and shows no card controls" do
+    admin = create(:user, :make_admin, verified: true)
+    Fuime::Subscription.grant_family_plan!(user: guardian, by: admin, notes: "school partner")
+    expect(Stripe::Checkout::Session).not_to receive(:create)
+
+    login_as!(guardian)
+
+    get my_billing_path
+    expect(response.body).to include("comped this plan")
+    expect(response.body).not_to include("Manage billing")
+
+    post my_billing_subscribe_path
+    expect(flash[:alert]).to include("comped by Fuime")
+  end
 end

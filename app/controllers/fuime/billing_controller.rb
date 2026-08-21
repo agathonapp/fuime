@@ -26,6 +26,25 @@ module Fuime
     def subscribe
       return refuse_minor unless adult?
 
+      # Fuime: refuse a second subscription for the same family (2026-08-21).
+      #
+      # Nothing stopped a repeat POST here. The page hides the Upgrade button once
+      # the plan is active, but the route was reachable — a double submit, a
+      # bookmarked form, or a back-button re-post minted a SECOND Stripe
+      # subscription against the same customer. The webhook then overwrote
+      # `stripe_subscription_id` with the new one, so the first became invisible to
+      # Fuime while continuing to charge the guardian's card every month, forever,
+      # with no surface anywhere in the app that could see it.
+      #
+      # A comped subscription is caught by the same check (`#active?`), which is
+      # correct: somebody who already has the plan for free should not be sold it.
+      existing = service.record
+      if existing&.active?
+        redirect_to my_billing_path,
+                    alert: existing.comped? ? "You already have the family plan, comped by Fuime — there's nothing to buy." : "You're already on the family plan."
+        return
+      end
+
       session = service.checkout_session(
         success_url: my_billing_url(subscribed: 1),
         cancel_url: my_billing_url
