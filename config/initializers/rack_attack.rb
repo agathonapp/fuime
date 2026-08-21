@@ -302,8 +302,13 @@ class Rack::Attack
   #
   # 20 in 5 minutes is far above a real buyer — who starts one checkout, maybe
   # retries once — and low enough that automation hits it in seconds.
+  #
+  # The route is `POST /b/:slug/pay` (`fuime_storefront_pay`). Rails adds an
+  # optional `(.:format)` to every route, so `/b/slug/pay.json` reaches the
+  # same action and must count. A matcher that only accepts the extension-less
+  # path is a bypass, not a ceiling.
   throttle("fuime/checkout/ip", limit: 20, period: 5.minutes) do |req|
-    Rack::Attack.client_ip(req) if req.post? && req.path.match?(/\A\/b\/[^\/]+\/pay\z/)
+    Rack::Attack.client_ip(req) if req.post? && req.path.match?(%r{\A/b/[^/]+/pay(\.[^/]*)?/?\z})
   end
 
   # Fuime: inviting a guardian.
