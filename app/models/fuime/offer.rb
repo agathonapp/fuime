@@ -54,9 +54,9 @@
 # Check Constraints
 #
 #  fuime_offers_api_offers_name_their_key  (created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL) NOT VALID
-#  fuime_offers_created_via_known          (created_via::text = ANY (ARRAY['operator'::character varying, 'api'::character varying]::text[])) NOT VALID
+#  fuime_offers_created_via_known          (created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])) NOT VALID
 #  fuime_offers_price_in_range             (price_cents > 0 AND price_cents <= 1000000)
-#  fuime_offers_state_known                (aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[]))
+#  fuime_offers_state_known                (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text]))
 #
 module Fuime
   class Offer < ApplicationRecord
