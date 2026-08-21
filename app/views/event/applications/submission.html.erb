@@ -118,6 +118,26 @@
           inline keeps the flow closed until a DocuSeal template is set
           (docs/fuime/DOCUSEAL_SETUP.md). %>
       <% admin_tool do %>
+        <%# Fuime: say why activation would refuse, here, instead of letting the
+            operator find out from a 500.
+
+            Event::Application#activate_event! raises on four ordinary situations
+            and the controller used to rescue none of them, so "this founder has
+            already used their one free venture" arrived as an error page with a
+            reference code. Same list the controller re-checks and the model
+            raises from, so this cannot promise an activation that then fails. %>
+        <% activation_blockers = @application.activation_blockers %>
+        <% if activation_blockers.any? %>
+          <div class="card card--outline mb-3">
+            <p class="text-sm mb-1"><strong>Not ready to activate</strong></p>
+            <ul class="text-sm muted mb-0 pl-4">
+              <% activation_blockers.each do |blocker| %>
+                <li><%= blocker %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
         <%= form_with url: admin_activate_application_path(@application), method: :post, class: "my-0" do |form| %>
           <div class="field">
             <%= form.label "Tags" %>
@@ -129,7 +149,7 @@
             <%= form.collection_select :risk_level, Event.risk_levels.map { |k, _v| [k.humanize.capitalize, k] }, :last, :first, { include_blank: "Select a risk level" }, { required: true } %>
           </div>
 
-          <%= form.submit "Activate", class: "btn bg-success" %>
+          <%= form.submit "Activate", class: "btn bg-success", disabled: activation_blockers.any? %>
         <% end %>
       <% end %>
     <% end %>
