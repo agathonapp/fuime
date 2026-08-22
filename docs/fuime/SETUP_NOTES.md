@@ -2,7 +2,18 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — two family-plan write holes on PR #87.**
+**2026-08-21 (latest) — signed-in minor buyers refused at public checkout.**
+
+`Fuime::CheckoutsController` now refuses a signed-in minor or unknown-age buyer
+before it talks to Stripe. Same predicate as `BillingController#adult?`
+(`known_adult?` or `staff?`). Guests still check out; offer price still comes
+off the offer record. Both storefront `POST /b/:slug/pay` and the pay-link form
+hit this one action. Specs: `spec/requests/fuime_checkout_buyer_age_spec.rb`.
+
+Did not touch Discover, `/directory`, waitlist, CORS, CSP, or billing.
+
+
+**2026-08-21 — two family-plan write holes on PR #87.**
 
 A subscription is a contract billed to a confirmed adult. `grant_family_plan!`
 now refuses anyone who is not `known_adult?` or `staff?`, and

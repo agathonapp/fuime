@@ -161,6 +161,33 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
         expect(flash[:alert]).not_to include("sk_live")
       end
     end
+
+    # Buyer age. Request-level coverage lives in
+    # spec/requests/fuime_checkout_buyer_age_spec.rb; these assert the
+    # controller itself will not construct a Stripe session.
+    context "signed-in buyer age" do
+      include SessionSupport
+
+      it "refuses a minor and does not start Stripe Checkout" do
+        create_session(create(:user, :minor_with_guardian), verified: true)
+        allow(Fuime::PaymentLinkService).to receive(:new)
+
+        post :create, params: { slug: event.slug, amount: "25" }
+
+        expect(Fuime::PaymentLinkService).not_to have_received(:new)
+        expect(flash[:alert]).to match(/adult/i)
+      end
+
+      it "lets an adult through" do
+        create_session(create(:user, birthday: 40.years.ago.to_date), verified: true)
+        stub_checkout
+
+        post :create, params: { slug: event.slug, amount: "25" }
+
+        expect(Fuime::PaymentLinkService).to have_received(:new)
+        expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_123")
+      end
+    end
   end
 
 end

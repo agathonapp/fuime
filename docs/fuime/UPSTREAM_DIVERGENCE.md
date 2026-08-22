@@ -5558,3 +5558,27 @@ expired unpaid, and zero subscriptions. The platform webhook endpoint *is*
 registered for `customer.subscription.created/updated/deleted`, so the wiring is
 in place — but the completion → webhook → `active` path is proven only by stubs.
 The comp path added here is exercised end to end and does not depend on it.
+
+## 2026-08-21 — Refuse a signed-in minor buyer at public checkout
+
+`POST /b/:slug/pay` (`fuime_storefront_pay`) is the only action that opens a
+Stripe Checkout session for a public offer or pay link. Both the storefront Buy
+button and the hosted `/pay/:event_slug/:offer` form post here. It was public
+and unauthenticated with no buyer-age check, so a signed-in teen — including one
+with an active guardian, who already passes `GuardianshipEnforcement` — could
+start a session.
+
+Guests (no session) still check out. The pay link a teen texts to a customer
+they know must keep working without a Fuime account. Price is unchanged: it
+still comes off the offer record, never the POST body.
+
+The predicate is the same as `BillingController#adult?`: `known_adult?` or
+`staff?` may proceed; unknown age is fail-closed (`User#known_adult?`).
+`GuardianshipEnforcement` is skipped on this controller so a parked teen's POST
+is refused as a buyer rather than redirected to "invite your guardian."
+
+| Change | Why | Files |
+|---|---|---|
+| `refuse_minor_buyer` before_action on `Fuime::CheckoutsController` | A signed-in minor or unknown-age user must not open a Stripe session. Guests skip the check. | `app/controllers/fuime/checkouts_controller.rb` |
+| Request spec: guest / adult / teen / unknown-age / staff | The three buyer cases the product asked for, plus the fail-closed and staff exemptions already used on billing. | `spec/requests/fuime_checkout_buyer_age_spec.rb` |
+| Controller spec: signed-in minor refused, adult proceeds | Same gate, next to the other checkout guards, so a later edit cannot drop the request file and lose coverage. | `spec/controllers/fuime/checkouts_controller_spec.rb` |
