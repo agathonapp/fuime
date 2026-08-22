@@ -2,7 +2,26 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — signed-in minor buyers refused at public checkout.**
+**2026-08-21 (latest) — /discover: listed offers, not a marketplace.**
+
+`GET /discover` is the public shop window of **listed + published** offers on a
+venture the directory would already show (public, indexable, not hidden, not
+demo, vetting-approved, `accepts_payments?`). `/directory` is unchanged: it
+still lists ventures and quotes no prices. Cards go to `/b/:slug` with no query
+string. Checkout still reads `offer.price_cents` off the record.
+
+Empty state talks to a **founder**: share `/pay/your-business/your-offer`. That
+is the path that works at n=1. Do not turn this page into search, popular,
+recommendations, or "check back soon."
+
+`GET /discover/:event_slug/:offer` 404s unlisted / unpublished / missing /
+non-payable. It does **not** change `/pay/`, where an unlisted private link
+must keep working.
+
+Specs: `spec/requests/fuime_discover_spec.rb`.
+
+
+**2026-08-21 — signed-in minor buyers refused at public checkout.**
 
 `Fuime::CheckoutsController` now refuses a signed-in minor or unknown-age buyer
 before it talks to Stripe. Same predicate as `BillingController#adult?`

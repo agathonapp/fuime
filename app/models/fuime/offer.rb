@@ -171,6 +171,22 @@ module Fuime
       scope.find_by(slug: identifier) || scope.find_by(public_token: identifier)
     end
 
+    # Whether this offer may appear on /discover or answer a Discover deep link.
+    #
+    # All of it, not just `listed && published`: a card that leads to a dead
+    # storefront is worse than no card, and a deep link that 302s an unlisted
+    # offer onto `/b/:slug` would publish a private arrangement. The moment any
+    # half is false the offer drops — see Fuime::DiscoverController.
+    def in_discover_window?
+      listed? && published? && event.present? &&
+        !event.hidden? &&
+        event.is_public? &&
+        event.is_indexable? &&
+        !event.demo_mode? &&
+        event.operator_vetting_approved? &&
+        event.accepts_payments?
+    end
+
     scope :published, -> { where(aasm_state: "published") }
     scope :live, -> { where.not(aasm_state: "archived") }
     # The shop window. See AddListingToFuimeOffers for why this is separate from
@@ -180,6 +196,26 @@ module Fuime
     # meant to be reached.
     scope :listed, -> { where(listed: true) }
     scope :unlisted, -> { where(listed: false) }
+    # The public shop window at /discover — listed + published on a venture the
+    # directory would already show. `#accepts_payments?` is applied in Ruby by
+    # Fuime::DiscoverController (same reason as the directory: a school venture
+    # inherits its payment account and a SQL join would miss it).
+    #
+    # Unlisted published offers stay out of this on purpose. They are private
+    # pay links and remain reachable at `/pay/:event_slug/:offer`.
+    scope :in_discover_window, -> {
+      published.listed
+               .joins(:event)
+               .where(
+                 events: {
+                   hidden_at: nil,
+                   is_public: true,
+                   is_indexable: true,
+                   demo_mode: false,
+                   operator_vetting_status: Event.operator_vetting_statuses.fetch("approved")
+                 }
+               )
+    }
     scope :made_by_program, -> { where(created_via: "api") }
     # The storefront's order: the operator's own. See the migration for why an
     # operator ordering their OWN shop is not the ranking §8.3 D2 forbids.

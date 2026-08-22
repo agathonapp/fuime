@@ -1,0 +1,98 @@
+<% title "Discover | Fuime" %>
+
+<% content_for :head do %>
+  <meta name="description" content="Listed offers from teen-run businesses on Fuime. Each business sets its own price.">
+  <meta property="og:site_name" content="Fuime">
+  <meta property="og:title" content="Listed offers on Fuime">
+  <meta property="og:url" content="<%= fuime_discover_url %>">
+<% end %>
+
+<%# Fuime: the public shop window.
+
+    A LISTING, not a dispatch, and not a marketplace that needs a crowd. See
+    Fuime::DiscoverController. Short version:
+
+      * no ratings, reviews, featured, popular, recommended, or best match
+      * no search
+      * the price is the operator's (`offer.price_cents`), never one Fuime wrote
+      * every card is `/b/:slug` with no query string
+      * nothing here names an operator or states an age
+
+    Empty state talks to a founder: share the /pay/ link you already have. %>
+
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Discover</h1>
+    <p class="muted m-0">
+      Offers a founder has listed, at the price they set. Pay them on their
+      storefront. Fuime does not pick who you hire.
+    </p>
+  </div>
+
+  <% if @offers.any? %>
+    <%= form_with url: fuime_discover_path, method: :get, local: true, class: "card mb-6" do |form| %>
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="field">
+          <%# Both options are neutral by construction. There is deliberately no
+              "most popular" or "highest rated". %>
+          <%= form.label :order, "Order" %>
+          <%= form.select :order,
+                          options_for_select(Fuime::DiscoverController::ORDERINGS.map { |k, v| [v, k] }, @ordering) %>
+        </div>
+
+        <%= form.submit "Show", class: "btn" %>
+      </div>
+    <% end %>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <% @offers.each do |offer| %>
+        <% venture = offer.event %>
+        <%= link_to fuime_storefront_path(slug: venture.slug), class: "card flex flex-col gap-2 no-underline" do %>
+          <div class="min-w-0">
+            <strong class="block truncate"><%= venture.name %></strong>
+            <% if venture.business_category.present? %>
+              <span class="muted text-sm"><%= venture.business_category.humanize %></span>
+            <% end %>
+          </div>
+
+          <% if venture.storefront_tagline.present? %>
+            <p class="m-0 text-sm muted"><%= venture.storefront_tagline %></p>
+          <% end %>
+
+          <p class="m-0">
+            <strong><%= offer.name %></strong>
+          </p>
+          <p class="m-0"><%= offer.price_sentence %></p>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# @page, not @offers: the latter is a filtered Array and knows nothing
+        about pages. See the controller. %>
+    <div class="mt-6">
+      <%= paginate @page %>
+    </div>
+  <% else %>
+    <div class="card py-8">
+      <p class="m-0">
+        Discover is a window onto listed offers. It is not how a first sale
+        happens.
+      </p>
+      <p class="mt-3 mb-0">
+        If you already sell something, send the customer the payment link you
+        already have:
+      </p>
+      <p class="mt-2 mb-0">
+        <code>/pay/your-business/your-offer</code>
+      </p>
+      <p class="muted mt-3 mb-0">
+        That works with one person. This page does not need anyone else on it.
+      </p>
+    </div>
+  <% end %>
+
+  <p class="muted text-sm mt-8">
+    Each business sets its own prices and chooses its own customers. Fuime provides
+    the payment tools. It does not assign work, set rates, or rank these businesses.
+  </p>
+</div>

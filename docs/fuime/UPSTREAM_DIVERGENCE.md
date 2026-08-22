@@ -5582,3 +5582,19 @@ is refused as a buyer rather than redirected to "invite your guardian."
 | `refuse_minor_buyer` before_action on `Fuime::CheckoutsController` | A signed-in minor or unknown-age user must not open a Stripe session. Guests skip the check. | `app/controllers/fuime/checkouts_controller.rb` |
 | Request spec: guest / adult / teen / unknown-age / staff | The three buyer cases the product asked for, plus the fail-closed and staff exemptions already used on billing. | `spec/requests/fuime_checkout_buyer_age_spec.rb` |
 | Controller spec: signed-in minor refused, adult proceeds | Same gate, next to the other checkout guards, so a later edit cannot drop the request file and lose coverage. | `spec/controllers/fuime/checkouts_controller_spec.rb` |
+
+## 2026-08-21 — /discover (listed-offer shop window)
+
+Public offer listing at `/discover`. `/directory` stays the venture listing.
+This is a window onto offers a founder has already listed, not a marketplace
+that needs browse traffic. Empty state tells a founder to share the `/pay/`
+link they already have.
+
+| Change | Why | Files |
+|---|---|---|
+| `Fuime::DiscoverController` + `/discover` + `/discover/:event_slug/:offer` | Listed+published offers on a payable public venture. Neutral order only. Cards link to `/b/:slug` with no query string so checkout cannot be passed a price. Deep link 404s anything not in the shop window; `/pay/` is untouched so unlisted private links still work. | `app/controllers/fuime/discover_controller.rb`, `app/views/fuime/discover/`, `config/routes.rb` |
+| `Fuime::Offer#in_discover_window?` and `.in_discover_window` | One place for listed+published+venture gates. `#accepts_payments?` stays in Ruby, same reason as the directory. | `app/models/fuime/offer.rb` |
+| Discover added to `INDEXABLE_CONTROLLER_PATHS` | Same allowlist as `/directory`. | `app/controllers/application_controller.rb` |
+| Footer link | How a founder finds the page. Not a homepage promo. | `app/views/application/_footer.html.erb` |
+
+Specs: `spec/requests/fuime_discover_spec.rb`.

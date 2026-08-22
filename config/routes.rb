@@ -101,6 +101,18 @@ Rails.application.routes.draw do
   get "learn/start/:slug", to: "learn#template", as: :learn_template
   get "learn/:slug", to: "learn#show", as: :learn_lesson
 
+  # Fuime: /discover — the public shop window of listed offers. See
+  # Fuime::DiscoverController. Declared here with /learn for the same two
+  # reasons: `/:event_slug/<word>` would swallow `/discover/taxes`, and
+  # `resources :events, path: "/"` would claim `/discover` as a venture slug.
+  #
+  # `/directory` stays the venture listing (and its spec). This is the offer
+  # shop. The two-segment show 404s anything that is not listed + payable; it
+  # does not replace `/pay/:event_slug/:offer`, which is how an unlisted private
+  # link is meant to be reached.
+  get "discover", to: "fuime/discover#index", as: :fuime_discover
+  get "discover/:event_slug/:offer", to: "fuime/discover#show", as: :fuime_discover_offer
+
   namespace :fuime do
     post "webhooks/stripe", to: "webhooks#stripe"
     post "webhooks/stripe/connect", to: "webhooks#connect"
