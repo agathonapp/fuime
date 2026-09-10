@@ -46,7 +46,7 @@ RSpec.describe Admin::Nav do
       item = organizations.items.find { |entry| entry.name == "Cohorts (Fuime)" }
       expect(item.path).to eq(Rails.application.routes.url_helpers.cohorts_admin_index_path)
       expect(item).to be_active
-      expect(item).to be_task_count?
+      expect(item).to be_task_count
       expect(instance.active_section).to eq(organizations)
     end
 
