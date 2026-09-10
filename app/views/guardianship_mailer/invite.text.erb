@@ -1,0 +1,16 @@
+Hello,
+
+<%= @minor.name || @minor.email %> invited you to be their parent or guardian on Fuime, a financial platform for teen-run businesses.
+
+If you accept, you will be the legal signer and responsible adult for their venture. You will be able to see their transactions and you will receive important notifications about the account. They run the venture day to day.
+
+Review the invitation and the guardian agreement here:
+
+<%= @accept_url %>
+
+If you did not expect this invitation, or if you do not know <%= @minor.name || @minor.email %>, you can ignore this email. Nothing happens unless you accept.
+
+Questions? Reply to this email or write to <%= @support_email %>.
+
+Thanks,
+The Fuime team

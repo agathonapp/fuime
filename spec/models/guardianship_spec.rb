@@ -71,6 +71,35 @@ RSpec.describe Guardianship do
     end
   end
 
+  describe "#structural_activation_blockers and #can_present_accept_form?" do
+    # The 18+ line is an activation precondition, not a reason to hide the
+    # checkbox that satisfies it. An invited stub parent must still see the form.
+    it "does not treat pending 18+ confirmation as a structural blocker" do
+      stub = create(:user, :unknown_age)
+      guardianship = create(:guardianship, guardian: stub, minor: teen)
+
+      expect(guardianship.structural_activation_blockers).to be_empty
+      expect(guardianship.can_present_accept_form?).to be true
+      expect(guardianship.activation_blockers).to include(described_class::AGE_CONFIRMATION_BLOCKER)
+    end
+
+    it "still presents the form after a 13+ settings tick" do
+      parent = create(:user, :attested_teen)
+      guardianship = create(:guardianship, guardian: parent, minor: teen)
+
+      expect(guardianship.can_present_accept_form?).to be true
+    end
+
+    it "withholds the form when the guardian is known to be under 18" do
+      underage = create(:user, :minor)
+      guardianship = build(:guardianship, guardian: underage, minor: teen)
+      guardianship.save(validate: false)
+
+      expect(guardianship.structural_activation_blockers.join).to match(/18 or older/)
+      expect(guardianship.can_present_accept_form?).to be false
+    end
+  end
+
   describe "#accept!" do
     it "activates and records the consent evidence" do
       guardianship = create(:guardianship, guardian: adult, minor: teen)

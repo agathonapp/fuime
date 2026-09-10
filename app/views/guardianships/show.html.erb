@@ -23,14 +23,17 @@
     </ul>
   </div>
 
-  <%# Preconditions — chiefly a confirmed 18+ date of birth. A guardian invited
-      by email is a stub user with no birthday, so this is the common path.
-      Surfacing it here means they fix it before signing, not after. %>
-  <% blockers = @guardianship.activation_blockers %>
-  <% if blockers.any? %>
+  <%# Structural preconditions only (known-under-18 guardian, self-invite).
+      The common invited parent is a stub / 13+ attested user: the 18+ claim
+      lives on the checkbox below. Hiding the form when that "blocker" is
+      present left parents with a message that said "tick the box below" and
+      no box — and an "Update my details" link to a settings page that cannot
+      make them an adult. %>
+  <% structural_blockers = @guardianship.structural_activation_blockers %>
+  <% if structural_blockers.any? %>
     <%= render "application/callout", type: "warning", title: "Before you can sign" do %>
       <ul class="list-disc pl-5 mb-2">
-        <% blockers.each do |blocker| %>
+        <% structural_blockers.each do |blocker| %>
           <li><%= blocker %></li>
         <% end %>
       </ul>
@@ -52,12 +55,18 @@
     <% end %>
   </div>
 
-  <% if blockers.empty? && @guardianship.agreement_partial.present? %>
-    <%= form_with url: accept_guardianship_path(@guardianship.invite_token), method: :post do |f| %>
-      <div class="field field--checkbox mb-3" data-controller="accordion">
+  <% if @guardianship.can_present_accept_form? %>
+    <%= form_with url: accept_guardianship_path(@guardianship.invite_token),
+                  method: :post,
+                  data: { turbo: false },
+                  html: { id: "guardian-accept-form" } do |f| %>
+      <div class="field field--checkbox mb-3" style="align-items: flex-start;">
         <%= check_box_tag :agree, "1", false,
                           required: true,
-                          id: "agree" %>
+                          id: "agree",
+                          class: "mt1",
+                          style: "width: 1.25rem; height: 1.25rem; flex-shrink: 0;",
+                          aria: { required: true } %>
         <%= label_tag :agree do %>
           I confirm I am the parent or legal guardian of
           <strong><%= @guardianship.minor.name || "this minor" %></strong>,
@@ -66,7 +75,9 @@
       </div>
 
       <div class="flex justify-center items-center flex-wrap gap-3">
-        <%= f.submit "Agree & activate their account", class: "btn bg-success text-lg px-6 py-3" %>
+        <%= f.submit "Agree & activate their account",
+                     class: "btn bg-success text-lg px-6 py-3",
+                     id: "guardian-accept-submit" %>
       </div>
     <% end %>
 

@@ -2,7 +2,22 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — API key create: reveal the plaintext without a reload.**
+**2026-09-10 (latest) — Parent invite: missing accept checkbox + spammy email.**
+
+The accept form on `GET /guardian/:token` was gated on
+`activation_blockers.empty?`. For an invited parent (stub or 13+ settings tick)
+that array still contains the 18+ sentence — the checkbox *is* how they clear
+it — so the page told them to tick a box that was not rendered, and sent them
+to settings (which cannot make them an adult). Form now keys off
+`#can_present_accept_form?` / `#structural_activation_blockers`. Invite mail
+adds Reply-To, a real text part, a calmer subject, and a pasteable URL.
+DNS/ESP (Resend SPF/DKIM/DMARC) is still required and is not a code change.
+
+Specs: `spec/controllers/guardianships_render_spec.rb`,
+`spec/mailers/guardianship_mailer_spec.rb`,
+`spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb`.
+
+**2026-09-10 — API key create: reveal the plaintext without a reload.**
 
 `POST /:slug/developer` already minted the key and rendered it in that
 response (F-08: never in flash). Turbo form POSTs still dropped it: they

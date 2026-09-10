@@ -94,16 +94,18 @@ class Guardianship < ApplicationRecord
       .where(organizer_positions: { event_id: event.id, deleted_at: nil })
   }
 
+  # Shown when the parent has not yet asserted 18+. The accept checkbox IS that
+  # assertion (GuardianshipsController#accept records `adult_18_plus` from it).
+  # Keep this sentence stable — specs and the invite page match on it.
+  AGE_CONFIRMATION_BLOCKER =
+    "Please confirm you're 18 or older by ticking the box below before you sign."
+
   # Reasons this guardianship cannot go active yet, as user-facing sentences.
   # Empty array means it can. Activation is the moment Fuime starts telling the
   # public "parent-signed account", so every precondition is checked here.
   def activation_blockers
-    blockers = []
-
-    if guardian.blank?
-      blockers << "This invitation has no guardian attached."
-      return blockers
-    end
+    blockers = structural_activation_blockers
+    return blockers if guardian.blank?
 
     # Fail closed on unknown age: a stub user created from an email address has
     # told us nothing, and must not be able to sign as the responsible adult until
@@ -127,8 +129,28 @@ class Guardianship < ApplicationRecord
     # Still fail-closed, and still the one place adulthood can be claimed: a user
     # cannot reach `adult_18_plus` from their own settings form (see
     # User#attest_minor_13_plus!).
+    #
+    # This sentence must NOT hide the accept form. The form is how they clear it.
+    # `structural_activation_blockers` / `#can_present_accept_form?` are the
+    # gates the view uses; this line stays in `#activation_blockers` so `#accept!`
+    # remains fail-closed until the tick is recorded.
     unless guardian.known_adult? || guardian.attested_adult_18_plus?
-      blockers << "Please confirm you're 18 or older by ticking the box below before you sign."
+      blockers << AGE_CONFIRMATION_BLOCKER
+    end
+
+    blockers
+  end
+
+  # Blockers that are NOT cleared by ticking the accept box — missing guardian,
+  # a known-under-18 guardian, or a self-invite. The invite page only withholds
+  # the checkbox for these. The 18+ confirmation is listed in
+  # `#activation_blockers` but presented *as* the checkbox.
+  def structural_activation_blockers
+    blockers = []
+
+    if guardian.blank?
+      blockers << "This invitation has no guardian attached."
+      return blockers
     end
 
     if guardian.is_minor? == true
@@ -140,6 +162,12 @@ class Guardianship < ApplicationRecord
     end
 
     blockers
+  end
+
+  # The accept form (checkbox + submit) can be shown. Age confirmation pending
+  # is allowed — ticking the box is how that precondition is satisfied.
+  def can_present_accept_form?
+    structural_activation_blockers.empty? && agreement_partial.present?
   end
 
   def activatable?
