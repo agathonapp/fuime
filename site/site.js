@@ -373,9 +373,10 @@
   /* ── live fee calculator ─────────────────────────────────────────────── */
 
   // The one place on the site where the pricing is not a claim. Drag it and
-  // the invoice recomputes with the arithmetic a Standard plan will run at live
-  // launch — 7% platform fee, with Stripe's own 2.9% + 30c shown as its own
-  // line because an all-in figure that hides the processor is a deceptive one.
+  // the invoice recomputes with the arithmetic Free and Pro both run — 7%
+  // platform fee, with Stripe's own 2.9% + 30c shown as its own line because
+  // an all-in figure that hides the processor is a deceptive one. Pro does not
+  // cut this rate; it is $19.99/mo for a second venture and API keys.
   // Nothing is billed today: payments run in Stripe test mode.
   var STRIPE_PCT = 0.029
   var STRIPE_FIXED = 0.3
@@ -421,7 +422,7 @@
       // with the range or it reads as a threshold that trips.
       set(
         out.monthly,
-        "Standard is $0/mo + 7%. Pro is $15/mo + 4%. Stripe's 2.9% + 30\u00A2 applies on both."
+        "Free is $0/mo + 7%. Pro is $19.99/mo + 7% \u2014 same take-rate, plus unlimited ventures and API keys. Stripe's 2.9% + 30\u00A2 applies on both."
       )
 
       var pct = ((amount - range.min) / (range.max - range.min)) * 100

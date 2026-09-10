@@ -63,7 +63,7 @@ idempotent-ish and print what they did:
     SLUG=stripe-pass-full rake fuime:stripe_pass:refund      # $5 back -> clamped reversal line
     SLUG=stripe-pass-full rake fuime:stripe_pass:payout      # teen asks, guardian approves, real payout
     SLUG=stripe-pass-full rake fuime:stripe_pass:payout_ledger  # the -$10 in the books
-    SLUG=stripe-pass-full rake fuime:stripe_pass:subscribe   # $15/mo family checkout URL
+    SLUG=stripe-pass-full rake fuime:stripe_pass:subscribe   # $19.99/mo family checkout URL
 
 (Prefix each with the usual `docker compose run --rm -e SLUG=stripe-pass-full
 -e RAILS_ENV=development -e DATABASE_URL=... web bundle exec`.)
@@ -76,17 +76,19 @@ should be a line with a memo a fifteen-year-old could read.
 1. `/my/billing` as the TEEN → sees the pitch and *the name of their parent*
    to ask; no upgrade button. POSTing anyway is refused (that's a spec, but
    feel free to try).
-2. `/my/billing` as the PARENT → **Upgrade — $15/mo** → Stripe Checkout → pay
+2. `/my/billing` as the PARENT → **Upgrade — $19.99/mo** → Stripe Checkout → pay
    with 4242.
-   ✅ Expect: back on /my/billing with the welcome callout. Locally the ACTIVE
-   flip needs `stripe listen --forward-to localhost:3000/fuime/webhooks/stripe`
+   ✅ Expect: back on /my/billing with the welcome callout. The callout must say
+   the take-rate **stays 7%** (same as Free) and that Pro unlocks more ventures
+   and API keys — not a cheaper fee. Locally the ACTIVE flip needs
+   `stripe listen --forward-to localhost:3000/fuime/webhooks/stripe`
    (platform endpoint, not /connect); in prod it's automatic.
 3. **The slot.** Before upgrading: teen applies for a SECOND venture, admin
    approves, activate → ❌ refused: "the free plan includes one venture".
-   After the parent upgrades → same activation succeeds, and every family
-   venture's fee reads 4% instead of 7%.
+   After the parent upgrades → same activation succeeds. Fee stays **7%** on
+   every family venture; what changed is the second-venture slot and API keys.
 4. **Manage billing** (as subscribed parent) → Stripe's portal: card, invoices,
-   cancel. Cancel → fee resolution returns to 7%.
+   cancel. Cancel → back to one venture and no API keys; fee stays 7%.
 
 ## 4. The school — local
 

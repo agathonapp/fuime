@@ -1651,9 +1651,10 @@ class Event < ApplicationRecord
     end
 
     # Fuime: new root ventures start on the Free plan (7%, no monthly) — the
-    # zero-friction end of the pricing ladder. Standard (4%) remains for
-    # ventures that already have it. Sub-orgs still inherit their parent's
-    # plan class above, which is what keeps a school's children on School.
+    # zero-friction end of the pricing ladder. Standard (5% + $15/mo, admin
+    # assigned) remains for ventures that already have it. Sub-orgs still
+    # inherit their parent's plan class above, which is what keeps a school's
+    # children on School.
     Event::Plan::Free
   end
 

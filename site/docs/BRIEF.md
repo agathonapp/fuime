@@ -37,8 +37,12 @@ never as what does.
 
 ### Pricing
 
-Starter $0 (no payments — books, storefront preview, education). Standard $0/mo
-+ 7% of collections. Pro ~$15/mo + 4%. Founders 0% for the launch cohort.
+These numbers must match `Event::Plan::{Free,Pro}` and `/billing`. Do not invent
+a cheaper Pro fee.
+
+Free $0/mo + 7% of collections, one venture. Pro $19.99/mo + 7% — **the same
+take-rate** — unlocking unlimited ventures and API keys. Founders 0% for the
+launch cohort, by invitation. Pro is not a discount on the fee.
 Stripe's card processing (~2.9% + 30¢) is separate, goes to Stripe, and **must be
 disclosed wherever a fee appears** — an all-in cost that only becomes visible
 later is the FTC's hidden-fee fact pattern. Subscriptions bill the **guardian**,
@@ -233,14 +237,13 @@ Three steps. One of them needs a parent.
 
 Pricing on the page must match the Pricing section above, including Stripe's
 separate processing fee. A flat monthly fee on a kid making $80 a month is a tax
-on starting, which is why Standard has none — but never imply the 7% is the
-all-in cost.
+on starting, which is why Free has none — but never imply the 7% is the
+all-in cost, and never imply Pro cuts the 7%.
 Stripe's card processing is separate and goes to Stripe. We show it on every
 invoice so the math is never a surprise.
 
-Starter   Free. Books, storefront and lessons, with no payment processing.
-Standard  $0/mo + 7% of what you collect. No fee on an invoice nobody pays.
-Pro       $15/mo + 4%. Cheaper than Standard above about $500 a month.
+Free      $0/mo + 7% of what you collect. One venture. No fee on an invoice nobody pays.
+Pro       $19.99/mo + 7%. Same take-rate. Unlimited ventures and API keys.
 Founders  0% for the launch cohort, by invitation.
 Stripe    2.9% + 30¢ a card payment, on top of every plan above, paid to Stripe.
 Billed to the guardian who holds the account, never to the young founder — and
@@ -272,7 +275,7 @@ hi@fuime.com
 Invoice 0014 · Maya R. · Photography · Due on receipt
 Senior portraits · 3 hr session      $400.00
 Stripe processing · 2.9% + 30¢       −$11.90
-fuime platform fee · 7% (Standard)   −$28.00
+fuime platform fee · 7% (Free / Pro) −$28.00
 Left for the venture                 $360.10
 Paid Jun 14 · Visa ···· 4242
 ```

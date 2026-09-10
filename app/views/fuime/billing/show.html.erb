@@ -5,8 +5,10 @@
 
 <% if params[:subscribed].present? %>
   <%= render "application/callout", type: "success", title: "Welcome to the family plan" do %>
-    <p class="mb-0">Once Stripe confirms the payment (usually seconds), every venture in your family drops to
-      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %>.</p>
+    <p class="mb-0">Once Stripe confirms the payment (usually seconds), your family can run
+      more than one venture and use API keys. The take-rate stays
+      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %> —
+      the same as Free. Pro does not discount the fee.</p>
   <% end %>
 <% end %>
 
@@ -14,9 +16,10 @@
   <% if @subscription&.active? %>
     <h3 class="mt0">You're on the family plan 🎉</h3>
     <p>
-      Every venture your family runs, at
-      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong> —
-      unlimited businesses, one subscription.
+      Unlimited ventures and API keys, one subscription.
+      Fuime still keeps
+      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>
+      of what each venture collects — the same take-rate as Free.
       <% if @subscription.current_period_end %>
         Renews <%= @subscription.current_period_end.strftime("%B %-d, %Y") %><%= @subscription.cancel_at_period_end ? " (set to cancel)" : "" %>.
       <% end %>
@@ -55,8 +58,11 @@
           price the product does not have, on the one screen whose entire job is
           stating the price. %>
       <strong><%= render_money(@pro_plan.monthly_fee_cents) %>/month</strong> for
-      <strong>unlimited businesses</strong> at
-      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>.
+      <strong>unlimited ventures</strong> and
+      <strong>API keys</strong>,
+      at the same
+      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>
+      take-rate — not a cheaper fee.
     </p>
     <% if @is_adult %>
       <%# Fuime: `turbo: false`, and it is the whole reason this button worked.

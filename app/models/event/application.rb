@@ -573,7 +573,7 @@ class Event
       unless user.institutionally_vouched_for? || user.staff? || free_venture_slot_available?
         blockers << "the free plan includes one venture and #{user.email} already " \
                     "has one — the family plan (#{format('$%.2f', Event::Plan::Pro.new.monthly_fee_cents / 100.0)}/mo) " \
-                    "covers unlimited businesses"
+                    "covers unlimited ventures and API keys"
       end
 
       blockers

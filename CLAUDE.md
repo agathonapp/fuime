@@ -109,10 +109,10 @@ L7. **No targeted advertising, sale, or profiling of minors' data — ever** (CT
     SCOPE; NY CDPA "strictly necessary"). Paid acquisition targets parents. Transactional-only
     notifications to minors, none 12–6 a.m. No algorithmic/social feed without legal review.
 
-L8. **fuime.com must describe the product that exists.** The site currently claims a Stripe
-    Connect no-custody architecture, a Stripe ID check, and 7% + $15/mo pricing — none
-    implemented (app: pooled account, no KYC, 4%, no monthly fee). Fixing this divergence is
-    P0; never let site copy lead the code again.
+L8. **fuime.com must describe the product that exists.** Pricing (G3, 2026-09): Free is
+    $0/mo + 7%, one venture; Pro is $19.99/mo + 7% (same take-rate), unlimited ventures
+    and API keys. Do not re-advertise a cheaper Pro fee. Other site/app gaps (Connect
+    vs MoR, KYC claims) remain — never let site copy lead the code again.
 
 ---
 

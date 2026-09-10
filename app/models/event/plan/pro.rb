@@ -23,7 +23,8 @@
 class Event
   class Plan
     # Fuime: the family plan — a monthly subscription that covers EVERY venture
-    # the guardian signs for ("unlimited businesses"), at the lower 4% rate.
+    # the guardian signs for ("unlimited businesses") plus the developer API.
+    # Same take-rate as Free (7%). It is not a cheaper fee.
     #
     # Not directly selectable in a plan picker, deliberately: Pro is not a
     # per-venture choice, it is a property of the FAMILY. It is granted by the
@@ -32,8 +33,9 @@ class Event
     # resolution-over-state pattern the School plan uses — so an upgrade or a
     # lapse takes effect everywhere at once with no rows to sweep.
     #
-    # Price is env-tunable; $15/mo default per the founder's 2026-08-05 pricing
-    # decision ($15-20 band).
+    # Price is env-tunable; $19.99/mo default (FUIME_PRO_MONTHLY_CENTS). Stripe
+    # Billing creates the Price from this number (`fuime_monthly_<cents>`), so
+    # this file — not marketing copy — is what Checkout charges.
     class Pro < Standard
       # ⚠️ 3% is BELOW Stripe's own rate on any normal teen-sized sale.
       #
@@ -88,8 +90,8 @@ class Event
       end
 
       def description
-        "The family plan: every business your kids run, #{revenue_fee_label} on revenue, " \
-          "one monthly subscription billed to the parent."
+        "The family plan: unlimited ventures and API keys, #{price_label} — the same " \
+          "take-rate as Free, billed to the parent. Not a cheaper fee."
       end
 
     end

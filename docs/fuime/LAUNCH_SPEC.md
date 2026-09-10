@@ -267,8 +267,8 @@ Set in Render for **both** `fuime-web` **and** `fuime-worker`. Anything marked
 > The boot guard refuses to start if `STRIPE_MODE=live` without live keys, and refuses
 > if a live key is present while mode is not live. Both are deliberate.
 
-**Cost:** 2.9% + $0.30 per transaction. Connect adds fees — model this against your 4%
-before promising anyone a margin.
+**Cost:** 2.9% + $0.30 per transaction. Connect adds fees — model this against the
+live take-rate (Free/Pro **7%**, Standard 5%) before promising anyone a margin.
 
 ### 3.2 Object storage — REQUIRED (data loss today)
 
@@ -358,19 +358,20 @@ Every unused credential is attack surface with no upside. Remove them from `rend
 ## §4. Feature work
 
 ### 4.1 Payments, end to end — BLOCKING
-**Today the product cannot take a single dollar.** `Fuime::PaymentLinkService` exists
-but is **called from nowhere**, and the storefront's Pay button is `disabled` with the
-label "(Payment links coming soon)".
+**Stale as of 2026-09 (G3).** The storefront Pay button is live. Checkouts exist
+(`Fuime::CheckoutsController`, `Fuime::PaymentLinkService`). The platform fee is
+plan-driven: Free and Pro are **7%**; Standard is 5% (admin-assigned). Pro is
+**$19.99/mo + 7%** — same take-rate as Free — and unlocks unlimited ventures
+plus API keys, not a cheaper fee. The remaining gate is a `stripe listen` pass
+against Fuime's own Stripe account, then real cards.
 
-- [ ] Rebuild against the §1.1 structure (Connect changes most of this)
+- [x] UI for a teen to create and share a payment link
+- [x] Enable the storefront Pay button
+- [x] Charge the plan's fee (`event.revenue_fee`) into Stripe / the ledger
+- [ ] Rebuild against the §1.1 structure (Connect vs production MoR)
 - [ ] Guardian-facing onboarding into Stripe Connect, incl. KYC handoff
-- [ ] UI for a teen to create and share a payment link
-- [ ] Enable the storefront Pay button
-- [ ] **Actually charge the 4% fee.** It is computed into Stripe metadata and then
-      never read by anything — no line item, no `application_fee_amount`, nothing
-      booked to the ledger. The business model is currently a comment.
 - [ ] Payout scheduling and visibility for the guardian
-- [ ] Test with real cards, real refunds, real disputes
+- [ ] Test with real cards, real refunds, real disputes (`stripe listen` on Fuime's account)
 
 Already done and worth keeping: webhook signature verification, idempotency keyed on
 the payment intent, `fronted: false`, and refund/dispute reversal capped at the

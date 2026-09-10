@@ -2,18 +2,12 @@
 
 require "rails_helper"
 
-# Fuime: the pricing ladder.
+# Fuime: the pricing ladder (must match Event::Plan::{Free,Pro} and /billing).
 #
-#   Free   — 7% (HCB's own rate), no monthly. The D2C default; a kid starts
-#            selling before any adult enters a card.
-#   Pro    — $15/mo (env-tunable) billed to the GUARDIAN, covering every
-#            venture they sign for, at 4%.
+#   Free   — 7% (HCB's own rate), no monthly. One venture. No API keys.
+#   Pro    — $19.99/mo (env-tunable) billed to the GUARDIAN, unlimited
+#            ventures + API keys, at the SAME 7%. Not a cheaper fee.
 #   School — 0%, invoiced per contract; never card-on-file.
-#
-# The upgrade breakeven is worth stating where it can't be lost: 3 points of
-# fee spread only beat $180/yr above ~$6,000 of annual sales, so Pro is sold
-# on the software (unlimited businesses, cards when they land), not on fee
-# arbitrage — the specs pin the mechanism, the PR carries the argument.
 RSpec.describe Fuime::SubscriptionService do
   let(:guardian) { create(:user, birthday: 40.years.ago.to_date) }
   let(:teen) { create(:user, birthday: 15.years.ago.to_date, verified: true) }
@@ -181,6 +175,9 @@ RSpec.describe "family plan banner", type: :request do
     create(:event, name: "Slot Taken", organizers: [teen])
     get new_application_path
     expect(response.body).to include("needs the family plan")
+    expect(response.body).to include("$19.99")
+    expect(response.body).to include("API keys")
+    expect(response.body).to include("not a cheaper fee")
     expect(response.body).to include(ERB::Util.html_escape(guardian.name.presence || guardian.email))
 
     Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_ban_1")

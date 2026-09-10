@@ -5668,6 +5668,23 @@ are not in `user_params`.
 | Activation / payout / apply fields use `#needs_guardian?` | Stop duplicating the check so a waiver cannot be half-applied | `app/models/event/application.rb`, `app/models/event.rb` |
 | Admin actions + panel | The surface Rushmore actually uses | `app/controllers/users_controller.rb`, `app/views/users/_admin_guardianship.html.erb`, `app/policies/user_policy.rb`, `config/routes.rb` |
 
+## 2026-09-10 — G3: pricing truth (marketing + /billing match Plan)
+
+fuime.com sold Pro at $15/mo + 4%. The app charges **$19.99/mo + 7%** (same
+take-rate as Free). Pro unlocks unlimited ventures and API keys — not a cheaper
+fee. Stripe Billing creates `fuime_monthly_<cents>` from
+`Event::Plan::Pro#monthly_fee_cents`; there is no unused $15 Pro price to
+adopt. Marketing and `/billing` now state the Plan. `LAUNCH_SPEC` §4.1 no
+longer claims a disabled Pay button or an uncollected 4% fee.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Marketing Free / Pro / Founders at live numbers | Parents who read fuime.com were being sold a plan Checkout does not charge | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/site.js`, `site/docs/BRIEF.md` |
+| `/billing` + family-plan banner stop saying "drops to 7%" | Same take-rate as Free; the product is a second venture + API keys | `app/views/fuime/billing/show.html.erb`, `app/views/event/applications/_family_plan_banner.html.erb` |
+| `Event::Plan::{Free,Pro}` comments + descriptions | Header comments still narrated a 4% family discount | `app/models/event/plan/free.rb`, `app/models/event/plan/pro.rb` |
+| Specs pin $19.99, 7%, unlocks, and reject $15+4% on the site | So the next copy pass cannot re-lie | `spec/fuime_marketing_pricing_spec.rb`, `spec/requests/fuime_billing_spec.rb`, `spec/models/event/plan_pricing_spec.rb` |
+| `LAUNCH_SPEC` §4.1 / §3.1; walkthrough billing steps | Those docs still said Pay was disabled and Pro cut the fee to 4% | `docs/fuime/LAUNCH_SPEC.md`, `docs/fuime/TESTING_WALKTHROUGH.md` |
+
 ## 2026-09-10 — G2: Cohorts in admin nav + admit runbook
 
 `/admin/cohorts` already collapsed approve → activate → operator vetting when
