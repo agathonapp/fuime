@@ -414,6 +414,8 @@ Rails.application.routes.draw do
       post "unimpersonate"
 
       post "suppress_card_locking", to: "users#suppress_card_locking"
+      post "waive_guardian_requirement", to: "users#waive_guardian_requirement"
+      post "restore_guardian_requirement", to: "users#restore_guardian_requirement"
     end
     post "delete_profile_picture", to: "users#delete_profile_picture"
     post "generate_totp"

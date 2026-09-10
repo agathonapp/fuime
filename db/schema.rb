@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_21_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -3208,6 +3208,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_120000) do
     t.string "discord_id"
     t.text "email", null: false
     t.string "full_name"
+    t.datetime "guardian_requirement_waived_at"
+    t.bigint "guardian_requirement_waived_by_id"
+    t.text "guardian_requirement_waiver_notes"
     t.boolean "joined_as_teenager"
     t.datetime "locked_at", precision: nil
     t.boolean "monthly_donation_summary", default: true
@@ -3233,6 +3236,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_120000) do
     t.string "webauthn_id"
     t.index ["discord_id"], name: "index_users_on_discord_id", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["guardian_requirement_waived_by_id"], name: "index_users_on_guardian_requirement_waived_by_id"
     t.index ["slug"], name: "index_users_on_slug", unique: true
   end
 
@@ -3614,6 +3618,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_120000) do
   add_foreign_key "user_seen_at_histories", "users"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
+  add_foreign_key "users", "users", column: "guardian_requirement_waived_by_id"
   add_foreign_key "venture_cardholders", "events"
   add_foreign_key "venture_cardholders", "users"
   add_foreign_key "venture_cards", "venture_cardholders"

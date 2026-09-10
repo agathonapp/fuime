@@ -5648,3 +5648,22 @@ placement will stay poor no matter what the template says.
 | `#structural_activation_blockers` + `#can_present_accept_form?` | Show the accept checkbox when the only remaining claim is the 18+ tick the box itself records | `app/models/guardianship.rb`, `app/views/guardianships/show.html.erb` |
 | Reply-To, text parts, calmer subject, pasteable URL | In-app deliverability: multipart, replyable, not phishing-shaped | `app/mailers/guardianship_mailer.rb`, `app/views/guardianship_mailer/` |
 | Render / mailer / family-flow specs | Cover the stub-parent UI and the success path the founder hit | `spec/controllers/guardianships_render_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb` |
+
+## 2026-09-10 — Admin waiver of the parent/guardian gate
+
+An admin must be able to let one person through without a real parent accept
+(support, demos) without weakening the default. The gate is
+`User#needs_guardian?` — session filter, `Event::Application#activation_blockers`,
+EventPolicy, payout setup. A named waiver on the user (who / when / notes)
+clears that predicate. It does not fabricate a guardianship.
+
+UI: `/users/:id/admin` Guardianship panel — "Waive guardian requirement" /
+"Restore guardian requirement". Admin only (not auditor, not the user). Columns
+are not in `user_params`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `guardian_requirement_waived_*` on users | Audited, reversible bypass for one person | `db/migrate/20260910150000_add_guardian_requirement_waiver_to_users.rb` |
+| `#needs_guardian?` honors the waiver | One predicate; every consumer follows | `app/models/user.rb` |
+| Activation / payout / apply fields use `#needs_guardian?` | Stop duplicating the check so a waiver cannot be half-applied | `app/models/event/application.rb`, `app/models/event.rb` |
+| Admin actions + panel | The surface Rushmore actually uses | `app/controllers/users_controller.rb`, `app/views/users/_admin_guardianship.html.erb`, `app/policies/user_policy.rb`, `config/routes.rb` |

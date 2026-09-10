@@ -258,6 +258,14 @@ RSpec.describe Fuime::PayableAssessment do
         expect(assessment.skip_reason).not_to include("parent or guardian")
       end
 
+      it "lets a minor through after an admin waives the guardian requirement" do
+        teen = create(:user, :minor, birthday: 16.years.ago.to_date)
+        teen.waive_guardian_requirement!(by: create(:user, :make_admin))
+        create(:organizer_position, event:, user: teen)
+
+        expect(assessment.skip_reason).not_to include("parent or guardian")
+      end
+
       # A school student's responsible adult is the school. Same carve-out as
       # Event::Application#activate_event! and User#institutionally_vouched_for?.
       it "exempts a venture inside a school programme" do

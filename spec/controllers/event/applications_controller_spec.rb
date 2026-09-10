@@ -191,6 +191,30 @@ RSpec.describe Event::ApplicationsController, type: :controller do
     end
   end
 
+  describe "POST #admin_activate for a minor whose guardian requirement was waived" do
+    let(:teen) { create(:user, :minor) }
+    let(:application) do
+      create(:event_application, user: teen, teen_led: true, description: "Prints").tap do |app|
+        app.update!(aasm_state: :approved, address_country: "US")
+      end
+    end
+
+    it "refuses activation until an admin waives, then proceeds" do
+      expect(application.activation_blockers.join).to match(/no active guardian/)
+
+      expect {
+        post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
+      }.not_to(change { Event.count })
+
+      teen.waive_guardian_requirement!(by: admin)
+      expect(application.reload.activation_blockers).to be_empty
+
+      expect {
+        post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
+      }.to change { Event.count }.by(1)
+    end
+  end
+
   describe "Event::Application#next_step" do
     # The application card renders `next_step`, falling back to "We're reviewing
     # your application" when it returns nil. Approved-but-not-yet-activated hit

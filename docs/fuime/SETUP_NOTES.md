@@ -2,7 +2,21 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — Parent invite: missing accept checkbox + spammy email.**
+**2026-09-10 (latest) — Admin can waive the parent/guardian gate for one person.**
+
+On `/users/:id/admin` (Guardianship panel): **Waive guardian requirement**
+(optional reason) and **Restore guardian requirement**. Writes
+`users.guardian_requirement_waived_*`. `User#needs_guardian?` is the single
+predicate (session filter, activation, EventPolicy, payout setup). Not a fake
+parent accept. Not a permitted user attribute. Model refuses a non-admin `by:`.
+Auditors can see the panel; only admins can click.
+
+Specs: `spec/models/user_guardian_exemption_spec.rb`,
+`spec/controllers/users_controller_spec.rb`,
+`spec/controllers/fuime/guardianship_enforcement_spec.rb`,
+`spec/controllers/event/applications_controller_spec.rb`.
+
+**2026-09-10 — Parent invite: missing accept checkbox + spammy email.**
 
 The accept form on `GET /guardian/:token` was gated on
 `activation_blockers.empty?`. For an invited parent (stub or 13+ settings tick)

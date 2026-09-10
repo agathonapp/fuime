@@ -42,6 +42,21 @@ RSpec.describe EventsController, type: :controller do
     end
   end
 
+  context "as a minor whose guardian requirement an admin waived" do
+    let(:teen) { create(:user, :minor) }
+
+    before do
+      teen.waive_guardian_requirement!(by: create(:user, :make_admin))
+      sign_in_as(teen)
+    end
+
+    it "is not blocked by the guardianship filter" do
+      get :show, params: { id: event.slug }
+
+      expect(response).not_to redirect_to(new_guardianship_path)
+    end
+  end
+
   context "as a minor with an active guardianship" do
     let(:teen) { create(:user, :minor_with_guardian) }
 
@@ -131,6 +146,13 @@ RSpec.describe EventsController, type: :controller do
       create(:organizer_position, user: guarded, event:, role: :manager)
 
       expect(EventPolicy.new(guarded, event).update?).to be true
+    end
+
+    it "allows write access once an admin waives the guardian requirement" do
+      teen.waive_guardian_requirement!(by: create(:user, :make_admin))
+      create(:organizer_position, user: teen, event:, role: :manager)
+
+      expect(EventPolicy.new(teen, event).update?).to be true
     end
 
     it "still allows a blocked minor to READ their own business" do

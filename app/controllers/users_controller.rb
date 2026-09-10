@@ -33,7 +33,7 @@ class UsersController < ApplicationController
     :admin_details_disbursements, :admin_details_emburse_cards, :admin_details_increase_checks,
     :admin_details_invoices, :admin_details_lob_checks, :admin_details_missing_receipts,
     :admin_details_reimbursement_reports, :admin_details_stripe_cards, :admin_details_stripe_transactions,
-    :suppress_card_locking
+    :suppress_card_locking, :waive_guardian_requirement, :restore_guardian_requirement
   ]
   wrap_parameters format: :url_encoded_form
 
@@ -341,6 +341,29 @@ class UsersController < ApplicationController
     redirect_back_or_to admin_user_path(@user), flash: { success: "Card locking suppressed for #{hours}h." }
   end
 
+  # Fuime: admin-only lift of the parent/guardian gate for this person.
+  #
+  # Does not fabricate a guardianship (that would look like a parent signed).
+  # Writes the waiver columns through User#waive_guardian_requirement!, which
+  # also refuses a non-admin `by:` so a missed policy check cannot persist it.
+  def waive_guardian_requirement
+    authorize @user
+
+    @user.waive_guardian_requirement!(by: current_user, notes: params[:notes])
+
+    redirect_back_or_to admin_user_path(@user),
+                        flash: { success: "Guardian requirement waived for #{@user.email}. They can operate without a parent accept." }
+  end
+
+  def restore_guardian_requirement
+    authorize @user
+
+    @user.restore_guardian_requirement!(by: current_user)
+
+    redirect_back_or_to admin_user_path(@user),
+                        flash: { success: "Guardian requirement restored for #{@user.email}." }
+  end
+
   def update
     return_to = params[:return_to]
     @states = ISO3166::Country.new("US").subdivisions.values.map { |s| [s.translations["en"], s.code] }
@@ -585,6 +608,10 @@ class UsersController < ApplicationController
       # omission: the enum has a value that confers adulthood, and no parameter a
       # user controls may set it. #attest_minor_13_plus! is the only door from this
       # form, and it can express one value.
+      #
+      # The guardian-requirement waiver columns are not permitted here for the
+      # same reason: only #waive_guardian_requirement / #restore_guardian_requirement
+      # (admin-authorized) may write them.
       :profile_picture,
       :seasonal_themes_enabled,
       # admin

@@ -95,6 +95,8 @@ RSpec.describe "age attestation" do
 
       expect(code_only).not_to include(":age_attestation")
       expect(code_only).not_to include(":birthday")
+      expect(code_only).not_to include(":guardian_requirement_waived_at")
+      expect(code_only).not_to include(":guardian_requirement_waived_by")
     end
 
     it "is write-once for its owner" do

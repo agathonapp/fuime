@@ -942,7 +942,7 @@ class Event < ApplicationRecord
     # by ONE guardian even when a second co-founder has none. Money is about to
     # be sent on behalf of every one of them.
     unless institutionally_sponsored?
-      unguarded = users.select { |u| u.minor_or_unknown_age? && !u.has_active_guardian? }
+      unguarded = users.select(&:needs_guardian?)
 
       if unguarded.any?
         blockers << "Needs a parent or guardian on the account before money can be sent " \
