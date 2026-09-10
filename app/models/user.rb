@@ -774,7 +774,8 @@ class User < ApplicationRecord
   #
   # A family subscription is a Fuime::Subscription with no event — it belongs
   # to the guardian and covers every venture they sign for. Read by
-  # Event#family_pro?, which is what turns it into the 4% rate.
+  # Event#family_pro?, which is what unlocks unlimited ventures and API keys
+  # at the same take-rate as Free (not a cheaper fee).
   def fuime_pro?
     return @fuime_pro if defined?(@fuime_pro)
 

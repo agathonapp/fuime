@@ -2,7 +2,21 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G2: Cohorts in the admin nav + in-app admit runbook.**
+**2026-09-10 (latest) — G3: tell the truth on fuime.com and /billing.**
+
+Pro is `$19.99/mo + 7%` (same take-rate as Free). It unlocks unlimited ventures
+and API keys, not a cheaper fee. Stripe Billing creates `fuime_monthly_<cents>`
+from `Event::Plan::Pro#monthly_fee_cents` — there is no unused $15 Pro price.
+Marketing (`site/index.html`, `pricing.html`, `parents.html`, `site.js`,
+`BRIEF.md`) and `/billing` now say that. `LAUNCH_SPEC` §4.1 no longer claims a
+disabled Pay button or an uncollected 4% fee.
+
+Verify: `/my/billing` as a parent shows **Upgrade — $19.99/mo** and "not a
+cheaper fee"; fuime.com `/pricing` shows Pro $19.99 + 7% and API keys. Specs:
+`spec/fuime_marketing_pricing_spec.rb`, `spec/requests/fuime_billing_spec.rb`,
+`spec/models/event/plan_pricing_spec.rb`.
+
+**2026-09-10 — G2: Cohorts in the admin nav + in-app admit runbook.**
 
 `/admin/cohorts` already auto-admits (approve + activate + vet). It was missing
 from `Admin::Nav`, so operators worked Applications / Vetting and never found

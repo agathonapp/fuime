@@ -25,10 +25,11 @@ class Event
     # Fuime: the zero-friction entry plan, and the D2C default for new ventures.
     #
     # 7% is not arbitrary — it is HCB's own nonprofit rate, which makes the
-    # sentence honest and easy: "free to start, same rate Hack Club charges;
-    # drop to 4% with the family plan." A kid can start selling before any
-    # adult has entered a card: the guardian signs the guardianship (free),
-    # and Fuime earns only when the kid does.
+    # sentence honest and easy: "free to start, same rate Hack Club charges."
+    # The family plan does NOT cut this rate; it unlocks a second venture and
+    # API keys at $19.99/mo. A kid can start selling before any adult has
+    # entered a card: the guardian signs the guardianship (free), and Fuime
+    # earns only when the kid does.
     class Free < Standard
       REVENUE_FEE = 0.07
 
@@ -60,7 +61,8 @@ class Event
 
       def description
         "Free to start, one venture — Fuime keeps #{revenue_fee_label} of what it collects. " \
-          "The family plan is #{Event::Plan::Pro.new.revenue_fee_label} with unlimited businesses."
+          "The family plan is #{Event::Plan::Pro.new.price_label} for unlimited ventures " \
+          "and API keys, at the same take-rate."
       end
 
     end

@@ -7,9 +7,11 @@
     <p class="mb-1">
       The free plan includes one venture, and you already have one.
       The family plan is <strong><%= render_money(Event::Plan::Pro.new.monthly_fee_cents) %>/month</strong> for
-      <strong>unlimited businesses</strong> at
-      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %> —
-      you can apply now either way; approval just waits on the upgrade.
+      <strong>unlimited ventures</strong> and <strong>API keys</strong>,
+      at the same
+      <%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %>
+      take-rate as Free — not a cheaper fee.
+      You can apply now either way; approval just waits on the upgrade.
     </p>
     <%# Staff buy their own upgrade (User#staff?) — sending an admin to "ask
         your parent" is the same fail-closed-on-missing-birthday miss the

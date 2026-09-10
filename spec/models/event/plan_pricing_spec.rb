@@ -20,8 +20,21 @@ RSpec.describe "Fuime pricing" do
     end
 
     it "still charges a monthly fee, which is where the plan's value now sits" do
-      expect(Event::Plan::Pro.new.monthly_fee_cents).to be > 0
+      expect(Event::Plan::Pro.new.monthly_fee_cents).to eq(1999)
       expect(Event::Plan::Free.new.monthly_fee_cents).to eq(0)
+    end
+
+    it "sells unlimited ventures and API keys, not a cheaper fee" do
+      free = Event::Plan::Free.new
+      pro = Event::Plan::Pro.new
+
+      expect(pro.description).to include("unlimited ventures")
+      expect(pro.description).to include("API keys")
+      expect(pro.description).to include("same")
+      expect(pro.description).to include("Not a cheaper fee")
+      expect(pro.description).not_to match(/drops? to|4%/)
+      expect(free.description).to include("one venture")
+      expect(free.description).to include(pro.price_label)
     end
   end
 

@@ -36,7 +36,11 @@ RSpec.describe "billing page", type: :request do
 
     get my_billing_path
     expect(response.body).to include("Upgrade")
-    expect(response.body).to include("unlimited businesses")
+    expect(response.body).to include("unlimited ventures")
+    expect(response.body).to include("API keys")
+    expect(response.body).to include("$19.99")
+    expect(response.body).to include("not a cheaper fee")
+    expect(response.body).not_to include("drops to")
 
     post my_billing_subscribe_path
     expect(response).to redirect_to("https://checkout.stripe.com/bill")
