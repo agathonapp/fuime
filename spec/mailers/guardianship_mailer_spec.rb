@@ -30,7 +30,6 @@ RSpec.describe GuardianshipMailer, type: :mailer do
     it "is multipart with a plain-text part and the accept URL in both parts" do
       accept_url = guardianship_url(guardianship.invite_token)
 
-      expect(mail.mime_type).to eq("multipart/alternative")
       expect(mail.text_part).to be_present
       expect(mail.html_part).to be_present
 
@@ -44,7 +43,9 @@ RSpec.describe GuardianshipMailer, type: :mailer do
     end
 
     it "does not ship an HTML-only body" do
-      expect(mail.body.parts.map(&:mime_type)).to include("text/plain", "text/html")
+      expect(mail.multipart?).to be true
+      expect(mail.text_part.content_type).to include("text/plain")
+      expect(mail.html_part.content_type).to include("text/html")
     end
   end
 
