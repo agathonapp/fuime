@@ -1,0 +1,52 @@
+<p>
+  Hello,
+</p>
+
+<p>
+  This is a reminder:
+  <strong><%= @minor_name %></strong> invited you to be their parent or
+  guardian on Fuime, a financial platform for teen-run businesses, and
+  the invitation is still waiting.
+</p>
+
+<% if @stage == :day6 %>
+  <p>
+    The link expires
+    <strong><%= @expires_at ? l(@expires_at.to_date, format: :long) : "soon" %></strong>.
+    After that they will need a new invite.
+  </p>
+<% end %>
+
+<p>
+  Until you accept, they can sell but they cannot get paid. Accepting
+  makes you the legal signer and responsible adult for their venture.
+</p>
+
+<p>
+  Review the invitation and the guardian agreement here:
+</p>
+
+<p>
+  <%= link_to "Review guardian invitation", @accept_url,
+              style: "display:inline-block;background:#2242FF;color:#ffffff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600;" %>
+</p>
+
+<p style="word-break: break-all;">
+  Or paste this link into your browser:<br>
+  <%= link_to @accept_url, @accept_url %>
+</p>
+
+<p>
+  If you already accepted, you can ignore this. If you did not expect
+  this invitation, or if you do not know <%= @minor_name %>, you can
+  ignore this email. Nothing happens unless you accept.
+</p>
+
+<p>
+  Questions? Reply to this email or write to <%= @support_email %>.
+</p>
+
+<p>
+  Thanks,<br>
+  The Fuime team
+</p>

@@ -2,7 +2,16 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G1 waitlist invite (login-ready email + optional cohort).**
+**2026-09-10 (latest) — G5: day-3 / day-6 guardian invite reminders + stale queue.**
+
+Pending invites now get a reminder at ~day 3 and ~day 6 (`Fuime::GuardianInviteReminderJob`,
+daily 13:00 UTC). Same `invite_token` — not a second token, and not `#resend_invite!`
+(that would reset the 7-day clock). Accepted / revoked / expired are skipped.
+Stale pending (7 days+) is `/admin/guardianships` (Organizations nav + admin_tools
+card). Resend on that page is the existing action. How to test: see the comment
+at the top of `spec/requests/fuime_guardianships_admin_spec.rb`.
+
+**2026-09-10 — G1 waitlist invite (login-ready email + optional cohort).**
 
 `/admin/waitlist` can Invite / Resend one address or Invite next N (oldest
 uninvited, max 25). Optional live cohort. Clicking the mailed link signs them

@@ -1,0 +1,161 @@
+<% title "Guardian invites (Fuime)" %>
+
+<%# FUIME: the stale-pending guardian invite queue (TEEN_GROWTH G5).
+
+    Day-3 / day-6 mail is the automatic nudge. This page is the human
+    backstop after the 7-day token dies — ADMIN_OPS_QUEUES.md §3. A fresh
+    invite is not work; a week-old one is a family who can sell under MoR
+    and cannot get paid.
+
+    The only write is Resend, and it posts to the existing
+    GuardianshipsController#resend_invite so this page cannot grow a second
+    token writer. Revocation stays on /users/:id/admin.
+
+    The verifications tab is the consent RECORD only (method, vendor ref,
+    timestamps). Never ID imagery or a payload — L4. %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <%= link_to guardianships_admin_index_path(filter: "stale"), class: "badge #{@filter == 'stale' ? (@counts[:stale].positive? ? 'bg-warning' : 'bg-info') : 'bg-muted'}" do %>
+    Stale (7 days+): <%= @counts[:stale] %>
+  <% end %>
+  <%= link_to guardianships_admin_index_path(filter: "pending"), class: "badge #{@filter == 'pending' ? 'bg-info' : 'bg-muted'}" do %>
+    All pending: <%= @counts[:pending] %>
+  <% end %>
+  <%= link_to guardianships_admin_index_path(filter: "verifications"), class: "badge #{@filter == 'verifications' ? 'bg-info' : 'bg-muted'}" do %>
+    Verifications awaiting: <%= @counts[:verifications] %>
+  <% end %>
+</div>
+
+<p class="muted text-sm">
+  Stale means the invite is older than 7 days,
+  so the emailed link no longer works. Resend mints a new token and restarts
+  the day-3 / day-6 reminders. Revoke from the person's admin page.
+</p>
+
+<% if @filter == "verifications" %>
+  <div class="flex items-center mb2 flex-col sm:flex-row">
+    <div class="flex-grow">
+      <%= page_entries_info @verifications, entry_name: "verifications" %>
+    </div>
+    <%= paginate @verifications %>
+  </div>
+
+  <table class="min-w-0">
+    <thead>
+      <tr>
+        <th>Guardian</th>
+        <th>Venture</th>
+        <th>Method</th>
+        <th>Vendor ref</th>
+        <th>Submitted</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @verifications.each do |verification| %>
+        <tr>
+          <td>
+            <%= user_mention verification.user %>
+            <div class="muted text-sm"><%= verification.user.email %></div>
+          </td>
+          <td>
+            <% if verification.event.present? %>
+              <%= link_to verification.event.name, event_path(verification.event) %>
+            <% else %>
+              <span class="muted">—</span>
+            <% end %>
+          </td>
+          <td>
+            <%= verification.verification_method.to_s.humanize %>
+            <% if verification.vendor.present? %>
+              <div class="muted text-sm"><%= verification.vendor %></div>
+            <% end %>
+          </td>
+          <td class="muted text-sm"><%= verification.vendor_ref.presence || "—" %></td>
+          <td><%= verification.submitted_at ? format_datetime(verification.submitted_at) : "—" %></td>
+        </tr>
+      <% end %>
+
+      <% if @verifications.empty? %>
+        <tr><td colspan="5" class="muted center">Nothing awaiting acceptance.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="flex items-center mb2 flex-col sm:flex-row">
+    <div class="flex-grow">
+      <%= page_entries_info @guardianships, entry_name: "invites" %>
+    </div>
+    <%= paginate @guardianships %>
+  </div>
+
+  <table class="min-w-0">
+    <thead>
+      <tr>
+        <th>Minor</th>
+        <th>Guardian invited</th>
+        <th>Invited</th>
+        <th>Reminders</th>
+        <th class="w-48">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @guardianships.each do |guardianship| %>
+        <tr class="<%= "admin-bg-pending" if guardianship.invite_expired? %>">
+          <td>
+            <%= user_mention guardianship.minor %>
+            <div class="muted text-sm">
+              <% if guardianship.minor.age %>
+                age <%= guardianship.minor.age %>
+              <% elsif guardianship.minor.attested_minor_13_plus? %>
+                age unknown (13+)
+              <% else %>
+                age unknown
+              <% end %>
+            </div>
+            <div class="muted text-sm"><%= link_to "admin page", admin_user_path(guardianship.minor) %></div>
+          </td>
+          <td>
+            <%= user_mention guardianship.guardian %>
+            <div class="muted text-sm"><%= guardianship.guardian.email %></div>
+          </td>
+          <td>
+            <%= format_datetime(guardianship.invite_sent_at || guardianship.created_at) %>
+            <% if guardianship.invite_expired? %>
+              <div><%= badge_for "Expired", class: "bg-warning" %></div>
+            <% end %>
+          </td>
+          <td class="muted text-sm">
+            <% if guardianship.invite_day3_reminded_at %>
+              Day 3: <%= format_date guardianship.invite_day3_reminded_at %>
+            <% else %>
+              Day 3: —
+            <% end %>
+            <br>
+            <% if guardianship.invite_day6_reminded_at %>
+              Day 6: <%= format_date guardianship.invite_day6_reminded_at %>
+            <% else %>
+              Day 6: —
+            <% end %>
+          </td>
+          <td>
+            <%= button_to "Resend invite",
+                          resend_invite_guardianship_path(guardianship),
+                          method: :post,
+                          class: "btn bg-info",
+                          form: { data: { turbo_frame: "_top" } } %>
+          </td>
+        </tr>
+      <% end %>
+
+      <% if @guardianships.empty? %>
+        <tr><td colspan="5" class="muted center">
+          <% if @filter == "stale" %>
+            No stale invites. Fresh pending ones are on the All pending tab.
+          <% else %>
+            No pending guardian invites.
+          <% end %>
+        </td></tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

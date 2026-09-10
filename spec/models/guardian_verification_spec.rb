@@ -191,4 +191,15 @@ RSpec.describe GuardianVerification, type: :model do
       expect(described_class.awaiting_evidence_release).to contain_exactly(stale)
     end
   end
+
+  describe ".awaiting_acceptance" do
+    it "is submitted rows Stripe has not yet accepted — the §3 second list" do
+      waiting = build_record(accepted_at: nil)
+      waiting.save!
+      done = build_record(accepted_at: Time.current, vendor_ref: "file_accepted")
+      done.save!
+
+      expect(described_class.awaiting_acceptance).to contain_exactly(waiting)
+    end
+  end
 end

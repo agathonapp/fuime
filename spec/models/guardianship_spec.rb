@@ -202,5 +202,86 @@ RSpec.describe Guardianship do
 
       expect(guardianship.resend_invite!).to be false
     end
+
+    it "clears reminder stamps so the new 7-day window can be nudged again" do
+      guardianship = create(:guardianship, :due_for_day3_reminder, guardian: adult, minor: teen)
+      guardianship.update!(invite_day3_reminded_at: 1.day.ago, invite_day6_reminded_at: 1.hour.ago)
+
+      expect(guardianship.resend_invite!).to be true
+
+      guardianship.reload
+      expect(guardianship.invite_day3_reminded_at).to be_nil
+      expect(guardianship.invite_day6_reminded_at).to be_nil
+    end
+  end
+
+  describe "invite reminders (TEEN_GROWTH G5)" do
+    it "owes a day-3 reminder after three days, still using the same token" do
+      guardianship = create(:guardianship, :due_for_day3_reminder, guardian: adult, minor: teen)
+      token = guardianship.invite_token
+
+      expect(described_class.due_for_invite_reminder).to include(guardianship)
+      expect(guardianship.due_reminder_stage).to eq(:day3)
+
+      expect { guardianship.send_invite_reminder! }
+        .to have_enqueued_mail(GuardianshipMailer, :invite_reminder)
+
+      guardianship.reload
+      expect(guardianship.invite_token).to eq(token)
+      expect(guardianship.invite_day3_reminded_at).to be_present
+      expect(guardianship.invite_day6_reminded_at).to be_nil
+      expect(guardianship.due_reminder_stage).to be_nil
+      expect(described_class.due_for_invite_reminder).not_to include(guardianship)
+    end
+
+    it "owes a day-6 reminder after six days and does not send a late day-3" do
+      guardianship = create(:guardianship, :due_for_day6_reminder, guardian: adult, minor: teen)
+
+      expect(guardianship.due_reminder_stage).to eq(:day6)
+      expect { guardianship.send_invite_reminder! }
+        .to have_enqueued_mail(GuardianshipMailer, :invite_reminder)
+
+      guardianship.reload
+      expect(guardianship.invite_day3_reminded_at).to be_present
+      expect(guardianship.invite_day6_reminded_at).to be_present
+      expect(guardianship.due_reminder_stage).to be_nil
+    end
+
+    it "does not remind an accepted, revoked, or expired invite" do
+      accepted = create(:guardianship, :active, guardian: adult, minor: teen)
+      other_teen = create(:user, :minor)
+      revoked = create(:guardianship, :revoked, guardian: adult, minor: other_teen)
+      expired = create(:guardianship, :expired_invite, guardian: create(:user, birthday: 41.years.ago.to_date), minor: create(:user, :minor))
+
+      expect(accepted.send_invite_reminder!).to be false
+      expect(revoked.send_invite_reminder!).to be false
+      expect(expired.send_invite_reminder!).to be false
+      expect(described_class.due_for_invite_reminder).to be_empty
+    end
+
+    it "does not remind a fresh invite" do
+      guardianship = create(:guardianship, guardian: adult, minor: teen)
+
+      expect(guardianship.due_reminder_stage).to be_nil
+      expect(guardianship.send_invite_reminder!).to be false
+      expect(described_class.due_for_invite_reminder).to be_empty
+    end
+  end
+
+  describe ".stale_pending" do
+    it "counts pending invites older than 7 days and ignores fresh or accepted ones" do
+      stale = create(:guardianship, :expired_invite, guardian: adult, minor: teen)
+      create(:guardianship, guardian: create(:user, birthday: 42.years.ago.to_date), minor: create(:user, :minor))
+      create(:guardianship, :active, guardian: create(:user, birthday: 43.years.ago.to_date), minor: create(:user, :minor))
+
+      expect(described_class.stale_pending).to contain_exactly(stale)
+    end
+
+    it "still counts a pending row whose invite_sent_at is missing, via created_at" do
+      orphan = create(:guardianship, :expired_invite, guardian: adult, minor: teen)
+      orphan.update_columns(invite_sent_at: nil, created_at: 8.days.ago)
+
+      expect(described_class.stale_pending).to include(orphan)
+    end
   end
 end

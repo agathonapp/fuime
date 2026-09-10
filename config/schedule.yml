@@ -284,3 +284,9 @@ fuime_connect_settlement_sweep_job:
 fuime_generate_payout_batch_job:
   cron: "0 14 * * WED"
   class: "Fuime::GeneratePayoutBatchJob"
+
+# Fuime: day-3 / day-6 reminders for still-pending guardian invites (TEEN_GROWTH G5).
+# 13:00 UTC = 9am ET. The mail goes to the adult, not the minor (L7).
+fuime_guardian_invite_reminder_job:
+  cron: "0 13 * * *"
+  class: "Fuime::GuardianInviteReminderJob"

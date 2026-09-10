@@ -46,6 +46,7 @@ module StaticPagesHelper
       { name: "Payout runs", path: payout_batches_admin_index_path, badge: Fuime::PayoutBatch.awaiting_approval.count },
       { name: "Applications", path: applications_admin_index_path, badge: Event::Application.under_review.count },
       { name: "Live cohorts", path: cohorts_admin_index_path, badge: Fuime::Cohort.live.count },
+      { name: "Stale guardian invites", path: guardianships_admin_index_path, badge: Guardianship.stale_pending.count },
       { name: "OPDRs", path: organizer_position_deletion_requests_path, badge: OrganizerPositionDeletionRequest.under_review.count },
       { name: "Unmapped ledger", path: ledger_admin_index_path, badge: CanonicalTransaction.not_stripe_top_up.unmapped.count },
       { name: "Pending ledger", path: pending_ledger_admin_index_path, badge: CanonicalPendingTransaction.unsettled.count },

@@ -945,6 +945,41 @@ class AdminController < Admin::BaseController
     )
   end
 
+  # FUIME: pending guardian invites that have gone stale (TEEN_GROWTH G5).
+  #
+  # Specified in ADMIN_OPS_QUEUES.md §3. A fresh invite is a family in
+  # progress — day-3 / day-6 mail handles that. A pending row older than
+  # the 7-day token is a lost family, and until this page existed the only
+  # way to see one was `/users/:id/admin` one teen at a time.
+  #
+  # Read-only except Resend, which posts to the existing
+  # GuardianshipsController#resend_invite. Revocation stays on the user
+  # admin page, where the person-context lives. Never renders ID imagery
+  # or a verification payload (L4).
+  def guardianships
+    @page = params[:page] || 1
+    @per = params[:per] || 50
+    @filter = params[:filter].presence || "stale"
+
+    @counts = {
+      stale: Guardianship.stale_pending.count,
+      pending: Guardianship.pending.count,
+      verifications: GuardianVerification.awaiting_acceptance.count
+    }
+
+    if @filter == "verifications"
+      @verifications = GuardianVerification.awaiting_acceptance
+                                           .includes(:user, :event)
+                                           .order(submitted_at: :asc)
+                                           .page(@page).per(@per)
+      @guardianships = Guardianship.none
+    else
+      scope = @filter == "pending" ? Guardianship.oldest_pending_first : Guardianship.stale_pending.oldest_pending_first
+      @guardianships = scope.includes(:minor, :guardian).page(@page).per(@per)
+      @verifications = GuardianVerification.none
+    end
+  end
+
   # FUIME: the family-plan queue.
   #
   # Every subscription Fuime bills, plus every one it has comped, in one place.

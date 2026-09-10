@@ -5741,3 +5741,25 @@ Not G5 (guardian reminders) or G10 (webhooks). Not G2/G3.
 | `creation_method: :waitlist` | Audit how the user got here; no schema change | `app/models/user.rb` |
 | Application cohort prefill | Natural use of the existing cohort model | `app/controllers/event/applications_controller.rb` |
 | Site waitlist copy | Stop promising a mail we did not send; describe the login link | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/start.html`, `site/start-scroll.html`, `site/docs/BRIEF.md` |
+
+## 2026-09-10 — G5: guardian invite day-3 / day-6 reminders + stale queue
+
+The invite was one email and a 7-day token. Under MoR a teen can sell without
+a parent and cannot get paid until guardianship is active, so a forgotten
+inbox is a stranded payout. TEEN_GROWTH G5 / ADMIN_OPS_QUEUES §3: scheduled
+reminders at ~day 3 and ~day 6 for still-pending, still-live tokens, and an
+admin queue for pending rows older than 7 days. Did not implement G10. Did
+not redo G1/G2/G3.
+
+Reminders reuse `invite_token`. They do not call `#resend_invite!`, which
+mints a new token and resets the clock — that stays the ops / family verb
+for an expired link.
+
+| Change | Why | Files |
+|---|---|---|
+| `invite_day3_reminded_at` / `invite_day6_reminded_at` + status/sent index | Idempotent daily job; cheap stale badge count | `db/migrate/20260910180000_add_invite_reminder_timestamps_to_guardianships.rb`, `app/models/guardianship.rb` |
+| `#send_invite_reminder!` + `.stale_pending` / `.due_for_invite_reminder` | Same token; skip accepted / revoked / expired | `app/models/guardianship.rb` |
+| `GuardianshipMailer#invite_reminder` | Day-3 nudge / day-6 last reminder; multipart + Reply-To like `#invite` | `app/mailers/guardianship_mailer.rb`, `app/views/guardianship_mailer/` |
+| `Fuime::GuardianInviteReminderJob` daily 13:00 UTC | Parent-hour mail; L7 does not apply (adult recipient) | `app/jobs/fuime/guardian_invite_reminder_job.rb`, `config/schedule.yml` |
+| `/admin/guardianships` + nav + admin_tools | Stale queue; resend reuses existing action; verifications tab is consent record only (L4) | `app/controllers/admin_controller.rb`, `app/views/admin/guardianships.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
+| Specs + how-to-test | Model / job / mailer / request / nav | `spec/models/guardianship_spec.rb`, `spec/jobs/fuime/guardian_invite_reminder_job_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/requests/fuime_guardianships_admin_spec.rb`, `spec/models/admin/nav_spec.rb` |
