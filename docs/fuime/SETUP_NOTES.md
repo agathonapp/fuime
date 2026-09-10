@@ -13,6 +13,11 @@ id. Missed deliveries: `Fuime::MissedMorPaymentSweep`. Runbook:
 `rake fuime:mor_webhook_pass:{listen,setup,charge,backfill,settle}`.
 Did not redo G1–G5. Did not touch Connect.
 
+CI shard 2 failed after rebase: `ConnectSettlementSweep` settle still hits
+`assign_ledger_item`'s unexpected report (memo short_code ≠ grouping HcbCode).
+The spec now stubs `Rails.error.unexpected` so leftover Ledger::Items cannot
+fail a settle. Spec-only; ledger engine untouched.
+
 **2026-09-10 — G5: day-3 / day-6 guardian invite reminders + stale queue.**
 
 Pending invites now get a reminder at ~day 3 and ~day 6 (`Fuime::GuardianInviteReminderJob`,
