@@ -10,10 +10,15 @@
 #
 # Not a permitted user attribute. Only UsersController#waive_guardian_requirement
 # / #restore_guardian_requirement write these columns, and both authorize admin.
+#
+# The waived_by foreign key is added separately (see the follow-up migrations)
+# so users does not take a blocking lock on itself.
 class AddGuardianRequirementWaiverToUsers < ActiveRecord::Migration[8.0]
+  disable_ddl_transaction!
+
   def change
     add_column :users, :guardian_requirement_waived_at, :datetime
     add_column :users, :guardian_requirement_waiver_notes, :text
-    add_reference :users, :guardian_requirement_waived_by, foreign_key: { to_table: :users }, index: true
+    add_reference :users, :guardian_requirement_waived_by, null: true, index: { algorithm: :concurrently }
   end
 end

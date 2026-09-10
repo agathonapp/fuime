@@ -61,20 +61,25 @@
                         class: "btn bg-info",
                         form: { data: { turbo_frame: "_top" } },
                         data: {
-                          turbo_confirm: "Restore the parent/guardian gate for #{user.name || user.email}? They will need an active guardian again before they can operate.",
+                          turbo_confirm: "Restore the parent/guardian gate for this user? They will need an active guardian again before they can operate.",
                         } %>
         <% else %>
           <%= form_with url: waive_guardian_requirement_user_path(user),
                         method: :post,
-                        data: { turbo: false },
-                        html: { class: "flex flex-col gap-2" } do %>
-            <label class="muted" for="guardian-waiver-notes">Reason (optional)</label>
-            <textarea id="guardian-waiver-notes" name="notes" class="input w-full" rows="2" placeholder="Why this person may proceed without a parent accept"></textarea>
-            <%= submit_tag "Waive guardian requirement",
-                           class: "btn bg-warning",
-                           data: {
-                             confirm: "Waive the parent/guardian gate for #{user.name || user.email}? This is an admin override, not a parent signature. They will be able to operate without an accept.",
-                           } %>
+                        data: { turbo: false } do |f| %>
+            <div class="field field--text">
+              <%= f.label :notes, "Reason (optional)" %>
+              <%= text_area_tag :notes, nil,
+                                id: "guardian-waiver-notes",
+                                class: "input w-full",
+                                rows: 2,
+                                placeholder: "Why this person may proceed without a parent accept" %>
+            </div>
+            <%= f.submit "Waive guardian requirement",
+                         class: "btn bg-warning",
+                         data: {
+                           turbo_confirm: "Waive the parent/guardian gate for this user? This is an admin override, not a parent signature. They will be able to operate without an accept.",
+                         } %>
           <% end %>
         <% end %>
       </div>

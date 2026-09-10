@@ -4,54 +4,59 @@
 #
 # Table name: users
 #
-#  id                            :bigint           not null, primary key
-#  access_level                  :integer          default(0), not null
-#  age_attestation               :integer
-#  age_attestation_ip            :string
-#  age_attestation_user_agent    :string
-#  age_attested_at               :datetime
-#  birthday_ciphertext           :text
-#  card_locking_suppressed_until :datetime
-#  cards_locked                  :boolean          default(FALSE), not null
-#  charge_notifications          :integer          default(0), not null
-#  comment_notifications         :integer          default(0), not null
-#  creation_method               :integer
-#  email                         :text             not null
-#  full_name                     :string
-#  joined_as_teenager            :boolean
-#  locked_at                     :datetime
-#  monthly_donation_summary      :boolean          default(TRUE)
-#  monthly_follower_summary      :boolean          default(TRUE)
-#  phone_number                  :text
-#  phone_number_verified         :boolean          default(FALSE)
-#  preferred_name                :string
-#  pretend_is_not_admin          :boolean          default(FALSE), not null
-#  guardian_requirement_waived_at :datetime
+#  id                                :bigint           not null, primary key
+#  access_level                      :integer          default(0), not null
+#  age_attestation                   :integer
+#  age_attestation_ip                :string
+#  age_attestation_user_agent        :string
+#  age_attested_at                   :datetime
+#  birthday_ciphertext               :text
+#  card_locking_suppressed_until     :datetime
+#  cards_locked                      :boolean          default(FALSE), not null
+#  charge_notifications              :integer          default(0), not null
+#  comment_notifications             :integer          default(0), not null
+#  creation_method                   :integer
+#  email                             :text             not null
+#  full_name                         :string
+#  guardian_requirement_waived_at    :datetime
 #  guardian_requirement_waiver_notes :text
-#  receipt_report_option         :integer          default(0), not null
-#  running_balance_enabled       :boolean          default(FALSE), not null
-#  seasonal_themes_enabled       :boolean          default(TRUE), not null
-#  session_validity_preference   :integer          default(259200), not null
-#  sessions_reported             :boolean          default(FALSE), not null
-#  slug                          :string
-#  subscribed_to_loops_at        :datetime
-#  teenager                      :boolean
-#  use_sms_auth                  :boolean          default(FALSE)
-#  use_two_factor_authentication :boolean          default(FALSE)
-#  verified                      :boolean          default(FALSE), not null
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  discord_id                    :string
+#  joined_as_teenager                :boolean
+#  locked_at                         :datetime
+#  monthly_donation_summary          :boolean          default(TRUE)
+#  monthly_follower_summary          :boolean          default(TRUE)
+#  phone_number                      :text
+#  phone_number_verified             :boolean          default(FALSE)
+#  preferred_name                    :string
+#  pretend_is_not_admin              :boolean          default(FALSE), not null
+#  receipt_report_option             :integer          default(0), not null
+#  running_balance_enabled           :boolean          default(FALSE), not null
+#  seasonal_themes_enabled           :boolean          default(TRUE), not null
+#  session_validity_preference       :integer          default(259200), not null
+#  sessions_reported                 :boolean          default(FALSE), not null
+#  slug                              :string
+#  subscribed_to_loops_at            :datetime
+#  teenager                          :boolean
+#  use_sms_auth                      :boolean          default(FALSE)
+#  use_two_factor_authentication     :boolean          default(FALSE)
+#  verified                          :boolean          default(FALSE), not null
+#  created_at                        :datetime         not null
+#  updated_at                        :datetime         not null
+#  discord_id                        :string
 #  guardian_requirement_waived_by_id :bigint
-#  payout_method_id              :bigint
-#  payout_method_type            :string
-#  webauthn_id                   :string
+#  payout_method_id                  :bigint
+#  payout_method_type                :string
+#  webauthn_id                       :string
 #
 # Indexes
 #
-#  index_users_on_discord_id  (discord_id) UNIQUE
-#  index_users_on_email       (email) UNIQUE
-#  index_users_on_slug        (slug) UNIQUE
+#  index_users_on_discord_id                         (discord_id) UNIQUE
+#  index_users_on_email                              (email) UNIQUE
+#  index_users_on_guardian_requirement_waived_by_id  (guardian_requirement_waived_by_id)
+#  index_users_on_slug                               (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (guardian_requirement_waived_by_id => users.id)
 #
 class User < ApplicationRecord
   has_paper_trail skip: [:birthday] # ciphertext columns will still be tracked

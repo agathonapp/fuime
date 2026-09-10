@@ -2,7 +2,14 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — Admin can waive the parent/guardian gate for one person.**
+**2026-09-10 (latest) — CI fix on the waiver PR (annotate / strong_migrations / ERB).**
+
+Head after this: User annotation re-padded for the new columns + index + FK;
+waiver FK split into add-column / add-FK-unvalidated / validate-FK (same
+pattern as `revoked_by`); waive form uses `form_with |f|` and a static
+`turbo_confirm` so ERB lint is clean. Product behavior unchanged.
+
+**2026-09-10 — Admin can waive the parent/guardian gate for one person.**
 
 On `/users/:id/admin` (Guardianship panel): **Waive guardian requirement**
 (optional reason) and **Restore guardian requirement**. Writes

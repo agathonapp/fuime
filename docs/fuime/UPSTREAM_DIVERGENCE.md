@@ -5663,7 +5663,7 @@ are not in `user_params`.
 
 | Change | Why | Files |
 |--------|-----|-------|
-| `guardian_requirement_waived_*` on users | Audited, reversible bypass for one person | `db/migrate/20260910150000_add_guardian_requirement_waiver_to_users.rb` |
+| `guardian_requirement_waived_*` on users | Audited, reversible bypass for one person. Column + concurrent index first; FK added unvalidated then validated (same lock-avoidance as `revoked_by` on guardianships) | `db/migrate/20260910150000_add_guardian_requirement_waiver_to_users.rb`, `db/migrate/20260910150001_add_guardian_requirement_waived_by_foreign_key_to_users.rb`, `db/migrate/20260910150002_validate_guardian_requirement_waived_by_foreign_key_on_users.rb` |
 | `#needs_guardian?` honors the waiver | One predicate; every consumer follows | `app/models/user.rb` |
 | Activation / payout / apply fields use `#needs_guardian?` | Stop duplicating the check so a waiver cannot be half-applied | `app/models/event/application.rb`, `app/models/event.rb` |
 | Admin actions + panel | The surface Rushmore actually uses | `app/controllers/users_controller.rb`, `app/views/users/_admin_guardianship.html.erb`, `app/policies/user_policy.rb`, `config/routes.rb` |
