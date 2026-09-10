@@ -5701,3 +5701,15 @@ vetting (PLATFORM_REVIEW.md: offer-level moderation is not built).
 | `admin/_admit_runbook` on the three queues | One page: approve → activate → vet; solo vs event. Full on Cohorts, compact on Applications and Vetting. | `app/views/admin/_admit_runbook.html.erb`, `cohorts.html.erb`, `applications.html.erb`, `operator_vetting.html.erb` |
 | Nav + queue specs | Existing `Admin::Nav` spec now asserts the item, path, active state, and live badge. Request specs assert the runbook copy and the rendered nav HTML. | `spec/models/admin/nav_spec.rb`, `spec/requests/fuime_cohorts_admin_spec.rb`, `spec/requests/fuime_operator_vetting_spec.rb` |
 | Pin venture name on subscriptions admin spec | Unrelated Faker apostrophe flake (`O'Conner`) escaped in HTML; same pin already used on operator vetting. | `spec/requests/fuime_subscriptions_admin_spec.rb` |
+
+## 2026-09-10 — Isolate connect_settlement_sweep_spec from HcbCode collision
+
+CI shard 1 failed on `settles a refund reversal…` after a docs-only push:
+`CanonicalTransaction#assign_ledger_item` raised unexpected because the
+settled memo had no unique `HCB-xxxxx`. Same seed-dependent collision
+already isolated in `payables_ledger_spec`. Spec-only; ledger engine
+untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Unique `HCB-xxxxx` on every sweep-spec `post!` memo | Settled CT gets its own short_code instead of colliding with a leftover Ledger::Item | `spec/services/fuime/connect_settlement_sweep_spec.rb` |

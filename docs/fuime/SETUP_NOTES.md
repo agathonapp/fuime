@@ -2,7 +2,14 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G3: tell the truth on fuime.com and /billing.**
+**2026-09-10 (latest) — Isolate connect_settlement_sweep_spec HcbCode collision.**
+
+Same flake as payables_ledger_spec: a settled memo with no `HCB-xxxxx`
+lets `assign_ledger_item` collide with a seed/leftover Ledger::Item
+(`CanonicalTransaction … different ledger item from its local_hcb_code`).
+Spec-only unique tokens on every `post!` memo. Ledger engine untouched.
+
+**2026-09-10 — G3: tell the truth on fuime.com and /billing.**
 
 Pro is `$19.99/mo + 7%` (same take-rate as Free). It unlocks unlimited ventures
 and API keys, not a cheaper fee. Stripe Billing creates `fuime_monthly_<cents>`
@@ -67,6 +74,15 @@ DNS/ESP (Resend SPF/DKIM/DMARC) is still required and is not a code change.
 Specs: `spec/controllers/guardianships_render_spec.rb`,
 `spec/mailers/guardianship_mailer_spec.rb`,
 `spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb`.
+
+**2026-09-10 — Teen growth gap audit (docs only, no product code).**
+
+`docs/fuime/TEEN_GROWTH_GAPS.md` is the ranked punch list for "what
+still blocks more teenagers from getting on." Production is MoR
+(`render.yaml` `FEATURE_MERCHANT_OF_RECORD=true`); the waitlist has no
+admit path; Pro is $19.99/7% not the site's $15/4%; guardian reminders
+and ADMIN_OPS_QUEUES §1–§3 are unbuilt. Do not start from LAUNCH_SPEC
+§4.1 — it is stale on payments.
 
 **2026-09-10 — API key create: reveal the plaintext without a reload.**
 

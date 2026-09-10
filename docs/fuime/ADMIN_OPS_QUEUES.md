@@ -1,9 +1,14 @@
-# Admin ops queues — spec (not yet built)
+# Admin ops queues — spec (§4 shipped; §1–§3 unbuilt)
 
-**Status: spec'd 2026-08-05, deliberately unbuilt.** CLAUDE.md's current position says
-the `stripe listen` pass outranks writing more features, and every queue here renders
-webhook-fed state — so building them *before* the pass would mean building dashboards
-over data shapes nobody has verified. Build order: stripe listen pass → this doc.
+**Status: spec'd 2026-08-05.** §4 (subscriptions) shipped 2026-08-21
+(`/admin/subscriptions`). §1 payouts, §2 connected accounts, and
+§3 guardianships are still unbuilt. See `TEEN_GROWTH_GAPS.md` G5/G11.
+
+CLAUDE.md's current position still says the `stripe listen` pass outranks
+writing more features, and §1–§2 render webhook-fed state — so building
+those *before* the pass would mean building dashboards over data shapes
+nobody has verified. §3 (stuck guardianships) does **not** wait on Stripe
+and is the one queue that unblocks teens this week.
 
 ## Why this exists
 
