@@ -1,5 +1,7 @@
 <% title "Applications (Fuime)" %>
 
+<%= render "admin/admit_runbook", compact: true %>
+
 <%= form_with local: true, class: "card", url: applications_admin_index_path, method: :get do |form| %>
   <%= render "events/filters/search", form: %>
 

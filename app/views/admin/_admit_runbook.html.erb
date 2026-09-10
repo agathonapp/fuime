@@ -1,0 +1,65 @@
+<%# locals: (compact: false) %>
+<%# FUIME: how a submitted application becomes a venture that can sell.
+
+    After apply, the product tells the founder to wait on Fuime. That wait is
+    three human clicks (approve → activate → operator vetting) unless a cohort
+    code already did them. Applications and Vetting were on the nav; Cohorts
+    was not — so the path that auto-admits was the one nobody opened
+    (TEEN_GROWTH G2).
+
+    This card is the one-page runbook. It lives on the three queues, not in a
+    markdown file, because the people who need it are already looking at one
+    of those pages. Do not remove operator vetting from the solo path: under
+    merchant-of-record it is the compensating control for Fuime being the
+    legal seller (PLATFORM_REVIEW.md). A cohort records that decision in
+    advance; it does not waive eligibility. %>
+
+<div class="card mb2" id="admit-runbook">
+  <h2 class="mt0 text-lg">How we admit</h2>
+
+  <p class="mb1">
+    A submitted application does not create a business. Work
+    <strong>left to right</strong>:
+  </p>
+
+  <ol class="mt0 mb2 pl-4">
+    <li>
+      <strong>Approve</strong>: this venture should exist.
+      <%= link_to "Applications", applications_admin_index_path %>, then
+      Approve on the submission.
+    </li>
+    <li>
+      <strong>Activate</strong>: create the business. Same submission page.
+      Read the blocker list first (usual causes: no guardian under Connect,
+      or the free plan's one-venture wall).
+    </li>
+    <li>
+      <strong>Operator vetting</strong>: they may sell. This is revocable
+      and asked again when something changes.
+      <%= link_to "Operator vetting", operator_vetting_admin_index_path %>.
+    </li>
+  </ol>
+
+  <p class="mb1">
+    <strong>Solo applicant</strong> =
+    <%= link_to "Applications", applications_admin_index_path %>
+    then
+    <%= link_to "Operator vetting", operator_vetting_admin_index_path %>.
+  </p>
+
+  <p class="<%= compact ? "mb0" : "mb1" %>">
+    <strong>Event / group</strong> =
+    <%= link_to "a cohort code", cohorts_admin_index_path %>
+    on the review step. Founders who enter it get approve, activate and
+    vet automatically, attributed to you. Watch the roster
+    <strong>Next step</strong> column left to right.
+  </p>
+
+  <% unless compact %>
+    <p class="muted mb0 text-sm">
+      A cohort does not waive the services-only scope or the operator age
+      floor, and it never stands in for a parent. Do not turn vetting off
+      until offer-level moderation exists.
+    </p>
+  <% end %>
+</div>

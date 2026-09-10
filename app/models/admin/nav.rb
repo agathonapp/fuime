@@ -298,6 +298,20 @@ module Admin
             count: ->{ Event::Application.under_review.count },
             count_type: :tasks
           ),
+          # FUIME: the event fast-path. A submitted application sits in
+          # Applications until someone approves and activates it, then in
+          # Operator vetting until someone lets it sell. A cohort code does
+          # those three clicks once, in advance — but the page lived at
+          # /admin/cohorts with no nav entry, so the queue that already
+          # auto-admits was the one operators never opened (TEEN_GROWTH G2).
+          # :tasks with the live count: a code that is still admitting is a
+          # Friday to watch, not a directory of historical events.
+          make_item(
+            name: "Cohorts (Fuime)",
+            path: cohorts_admin_index_path,
+            count: ->{ Fuime::Cohort.live.count },
+            count_type: :tasks
+          ),
           # FUIME: ventures waiting on a human to decide whether they may sell.
           # :tasks rather than :records because an unvetted venture cannot take a
           # payment — this count is work owed to an operator, not a statistic.
