@@ -83,15 +83,25 @@ class Guardianship < ApplicationRecord
   scope :for_guardian, ->(user) { where(guardian: user) }
 
   # Oldest-first: staleness is the signal. Used by the admin queue.
+  # `invite_sent_at` is set on create; order it directly so Postgres can
+  # use index_guardianships_on_status_and_invite_sent_at.
   scope :oldest_pending_first, -> {
-    pending.order(Arel.sql("COALESCE(invite_sent_at, created_at) ASC"))
+    pending.order(:invite_sent_at)
   }
 
   # Badge query for ADMIN_OPS_QUEUES.md §3. A day-old invite is a family in
   # progress; a week-old one is a lost family. Matches INVITE_VALID_FOR so the
   # queue is exactly the invites `find_by_token` will no longer honour.
+  #
+  # Predicate is on `invite_sent_at` so the (status, invite_sent_at) index
+  # can serve the nav / admin_tools count. The NULL branch is only for a
+  # corrupt or pre-callback row — `generate_invite_token` always stamps it.
   scope :stale_pending, -> {
-    pending.where("COALESCE(invite_sent_at, created_at) <= ?", STALE_AFTER.ago)
+    cutoff = STALE_AFTER.ago
+    pending.where(
+      "invite_sent_at <= :cutoff OR (invite_sent_at IS NULL AND created_at <= :cutoff)",
+      cutoff:
+    )
   }
 
   # Still pending, token still live, and owed a day-3 and/or day-6 mail.

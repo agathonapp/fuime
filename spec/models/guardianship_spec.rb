@@ -276,5 +276,12 @@ RSpec.describe Guardianship do
 
       expect(described_class.stale_pending).to contain_exactly(stale)
     end
+
+    it "still counts a pending row whose invite_sent_at is missing, via created_at" do
+      orphan = create(:guardianship, :expired_invite, guardian: adult, minor: teen)
+      orphan.update_columns(invite_sent_at: nil, created_at: 8.days.ago)
+
+      expect(described_class.stale_pending).to include(orphan)
+    end
   end
 end
