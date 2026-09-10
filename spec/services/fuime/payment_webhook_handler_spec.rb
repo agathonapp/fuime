@@ -26,6 +26,21 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     }
   end
 
+  def checkout_session(intent_id: "pi_test_1", amount: 10_000, event_id: event.id,
+                       payment_status: "paid", mode: "payment", id: "cs_test_1")
+    {
+      id:,
+      object: "checkout.session",
+      amount_total: amount,
+      payment_intent: intent_id,
+      payment_status:,
+      status: "complete",
+      mode:,
+      created: Time.current.to_i,
+      metadata: { "fuime_event_id" => event_id.to_s, "fuime_fee_cents" => fee_on(amount).to_s },
+    }
+  end
+
   def handle(type, object)
     described_class.new(event: stripe_event(type, object)).handle
   end
@@ -149,20 +164,78 @@ RSpec.describe Fuime::PaymentWebhookHandler do
       expect(net_cents).to eq(10_000 - fee_on(10_000))
     end
 
-    # A Checkout payment emits BOTH events with different object ids. Handling
-    # both posted the same payment twice.
-    it "ignores checkout.session.completed for the same payment" do
+    # A Checkout payment emits BOTH events with different object ids. The
+    # ledger key is the PaymentIntent id either way, so either event is
+    # enough and both together stay one sale.
+    it "does not double-post when checkout.session.completed follows the intent" do
       handle("payment_intent.succeeded", payment_intent)
-      handle("checkout.session.completed", {
-               id: "cs_test_1",
-               object: "checkout_session",
-               amount_total: 10_000,
-               created: Time.current.to_i,
-               metadata: { "fuime_event_id" => event.id.to_s },
-             })
+      handle("checkout.session.completed", checkout_session)
 
       expect(ledger_lines.size).to eq(2)
       expect(net_cents).to eq(10_000 - fee_on(10_000))
+    end
+  end
+
+  describe "checkout.session.completed" do
+    it "posts the sale from the session alone, keyed on the PaymentIntent" do
+      handle("checkout.session.completed", checkout_session)
+
+      expect(ledger_lines.size).to eq(2)
+      expect(ledger_lines.map(&:amount_cents)).to contain_exactly(10_000, -fee_on(10_000))
+      expect(Fuime::VentureLedger.find_row(Fuime::VentureLedger.payment_key("pi_test_1"))).to be_present
+      expect(Fuime::VentureLedger.find_row(Fuime::VentureLedger.payment_key("cs_test_1"))).to be_nil
+    end
+
+    it "still posts once when the session event arrives before the intent" do
+      handle("checkout.session.completed", checkout_session)
+      handle("payment_intent.succeeded", payment_intent)
+
+      expect(ledger_lines.size).to eq(2)
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
+    end
+
+    it "posts from an expanded payment_intent object" do
+      handle("checkout.session.completed", checkout_session.merge(
+                                             payment_intent: { id: "pi_test_1", object: "payment_intent", amount: 10_000 }
+                                           ))
+
+      expect(Fuime::VentureLedger.find_row(Fuime::VentureLedger.payment_key("pi_test_1"))).to be_present
+    end
+
+    it "ignores an unpaid session (async methods are not sales yet)" do
+      handle("checkout.session.completed", checkout_session(payment_status: "unpaid"))
+
+      expect(ledger_lines).to be_empty
+    end
+
+    it "ignores a family-plan Billing session" do
+      handle("checkout.session.completed", checkout_session(mode: "subscription"))
+
+      expect(ledger_lines).to be_empty
+    end
+
+    it "posts checkout.session.async_payment_succeeded" do
+      handle("checkout.session.async_payment_succeeded", checkout_session(payment_status: "paid"))
+
+      expect(ledger_lines.size).to eq(2)
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
+    end
+
+    it "ignores a completed session with no payment_intent" do
+      handle("checkout.session.completed", checkout_session.merge(payment_intent: nil))
+
+      expect(ledger_lines).to be_empty
+    end
+
+    # Regression: falling back to Hash#to_s keyed the sale as
+    # `fuime_{:id=>"pi_…"}` and the later payment_intent.succeeded posted again.
+    it "does not invent a ledger key from an expanded object that has no id" do
+      handle("checkout.session.completed", checkout_session.merge(
+                                             payment_intent: { object: "payment_intent", amount: 10_000 }
+                                           ))
+
+      expect(ledger_lines).to be_empty
+      expect(RawPendingDonationTransaction.where("donation_transaction_id LIKE ?", "fuime_{%")).to be_empty
     end
   end
 
@@ -251,5 +324,18 @@ RSpec.describe Fuime::PaymentWebhookHandler do
   it "ignores unrelated event types" do
     expect { handle("customer.created", { id: "cus_1", object: "customer" }) }
       .not_to(change { ledger_lines.size })
+  end
+
+  # The Dashboard checkbox list. Dropping checkout.session.completed from this
+  # constant is how the first-sale gap comes back — the runbook registers
+  # exactly these names.
+  it "documents the events the platform endpoint must register" do
+    expect(described_class::HANDLED_TYPES).to include(
+      "payment_intent.succeeded",
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "charge.refunded",
+      "charge.dispute.created"
+    )
   end
 end

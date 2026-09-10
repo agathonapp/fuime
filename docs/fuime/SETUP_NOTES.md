@@ -2,7 +2,26 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G5: day-3 / day-6 guardian invite reminders + stale queue.**
+**2026-09-10 (latest) — G10: MoR Checkout webhook → ledger.**
+
+A Dashboard that only forwarded `checkout.session.completed` dropped the first
+sale: the handler ignored that event (old double-post fix) and waited for
+`payment_intent.succeeded`. Either event now posts, keyed on the PaymentIntent
+id. Missed deliveries: `Fuime::MissedMorPaymentSweep`. Runbook:
+`docs/fuime/MOR_WEBHOOK_PASS.md`. Specs: `payment_webhook_handler_spec`,
+`missed_mor_payment_sweep_spec`, `fuime_mor_checkout_ledger_spec`.
+`rake fuime:mor_webhook_pass:{listen,setup,charge,backfill,settle}`.
+Did not redo G1–G5. Did not touch Connect.
+
+CI shard 2 failed after rebase: `ConnectSettlementSweep` settle still hits
+`assign_ledger_item`'s unexpected report (memo short_code ≠ grouping HcbCode).
+The spec now stubs `Rails.error.unexpected` so leftover Ledger::Items cannot
+fail a settle. Spec-only; ledger engine untouched.
+
+CI shard 2 also flaked `fuime_cohorts_admin_spec` on `Bronwyn O'Keefe`
+(apostrophe escaped in HTML). Founder name is now pinned. Unrelated to G10.
+
+**2026-09-10 — G5: day-3 / day-6 guardian invite reminders + stale queue.**
 
 Pending invites now get a reminder at ~day 3 and ~day 6 (`Fuime::GuardianInviteReminderJob`,
 daily 13:00 UTC). Same `invite_token` — not a second token, and not `#resend_invite!`

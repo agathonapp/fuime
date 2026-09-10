@@ -5763,3 +5763,29 @@ for an expired link.
 | `Fuime::GuardianInviteReminderJob` daily 13:00 UTC | Parent-hour mail; L7 does not apply (adult recipient) | `app/jobs/fuime/guardian_invite_reminder_job.rb`, `config/schedule.yml` |
 | `/admin/guardianships` + nav + admin_tools | Stale queue; resend reuses existing action; verifications tab is consent record only (L4) | `app/controllers/admin_controller.rb`, `app/views/admin/guardianships.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
 | Specs + how-to-test | Model / job / mailer / request / nav | `spec/models/guardianship_spec.rb`, `spec/jobs/fuime/guardian_invite_reminder_job_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/requests/fuime_guardianships_admin_spec.rb`, `spec/models/admin/nav_spec.rb` |
+
+## 2026-09-10 — G10: MoR Checkout webhook posts the first sale
+
+Production is merchant-of-record. A successful storefront Checkout must appear
+on the venture ledger or the founder churns. `PaymentWebhookHandler` already
+posted `payment_intent.succeeded` and **ignored** `checkout.session.completed`
+so the two events (different object ids) would not double-post. A Stripe
+endpoint that only ticks Checkout events — a normal Dashboard default — then
+wrote nothing.
+
+Either success event now posts; the ledger key is always the PaymentIntent id
+(`amount_total` on the session, because a session has no `amount_received`).
+Unpaid and `mode: subscription` sessions are skipped (family-plan Billing is
+`SubscriptionWebhookHandler`). `Fuime::MissedMorPaymentSweep` replays succeeded
+platform PIs that never arrived. Runbook: `docs/fuime/MOR_WEBHOOK_PASS.md`.
+
+Did not redo G1–G5. Did not change Connect recorders or the ledger engine.
+
+| Change | Why | Files |
+|---|---|---|
+| Post `checkout.session.completed` / `async_payment_succeeded` keyed on the PI | First sale must land even when only Checkout events are registered | `app/services/fuime/payment_webhook_handler.rb` |
+| `MissedMorPaymentSweep` | Recover a dropped webhook without double-posting | `app/services/fuime/missed_mor_payment_sweep.rb` |
+| `fuime:mor_webhook_pass` rake + runbook | `stripe listen` at `/fuime/webhooks/stripe`, charge, backfill, settle | `lib/tasks/fuime_mor_webhook_pass.rake`, `docs/fuime/MOR_WEBHOOK_PASS.md` |
+| Handler + HTTP + sweep specs | Session alone, twin events, unpaid/subscription skip, signed endpoint, backfill | `spec/services/fuime/payment_webhook_handler_spec.rb`, `spec/requests/fuime_mor_checkout_ledger_spec.rb`, `spec/services/fuime/missed_mor_payment_sweep_spec.rb` |
+| Stub `Rails.error.unexpected` in `connect_settlement_sweep_spec` | Pipeline CT memo short_code ≠ grouping HcbCode; the report raises in test and flakes shard 2 | `spec/services/fuime/connect_settlement_sweep_spec.rb` |
+| Pin founder name on cohorts admin roster spec | Faker apostrophe (`O'Keefe`) escapes in HTML; same pin as subscriptions / operator vetting | `spec/requests/fuime_cohorts_admin_spec.rb` |

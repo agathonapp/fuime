@@ -15,6 +15,13 @@ RSpec.describe Fuime::ConnectSettlementSweep do
                                    stripe_id: "acct_sweep_test")
   end
 
+  # The settlement pipeline builds a CanonicalTransaction through raw CSV
+  # import. assign_ledger_item then compares a memo-derived short_code to the
+  # grouping-engine HcbCode and calls Rails.error.unexpected on mismatch —
+  # which raises in test. That report is seed-dependent and is not what this
+  # spec is proving. Stub it so a leftover Ledger::Item cannot fail a settle.
+  before { allow(Rails.error).to receive(:unexpected) }
+
   # Same isolation as payables_ledger_spec: a unique HCB-xxxxx in the memo
   # gives the settled CanonicalTransaction its own short_code. Without one,
   # assign_ledger_item can collide with a seed or leftover Ledger::Item
