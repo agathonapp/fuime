@@ -125,7 +125,9 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       expect(response.body).to include("turbo-stream")
       expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
 
-      get :index, params: { event_slug: event.slug }
+      # Controller specs keep the last request format; ask for HTML explicitly
+      # or this GET looks for index.turbo_stream.erb.
+      get :index, params: { event_slug: event.slug }, format: :html
       expect(response.body).not_to include(fresh)
       expect(response.body).to include(key.display)
     end
