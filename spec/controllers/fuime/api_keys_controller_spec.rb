@@ -97,6 +97,9 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
       expect(response.body).to include("Copy")
       expect(response.body).to include(key.display)
+      # On the reveal card itself — flash also uses this attribute, so a bare
+      # include would pass even if the secret stayed in the snapshot.
+      expect(response.body).to include("data-fuime-fresh-key data-turbo-temporary")
 
       # And still exactly once — a later load of the same page does not show it.
       get :index, params: { event_slug: event.slug }
@@ -123,6 +126,7 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
       expect(response.body).to include("Copy")
       expect(response.body).to include(key.display)
       expect(response.body).to include("turbo-stream")
+      expect(response.body).to include("data-fuime-fresh-key data-turbo-temporary")
       expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
 
       # Controller specs keep the last request format; ask for HTML explicitly
