@@ -39,6 +39,7 @@ class WaitlistInvitesController < ApplicationController
     }
 
     ProcessLoginService.new(login:).process_signed_email_link
+    login.reload
 
     login.with_lock do
       if login.complete? && login.user_session.nil?

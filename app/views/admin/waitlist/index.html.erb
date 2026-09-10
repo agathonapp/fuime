@@ -128,7 +128,7 @@
     </tr>
   </thead>
   <tbody>
-    <% @signups.each do |signup| %>
+    <% @signups.each_with_index do |signup, i| %>
       <tr>
         <td><%= mail_to signup.email %></td>
         <td><%= signup.source %></td>
@@ -149,11 +149,12 @@
         <td>
           <% if @configured && @error.blank? %>
             <%= form_with url: invite_admin_waitlist_index_path, method: :post, class: "flex flex-wrap items-center gap-1 mb0" do %>
-              <%= hidden_field_tag :email, signup.email %>
+              <%= hidden_field_tag :email, signup.email, id: "waitlist-email-#{i}" %>
               <% if @live_cohorts.any? %>
                 <%= select_tag :cohort_code,
                                options_from_collection_for_select(@live_cohorts, :code, :name),
-                               include_blank: "No cohort" %>
+                               include_blank: "No cohort",
+                               id: "waitlist-cohort-#{i}" %>
               <% end %>
               <%= submit_tag signup.invited_at ? "Resend" : "Invite", class: "btn bg-info" %>
             <% end %>
