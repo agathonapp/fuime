@@ -40,16 +40,21 @@ RSpec.describe Fuime::PayoutBatch do
     # each think they own the same week. Enforced in the database, because two
     # workers racing is the case a Ruby-side check does not cover.
     it "refuses a second live run for the same period" do
-      create(:fuime_payout_batch, period_end: Date.new(2026, 8, 15))
+      # period_start defaults to Date.current - 7. A hardcoded period_end in
+      # the past fails "end can't be before start" the moment today moves
+      # past that week — which is why these two examples went red in Sept 2026.
+      attrs = { period_start: Date.new(2026, 8, 8), period_end: Date.new(2026, 8, 15) }
+      create(:fuime_payout_batch, **attrs)
 
-      expect { create(:fuime_payout_batch, period_end: Date.new(2026, 8, 15)) }
+      expect { create(:fuime_payout_batch, **attrs) }
         .to raise_error(ActiveRecord::RecordNotUnique)
     end
 
     it "allows a fresh run for a period whose earlier run was cancelled" do
-      create(:fuime_payout_batch, :cancelled, period_end: Date.new(2026, 8, 15))
+      attrs = { period_start: Date.new(2026, 8, 8), period_end: Date.new(2026, 8, 15) }
+      create(:fuime_payout_batch, :cancelled, **attrs)
 
-      expect { create(:fuime_payout_batch, period_end: Date.new(2026, 8, 15)) }.not_to raise_error
+      expect { create(:fuime_payout_batch, **attrs) }.not_to raise_error
     end
   end
 

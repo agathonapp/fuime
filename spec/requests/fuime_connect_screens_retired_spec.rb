@@ -90,7 +90,9 @@ RSpec.describe "the Connect screens under merchant-of-record", type: :request do
         get fuime_payouts_path(event_slug: event.slug)
 
         expect(response.body).to include("parent or guardian")
-        expect(response.body).to include(teen.name)
+        # The name is HTML-escaped in the page. Faker occasionally produces
+        # an apostrophe (O'Conner), and a raw-string include then misses it.
+        expect(response.body).to include(ERB::Util.html_escape(teen.name))
       end
 
       it "stops warning once the destination and the guardian are both there" do

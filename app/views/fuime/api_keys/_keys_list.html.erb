@@ -1,0 +1,40 @@
+<%# locals: (keys:, can_manage:, event:) %>
+<div id="fuime-api-keys-list">
+  <% if keys.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Key</th>
+          <th>Last used</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% keys.each do |key| %>
+          <tr>
+            <td><%= key.name %></td>
+            <td><code><%= key.display %></code></td>
+            <td class="muted">
+              <%# "Never" is the useful answer, not a blank cell — it is how an
+                  operator tells which of two keys their site is actually using
+                  before revoking the wrong one. %>
+              <%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %>
+            </td>
+            <td>
+              <% if can_manage %>
+                <%= button_to "Revoke",
+                              fuime_api_key_revoke_path(event_slug: event.slug, id: key.id),
+                              method: :delete,
+                              class: "danger",
+                              form: { data: { turbo_confirm: "Revoke #{key.name}? Anything using this key stops working immediately." } } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="muted">No keys yet.</p>
+  <% end %>
+</div>

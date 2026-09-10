@@ -1,0 +1,19 @@
+<%# Fuime: in-place create so the one-time plaintext is not lost.
+
+    Turbo form POSTs send Accept: text/vnd.turbo-stream.html first. Rendering
+    HTML 200 from #create left Turbo with nothing it would apply, so the key
+    was minted, the page stayed stale, and a reload showed only last4.
+
+    This stream is the create response: plaintext in the banner (once), redacted
+    row in the list, empty form. A later GET of index has no @fresh_key. %>
+<%= turbo_stream.update "fuime-fresh-api-key" do %>
+  <%= render "fuime/api_keys/fresh_key", fresh_key: @fresh_key %>
+<% end %>
+
+<%= turbo_stream.replace "fuime-api-keys-list" do %>
+  <%= render "fuime/api_keys/keys_list", keys: @keys, can_manage: @can_manage, event: @event %>
+<% end %>
+
+<%= turbo_stream.replace "fuime-api-key-form" do %>
+  <%= render "fuime/api_keys/create_form", event: @event %>
+<% end %>

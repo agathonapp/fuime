@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-08-21 (latest) — /discover: listed offers, not a marketplace.**
+**2026-09-10 (latest) — API key create: reveal the plaintext without a reload.**
+
+`POST /:slug/developer` already minted the key and rendered it in that
+response (F-08: never in flash). Turbo form POSTs still dropped it: they
+ask for a turbo stream, got HTML 200, left the page stale. Reload listed
+last4 only. `#create` now responds with a turbo stream (copyable banner +
+redacted list) and HTML for no-JS. Specs:
+`spec/controllers/fuime/api_keys_controller_spec.rb` and F-08 in
+`spec/requests/fuime_security_review_fixes_spec.rb`.
+
+**2026-08-21 — /discover: listed offers, not a marketplace.**
 
 `GET /discover` is the public shop window of **listed + published** offers on a
 venture the directory would already show (public, indexable, not hidden, not

@@ -10,6 +10,8 @@
     Nothing here suggests an amount, for the same reason the offers page does not
     (§8.3 D2). The examples use a price the operator has to replace. %>
 
+<%= render "events/nav", selected: :api_keys %>
+
 <h1>Developer</h1>
 
 <p class="muted">
@@ -22,70 +24,24 @@
 
     Shown once. Fuime stores only an encrypted copy and cannot show it again;
     see Fuime::ApiKey.mint!. Said plainly here rather than in help text, because
-    a teenager who closes this tab without copying it has to make a new one. %>
-<% if @fresh_key.present? %>
-  <div class="card mb2" style="border-color: var(--success);">
-    <h2 class="mt0 text-lg">Your new key</h2>
-    <p class="muted text-sm">
-      Copy it now. This is the only time it will be shown — Fuime keeps only an
-      encrypted copy and cannot show it to you again.
-    </p>
-    <pre class="mt1" style="overflow-x: auto;"><code><%= @fresh_key %></code></pre>
-  </div>
-<% end %>
+    a teenager who closes this tab without copying it has to make a new one.
+
+    #create also paints this via turbo_stream so a Turbo form submit does not
+    swallow the plaintext. The wrapper stays in the DOM even when empty so the
+    stream has a target. %>
+<div id="fuime-fresh-api-key">
+  <%= render "fuime/api_keys/fresh_key", fresh_key: @fresh_key if @fresh_key.present? %>
+</div>
 
 <%# ── Keys ─────────────────────────────────────────────────────────────── %>
 
 <div class="card mb2">
   <h2 class="mt0 text-lg">Your keys</h2>
 
-  <% if @keys.any? %>
-    <table class="w-full">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Key</th>
-          <th>Last used</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @keys.each do |key| %>
-          <tr>
-            <td><%= key.name %></td>
-            <td><code><%= key.display %></code></td>
-            <td class="muted">
-              <%# "Never" is the useful answer, not a blank cell — it is how an
-                  operator tells which of two keys their site is actually using
-                  before revoking the wrong one. %>
-              <%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %>
-            </td>
-            <td>
-              <% if @can_manage %>
-                <%= button_to "Revoke",
-                              fuime_api_key_revoke_path(event_slug: @event.slug, id: key.id),
-                              method: :delete,
-                              class: "danger",
-                              form: { data: { turbo_confirm: "Revoke #{key.name}? Anything using this key stops working immediately." } } %>
-              <% end %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% else %>
-    <p class="muted">No keys yet.</p>
-  <% end %>
+  <%= render "fuime/api_keys/keys_list", keys: @keys, can_manage: @can_manage, event: @event %>
 
   <% if @can_manage %>
-    <%= form_with url: fuime_api_keys_create_path(event_slug: @event.slug),
-                  method: :post, local: true, class: "mt2" do |form| %>
-      <div class="field">
-        <%= form.label :name, "What's this key for?" %>
-        <%= form.text_field :name, placeholder: "My website", maxlength: Fuime::ApiKey::MAX_NAME_LENGTH, required: true %>
-      </div>
-      <%= form.submit "Create a key" %>
-    <% end %>
+    <%= render "fuime/api_keys/create_form", event: @event %>
   <% end %>
 </div>
 

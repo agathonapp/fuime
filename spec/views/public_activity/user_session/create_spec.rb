@@ -66,7 +66,7 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
       render_activity_for(session, current_user: admin)
 
       expect(rendered).to include("impersonated")
-      expect(rendered).to include(shadow.name)
+      expect(rendered).to include(ERB::Util.html_escape(shadow.name))
     end
   end
 
@@ -87,7 +87,7 @@ RSpec.describe "public_activity/user_session/_create", type: :view do
       render_activity_for(session, current_user: admin)
 
       expect(rendered).to include("impersonated")
-      expect(rendered).to include(target.name)
+      expect(rendered).to include(ERB::Util.html_escape(target.name))
     end
   end
 
