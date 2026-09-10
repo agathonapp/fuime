@@ -321,6 +321,16 @@ module Admin
             count: ->{ Event.not_hidden.operator_vetting_unvetted.count },
             count_type: :tasks
           ),
+          # FUIME: pending guardian invites older than 7 days. A fresh invite
+          # is not a problem (day-3 / day-6 mail handles that); a stale one
+          # is a family who can sell under MoR and cannot get paid (TEEN_GROWTH
+          # G5 / ADMIN_OPS_QUEUES §3). :tasks because the count is work owed.
+          make_item(
+            name: "Guardian invites (Fuime)",
+            path: guardianships_admin_index_path,
+            count: ->{ Guardianship.stale_pending.count },
+            count_type: :tasks
+          ),
           make_item(
             name: "Organizations",
             path: events_admin_index_path,

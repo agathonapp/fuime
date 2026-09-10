@@ -49,6 +49,28 @@ RSpec.describe GuardianshipMailer, type: :mailer do
     end
   end
 
+  describe "#invite_reminder" do
+    subject(:mail) { described_class.invite_reminder(guardianship:, stage: :day3) }
+
+    it "reuses the existing accept token and is multipart" do
+      accept_url = guardianship_url(guardianship.invite_token)
+
+      expect(mail.to).to eq([guardian.email])
+      expect(mail.reply_to).to eq([ApplicationMailer::OPERATIONS_EMAIL])
+      expect(mail.subject).to eq("Reminder: Maya Family is still waiting for you on Fuime")
+      expect(mail.text_part.body.to_s).to include(accept_url)
+      expect(mail.html_part.body.to_s).to include(accept_url)
+      expect(mail.text_part.body.to_s).to include("cannot get paid")
+    end
+
+    it "marks the day-6 mail as the last reminder before expiry" do
+      mail = described_class.invite_reminder(guardianship:, stage: :day6)
+
+      expect(mail.subject).to match(/Last reminder: Maya Family's Fuime invite expires/i)
+      expect(mail.text_part.body.to_s).to include("expires")
+    end
+  end
+
   describe "#accepted" do
     subject(:mail) { described_class.accepted(guardianship:) }
 

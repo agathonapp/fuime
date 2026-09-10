@@ -1,14 +1,10 @@
-# Admin ops queues — spec (§4 shipped; §1–§3 unbuilt)
+# Admin ops queues — spec (§3 and §4 shipped; §1–§2 unbuilt)
 
-**Status: spec'd 2026-08-05.** §4 (subscriptions) shipped 2026-08-21
-(`/admin/subscriptions`). §1 payouts, §2 connected accounts, and
-§3 guardianships are still unbuilt. See `TEEN_GROWTH_GAPS.md` G5/G11.
-
-CLAUDE.md's current position still says the `stripe listen` pass outranks
-writing more features, and §1–§2 render webhook-fed state — so building
-those *before* the pass would mean building dashboards over data shapes
-nobody has verified. §3 (stuck guardianships) does **not** wait on Stripe
-and is the one queue that unblocks teens this week.
+**Status: §3 (guardianships) and §4 (subscriptions) are built. §1–§2 are not.**
+§3 shipped with TEEN_GROWTH G5 (day-3 / day-6 invite reminders + stale-pending
+queue at `/admin/guardianships`). §4 is `/admin/subscriptions`. §1–§2 still
+render webhook-fed state that the `stripe listen` pass has not verified; do
+not build those until G10.
 
 ## Why this exists
 
@@ -76,20 +72,22 @@ explicitly listed under Payouts.
 - **Actions:** none. The fix always happens on Stripe's side or the guardian's;
   the page's job is a deep link to the account in the Stripe dashboard.
 
-### 3. Guardianships & verifications
+### 3. Guardianships & verifications — built (TEEN_GROWTH G5)
 
-- **Query:** `Guardianship.pending` ordered oldest-first (staleness is the signal),
-  plus a second tab/list for `GuardianVerification` records not yet `accepted`
-  (`accepted_at: nil`, `submitted_at` present).
-- **Badge:** pending guardianships older than N days (start N=7; a fresh invite is
-  not a problem, a stale one is a lost family).
-- **Columns:** minor (age via `date_of_birth`), guardian email invited, invited-at,
-  and for verifications: method, vendor ref, submitted-at. **Never any ID imagery or
-  verification payload — L4; the consent record is the only thing that exists to
-  show, which is the point.**
-- **Actions:** resend invite (exists on the user admin page — reuse, don't duplicate
-  logic). Revocation stays on `/users/:id/admin` where the context (who is this
-  person) lives.
+- **Surface:** `/admin/guardianships` (`AdminController#guardianships`). Nav item
+  **Guardian invites (Fuime)** in Organizations; admin_tools card **Stale guardian
+  invites**. Badge is `Guardianship.stale_pending` (pending, invited ≥ 7 days ago).
+- **Query:** default tab is stale (oldest-first). `filter=pending` is every
+  pending invite. `filter=verifications` is `GuardianVerification.awaiting_acceptance`.
+- **Reminders:** `Fuime::GuardianInviteReminderJob` daily at 13:00 UTC. Day 3 and
+  day 6 for still-pending, still-live tokens. Reuses `invite_token`; does **not**
+  call `#resend_invite!`. Accepted / revoked / expired are skipped.
+- **Columns:** minor (age via `User#birthday` / `#age` — there is no
+  `date_of_birth` column), guardian email, invited-at, reminder stamps; for
+  verifications: method, vendor ref, submitted-at. **Never any ID imagery or
+  verification payload — L4.**
+- **Actions:** resend invite posts to `GuardianshipsController#resend_invite`.
+  Revocation stays on `/users/:id/admin`.
 
 ### 4. Subscriptions
 

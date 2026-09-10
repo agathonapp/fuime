@@ -25,5 +25,15 @@ FactoryBot.define do
       status { :pending }
       invite_sent_at { (Guardianship::INVITE_VALID_FOR + 1.day).ago }
     end
+
+    trait :due_for_day3_reminder do
+      status { :pending }
+      invite_sent_at { (Guardianship::REMINDER_DAY_3 + 1.hour).ago }
+    end
+
+    trait :due_for_day6_reminder do
+      status { :pending }
+      invite_sent_at { (Guardianship::REMINDER_DAY_6 + 1.hour).ago }
+    end
   end
 end

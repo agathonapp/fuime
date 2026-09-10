@@ -94,6 +94,7 @@ class GuardianVerification < ApplicationRecord
   validate :no_personal_data_in_attributes
 
   scope :accepted, -> { where.not(accepted_at: nil) }
+  scope :awaiting_acceptance, -> { where(accepted_at: nil) }
   scope :recent_first, -> { order(submitted_at: :desc) }
 
   # Stripe accepted the identity information. Distinct from "Fuime sent it" because

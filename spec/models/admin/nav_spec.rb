@@ -50,6 +50,34 @@ RSpec.describe Admin::Nav do
       expect(instance.active_section).to eq(organizations)
     end
 
+    # Fuime G5: a stale pending invite is a family who can sell under MoR
+    # and cannot get paid. It has to sit on Organizations with the other
+    # "teen is stuck" queues, not only on /users/:id/admin.
+    it "lists Guardian invites in Organizations as a task queue" do
+      instance = described_class.new(page_title: "Guardian invites (Fuime)")
+      organizations = instance.sections.find { |section| section.name == "Organizations" }
+      item = organizations.items.find { |entry| entry.name == "Guardian invites (Fuime)" }
+
+      expect(item).to be_present
+      expect(item.path).to eq(Rails.application.routes.url_helpers.guardianships_admin_index_path)
+      expect(item).to be_active
+      expect(item).to be_task_count
+      expect(instance.active_section).to eq(organizations)
+    end
+
+    it "badges Guardian invites with stale pending rows, not fresh ones" do
+      adult = create(:user, birthday: 40.years.ago.to_date)
+      create(:guardianship, :expired_invite, guardian: adult, minor: create(:user, :minor))
+      create(:guardianship,
+             guardian: create(:user, birthday: 41.years.ago.to_date),
+             minor: create(:user, :minor))
+
+      instance = described_class.new(page_title: "")
+      item = instance.sections.flat_map(&:items).find { |entry| entry.name == "Guardian invites (Fuime)" }
+
+      expect(item.count).to eq(1)
+    end
+
     it "badges Cohorts with the number of live codes" do
       admin = create(:user, :make_admin, birthday: 40.years.ago.to_date)
       Fuime::Cohort.create!(

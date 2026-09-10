@@ -537,6 +537,9 @@ Rails.application.routes.draw do
       # subscription. Comping is a local write; cancelling a PAID subscription
       # goes to Stripe and comes back through the webhook — see
       # Fuime::Subscription#comped? for why those are different verbs.
+      # FUIME: stale pending guardian invites (TEEN_GROWTH G5 / ADMIN_OPS_QUEUES §3).
+      # Resend reuses GuardianshipsController#resend_invite — no second writer.
+      get "guardianships", to: "admin#guardianships"
       get "subscriptions", to: "admin#subscriptions"
       # `user_id` travels in the body rather than the path, so the queue page and
       # the user's own admin page post the same form to the same place.

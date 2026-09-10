@@ -4,28 +4,31 @@
 #
 # Table name: guardianships
 #
-#  id                   :bigint           not null, primary key
-#  agreement_ip         :string
-#  agreement_signed_at  :datetime
-#  agreement_user_agent :string
-#  agreement_version    :string
-#  invite_sent_at       :datetime
-#  invite_token         :string
-#  revoked_at           :datetime
-#  status               :integer          default(0), not null
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  guardian_id          :bigint           not null
-#  minor_id             :bigint           not null
-#  revoked_by_id        :bigint
+#  id                      :bigint           not null, primary key
+#  agreement_ip            :string
+#  agreement_signed_at     :datetime
+#  agreement_user_agent    :string
+#  agreement_version       :string
+#  invite_day3_reminded_at :datetime
+#  invite_day6_reminded_at :datetime
+#  invite_sent_at          :datetime
+#  invite_token            :string
+#  revoked_at              :datetime
+#  status                  :integer          default(0), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  guardian_id             :bigint           not null
+#  minor_id                :bigint           not null
+#  revoked_by_id           :bigint
 #
 # Indexes
 #
-#  index_guardianships_on_guardian_id               (guardian_id)
-#  index_guardianships_on_guardian_id_and_minor_id  (guardian_id,minor_id) UNIQUE
-#  index_guardianships_on_invite_token              (invite_token) UNIQUE
-#  index_guardianships_on_minor_id                  (minor_id)
-#  index_guardianships_on_revoked_by_id             (revoked_by_id)
+#  index_guardianships_on_guardian_id                (guardian_id)
+#  index_guardianships_on_guardian_id_and_minor_id   (guardian_id,minor_id) UNIQUE
+#  index_guardianships_on_invite_token               (invite_token) UNIQUE
+#  index_guardianships_on_minor_id                   (minor_id)
+#  index_guardianships_on_revoked_by_id              (revoked_by_id)
+#  index_guardianships_on_status_and_invite_sent_at  (status,invite_sent_at)
 #
 # Foreign Keys
 #
@@ -51,6 +54,14 @@ class Guardianship < ApplicationRecord
   # They expire so a forwarded or leaked email doesn't stay usable forever.
   INVITE_VALID_FOR = 7.days
 
+  # Scheduled reminders (TEEN_GROWTH G5). Same token, same 7-day clock — a
+  # reminder is not a resend. Day 3 is the first nudge; day 6 is the last
+  # one before `find_by_token` starts returning nil. Fresh invites are not
+  # an ops problem; pending past INVITE_VALID_FOR is (`stale_pending`).
+  REMINDER_DAY_3 = 3.days
+  REMINDER_DAY_6 = 6.days
+  STALE_AFTER = INVITE_VALID_FOR
+
   belongs_to :guardian, class_name: "User"
   belongs_to :minor, class_name: "User"
   # Who withdrew consent. Nil for guardianships revoked before this was
@@ -70,6 +81,34 @@ class Guardianship < ApplicationRecord
 
   scope :for_minor, ->(user) { where(minor: user) }
   scope :for_guardian, ->(user) { where(guardian: user) }
+
+  # Oldest-first: staleness is the signal. Used by the admin queue.
+  scope :oldest_pending_first, -> {
+    pending.order(Arel.sql("COALESCE(invite_sent_at, created_at) ASC"))
+  }
+
+  # Badge query for ADMIN_OPS_QUEUES.md §3. A day-old invite is a family in
+  # progress; a week-old one is a lost family. Matches INVITE_VALID_FOR so the
+  # queue is exactly the invites `find_by_token` will no longer honour.
+  scope :stale_pending, -> {
+    pending.where("COALESCE(invite_sent_at, created_at) <= ?", STALE_AFTER.ago)
+  }
+
+  # Still pending, token still live, and owed a day-3 and/or day-6 mail.
+  # Expired and accepted rows are excluded so the job cannot un-expire a
+  # link or mail a parent who already signed.
+  scope :due_for_invite_reminder, -> {
+    pending
+      .where.not(invite_token: nil)
+      .where.not(invite_sent_at: nil)
+      .where("invite_sent_at >= ?", INVITE_VALID_FOR.ago)
+      .where(
+        "(invite_day3_reminded_at IS NULL AND invite_sent_at <= :day3) OR " \
+        "(invite_day6_reminded_at IS NULL AND invite_sent_at <= :day6)",
+        day3: REMINDER_DAY_3.ago,
+        day6: REMINDER_DAY_6.ago
+      )
+  }
 
   # Active guardianships held by `user` over a minor who holds a position on
   # `event` — i.e. "is this user entitled to oversee this venture?"
@@ -306,15 +345,65 @@ class Guardianship < ApplicationRecord
   end
 
   # Re-issue a fresh token for a pending invite whose link has gone stale.
+  # This is the ops / family "send it again" verb: new token, new 7-day
+  # clock, reminder stamps cleared so the new window can be nudged on its
+  # own schedule. Scheduled reminders do NOT call this — see
+  # #send_invite_reminder!.
   def resend_invite!
     return false unless pending?
 
     update!(
       invite_token: SecureRandom.urlsafe_base64(32),
-      invite_sent_at: Time.current
+      invite_sent_at: Time.current,
+      invite_day3_reminded_at: nil,
+      invite_day6_reminded_at: nil
     )
     GuardianshipMailer.invite(guardianship: self).deliver_later
     true
+  end
+
+  # Which scheduled reminder, if any, this pending invite is owed right now.
+  # Day 6 wins when both are due (job was down) so we send one mail, not two.
+  def due_reminder_stage
+    return nil unless pending?
+    return nil if invite_expired? || invite_sent_at.blank? || invite_token.blank?
+
+    age = Time.current - invite_sent_at
+    return :day6 if age >= REMINDER_DAY_6 && invite_day6_reminded_at.nil?
+    return :day3 if age >= REMINDER_DAY_3 && invite_day3_reminded_at.nil?
+
+    nil
+  end
+
+  # Mail the current token again. Does not mint a second token and does not
+  # reset `invite_sent_at` — the original email keeps working, and expiry
+  # stays day 7 from the first send. Returns false for accepted, revoked,
+  # expired, or already-reminded rows so the daily job cannot spam.
+  def send_invite_reminder!
+    stage = nil
+
+    with_lock do
+      reload
+      stage = due_reminder_stage
+      if stage
+        now = Time.current
+        attrs = {}
+        # If we skipped day 3 (job down) and are sending day 6, stamp both so
+        # tomorrow's run does not send a late day-3 behind the last-chance mail.
+        attrs[:invite_day3_reminded_at] = now if invite_day3_reminded_at.nil?
+        attrs[:invite_day6_reminded_at] = now if stage == :day6
+        update!(attrs)
+      end
+    end
+
+    return false unless stage
+
+    GuardianshipMailer.invite_reminder(guardianship: self, stage:).deliver_later
+    true
+  end
+
+  def self.send_due_invite_reminders!
+    due_for_invite_reminder.find_each { |guardianship| guardianship.send_invite_reminder! }
   end
 
   def pending?
