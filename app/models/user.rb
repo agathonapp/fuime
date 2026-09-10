@@ -4,51 +4,59 @@
 #
 # Table name: users
 #
-#  id                            :bigint           not null, primary key
-#  access_level                  :integer          default(0), not null
-#  age_attestation               :integer
-#  age_attestation_ip            :string
-#  age_attestation_user_agent    :string
-#  age_attested_at               :datetime
-#  birthday_ciphertext           :text
-#  card_locking_suppressed_until :datetime
-#  cards_locked                  :boolean          default(FALSE), not null
-#  charge_notifications          :integer          default(0), not null
-#  comment_notifications         :integer          default(0), not null
-#  creation_method               :integer
-#  email                         :text             not null
-#  full_name                     :string
-#  joined_as_teenager            :boolean
-#  locked_at                     :datetime
-#  monthly_donation_summary      :boolean          default(TRUE)
-#  monthly_follower_summary      :boolean          default(TRUE)
-#  phone_number                  :text
-#  phone_number_verified         :boolean          default(FALSE)
-#  preferred_name                :string
-#  pretend_is_not_admin          :boolean          default(FALSE), not null
-#  receipt_report_option         :integer          default(0), not null
-#  running_balance_enabled       :boolean          default(FALSE), not null
-#  seasonal_themes_enabled       :boolean          default(TRUE), not null
-#  session_validity_preference   :integer          default(259200), not null
-#  sessions_reported             :boolean          default(FALSE), not null
-#  slug                          :string
-#  subscribed_to_loops_at        :datetime
-#  teenager                      :boolean
-#  use_sms_auth                  :boolean          default(FALSE)
-#  use_two_factor_authentication :boolean          default(FALSE)
-#  verified                      :boolean          default(FALSE), not null
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  discord_id                    :string
-#  payout_method_id              :bigint
-#  payout_method_type            :string
-#  webauthn_id                   :string
+#  id                                :bigint           not null, primary key
+#  access_level                      :integer          default(0), not null
+#  age_attestation                   :integer
+#  age_attestation_ip                :string
+#  age_attestation_user_agent        :string
+#  age_attested_at                   :datetime
+#  birthday_ciphertext               :text
+#  card_locking_suppressed_until     :datetime
+#  cards_locked                      :boolean          default(FALSE), not null
+#  charge_notifications              :integer          default(0), not null
+#  comment_notifications             :integer          default(0), not null
+#  creation_method                   :integer
+#  email                             :text             not null
+#  full_name                         :string
+#  guardian_requirement_waived_at    :datetime
+#  guardian_requirement_waiver_notes :text
+#  joined_as_teenager                :boolean
+#  locked_at                         :datetime
+#  monthly_donation_summary          :boolean          default(TRUE)
+#  monthly_follower_summary          :boolean          default(TRUE)
+#  phone_number                      :text
+#  phone_number_verified             :boolean          default(FALSE)
+#  preferred_name                    :string
+#  pretend_is_not_admin              :boolean          default(FALSE), not null
+#  receipt_report_option             :integer          default(0), not null
+#  running_balance_enabled           :boolean          default(FALSE), not null
+#  seasonal_themes_enabled           :boolean          default(TRUE), not null
+#  session_validity_preference       :integer          default(259200), not null
+#  sessions_reported                 :boolean          default(FALSE), not null
+#  slug                              :string
+#  subscribed_to_loops_at            :datetime
+#  teenager                          :boolean
+#  use_sms_auth                      :boolean          default(FALSE)
+#  use_two_factor_authentication     :boolean          default(FALSE)
+#  verified                          :boolean          default(FALSE), not null
+#  created_at                        :datetime         not null
+#  updated_at                        :datetime         not null
+#  discord_id                        :string
+#  guardian_requirement_waived_by_id :bigint
+#  payout_method_id                  :bigint
+#  payout_method_type                :string
+#  webauthn_id                       :string
 #
 # Indexes
 #
-#  index_users_on_discord_id  (discord_id) UNIQUE
-#  index_users_on_email       (email) UNIQUE
-#  index_users_on_slug        (slug) UNIQUE
+#  index_users_on_discord_id                         (discord_id) UNIQUE
+#  index_users_on_email                              (email) UNIQUE
+#  index_users_on_guardian_requirement_waived_by_id  (guardian_requirement_waived_by_id)
+#  index_users_on_slug                               (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (guardian_requirement_waived_by_id => users.id)
 #
 class User < ApplicationRecord
   has_paper_trail skip: [:birthday] # ciphertext columns will still be tracked
@@ -138,6 +146,8 @@ class User < ApplicationRecord
   # Fuime guardianship relationships
   has_many :guardianships_as_guardian, class_name: "Guardianship", foreign_key: :guardian_id, inverse_of: :guardian
   has_many :guardianships_as_minor, class_name: "Guardianship", foreign_key: :minor_id, inverse_of: :minor
+  # Admin who waived the parent/guardian gate for this user. Nil unless waived.
+  belongs_to :guardian_requirement_waived_by, class_name: "User", optional: true
   has_many :wards, through: :guardianships_as_guardian, source: :minor # teens this user is guardian for
   has_many :guardians, through: :guardianships_as_minor, source: :guardian # guardians of this teen
 
@@ -801,15 +811,45 @@ class User < ApplicationRecord
   # Fuime: Does this user require a guardian before they can operate a business?
   #
   # Unknown age counts as requiring one (see #minor_or_unknown_age?). Adults and
-  # minors with an ACTIVE guardianship do not.
+  # minors with an ACTIVE guardianship do not. An admin waiver (named, audited)
+  # also clears this — that is the only non-guardian way through, and it is not
+  # a permitted attribute on the user's own form.
   def needs_guardian?
     # Someone who is already the signing guardian for another user is a confirmed
     # adult (see #guardian_of_active_ward?), so asking them to invite a parent is
     # both wrong and a dead end — the invite flow would have them name a guardian
     # for themselves while they are mid-way through being one for their kid.
     return false if guardian_of_active_ward?
+    return false if guardian_requirement_waived?
 
     minor_or_unknown_age? && !has_active_guardian?
+  end
+
+  def guardian_requirement_waived?
+    guardian_requirement_waived_at.present?
+  end
+
+  # Admin-only. Raises unless `by` is an admin, so a crafted PATCH or a missed
+  # policy check cannot write these columns. Notes are optional and kept as the
+  # reason a reviewer later reads.
+  def waive_guardian_requirement!(by:, notes: nil)
+    raise ArgumentError, "only an admin can waive the guardian requirement" unless by&.admin?
+
+    update!(
+      guardian_requirement_waived_at: Time.current,
+      guardian_requirement_waived_by: by,
+      guardian_requirement_waiver_notes: notes.presence
+    )
+  end
+
+  def restore_guardian_requirement!(by:)
+    raise ArgumentError, "only an admin can restore the guardian requirement" unless by&.admin?
+
+    update!(
+      guardian_requirement_waived_at: nil,
+      guardian_requirement_waived_by: nil,
+      guardian_requirement_waiver_notes: nil
+    )
   end
 
   # Fuime: may this user create, own, or RUN a business?

@@ -545,7 +545,7 @@ class Event
       # Under merchant-of-record the guardian requirement moves to the payout
       # seam; see the note in #activate_event! below.
       if !::Fuime::Features.merchant_of_record? &&
-         user.minor_or_unknown_age? && !user.has_active_guardian? &&
+         user.needs_guardian? &&
          !user.institutionally_vouched_for? && !user.staff?
         blockers << "#{user.email} is a minor with no active guardian — their " \
                     "parent or guardian must accept the guardianship invite first (L2)"
@@ -849,7 +849,7 @@ class Event
       # falsy, so this would have stopped asking checkbox-only teenagers for a
       # parent's email — silently turning the guardian question off for exactly the
       # population it exists for.
-      if user.minor_or_unknown_age? && !user.has_active_guardian? && !user.institutionally_vouched_for?
+      if user.needs_guardian? && !user.institutionally_vouched_for?
         fields.push("cosigner_email")
       end
 

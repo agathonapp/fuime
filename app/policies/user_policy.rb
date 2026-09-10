@@ -174,4 +174,15 @@ class UserPolicy < ApplicationPolicy
     user.admin?
   end
 
+  # Named bypass of the parent/guardian gate for this person. Admin only —
+  # auditors may see the panel, they may not lift the legal control. The user
+  # themselves must never be able to waive their own requirement.
+  def waive_guardian_requirement?
+    user.admin?
+  end
+
+  def restore_guardian_requirement?
+    user.admin?
+  end
+
 end

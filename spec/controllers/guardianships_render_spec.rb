@@ -37,6 +37,43 @@ RSpec.describe GuardianshipsController, type: :controller do
       expect(response).to have_http_status(:ok)
       # The agreement they are consenting to must be on the page they sign.
       expect(response.body).to match(/agree/i)
+      expect(response.body).to include('name="agree"')
+      expect(response.body).to include('type="checkbox"')
+      expect(response.body).to include('id="guardian-accept-form"')
+      expect(response.body).to include("Agree &amp; activate their account")
+    end
+
+    # Production path: the invite creates a stub user; after login they have at
+    # most a 13+ settings tick. #activation_blockers still lists the 18+ sentence
+    # (accept! stays fail-closed), but that sentence used to hide the checkbox
+    # that is the only way to clear it.
+    it "shows the agreement checkbox to a parent who has not yet attested 18+" do
+      stub_parent = create(:user, :unknown_age)
+      pending_invite = create(:guardianship, minor: teen, guardian: stub_parent)
+      create_session(stub_parent, verified: true)
+
+      get :show, params: { id: pending_invite.invite_token }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('id="agree"')
+      expect(response.body).to include('name="agree"')
+      expect(response.body).to include('type="checkbox"')
+      expect(response.body).to include('id="guardian-accept-submit"')
+      expect(response.body).to include("I am 18 or older")
+      expect(response.body).not_to include("Update my details")
+    end
+
+    it "shows the agreement checkbox after the parent ticked 13+ on settings" do
+      settings_parent = create(:user, :attested_teen)
+      pending_invite = create(:guardianship, minor: teen, guardian: settings_parent)
+      create_session(settings_parent, verified: true)
+
+      get :show, params: { id: pending_invite.invite_token }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('id="agree"')
+      expect(response.body).to include('type="checkbox"')
+      expect(response.body).to include("Agree &amp; activate their account")
     end
 
     it "sends a signed-out visitor to log in rather than erroring" do
@@ -77,6 +114,17 @@ RSpec.describe GuardianshipsController, type: :controller do
 
       expect(guardianship.reload).to be_active
       expect(guardianship.agreement_signed_at).to be_present
+    end
+
+    it "activates when an invited stub parent ticks the 18+ box" do
+      stub_parent = create(:user, :unknown_age)
+      pending_invite = create(:guardianship, minor: teen, guardian: stub_parent)
+      create_session(stub_parent, verified: true)
+
+      post :accept, params: { id: pending_invite.invite_token, agree: "1" }
+
+      expect(pending_invite.reload).to be_active
+      expect(stub_parent.reload.known_adult?).to be true
     end
   end
 

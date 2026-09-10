@@ -63,6 +63,98 @@ RSpec.describe UsersController do
     end
   end
 
+  describe "#waive_guardian_requirement" do
+    it "lets an admin waive the gate for a teen" do
+      admin_user = create(:user, :make_admin)
+      teen = create(:user, :minor)
+      create_session(admin_user, verified: true)
+
+      post :waive_guardian_requirement, params: { id: teen.id, notes: "support demo" }
+
+      expect(response).to redirect_to(admin_user_path(teen))
+      expect(teen.reload.guardian_requirement_waived?).to be true
+      expect(teen.needs_guardian?).to be false
+      expect(teen.guardian_requirement_waived_by).to eq(admin_user)
+      expect(teen.guardian_requirement_waiver_notes).to eq("support demo")
+    end
+
+    it "forbids a normal user from waiving anyone's gate" do
+      requester = create(:user)
+      teen = create(:user, :minor)
+      create_session(requester, verified: true)
+
+      post :waive_guardian_requirement, params: { id: teen.id }
+
+      expect(flash[:error]).to eq("You are not authorized to perform this action.")
+      expect(teen.reload.needs_guardian?).to be true
+      expect(teen.guardian_requirement_waived?).to be false
+    end
+
+    it "forbids a teen from waiving their own gate" do
+      teen = create(:user, :minor)
+      create_session(teen, verified: true)
+
+      post :waive_guardian_requirement, params: { id: teen.id }
+
+      expect(flash[:error]).to eq("You are not authorized to perform this action.")
+      expect(teen.reload.needs_guardian?).to be true
+    end
+  end
+
+  describe "#restore_guardian_requirement" do
+    it "lets an admin put the gate back" do
+      admin_user = create(:user, :make_admin)
+      teen = create(:user, :minor)
+      teen.waive_guardian_requirement!(by: admin_user)
+      create_session(admin_user, verified: true)
+
+      post :restore_guardian_requirement, params: { id: teen.id }
+
+      expect(teen.reload.needs_guardian?).to be true
+      expect(teen.guardian_requirement_waived?).to be false
+    end
+
+    it "forbids a normal user from restoring (or clearing) a waiver" do
+      admin_user = create(:user, :make_admin)
+      teen = create(:user, :minor)
+      teen.waive_guardian_requirement!(by: admin_user)
+      create_session(create(:user), verified: true)
+
+      post :restore_guardian_requirement, params: { id: teen.id }
+
+      expect(flash[:error]).to eq("You are not authorized to perform this action.")
+      expect(teen.reload.guardian_requirement_waived?).to be true
+    end
+  end
+
+  describe "#edit_admin guardian waiver control" do
+    render_views
+
+    it "renders the waive control for an admin on a teen who needs a guardian" do
+      admin_user = create(:user, :make_admin)
+      teen = create(:user, :minor)
+      create_session(admin_user, verified: true)
+
+      get :edit_admin, params: { id: teen.id }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(waive_guardian_requirement_user_path(teen))
+      expect(response.body).to include("Waive guardian requirement")
+    end
+
+    it "hides the waive control from an auditor" do
+      auditor = create(:user, :make_auditor)
+      teen = create(:user, :minor)
+      create_session(auditor, verified: true)
+
+      get :edit_admin, params: { id: teen.id }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Cannot operate a business")
+      expect(response.body).not_to include(waive_guardian_requirement_user_path(teen))
+    end
+  end
+
   describe "#suppress_card_locking" do
     it "lets an admin suppress card locking for a user" do
       freeze_time do

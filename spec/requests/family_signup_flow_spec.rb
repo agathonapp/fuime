@@ -103,6 +103,10 @@ RSpec.describe "a family signs up and activates", type: :request do
     # The link from the invite email: token-addressed show, then accept.
     get guardianship_path(guardianship.invite_token)
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include('id="agree"')
+    expect(response.body).to include('name="agree"')
+    expect(response.body).to include('type="checkbox"')
+    expect(response.body).to include("Agree &amp; activate their account")
 
     # The agreement checkbox is required server-side — skipping it is refused
     # with a flash, which an earlier run of this spec proved by omitting it. It now

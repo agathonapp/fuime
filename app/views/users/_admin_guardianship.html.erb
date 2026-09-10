@@ -30,11 +30,59 @@
       <% end %>
     </p>
 
-    <% if user.needs_guardian? %>
+    <% if user.guardian_requirement_waived? %>
+      <p>
+        <%= badge_for "Guardian requirement waived", class: "bg-warning" %>
+        <span class="muted">
+          by <%= user.guardian_requirement_waived_by.present? ? user_mention(user.guardian_requirement_waived_by) : "an admin" %>
+          <%= "on #{format_datetime user.guardian_requirement_waived_at}" if user.guardian_requirement_waived_at %>
+        </span>
+      </p>
+      <% if user.guardian_requirement_waiver_notes.present? %>
+        <p class="muted">Reason: <%= user.guardian_requirement_waiver_notes %></p>
+      <% end %>
+      <p class="muted">
+        This person can operate and an admin can activate their venture without
+        a parent accept. Restoring the requirement puts the gate back.
+      </p>
+    <% elsif user.needs_guardian? %>
       <p class="error">
         <strong>Cannot operate a business.</strong>
         This user is a minor (or has not confirmed their age) with no active guardian.
       </p>
+    <% end %>
+
+    <% if admin_signed_in? && (user.needs_guardian? || user.guardian_requirement_waived?) %>
+      <div class="mt2">
+        <% if user.guardian_requirement_waived? %>
+          <%= button_to "Restore guardian requirement",
+                        restore_guardian_requirement_user_path(user),
+                        method: :post,
+                        class: "btn bg-info",
+                        form: { data: { turbo_frame: "_top" } },
+                        data: {
+                          turbo_confirm: "Restore the parent/guardian gate for this user? They will need an active guardian again before they can operate.",
+                        } %>
+        <% else %>
+          <%= form_with url: waive_guardian_requirement_user_path(user),
+                        method: :post,
+                        data: { turbo: false } do |f| %>
+            <div class="field field--text">
+              <%= f.label :notes, "Reason (optional)" %>
+              <%= text_area_tag :notes, nil,
+                                id: "guardian-waiver-notes",
+                                class: "input w-full",
+                                rows: 2,
+                                placeholder: "Why this person may proceed without a parent accept" %>
+            </div>
+            <%= f.submit "Waive guardian requirement",
+                         class: "btn bg-warning",
+                         data: {
+                           turbo_confirm: "Waive the parent/guardian gate for this user? This is an admin override, not a parent signature. They will be able to operate without an accept.",
+                         } %>
+          <% end %>
+        <% end %>
+      </div>
     <% end %>
 
     <%# ---- This user as a teen: who signs for them? ---- %>

@@ -5619,3 +5619,51 @@ the existing clipboard Stimulus controller; it does not log the secret.
 | Events nav on the developer page | Every other venture page renders `events/nav`; this one did not, so it rendered outside the org shell. | `app/views/fuime/api_keys/index.html.erb` |
 | `data-turbo-temporary` on the reveal card | Turbo snapshots the page after the stream. Back-navigation would restore the plaintext even though GET index cannot. Same attribute the flash already uses. On the card, not the wrapper — the wrapper is the stream target. | `app/views/fuime/api_keys/_fresh_key.html.erb` |
 | Turbo create examples on the controller spec and F-08 | The HTML example still holds. The stream example is the path a browser actually takes. | `spec/controllers/fuime/api_keys_controller_spec.rb`, `spec/requests/fuime_security_review_fixes_spec.rb` |
+
+## 2026-09-10 — Parent invite accept checkbox + invite email deliverability
+
+The emailed parent could not accept: `guardianships/show` only rendered the
+agreement checkbox when `#activation_blockers` was empty. After the 18+ claim
+moved onto that checkbox (settings can no longer produce `adult_18_plus`),
+every ordinary invite — stub user, or parent who ticked 13+ while setting a
+name — still had the "tick the box below" blocker, so the form that would
+clear it was omitted. The page pointed at "Update my details", a dead end.
+
+`#activation_blockers` / `#accept!` stay fail-closed. The view now uses
+`#structural_activation_blockers` and `#can_present_accept_form?` so the
+18+ line does not hide its own control. Stray `data-controller="accordion"`
+(no targets; Stimulus error on connect) removed. Accept form is a full-page
+POST (`data-turbo="false"`).
+
+Invite mail: Reply-To `support@fuime.com`, explicit text part, subject no
+longer reads like "sign their account", visible pasteable URL. From stays
+`no-reply@<domain>` because Resend is documented against that mailbox.
+
+Out of app (already in LAUNCH_SPEC §3.4; not inventable from this repo):
+verify `fuime.com` in Resend; SPF, DKIM, and DMARC must pass, or inbox
+placement will stay poor no matter what the template says.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `#structural_activation_blockers` + `#can_present_accept_form?` | Show the accept checkbox when the only remaining claim is the 18+ tick the box itself records | `app/models/guardianship.rb`, `app/views/guardianships/show.html.erb` |
+| Reply-To, text parts, calmer subject, pasteable URL | In-app deliverability: multipart, replyable, not phishing-shaped | `app/mailers/guardianship_mailer.rb`, `app/views/guardianship_mailer/` |
+| Render / mailer / family-flow specs | Cover the stub-parent UI and the success path the founder hit | `spec/controllers/guardianships_render_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb` |
+
+## 2026-09-10 — Admin waiver of the parent/guardian gate
+
+An admin must be able to let one person through without a real parent accept
+(support, demos) without weakening the default. The gate is
+`User#needs_guardian?` — session filter, `Event::Application#activation_blockers`,
+EventPolicy, payout setup. A named waiver on the user (who / when / notes)
+clears that predicate. It does not fabricate a guardianship.
+
+UI: `/users/:id/admin` Guardianship panel — "Waive guardian requirement" /
+"Restore guardian requirement". Admin only (not auditor, not the user). Columns
+are not in `user_params`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `guardian_requirement_waived_*` on users | Audited, reversible bypass for one person. Column + concurrent index first; FK added unvalidated then validated (same lock-avoidance as `revoked_by` on guardianships) | `db/migrate/20260910150000_add_guardian_requirement_waiver_to_users.rb`, `db/migrate/20260910150001_add_guardian_requirement_waived_by_foreign_key_to_users.rb`, `db/migrate/20260910150002_validate_guardian_requirement_waived_by_foreign_key_on_users.rb` |
+| `#needs_guardian?` honors the waiver | One predicate; every consumer follows | `app/models/user.rb` |
+| Activation / payout / apply fields use `#needs_guardian?` | Stop duplicating the check so a waiver cannot be half-applied | `app/models/event/application.rb`, `app/models/event.rb` |
+| Admin actions + panel | The surface Rushmore actually uses | `app/controllers/users_controller.rb`, `app/views/users/_admin_guardianship.html.erb`, `app/policies/user_policy.rb`, `config/routes.rb` |

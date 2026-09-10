@@ -2,7 +2,48 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — API key create: reveal the plaintext without a reload.**
+**2026-09-10 (latest) — Isolate payables_ledger_spec from a seed-dependent HcbCode collision.**
+
+`assign_ledger_item` can attach a factory line to another example's HcbCode when
+the memo has no unique `HCB-xxxxx`. Spec-only; ledger engine untouched.
+
+**2026-09-10 — CI fix on the waiver PR (annotate / strong_migrations / ERB).**
+
+Head after this: User annotation re-padded for the new columns + index + FK;
+waiver FK split into add-column / add-FK-unvalidated / validate-FK (same
+pattern as `revoked_by`); waive form uses `form_with |f|` and a static
+`turbo_confirm` so ERB lint is clean. Product behavior unchanged.
+
+**2026-09-10 — Admin can waive the parent/guardian gate for one person.**
+
+On `/users/:id/admin` (Guardianship panel): **Waive guardian requirement**
+(optional reason) and **Restore guardian requirement**. Writes
+`users.guardian_requirement_waived_*`. `User#needs_guardian?` is the single
+predicate (session filter, activation, EventPolicy, payout setup). Not a fake
+parent accept. Not a permitted user attribute. Model refuses a non-admin `by:`.
+Auditors can see the panel; only admins can click.
+
+Specs: `spec/models/user_guardian_exemption_spec.rb`,
+`spec/controllers/users_controller_spec.rb`,
+`spec/controllers/fuime/guardianship_enforcement_spec.rb`,
+`spec/controllers/event/applications_controller_spec.rb`.
+
+**2026-09-10 — Parent invite: missing accept checkbox + spammy email.**
+
+The accept form on `GET /guardian/:token` was gated on
+`activation_blockers.empty?`. For an invited parent (stub or 13+ settings tick)
+that array still contains the 18+ sentence — the checkbox *is* how they clear
+it — so the page told them to tick a box that was not rendered, and sent them
+to settings (which cannot make them an adult). Form now keys off
+`#can_present_accept_form?` / `#structural_activation_blockers`. Invite mail
+adds Reply-To, a real text part, a calmer subject, and a pasteable URL.
+DNS/ESP (Resend SPF/DKIM/DMARC) is still required and is not a code change.
+
+Specs: `spec/controllers/guardianships_render_spec.rb`,
+`spec/mailers/guardianship_mailer_spec.rb`,
+`spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb`.
+
+**2026-09-10 — API key create: reveal the plaintext without a reload.**
 
 `POST /:slug/developer` already minted the key and rendered it in that
 response (F-08: never in flash). Turbo form POSTs still dropped it: they

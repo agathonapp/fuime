@@ -50,5 +50,39 @@ RSpec.describe User, type: :model do
     it "still requires a guardian for a teen who has none" do
       expect(create(:user, birthday: teen_dob).needs_guardian?).to be true
     end
+
+    it "clears the gate when an admin waives the requirement" do
+      teen = create(:user, birthday: teen_dob)
+      admin = create(:user, :make_admin)
+
+      teen.waive_guardian_requirement!(by: admin, notes: "demo founder")
+
+      expect(teen.guardian_requirement_waived?).to be true
+      expect(teen.needs_guardian?).to be false
+      expect(teen.permitted_to_operate_business?).to be true
+      expect(teen.guardian_requirement_waived_by).to eq(admin)
+      expect(teen.guardian_requirement_waiver_notes).to eq("demo founder")
+    end
+
+    it "puts the gate back when an admin restores the requirement" do
+      teen = create(:user, birthday: teen_dob)
+      admin = create(:user, :make_admin)
+      teen.waive_guardian_requirement!(by: admin)
+
+      teen.restore_guardian_requirement!(by: admin)
+
+      expect(teen.guardian_requirement_waived?).to be false
+      expect(teen.needs_guardian?).to be true
+    end
+
+    it "refuses a non-admin who tries to waive on the model" do
+      teen = create(:user, birthday: teen_dob)
+      stranger = create(:user)
+
+      expect {
+        teen.waive_guardian_requirement!(by: stranger)
+      }.to raise_error(ArgumentError, /only an admin/)
+      expect(teen.reload.needs_guardian?).to be true
+    end
   end
 end
