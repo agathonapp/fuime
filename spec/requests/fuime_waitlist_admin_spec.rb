@@ -206,6 +206,8 @@ RSpec.describe "admin waitlist", type: :request do
       configure_store!
       stub_roster(emails: ["maya@example.com"], metas: {})
       login_as!(normal_user)
+      # login_as! sends a login-code email; this example is about the invite.
+      ActionMailer::Base.deliveries.clear
 
       post invite_admin_waitlist_index_path, params: { email: "maya@example.com" }
 

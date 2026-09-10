@@ -6,6 +6,11 @@ require "rails_helper"
 # contract — create a login-ready user, mail a working link, stamp Redis —
 # against a real store, same as waitlist_roster_spec.
 RSpec.describe Fuime::WaitlistInviteService do
+  # Service specs don't mix in URL helpers the way `type: :mailer` does.
+  # The mail body is the contract here — the link has to be the same URL
+  # WaitlistMailer renders — so we include them for that one assertion.
+  include Rails.application.routes.url_helpers
+
   def redis_url
     uri = URI.parse(ENV["REDIS_URL"].presence || "redis://localhost:6379")
     uri.path = "/15"

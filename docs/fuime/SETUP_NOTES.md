@@ -14,6 +14,11 @@ and roster specs. How to test: set `WAITLIST_REDIS_URL`, add an address on
 the marketing form or `SADD fuime:waitlist`, invite from the admin page,
 open the letter_opener / test delivery link. Did not do G5/G10/G2/G3.
 
+CI shards 5 and 7 failed on assertion setup, not the invite path: the
+service spec called `waitlist_invite_url` without URL helpers, and the
+ordinary-user refuse example saw the login-code mail `login_as!` sent.
+Fixed those two specs; product code unchanged.
+
 **2026-09-10 — Isolate connect_settlement_sweep_spec HcbCode collision.**
 
 Same flake as payables_ledger_spec: a settled memo with no `HCB-xxxxx`
