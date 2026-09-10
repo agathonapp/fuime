@@ -8,6 +8,8 @@ module Fuime
     skip_after_action :verify_authorized
 
     def stripe
+      # MoR money-in. Register Fuime::PaymentWebhookHandler::HANDLED_TYPES on this
+      # endpoint. Wrong path (/webhooks/stripe) 404s; see docs/fuime/MOR_WEBHOOK_PASS.md.
       payload = request.body.read
       sig_header = request.headers["Stripe-Signature"]
 

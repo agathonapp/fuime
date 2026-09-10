@@ -214,6 +214,11 @@ Production money-in is `Fuime::ConnectPaymentRecorder`, on the connect endpoint.
 
 ## 7. Test plan (`stripe listen`, test mode)
 
+> **Production money-in is MoR, not this section.** For a storefront Checkout
+> that must hit the ledger, use `docs/fuime/MOR_WEBHOOK_PASS.md`. The listen
+> URLs below (`/webhooks/stripe`) 404; the live path is
+> `/fuime/webhooks/stripe`. This section remains the Connect-era plan.
+
 > ### ✅ Partial pass completed 2026-08-14 — the money-in shape is no longer theoretical
 >
 > Run against the Fuime test account (`acct_1TznaN2Uz4P3wrXO`), `STRIPE_MODE=test`, using

@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
-# Fuime: the POOLED-ACCOUNT SIMULATOR. Test mode only — see #simulator_mode?.
+# Fuime: money-in on the PLATFORM Stripe account.
 #
-# Payments are taken on one pooled Fuime platform Stripe account; the paying
-# business is identified by `fuime_event_id` in the Checkout/PaymentIntent
-# metadata. That model is retired for production (CLAUDE.md L1): real payments
-# are direct charges on a guardian-owned connected account and are recorded by
-# Fuime::ConnectPaymentRecorder, which arrives on a different endpoint. This
-# class survives because it exercises the ledger pipeline end to end without a
-# connected account, which is useful in development and nowhere else.
+# Under merchant-of-record (production, `FEATURE_MERCHANT_OF_RECORD=true`) this
+# is the PRIMARY money-in path: the customer paid Fuime, and the ledger line is
+# how a teenager sees the sale. Under Connect, sibling Fuime::ConnectPaymentRecorder
+# records direct charges that arrive on `/fuime/webhooks/stripe/connect`. With
+# both flags off this class is the test-mode pooled simulator (see #simulator_mode?).
+#
+# The paying venture is identified by `fuime_event_id` in Checkout / PaymentIntent
+# metadata (stamped by Fuime::PaymentLinkService on both objects).
 #
 # This handler feeds those payments into HCB's EXISTING ledger
 # pipeline rather than reimplementing any of it (CLAUDE.md Rule 3):
@@ -29,6 +30,22 @@ module Fuime
     # See #simulator_mode?.
     class LivePooledPaymentRefused < StandardError; end
 
+    # Events this class will post (or reverse) a ledger line for.
+    #
+    # Register ALL of these on the platform webhook endpoint
+    # (`/fuime/webhooks/stripe`). A Checkout Dashboard default that only ticks
+    # `checkout.session.completed` used to silently drop every first sale: we
+    # ignored that event to avoid double-posting, and if `payment_intent.succeeded`
+    # was not registered nothing ever landed. Either success event is now
+    # sufficient; both together are a no-op. See docs/fuime/MOR_WEBHOOK_PASS.md.
+    HANDLED_TYPES = %w[
+      payment_intent.succeeded
+      checkout.session.completed
+      checkout.session.async_payment_succeeded
+      charge.refunded
+      charge.dispute.created
+    ].freeze
+
     def initialize(event:)
       @stripe_event = event
     end
@@ -39,21 +56,18 @@ module Fuime
       case @stripe_event.type
       # A Checkout payment fires BOTH checkout.session.completed and
       # payment_intent.succeeded, with different object ids. Keying idempotency
-      # on the object id therefore posted the same payment to the ledger twice.
-      # We handle payment_intent.succeeded only — it is the event that fires for
-      # every payment (Checkout, Payment Link, or direct PaymentIntent) and
-      # carries the settled amount.
+      # on the object that arrived therefore posted the same payment twice
+      # (session id vs intent id). We still post from either event — a Dashboard
+      # that only forwards Checkout events is a real production config — but the
+      # ledger key is always the PaymentIntent id, so the second delivery is a
+      # no-op.
       when "payment_intent.succeeded"
         record_payment(
           object: @stripe_event.data.object,
           amount_cents: @stripe_event.data.object.amount_received
         )
-      when "checkout.session.completed"
-        Rails.logger.info(
-          "[Fuime] Ignoring checkout.session.completed for #{@stripe_event.data.object.id}; " \
-          "the payment is recorded from payment_intent.succeeded"
-        )
-        nil
+      when "checkout.session.completed", "checkout.session.async_payment_succeeded"
+        record_checkout_session(@stripe_event.data.object)
       # The failure half of the lifecycle. Without these, a refunded or disputed
       # payment stays on a teen's ledger as income and inflates the tax number
       # Fuime shows their family.
@@ -135,9 +149,77 @@ module Fuime
       false
     end
 
+    # Checkout Session → the same posting as payment_intent.succeeded.
+    #
+    # A session's own id must never be the ledger key: Stripe also fires
+    # payment_intent.succeeded for the same card payment, and those ids differ.
+    # We lift the PaymentIntent id (string or expanded object) and the amount
+    # the customer actually paid (`amount_total`, not `amount_received` — a
+    # session does not have the latter, and treating a missing field as 0
+    # silently dropped the sale).
+    #
+    # Unpaid / subscription / setup sessions are not sales. Family-plan Billing
+    # Checkout is `mode: subscription` and is mirrored by
+    # Fuime::SubscriptionWebhookHandler from `customer.subscription.*`.
+    def record_checkout_session(session)
+      unless checkout_session_payable?(session)
+        Rails.logger.info(
+          "[Fuime] Ignoring #{@stripe_event.type} for #{session.id} " \
+          "(mode=#{session.try(:mode).inspect} payment_status=#{session.try(:payment_status).inspect})"
+        )
+        return nil
+      end
+
+      intent_id = checkout_payment_intent_id(session)
+      if intent_id.blank?
+        Rails.logger.warn(
+          "[Fuime] #{@stripe_event.type} #{session.id} has no payment_intent; cannot post"
+        )
+        return nil
+      end
+
+      amount_cents = session.try(:amount_total)
+      record_payment(
+        object: payment_view_from_checkout(session, intent_id:, amount_cents:),
+        amount_cents:
+      )
+    end
+
+    def checkout_session_payable?(session)
+      mode = session.try(:mode).to_s
+      return false if mode == "subscription" || mode == "setup"
+
+      return true if @stripe_event.type == "checkout.session.async_payment_succeeded"
+
+      session.try(:payment_status).to_s == "paid"
+    end
+
+    def checkout_payment_intent_id(session)
+      raw = session.try(:payment_intent)
+      return if raw.blank?
+      return raw if raw.is_a?(String)
+
+      raw.try(:id).presence || raw.to_s
+    end
+
+    # Thin PI-shaped object so #record_payment and #record_platform_fee key on
+    # the intent, not the session, and still read metadata / description / created
+    # the way they already do.
+    PaymentView = Struct.new(:id, :created, :description, :metadata, :amount_received, keyword_init: true)
+
+    def payment_view_from_checkout(session, intent_id:, amount_cents:)
+      PaymentView.new(
+        id: intent_id,
+        created: session.created,
+        description: session.try(:description),
+        metadata: session.metadata,
+        amount_received: amount_cents
+      )
+    end
+
     def record_payment(object:, amount_cents:)
       metadata = object.metadata
-      event_id = metadata && metadata["fuime_event_id"]
+      event_id = metadata && (metadata["fuime_event_id"] || metadata[:fuime_event_id])
       return nil if event_id.blank?
       return nil if amount_cents.to_i <= 0
 
