@@ -9,8 +9,8 @@ module Admin
   # which is a secret to distribute and revoke by hand and tells you nothing
   # about who looked.
   #
-  # Read-only. Nothing in Rails writes to the waitlist; the site's
-  # /api/waitlist owns that.
+  # The site's /api/waitlist still owns new signups. Rails may stamp an
+  # existing address as invited (G1) and mail a login link; it does not SADD.
   class WaitlistController < Admin::BaseController
     def index
       load_roster
@@ -24,6 +24,33 @@ module Admin
       end
     end
 
+    def invite
+      result = Fuime::WaitlistInviteService
+               .new(invited_by: current_user, cohort_code: invite_cohort_code)
+               .invite!(params[:email])
+
+      flash[:success] = invite_flash(result)
+      redirect_to admin_waitlist_index_path
+    rescue Fuime::WaitlistInviteService::Error => e
+      flash[:error] = e.message
+      redirect_to admin_waitlist_index_path
+    end
+
+    def invite_next
+      outcome = Fuime::WaitlistInviteService
+                .new(invited_by: current_user, cohort_code: invite_cohort_code)
+                .invite_next!(count: params[:count])
+
+      invited = outcome[:invited]
+      errors = outcome[:errors]
+      flash[:success] = "Sent #{helpers.pluralize(invited.size, "login invite")}." if invited.any?
+      flash[:error] = errors.to_sentence if errors.any?
+      redirect_to admin_waitlist_index_path
+    rescue Fuime::WaitlistInviteService::Error => e
+      flash[:error] = e.message
+      redirect_to admin_waitlist_index_path
+    end
+
     private
 
     def load_roster
@@ -32,6 +59,7 @@ module Admin
       @signups = []
       @total = 0
       @error = nil
+      @live_cohorts = Fuime::Cohort.live.order(:name)
 
       return unless @configured
 
@@ -47,14 +75,17 @@ module Admin
 
     def to_csv
       CSV.generate do |csv|
-        csv << ["email", "source", "signed_up_at", "ip"]
+        csv << ["email", "source", "signed_up_at", "ip", "invited_at", "invited_by", "cohort_code"]
 
         @signups.each do |s|
           csv << [
             csv_safe(s.email),
             csv_safe(s.source),
             s.signed_up_at&.iso8601,
-            csv_safe(s.ip)
+            csv_safe(s.ip),
+            s.invited_at&.iso8601,
+            csv_safe(s.invited_by),
+            csv_safe(s.cohort_code)
           ]
         end
       end
@@ -66,6 +97,16 @@ module Admin
     def csv_safe(value)
       str = value.to_s
       str.match?(/\A[=+\-@\t\r]/) ? "'#{str}" : str
+    end
+
+    def invite_cohort_code
+      params[:cohort_code].to_s.strip.presence
+    end
+
+    def invite_flash(result)
+      sentence = "Sent a login invite to #{result.email}."
+      sentence += " Cohort #{result.cohort.code}." if result.cohort
+      sentence
     end
 
   end

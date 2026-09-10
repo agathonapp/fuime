@@ -21,8 +21,11 @@
 # is its own variable: splitting the roster onto a dedicated instance later is
 # one new service and one changed value, not a code change.
 #
-# Read-only by construction: the only commands issued are SCARD, SMEMBERS and
-# HGETALL. The rake import task is the one thing in Fuime that writes here.
+# The marketing site owns new signups (SADD + the at/source/ip hash). Rails
+# reads that roster and, as of the G1 admit path, writes only invite stamps
+# (invited_at / invited_by / cohort_code) onto an address that is already in
+# the set. The rake import task is the other writer. Neither path invents a
+# signup the site did not capture.
 #
 # An absent URL is a normal state, not an error (Milestone 2: every external
 # service must be safely unset). `configured?` is false, the page says so, and
@@ -30,6 +33,7 @@
 module Fuime
   class WaitlistRoster
     class ReadFailed < StandardError; end
+    class WriteFailed < StandardError; end
 
     LIST_KEY = "fuime:waitlist"
     META_PREFIX = "fuime:waitlist:meta:"
@@ -48,7 +52,9 @@ module Fuime
       Credentials.fetch(:WAITLIST_GOAL).presence&.to_i || 1_000
     end
 
-    Signup = Struct.new(:email, :signed_up_at, :source, :ip, keyword_init: true)
+    Signup = Struct.new(:email, :signed_up_at, :source, :ip,
+                        :invited_at, :invited_by, :cohort_code,
+                        keyword_init: true)
 
     # WAITLIST_REDIS_URL only, with deliberately NO fallback to REDIS_URL.
     # The fallback is tempting for dev convenience and is a trap in production:
@@ -107,7 +113,10 @@ module Fuime
             # SADD landed. Still a real address, so still listed.
             signed_up_at: parse_time(meta["at"]),
             source: meta["source"].presence || "unknown",
-            ip: meta["ip"].to_s
+            ip: meta["ip"].to_s,
+            invited_at: parse_time(meta["invited_at"]),
+            invited_by: meta["invited_by"].to_s.presence,
+            cohort_code: meta["cohort_code"].to_s.presence
           )
         end
       end
@@ -134,6 +143,28 @@ module Fuime
       signups.group_by(&:source).transform_values(&:size).sort_by { |_, n| -n }
     end
 
+    # Oldest uninvited first — FIFO, which is what "invite next N" means on a
+    # waitlist. Undated imports sort last so a reconstructed backfill cannot
+    # jump the queue of people we actually have a signup time for.
+    def self.uninvited(signups)
+      signups.reject(&:invited_at).sort_by do |signup|
+        [signup.signed_up_at ? 0 : 1, signup.signed_up_at || Time.at(0)]
+      end
+    end
+
+    # Best-effort lookup of a prior admit stamp. Used when a founder logs in
+    # through the ordinary code flow instead of the invite link, so the cohort
+    # (if any) still lands on their application. Nil on every failure — a
+    # missing store must not block applying.
+    def self.invite_stamp(email)
+      return nil unless configured?
+
+      new.invite_stamp(email)
+    rescue ReadFailed, Redis::BaseError, SocketError, IOError => e
+      Rails.error.report(e, handled: true)
+      nil
+    end
+
     # Render terminates TLS on its external Key Value hostname with a
     # certificate the default store does not chain to, the same reason the
     # production cache_store passes this. Internal `redis://` URLs ignore it.
@@ -147,10 +178,71 @@ module Fuime
       }
     end
 
+    def member?(email)
+      return false unless configured?
+
+      redis.sismember(LIST_KEY, normalize_email(email))
+    rescue Redis::BaseError, SocketError, IOError => e
+      raise ReadFailed, e.message
+    end
+
+    def invite_stamp(email)
+      return nil unless configured?
+
+      normalized = normalize_email(email)
+      return nil if normalized.blank?
+      return nil unless redis.sismember(LIST_KEY, normalized)
+
+      meta = redis.hgetall("#{META_PREFIX}#{normalized}") || {}
+      return nil if meta["invited_at"].blank?
+
+      Signup.new(
+        email: normalized,
+        signed_up_at: parse_time(meta["at"]),
+        source: meta["source"].presence || "unknown",
+        ip: meta["ip"].to_s,
+        invited_at: parse_time(meta["invited_at"]),
+        invited_by: meta["invited_by"].to_s.presence,
+        cohort_code: meta["cohort_code"].to_s.presence
+      )
+    rescue Redis::BaseError, SocketError, IOError => e
+      raise ReadFailed, e.message
+    end
+
+    # Stamp an address that is already on the list. Refuses to SADD — inventing
+    # a signup from the admin console would mix ops actions into the capture
+    # roster the site owns.
+    #
+    # A blank cohort_code leaves any existing stamp alone, so Resend (which
+    # does not re-submit the cohort) cannot wipe the event promised in the
+    # first invite. Pass a code to set or replace it.
+    def mark_invited(email, invited_by:, cohort_code: nil)
+      raise WriteFailed, "waitlist store is not configured" unless configured?
+
+      normalized = normalize_email(email)
+      raise WriteFailed, "email is blank" if normalized.blank?
+      raise WriteFailed, "#{normalized} is not on the waitlist" unless redis.sismember(LIST_KEY, normalized)
+
+      fields = {
+        "invited_at" => Time.current.utc.iso8601,
+        "invited_by" => invited_by.to_s
+      }
+      fields["cohort_code"] = cohort_code.to_s if cohort_code.present?
+      redis.hset("#{META_PREFIX}#{normalized}", fields)
+      Rails.cache.delete(NAV_CACHE_KEY)
+      true
+    rescue Redis::BaseError, SocketError, IOError => e
+      raise WriteFailed, e.message
+    end
+
     private
 
     def redis
       @redis ||= Redis.new(**self.class.connection_options(self.class.url))
+    end
+
+    def normalize_email(email)
+      email.to_s.strip.downcase
     end
 
     def parse_time(value)

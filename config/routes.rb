@@ -74,6 +74,10 @@ Rails.application.routes.draw do
     end
   end
 
+  # Fuime G1: signed waitlist admit link from WaitlistMailer. Token-addressed
+  # like /guardian/:id — the recipient may not have a session yet.
+  get "waitlist_invites/:token", to: "waitlist_invites#show", as: :waitlist_invite
+
   # Fuime: Stripe webhooks.
   #
   # Two endpoints, not one, because Stripe scopes webhook endpoints separately for
@@ -623,8 +627,14 @@ Rails.application.routes.draw do
       post "reject", on: :member
     end
     resources :payments, only: [:index]
-    # FUIME: read-only view of the marketing site's waitlist (Render Key Value).
-    resources :waitlist, only: [:index]
+    # FUIME: marketing-site waitlist. Index is the roster; invite / invite_next
+    # mail a login-ready link (G1). The site still owns new signups.
+    resources :waitlist, only: [:index] do
+      collection do
+        post :invite
+        post :invite_next
+      end
+    end
     resources :payroll_positions, only: [:index] do
       post "reject", on: :member
     end

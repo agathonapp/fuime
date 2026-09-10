@@ -193,6 +193,7 @@ class Event
       end
 
       authorize(@application = Event::Application.new(user: current_user, teen_led: teen_led_param == "true", referral_code: params[:referral_code] || params.dig(:event_application, :referral_code)))
+      apply_waitlist_cohort_stamp
       @application.save!
 
       # Fuime: the business-type fork is the first real question now — see
@@ -397,6 +398,28 @@ class Event
     # anonymous applicant through sign-in and back to `start`.
     def teen_led_param
       params.dig(:event_application, :teen_led).presence || params[:teen_led].presence
+    end
+
+    # A waitlist admit may have stamped a cohort. Apply it the same way a typed
+    # code is applied — through Fuime::Cohort.for_code — so a dead or full code
+    # cannot sneak onto the application. Session first, and only if it was
+    # written for this user (they clicked their own invite); Redis stamp as
+    # fallback (they logged in with a regular code).
+    def apply_waitlist_cohort_stamp
+      return if @application.fuime_cohort_id.present?
+
+      stored = session[:waitlist_cohort]
+      if stored.is_a?(Hash) && stored["uid"].to_i == current_user.id
+        code = stored["code"].to_s.presence
+        session.delete(:waitlist_cohort)
+      end
+      code ||= Fuime::WaitlistRoster.invite_stamp(current_user.email)&.cohort_code
+      return if code.blank?
+
+      cohort = ::Fuime::Cohort.for_code(code)
+      return unless cohort&.admitting?
+
+      @application.fuime_cohort = cohort
     end
 
     # Fuime: a typed event code becomes a cohort, or nothing.

@@ -80,6 +80,35 @@
   </table>
 </div>
 
+<% uninvited = Fuime::WaitlistRoster.uninvited(@signups) %>
+<% if @configured && @error.blank? && uninvited.any? %>
+  <div class="card mb-4">
+    <h2 class="h4 mt0">Invite people in</h2>
+    <p class="muted mt0">
+      Sends the email the site promises — a login link, nothing else.
+      <%= number_with_delimiter(uninvited.size) %> still waiting.
+      Oldest first. Optional cohort stamps the event code on their application.
+    </p>
+    <%= form_with url: invite_next_admin_waitlist_index_path, method: :post, class: "flex flex-wrap items-end gap-2" do %>
+      <label class="mb0">
+        <span class="muted h5 block">Next</span>
+        <%= number_field_tag :count, [uninvited.size, 10].min, min: 1, max: Fuime::WaitlistInviteService::MAX_BATCH, class: "w-20" %>
+      </label>
+      <% if @live_cohorts.any? %>
+        <label class="mb0">
+          <span class="muted h5 block">Cohort (optional)</span>
+          <%= select_tag :cohort_code,
+                         options_from_collection_for_select(@live_cohorts, :code, :name),
+                         include_blank: "No cohort" %>
+        </label>
+      <% end %>
+      <%= submit_tag "Invite next",
+                     class: "btn bg-success",
+                     data: { turbo_confirm: "Send login emails to the next people on the list?" } %>
+    <% end %>
+  </div>
+<% end %>
+
 <div class="flex items-center mb2 flex-col sm:flex-row">
   <div class="flex-grow">
     <%= pluralize number_with_delimiter(@signups.size), "signup" %>
@@ -94,10 +123,12 @@
       <th class="w-32">Source</th>
       <th class="w-48">Signed up</th>
       <th class="w-32">IP</th>
+      <th class="w-40">Invite</th>
+      <th class="w-32"></th>
     </tr>
   </thead>
   <tbody>
-    <% @signups.each do |signup| %>
+    <% @signups.each_with_index do |signup, i| %>
       <tr>
         <td><%= mail_to signup.email %></td>
         <td><%= signup.source %></td>
@@ -105,10 +136,34 @@
           <%= signup.signed_up_at ? signup.signed_up_at.strftime("%Y-%m-%d %H:%M UTC") : "—" %>
         </td>
         <td class="muted h5"><%= signup.ip.presence %></td>
+        <td class="muted h5">
+          <% if signup.invited_at %>
+            <%= signup.invited_at.strftime("%Y-%m-%d %H:%M UTC") %>
+            <% if signup.cohort_code.present? %>
+              <div>cohort <%= signup.cohort_code %></div>
+            <% end %>
+          <% else %>
+            —
+          <% end %>
+        </td>
+        <td>
+          <% if @configured && @error.blank? %>
+            <%= form_with url: invite_admin_waitlist_index_path, method: :post, class: "flex flex-wrap items-center gap-1 mb0" do %>
+              <%= hidden_field_tag :email, signup.email, id: "waitlist-email-#{i}" %>
+              <% if @live_cohorts.any? %>
+                <%= select_tag :cohort_code,
+                               options_from_collection_for_select(@live_cohorts, :code, :name),
+                               include_blank: "No cohort",
+                               id: "waitlist-cohort-#{i}" %>
+              <% end %>
+              <%= submit_tag signup.invited_at ? "Resend" : "Invite", class: "btn bg-info" %>
+            <% end %>
+          <% end %>
+        </td>
       </tr>
     <% end %>
     <% if @signups.empty? %>
-      <tr><td colspan="4" class="muted">No signups stored yet.</td></tr>
+      <tr><td colspan="6" class="muted">No signups stored yet.</td></tr>
     <% end %>
   </tbody>
 </table>

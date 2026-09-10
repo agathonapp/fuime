@@ -198,6 +198,15 @@ RSpec.describe ProcessLoginService do
     end
   end
 
+  describe "#process_signed_email_link" do
+    it "marks the email factor the same way a valid code would" do
+      setup_context => { service:, login: }
+
+      expect(service.process_signed_email_link).to be(true)
+      expect(login.reload.authenticated_with_email).to eq(true)
+    end
+  end
+
   describe "#process_backup_code" do
     it "errors if the code is invalid" do
       setup_context => { service:, login: }

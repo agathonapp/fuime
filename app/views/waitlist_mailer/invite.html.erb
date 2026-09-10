@@ -1,0 +1,45 @@
+<p>
+  You're in.
+</p>
+
+<p>
+  Fuime is ready for you. Click the button to log in — it opens in this
+  browser and signs you in with the same email this message was sent to.
+</p>
+
+<p>
+  <%= link_to "Log in to Fuime", @login_url,
+              style: "display:inline-block;background:#2242FF;color:#ffffff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600;" %>
+</p>
+
+<p style="word-break: break-all;">
+  Or paste this link into your browser:<br>
+  <%= link_to @login_url, @login_url %>
+</p>
+
+<% if @cohort.present? %>
+  <p>
+    You're joining <strong><%= @cohort.name %></strong>. When you apply, the
+    event code <strong><%= @cohort.code %></strong> will already be on your
+    application.
+  </p>
+<% end %>
+
+<p>
+  The link works for 14 days. After that, go to
+  <%= link_to @login_page_url, @login_page_url %>
+  and we'll email you a login code.
+</p>
+
+<p>
+  If you did not join the Fuime waitlist, you can ignore this. Nothing
+  happens unless you click the link.
+</p>
+
+<p>
+  Questions? Reply to this email or write to <%= @support_email %>.
+</p>
+
+<p>
+  — the Fuime team
+</p>
