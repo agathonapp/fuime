@@ -18,6 +18,9 @@ CI shard 2 failed after rebase: `ConnectSettlementSweep` settle still hits
 The spec now stubs `Rails.error.unexpected` so leftover Ledger::Items cannot
 fail a settle. Spec-only; ledger engine untouched.
 
+CI shard 2 also flaked `fuime_cohorts_admin_spec` on `Bronwyn O'Keefe`
+(apostrophe escaped in HTML). Founder name is now pinned. Unrelated to G10.
+
 **2026-09-10 — G5: day-3 / day-6 guardian invite reminders + stale queue.**
 
 Pending invites now get a reminder at ~day 3 and ~day 6 (`Fuime::GuardianInviteReminderJob`,

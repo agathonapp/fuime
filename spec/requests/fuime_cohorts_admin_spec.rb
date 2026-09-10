@@ -144,7 +144,9 @@ RSpec.describe "admin cohorts", :merchant_of_record, type: :request do
     # Event::Application#activate_event!. Leaving it nil here would make every
     # example below assert the same category blocker rather than what it says.
     def admitted_founder(birthday: 16.years.ago.to_date)
-      user = create(:user, :minor, birthday:)
+      # Pin the name: Faker apostrophes (`O'Keefe`) escape in HTML and flake
+      # `include(founder.name)` — same pin as subscriptions / operator vetting.
+      user = create(:user, :minor, birthday:, full_name: "Bronwyn Keefe")
       application = create(:event_application, user:, fuime_cohort: cohort,
                                                name: "Lawn Care", teen_led: true,
                                                business_category: "services")
