@@ -95,10 +95,39 @@ RSpec.describe Fuime::ApiKeysController, type: :controller do
 
       # The assertion that matters: the secret is in the page, and in no cookie.
       expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
+      expect(response.body).to include("Copy")
+      expect(response.body).to include(key.display)
 
       # And still exactly once — a later load of the same page does not show it.
       get :index, params: { event_slug: event.slug }
       expect(response.body).not_to include(fresh)
+      expect(response.body).to include(key.display)
+    end
+
+    # The browser form is `form_with`, which Turbo intercepts. Those POSTs send
+    # Accept: text/vnd.turbo-stream.html first. A 200 HTML document is not a
+    # stream Turbo will apply, so the key used to be minted while the page
+    # stayed stale — and a reload showed only last4.
+    it "answers a Turbo submit with a stream that reveals the plaintext and lists the redacted key" do
+      create_session(teen, verified: true)
+
+      post :create, params: { event_slug: event.slug, name: "My website" }, format: :turbo_stream
+
+      key = event.fuime_api_keys.sole
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq(Mime[:turbo_stream])
+
+      fresh = response.body[/#{Regexp.escape(Fuime::ApiKey::PREFIX)}[A-Za-z0-9_-]+/]
+      expect(fresh).to be_present
+      expect(Fuime::ApiKey.authenticate(fresh)).to eq(key)
+      expect(response.body).to include("Copy")
+      expect(response.body).to include(key.display)
+      expect(response.body).to include("turbo-stream")
+      expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
+
+      get :index, params: { event_slug: event.slug }
+      expect(response.body).not_to include(fresh)
+      expect(response.body).to include(key.display)
     end
 
     # A key is the power to name an amount and ask a customer for it, which is

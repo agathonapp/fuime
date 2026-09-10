@@ -5598,3 +5598,23 @@ link they already have.
 | Footer link | How a founder finds the page. Not a homepage promo. | `app/views/application/_footer.html.erb` |
 
 Specs: `spec/requests/fuime_discover_spec.rb`.
+
+## 2026-09-10 — API key create reveals the plaintext without a reload
+
+Turbo intercepts `form_with` (including with `local: true`). Create minted the
+key and rendered HTML 200 with `@fresh_key`, but those POSTs send
+`Accept: text/vnd.turbo-stream.html` first. Turbo does not apply a 200 HTML
+document as a page visit the way a full-page POST would, so the operator saw
+no new row and no secret. Reloading GET `/developer` listed last4 only —
+correct for stored keys, and the one-time plaintext was already gone.
+
+`#create` now `respond_to` HTML (same reveal-in-this-response, still no flash
+cookie) and `turbo_stream` (banner + redacted list + empty form). Copy uses
+the existing clipboard Stimulus controller; it does not log the secret.
+
+| Change | Why | Files |
+|---|---|---|
+| `respond_to` html + turbo_stream on `#create` | A Turbo form submit must get a stream, or the one-time plaintext never reaches the page. HTML stays first so `*/*` (controller specs) does not pick the stream by accident. Secret still never travels in flash/cookie. | `app/controllers/fuime/api_keys_controller.rb` |
+| `create.turbo_stream.erb` plus keys/form/reveal partials | Stream updates the list (redacted) and paints the copyable reveal without a navigation. Subsequent GET of index has no `@fresh_key`. | `app/views/fuime/api_keys/` |
+| Events nav on the developer page | Every other venture page renders `events/nav`; this one did not, so it rendered outside the org shell. | `app/views/fuime/api_keys/index.html.erb` |
+| Turbo create examples on the controller spec and F-08 | The HTML example still holds. The stream example is the path a browser actually takes. | `spec/controllers/fuime/api_keys_controller_spec.rb`, `spec/requests/fuime_security_review_fixes_spec.rb` |

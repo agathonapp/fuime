@@ -329,6 +329,18 @@ RSpec.describe "Security review fixes (2026-08-20)", type: :request do
       expect(response.body).to include(Fuime::ApiKey::PREFIX)
       expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
     end
+
+    it "reveals the plaintext in the Turbo stream a browser form submit actually gets" do
+      post "/#{event.slug}/developer",
+           params: { name: "Replit bot" },
+           headers: { "Accept" => "text/vnd.turbo-stream.html, text/html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq(Mime[:turbo_stream])
+      expect(response.body).to include(Fuime::ApiKey::PREFIX)
+      expect(response.body).to include("Copy")
+      expect(flash.to_hash.values.join).not_to include(Fuime::ApiKey::PREFIX)
+    end
   end
 
   # ── F-13 ────────────────────────────────────────────────────────────────────

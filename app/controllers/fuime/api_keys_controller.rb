@@ -42,7 +42,7 @@ module Fuime
         name: params[:name]
       )
 
-      # ── Rendered here, not redirected to ──────────────────────────────────
+      # ── Shown in this response, never carried to the next ─────────────────
       #
       # This used to `redirect_to` with the plaintext in
       # `flash[:fuime_fresh_api_key]`, so the key could be shown once on the next
@@ -59,21 +59,34 @@ module Fuime
       # it can never reach "a log line, an error report or a serializer". The flash
       # is a serializer.
       #
-      # Rendering the page that shows the key IN the response that created it means
-      # there is nothing to carry: the secret exists in one response body and in no
-      # cookie, cache, or log. A server-side cache would have worked too and was
-      # tried first — but `Rails.cache` is `:null_store` in test and in development
-      # without `tmp/caching-dev.txt`, so the key would silently never appear
-      # outside production. A feature that only works where it cannot be tested is
-      # not a fix.
+      # Rendering the reveal IN the response that created it means there is
+      # nothing to carry: the secret exists in one response body and in no
+      # cookie, cache, or log. A server-side cache was tried first and rejected:
+      # `Rails.cache` is `:null_store` in test and in development without
+      # `tmp/caching-dev.txt`, so the key would silently never appear outside
+      # production.
       #
-      # The cost, stated: a browser refresh re-POSTs and mints a second key.
-      # Bounded by MAX_LIVE_KEYS, visible in the list, and revocable — a cheaper
-      # failure than a credential in a cookie.
+      # Turbo is why this is a `respond_to`, not a bare `render :index`.
+      # `form_with` submits via Turbo even with `local: true`. Those POSTs send
+      # `Accept: text/vnd.turbo-stream.html` first. A 200 HTML document is not a
+      # stream Turbo will apply, so the key was minted, the page stayed stale,
+      # and a reload showed only last4 — the one-time plaintext was gone. The
+      # stream updates the list and paints the reveal; HTML is for no-JS and
+      # the existing specs. html is listed first so a `*/*` Accept (controller
+      # specs) does not pick turbo_stream by accident.
+      #
+      # The cost of the HTML path, stated: a browser refresh re-POSTs and mints
+      # a second key. Bounded by MAX_LIVE_KEYS, visible in the list, and
+      # revocable — a cheaper failure than a credential in a cookie. The Turbo
+      # path does not have that cost: it is not a navigation.
       flash.now[:success] = "Key created. Copy it now — you won't be able to see it again."
       load_index
       @fresh_key = plaintext
-      render :index
+
+      respond_to do |format|
+        format.html { render :index }
+        format.turbo_stream
+      end
     end
 
     def destroy

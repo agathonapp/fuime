@@ -1,0 +1,17 @@
+<%# locals: (event:)
+
+    Turbo submits this form (form_with's default). Create answers with a
+    turbo_stream that reveals the plaintext once and replaces the keys list, so
+    the operator does not have to reload — and so a reload cannot reconstruct
+    the secret. `local: true` does not disable Turbo; do not add it back thinking
+    it will. %>
+<%= form_with url: fuime_api_keys_create_path(event_slug: event.slug),
+              method: :post,
+              id: "fuime-api-key-form",
+              class: "mt2" do |form| %>
+  <div class="field">
+    <%= form.label :name, "What's this key for?" %>
+    <%= form.text_field :name, placeholder: "My website", maxlength: Fuime::ApiKey::MAX_NAME_LENGTH, required: true %>
+  </div>
+  <%= form.submit "Create a key" %>
+<% end %>

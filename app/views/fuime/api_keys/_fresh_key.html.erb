@@ -1,0 +1,33 @@
+<%# locals: (fresh_key:)
+
+    The one-time plaintext reveal. Fuime stores only ciphertext + last4, so this
+    card is the only place the secret is ever rendered. Dismiss removes it from
+    the DOM; a later GET of this page cannot reconstruct it.
+
+    The Copy button uses the existing clipboard Stimulus controller (no extra
+    logging — that controller writes to the clipboard and nowhere else). %>
+<div class="card mb2" data-fuime-fresh-key style="border-color: var(--success);">
+  <h2 class="mt0 text-lg">Your new key</h2>
+  <p class="muted text-sm">
+    Copy it now. This is the only time it will be shown — Fuime keeps only an
+    encrypted copy and cannot show it to you again.
+  </p>
+  <div class="flex flex-col md:flex-row items-start gap-2 mt1">
+    <pre class="m0" style="overflow-x: auto;"><code><%= fresh_key %></code></pre>
+    <button type="button"
+            class="btn shrink-0"
+            data-controller="clipboard"
+            data-clipboard-text-value="<%= fresh_key %>"
+            data-clipboard-confirm-text-value="Copied!"
+            data-action="clipboard#copy">
+      Copy
+    </button>
+  </div>
+  <p class="mt1">
+    <button type="button"
+            class="btn"
+            onclick="this.closest('[data-fuime-fresh-key]').remove()">
+      I've copied it
+    </button>
+  </p>
+</div>
