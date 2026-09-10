@@ -5599,22 +5599,6 @@ link they already have.
 
 Specs: `spec/requests/fuime_discover_spec.rb`.
 
-## 2026-09-10 — G2: Cohorts in admin nav + admit runbook
-
-`/admin/cohorts` already collapsed approve → activate → operator vetting when
-a founder typed a code. The page was reachable only if you knew the URL.
-Applications and Vetting were on the Organizations nav, so a complete apply
-landed in those queues and stayed there. TEEN_GROWTH G2: put Cohorts on that
-same nav with a live count, and write the left-to-right admit runbook where
-operators already look. Did not implement G1/G3/G5/G10. Did not remove
-vetting (PLATFORM_REVIEW.md: offer-level moderation is not built).
-
-| Change | Why | Files |
-|---|---|---|
-| `Cohorts (Fuime)` on Organizations nav | Operators open the nav, not a remembered URL. Live count is `Fuime::Cohort.live`. `:tasks` so a Friday code lights the section badge. | `app/models/admin/nav.rb` |
-| `admin/_admit_runbook` on the three queues | One page: approve → activate → vet; solo vs event. Full on Cohorts, compact on Applications and Vetting. | `app/views/admin/_admit_runbook.html.erb`, `cohorts.html.erb`, `applications.html.erb`, `operator_vetting.html.erb` |
-| Nav + queue specs | Existing `Admin::Nav` spec now asserts the item, path, active state, and live badge. Request specs assert the runbook copy and the rendered nav HTML. | `spec/models/admin/nav_spec.rb`, `spec/requests/fuime_cohorts_admin_spec.rb`, `spec/requests/fuime_operator_vetting_spec.rb` |
-
 ## 2026-09-10 — API key create reveals the plaintext without a reload
 
 Turbo intercepts `form_with` (including with `local: true`). Create minted the
@@ -5683,3 +5667,19 @@ are not in `user_params`.
 | `#needs_guardian?` honors the waiver | One predicate; every consumer follows | `app/models/user.rb` |
 | Activation / payout / apply fields use `#needs_guardian?` | Stop duplicating the check so a waiver cannot be half-applied | `app/models/event/application.rb`, `app/models/event.rb` |
 | Admin actions + panel | The surface Rushmore actually uses | `app/controllers/users_controller.rb`, `app/views/users/_admin_guardianship.html.erb`, `app/policies/user_policy.rb`, `config/routes.rb` |
+
+## 2026-09-10 — G2: Cohorts in admin nav + admit runbook
+
+`/admin/cohorts` already collapsed approve → activate → operator vetting when
+a founder typed a code. The page was reachable only if you knew the URL.
+Applications and Vetting were on the Organizations nav, so a complete apply
+landed in those queues and stayed there. TEEN_GROWTH G2: put Cohorts on that
+same nav with a live count, and write the left-to-right admit runbook where
+operators already look. Did not implement G1/G3/G5/G10. Did not remove
+vetting (PLATFORM_REVIEW.md: offer-level moderation is not built).
+
+| Change | Why | Files |
+|---|---|---|
+| `Cohorts (Fuime)` on Organizations nav | Operators open the nav, not a remembered URL. Live count is `Fuime::Cohort.live`. `:tasks` so a Friday code lights the section badge. | `app/models/admin/nav.rb` |
+| `admin/_admit_runbook` on the three queues | One page: approve → activate → vet; solo vs event. Full on Cohorts, compact on Applications and Vetting. | `app/views/admin/_admit_runbook.html.erb`, `cohorts.html.erb`, `applications.html.erb`, `operator_vetting.html.erb` |
+| Nav + queue specs | Existing `Admin::Nav` spec now asserts the item, path, active state, and live badge. Request specs assert the runbook copy and the rendered nav HTML. | `spec/models/admin/nav_spec.rb`, `spec/requests/fuime_cohorts_admin_spec.rb`, `spec/requests/fuime_operator_vetting_spec.rb` |
