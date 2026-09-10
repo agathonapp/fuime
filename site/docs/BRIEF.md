@@ -159,7 +159,7 @@ Footer columns:
     <button type="submit" class="btn btn--accent">Get early access</button>
   </div>
   <p class="capture__msg" role="status" aria-live="polite"></p>
-  <p class="capture__done">You're on the list. We'll email you once.</p>
+  <p class="capture__done">You're on the list. We'll send a login link when it's your turn.</p>
 </form>
 ```
 
@@ -265,7 +265,7 @@ Where the money will sit — Roadmap, label it: at live launch, a Stripe account
   money moves.
 
 We're onboarding the first businesses now.
-One email when it's your turn. Nothing else.
+One email when it's your turn — a login link, nothing else.
 hi@fuime.com
 ```
 

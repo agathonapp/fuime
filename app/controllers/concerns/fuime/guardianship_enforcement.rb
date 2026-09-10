@@ -39,6 +39,7 @@ module Fuime
       "users/email_updates",  # confirming an email change
       "logins",               # sign in AND sign out — there is no separate
       # sessions controller in this app
+      "waitlist_invites",     # G1: signed admit link from the waitlist email
       "static_pages",         # home, legal, help
       "errors",
       "fuime/storefronts",    # public pages

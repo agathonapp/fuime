@@ -2,7 +2,19 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — Isolate connect_settlement_sweep_spec HcbCode collision.**
+**2026-09-10 (latest) — G1 waitlist invite (login-ready email + optional cohort).**
+
+`/admin/waitlist` can Invite / Resend one address or Invite next N (oldest
+uninvited, max 25). Optional live cohort. Clicking the mailed link signs them
+in through `Login` + `ProcessLoginService` (not a second auth system). Specs:
+`spec/services/fuime/waitlist_invite_service_spec.rb`,
+`spec/requests/fuime_waitlist_invite_spec.rb`,
+`spec/mailers/waitlist_mailer_spec.rb`, plus updates to the waitlist admin
+and roster specs. How to test: set `WAITLIST_REDIS_URL`, add an address on
+the marketing form or `SADD fuime:waitlist`, invite from the admin page,
+open the letter_opener / test delivery link. Did not do G5/G10/G2/G3.
+
+**2026-09-10 — Isolate connect_settlement_sweep_spec HcbCode collision.**
 
 Same flake as payables_ledger_spec: a settled memo with no `HCB-xxxxx`
 lets `assign_ledger_item` collide with a seed/leftover Ledger::Item

@@ -5713,3 +5713,31 @@ untouched.
 | Change | Why | Files |
 |---|---|---|
 | Unique `HCB-xxxxx` on every sweep-spec `post!` memo | Settled CT gets its own short_code instead of colliding with a leftover Ledger::Item | `spec/services/fuime/connect_settlement_sweep_spec.rb` |
+
+## 2026-09-10 — G1 waitlist → login-ready invite
+
+The marketing waitlist wrote Redis and an admin CSV. Site copy promised
+"one email when it's your turn" and nothing sent it. Admins can now invite
+a person or the next N oldest uninvited addresses. That creates a User
+(`creation_method: :waitlist` if new), mails a 14-day `signed_id` login
+link, and stamps `invited_at` / `invited_by` / optional `cohort_code` on
+the existing Redis hash. Clicking the link marks the email factor on a
+real `Login` via `ProcessLoginService#process_signed_email_link` and
+finishes through the same session rules as `LoginsController` (2FA still
+applies). Optional live cohort is resolved with `Fuime::Cohort.for_code`
+and prefilled on the application from the session or the Redis stamp.
+
+Site capture copy now says the email is a login link, sent when it's
+their turn — not on the public POST.
+
+Not G5 (guardian reminders) or G10 (webhooks). Not G2/G3.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Invite stamp on waitlist Redis hashes | Admit without inventing signups the site did not capture | `app/services/fuime/waitlist_roster.rb` |
+| `WaitlistInviteService` + `WaitlistMailer` | The promised "you're in" email, with a working login URL | `app/services/fuime/waitlist_invite_service.rb`, `app/mailers/waitlist_mailer.rb`, `app/views/waitlist_mailer/` |
+| Admin invite / invite_next | Ops action on `/admin/waitlist` | `app/controllers/admin/waitlist_controller.rb`, `app/views/admin/waitlist/index.html.erb`, `config/routes.rb` |
+| `WaitlistInvitesController` | Public token link → existing Login/session path | `app/controllers/waitlist_invites_controller.rb` |
+| `creation_method: :waitlist` | Audit how the user got here; no schema change | `app/models/user.rb` |
+| Application cohort prefill | Natural use of the existing cohort model | `app/controllers/event/applications_controller.rb` |
+| Site waitlist copy | Stop promising a mail we did not send; describe the login link | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/start.html`, `site/start-scroll.html`, `site/docs/BRIEF.md` |

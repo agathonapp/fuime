@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-# Fuime: the read side of the marketing site's waitlist. The site writes the
-# keys; this only ever reads them.
+# Fuime: the marketing site's waitlist. The site writes new signups; Rails
+# reads them and stamps invites.
 #
 # Runs against a REAL Redis rather than a stub. Both CI and docker-compose
 # provide one, and the whole point of this class is the shape of what Redis
@@ -145,6 +145,59 @@ RSpec.describe Fuime::WaitlistRoster do
         [Date.new(2026, 8, 5), 0],
         [Date.new(2026, 8, 6), 2]
       ]
+    end
+  end
+
+  describe ".uninvited" do
+    it "returns oldest uninvited first and skips already-invited rows" do
+      signups = [
+        described_class::Signup.new(email: "new@x.com", signed_up_at: Time.utc(2026, 8, 8), source: "home-hero"),
+        described_class::Signup.new(email: "done@x.com", signed_up_at: Time.utc(2026, 8, 1), source: "home-hero",
+                                    invited_at: Time.utc(2026, 8, 9)),
+        described_class::Signup.new(email: "old@x.com", signed_up_at: Time.utc(2026, 8, 2), source: "home-hero"),
+        described_class::Signup.new(email: "undated@x.com", signed_up_at: nil, source: "imported")
+      ]
+
+      expect(described_class.uninvited(signups).map(&:email))
+        .to eq ["old@x.com", "new@x.com", "undated@x.com"]
+    end
+  end
+
+  describe "#mark_invited" do
+    it "stamps invite fields on an address that is already on the list" do
+      store("a@example.com", at: "2026-08-05T10:00:00Z", source: "home-hero")
+
+      described_class.new.mark_invited("a@example.com", invited_by: "ops@fuime.com", cohort_code: "FOUNDERS26")
+
+      signup = described_class.new.fetch[:signups].first
+      expect(signup.invited_by).to eq "ops@fuime.com"
+      expect(signup.invited_at).to be_present
+      expect(signup.cohort_code).to eq "FOUNDERS26"
+      expect(signup.source).to eq "home-hero"
+    end
+
+    it "refuses to invent a signup that the site never captured" do
+      expect {
+        described_class.new.mark_invited("ghost@example.com", invited_by: "ops@fuime.com")
+      }.to raise_error(described_class::WriteFailed, /not on the waitlist/)
+    end
+  end
+
+  describe ".invite_stamp" do
+    it "returns the admit stamp for an invited address" do
+      store("a@example.com", at: "2026-08-05T10:00:00Z", source: "home-hero")
+      described_class.new.mark_invited("a@example.com", invited_by: "ops@fuime.com", cohort_code: "FOUNDERS26")
+
+      stamp = described_class.invite_stamp("a@example.com")
+
+      expect(stamp.cohort_code).to eq "FOUNDERS26"
+      expect(stamp.invited_by).to eq "ops@fuime.com"
+    end
+
+    it "is nil for an address that has not been invited" do
+      store("a@example.com", source: "home-hero")
+
+      expect(described_class.invite_stamp("a@example.com")).to be_nil
     end
   end
 

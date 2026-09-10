@@ -77,6 +77,15 @@ class ProcessLoginService
     true
   end
 
+  # A signed waitlist invite was mailed to this address and the recipient
+  # clicked it. That is the same inbox-control proof as typing the 6-digit
+  # code LoginCodeService just sent — so we mark the email factor and let
+  # Login's usual completion rules (including 2FA) take over.
+  def process_signed_email_link
+    login.update!(authenticated_with_email: true)
+    true
+  end
+
   # @param code [String]
   # @return [Boolean]
   #   Whether the operation succeeded. If `false` check `errors` for details.

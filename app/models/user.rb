@@ -111,7 +111,8 @@ class User < ApplicationRecord
     card_grant: 3,
     grant: 4,
     application_form: 5,
-    first_robotics_form: 6
+    first_robotics_form: 6,
+    waitlist: 7
   }
 
   has_many :logins

@@ -134,7 +134,7 @@ RSpec.describe "admin waitlist", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.header["Content-Type"]).to include("text/csv")
-      expect(response.body).to start_with("email,source,signed_up_at,ip")
+      expect(response.body).to start_with("email,source,signed_up_at,ip,invited_at,invited_by,cohort_code")
       expect(response.body).to include("a@example.com,home-hero")
     end
 
@@ -159,6 +159,73 @@ RSpec.describe "admin waitlist", type: :request do
       get admin_waitlist_index_path(format: :csv)
 
       expect(response).to have_http_status(:redirect)
+    end
+  end
+
+  describe "inviting" do
+    it "lets an admin mail a login invite to someone on the list" do
+      configure_store!
+      stub_roster(
+        emails: ["maya@example.com"],
+        metas: { "maya@example.com" => { "at" => "2026-08-05T10:00:00Z", "source" => "home-hero" } }
+      )
+      login_as!(admin)
+      ActionMailer::Base.deliveries.clear
+
+      post invite_admin_waitlist_index_path, params: { email: "maya@example.com" }
+
+      expect(response).to redirect_to(admin_waitlist_index_path)
+      expect(flash[:success]).to include("maya@example.com")
+      expect(User.find_by(email: "maya@example.com")).to be_waitlist
+      expect(ActionMailer::Base.deliveries.last.subject).to include("You're in")
+
+      get admin_waitlist_index_path
+      expect(response.body).to include("Resend")
+    end
+
+    it "invites the next N oldest uninvited addresses" do
+      configure_store!
+      stub_roster(
+        emails: ["old@example.com", "new@example.com"],
+        metas: {
+          "old@example.com" => { "at" => "2026-08-01T10:00:00Z", "source" => "home-hero" },
+          "new@example.com" => { "at" => "2026-08-08T10:00:00Z", "source" => "home-hero" }
+        }
+      )
+      login_as!(admin)
+      ActionMailer::Base.deliveries.clear
+
+      post invite_next_admin_waitlist_index_path, params: { count: 1 }
+
+      expect(flash[:success]).to include("1 login invite")
+      expect(User.find_by(email: "old@example.com")).to be_present
+      expect(User.find_by(email: "new@example.com")).to be_nil
+    end
+
+    it "is refused to an ordinary user" do
+      configure_store!
+      stub_roster(emails: ["maya@example.com"], metas: {})
+      login_as!(normal_user)
+
+      post invite_admin_waitlist_index_path, params: { email: "maya@example.com" }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:error]).to include("admin")
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it "renders the invite form for an admin" do
+      configure_store!
+      stub_roster(
+        emails: ["maya@example.com"],
+        metas: { "maya@example.com" => { "at" => "2026-08-05T10:00:00Z", "source" => "home-hero" } }
+      )
+      login_as!(admin)
+
+      get admin_waitlist_index_path
+
+      expect(response.body).to include("Invite people in")
+      expect(response.body).to include(invite_next_admin_waitlist_index_path)
     end
   end
 
