@@ -43,7 +43,10 @@ RSpec.describe "admin subscriptions", type: :request do
     end
 
     it "renders a per-venture subscription too, not just family ones" do
-      venture = create(:event, plan_type: Event::Plan::Standard)
+      # Pinned rather than Faker'd: this example matches rendered HTML, and a
+      # name with an apostrophe is escaped — a seed-dependent flake (CI seed
+      # 13293 produced "Antone O'Conner Esq."). Same as operator_vetting_spec.
+      venture = create(:event, name: "Northside Tutoring", plan_type: Event::Plan::Standard)
       Fuime::Subscription.create!(billed_to: guardian, event: venture, status: "active",
                                   stripe_customer_id: "cus_v", stripe_subscription_id: "sub_v")
 

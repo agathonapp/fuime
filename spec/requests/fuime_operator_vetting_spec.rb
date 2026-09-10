@@ -78,6 +78,17 @@ RSpec.describe "admin operator vetting", type: :request do
         expect(response.body).to include("Maya Design Studio")
       end
 
+      # G2: this queue is step 3 of admit. The compact runbook has to point
+      # at Cohorts from here, or operators keep working rows one at a time
+      # during an event.
+      it "shows the admit runbook and a link to Cohorts" do
+        get operator_vetting_admin_index_path
+
+        expect(response.body).to include("How we admit")
+        expect(response.body).to include("Solo applicant")
+        expect(response.body).to include(cohorts_admin_index_path)
+      end
+
       it "shows why the venture cannot sell" do
         get operator_vetting_admin_index_path
 

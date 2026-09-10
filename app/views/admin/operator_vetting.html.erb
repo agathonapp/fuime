@@ -13,6 +13,8 @@
     This asks whether it may SELL — revocable, and asked again whenever something
     changes. See Fuime::OperatorEligibility. %>
 
+<%= render "admin/admit_runbook", compact: true %>
+
 <%= form_with local: true, class: "card", url: operator_vetting_admin_index_path, method: :get do |form| %>
   <%= render "events/filters/search", form: %>
 

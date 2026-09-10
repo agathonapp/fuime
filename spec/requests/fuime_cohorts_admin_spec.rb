@@ -43,6 +43,41 @@ RSpec.describe "admin cohorts", :merchant_of_record, type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    # G2: the runbook has to live on this page (and the other two queues),
+    # not in a markdown file operators will not open on Friday.
+    it "shows the admit runbook so a solo vs event choice is on the page" do
+      login_as!(admin)
+      get cohorts_admin_index_path
+
+      expect(response.body).to include("How we admit")
+      expect(response.body).to include("Solo applicant")
+      expect(response.body).to include("Event / group")
+      expect(response.body).to include("Next step")
+      expect(response.body).to include("Do not turn vetting off")
+      expect(response.body).to include(applications_admin_index_path)
+      expect(response.body).to include(operator_vetting_admin_index_path)
+    end
+
+    # G2: Applications is the graveyard operators already open. The compact
+    # runbook has to be there too, or they never learn the event path exists.
+    it "points at Cohorts from the Applications queue" do
+      login_as!(admin)
+      get applications_admin_index_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("How we admit")
+      expect(response.body).to include(cohorts_admin_index_path)
+    end
+
+    it "renders Cohorts in the admin nav HTML" do
+      login_as!(admin)
+      get nav_admin_index_path, params: { title: "Cohorts (Fuime)" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Cohorts (Fuime)")
+      expect(response.body).to include(cohorts_admin_index_path)
+    end
+
     it "keeps everybody else out" do
       login_as!(normal_user)
       get cohorts_admin_index_path

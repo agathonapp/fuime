@@ -2,7 +2,18 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — Isolate payables_ledger_spec from a seed-dependent HcbCode collision.**
+**2026-09-10 (latest) — G2: Cohorts in the admin nav + in-app admit runbook.**
+
+`/admin/cohorts` already auto-admits (approve + activate + vet). It was missing
+from `Admin::Nav`, so operators worked Applications / Vetting and never found
+the Friday path. Organizations now lists **Cohorts (Fuime)** between those two,
+badged with `Fuime::Cohort.live.count`. The one-page runbook is
+`admin/_admit_runbook` on Cohorts (full), Applications, and Operator vetting
+(compact): solo = Applications then Vetting; event = cohort code, then roster
+`Next step` left to right. Do not turn vetting off. Specs: `admin/nav_spec`,
+`fuime_cohorts_admin_spec`, `fuime_operator_vetting_spec`.
+
+**2026-09-10 — Isolate payables_ledger_spec from a seed-dependent HcbCode collision.**
 
 `assign_ledger_item` can attach a factory line to another example's HcbCode when
 the memo has no unique `HCB-xxxxx`. Spec-only; ledger engine untouched.
