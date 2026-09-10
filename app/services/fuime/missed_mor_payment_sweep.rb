@@ -36,7 +36,7 @@ module Fuime
       posted = 0
       skipped = 0
 
-      list.data.each do |intent|
+      each_intent do |intent|
         unless postable?(intent)
           skipped += 1
           next
@@ -62,6 +62,17 @@ module Fuime
         { created: { gte: @since.to_i }, limit: @limit },
         { api_key: StripeService.secret_key }
       )
+    end
+
+    # Stripe pages at `limit`. A busy day can exceed one page; walking only
+    # `list.data` would silently leave later sales unrecovered.
+    def each_intent(&block)
+      result = list
+      if result.respond_to?(:auto_paging_each)
+        result.auto_paging_each(&block)
+      else
+        Array(result.try(:data)).each(&block)
+      end
     end
 
     def postable?(intent)

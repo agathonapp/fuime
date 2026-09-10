@@ -23,8 +23,9 @@ RSpec.describe Fuime::MissedMorPaymentSweep do
   end
 
   def stub_list(*intents)
-    allow(Stripe::PaymentIntent).to receive(:list)
-      .and_return(double("Stripe::ListObject", data: intents))
+    list = double("Stripe::ListObject")
+    allow(list).to receive(:auto_paging_each) { |&block| intents.each(&block) }
+    allow(Stripe::PaymentIntent).to receive(:list).and_return(list)
   end
 
   def ledger_lines
@@ -65,5 +66,20 @@ RSpec.describe Fuime::MissedMorPaymentSweep do
 
     expect(result[:posted]).to eq(0)
     expect(ledger_lines).to be_empty
+  end
+
+  it "walks every page Stripe returns, not just list.data" do
+    first = intent(id: "pi_page_1")
+    second = intent(id: "pi_page_2")
+    list = double("Stripe::ListObject")
+    expect(list).to receive(:auto_paging_each) { |&block|
+      [first, second].each(&block)
+    }
+    allow(Stripe::PaymentIntent).to receive(:list).and_return(list)
+
+    result = described_class.sweep!(since: 1.hour.ago)
+
+    expect(result[:posted]).to eq(2)
+    expect(Fuime::VentureLedger.find_row(Fuime::VentureLedger.payment_key("pi_page_2"))).to be_present
   end
 end

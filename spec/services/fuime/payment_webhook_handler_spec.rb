@@ -226,6 +226,17 @@ RSpec.describe Fuime::PaymentWebhookHandler do
 
       expect(ledger_lines).to be_empty
     end
+
+    # Regression: falling back to Hash#to_s keyed the sale as
+    # `fuime_{:id=>"pi_…"}` and the later payment_intent.succeeded posted again.
+    it "does not invent a ledger key from an expanded object that has no id" do
+      handle("checkout.session.completed", checkout_session.merge(
+                                             payment_intent: { object: "payment_intent", amount: 10_000 }
+                                           ))
+
+      expect(ledger_lines).to be_empty
+      expect(RawPendingDonationTransaction.where("donation_transaction_id LIKE ?", "fuime_{%")).to be_empty
+    end
   end
 
   describe "refunds" do

@@ -199,7 +199,13 @@ module Fuime
       return if raw.blank?
       return raw if raw.is_a?(String)
 
-      raw.try(:id).presence || raw.to_s
+      # Expanded objects arrive as a StripeObject (`.id`) or, after a shallow
+      # Hash merge in tests / some payloads, as a Hash. Never `to_s` the whole
+      # value — that produced a ledger key of "{:id=>\"pi_…\"}" and broke
+      # idempotency against payment_intent.succeeded.
+      id = raw.try(:id)
+      id = raw[:id] || raw["id"] if id.blank? && raw.respond_to?(:[])
+      id.to_s.presence
     end
 
     # Thin PI-shaped object so #record_payment and #record_platform_fee key on
