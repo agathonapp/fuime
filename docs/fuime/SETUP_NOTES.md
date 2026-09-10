@@ -68,6 +68,15 @@ Specs: `spec/controllers/guardianships_render_spec.rb`,
 `spec/mailers/guardianship_mailer_spec.rb`,
 `spec/models/guardianship_spec.rb`, `spec/requests/family_signup_flow_spec.rb`.
 
+**2026-09-10 — Teen growth gap audit (docs only, no product code).**
+
+`docs/fuime/TEEN_GROWTH_GAPS.md` is the ranked punch list for "what
+still blocks more teenagers from getting on." Production is MoR
+(`render.yaml` `FEATURE_MERCHANT_OF_RECORD=true`); the waitlist has no
+admit path; Pro is $19.99/7% not the site's $15/4%; guardian reminders
+and ADMIN_OPS_QUEUES §1–§3 are unbuilt. Do not start from LAUNCH_SPEC
+§4.1 — it is stale on payments.
+
 **2026-09-10 — API key create: reveal the plaintext without a reload.**
 
 `POST /:slug/developer` already minted the key and rendered it in that
