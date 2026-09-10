@@ -31,7 +31,8 @@ RSpec.describe "Fuime pricing" do
       expect(pro.description).to include("unlimited ventures")
       expect(pro.description).to include("API keys")
       expect(pro.description).to include("same")
-      expect(pro.description).not_to match(/cheaper|drops? to|4%/)
+      expect(pro.description).to include("Not a cheaper fee")
+      expect(pro.description).not_to match(/drops? to|4%/)
       expect(free.description).to include("one venture")
       expect(free.description).to include(pro.price_label)
     end
