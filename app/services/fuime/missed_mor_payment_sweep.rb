@@ -81,5 +81,6 @@ module Fuime
         data: { object: intent }
       )
     end
+
   end
 end

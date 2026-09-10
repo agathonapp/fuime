@@ -196,8 +196,8 @@ RSpec.describe Fuime::PaymentWebhookHandler do
 
     it "posts from an expanded payment_intent object" do
       handle("checkout.session.completed", checkout_session.merge(
-        payment_intent: { id: "pi_test_1", object: "payment_intent", amount: 10_000 }
-      ))
+                                             payment_intent: { id: "pi_test_1", object: "payment_intent", amount: 10_000 }
+                                           ))
 
       expect(Fuime::VentureLedger.find_row(Fuime::VentureLedger.payment_key("pi_test_1"))).to be_present
     end

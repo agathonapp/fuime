@@ -187,7 +187,7 @@ module Fuime
 
     def checkout_session_payable?(session)
       mode = session.try(:mode).to_s
-      return false if mode == "subscription" || mode == "setup"
+      return false if ["subscription", "setup"].include?(mode)
 
       return true if @stripe_event.type == "checkout.session.async_payment_succeeded"
 

@@ -28,7 +28,7 @@ RSpec.describe "MoR Checkout → webhook → ledger", :merchant_of_record, type:
     post "/fuime/webhooks/stripe",
          params: body,
          headers: {
-           "Content-Type" => "application/json",
+           "Content-Type"     => "application/json",
            "Stripe-Signature" => signature_header(body)
          }
   end
@@ -54,9 +54,9 @@ RSpec.describe "MoR Checkout → webhook → ledger", :merchant_of_record, type:
       mode: "payment",
       created: Time.current.to_i,
       metadata: {
-        "fuime_event_id" => event.id.to_s,
+        "fuime_event_id"   => event.id.to_s,
         "fuime_event_name" => event.name,
-        "fuime_fee_cents" => fee_cents.to_s
+        "fuime_fee_cents"  => fee_cents.to_s
       }
     }
   end
@@ -69,9 +69,9 @@ RSpec.describe "MoR Checkout → webhook → ledger", :merchant_of_record, type:
       created: Time.current.to_i,
       description: "Front and back lawn mow",
       metadata: {
-        "fuime_event_id" => event.id.to_s,
+        "fuime_event_id"   => event.id.to_s,
         "fuime_event_name" => event.name,
-        "fuime_fee_cents" => fee_cents.to_s
+        "fuime_fee_cents"  => fee_cents.to_s
       }
     }
   end
