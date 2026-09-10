@@ -119,7 +119,7 @@
             <div class="muted text-sm"><%= guardianship.guardian.email %></div>
           </td>
           <td>
-            <%= guardianship.invite_sent_at ? format_datetime(guardianship.invite_sent_at) : format_datetime(guardianship.created_at) %>
+            <%= format_datetime(guardianship.invite_sent_at || guardianship.created_at) %>
             <% if guardianship.invite_expired? %>
               <div><%= badge_for "Expired", class: "bg-warning" %></div>
             <% end %>
