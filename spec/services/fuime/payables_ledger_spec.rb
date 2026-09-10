@@ -21,8 +21,21 @@ RSpec.describe Fuime::PayablesLedger do
   # is an HTTP request and "corrects" the arguments into params:/session:, which
   # silently rewrote every line in this file into a request spec that tests
   # nothing. Renamed so the cop cannot mistake a ledger helper for a route.
+  # A unique HCB-xxxxx in the memo gives this line its own short_code. Without
+  # one, CanonicalTransaction#assign_ledger_item looks up Ledger::Item /
+  # HcbCode by nil and can attach to a leftover row from another example
+  # (seed-dependent: "calculated a different ledger item from its local_hcb_code").
+  def unique_hcb_short_code
+    loop do
+      token = SecureRandom.alphanumeric(5).upcase
+      unless Ledger::Item.exists?(short_code: token) || HcbCode.exists?(short_code: token)
+        break token
+      end
+    end
+  end
+
   def post_line(key, amount_cents, memo: "Line")
-    create(:canonical_transaction, amount_cents:, memo: "#{memo} [#{key}]", event:)
+    create(:canonical_transaction, amount_cents:, memo: "#{memo} [#{key}] HCB-#{unique_hcb_short_code}", event:)
   end
 
   # One realistic sale: $100 in, Fuime's 4% out, Stripe's ~2.9%+30¢ out.
@@ -51,7 +64,9 @@ RSpec.describe Fuime::PayablesLedger do
         donation_transaction_id: key, amount_cents:, date_posted: Date.current
       )
       cpt = CanonicalPendingTransaction.create!(
-        date: raw.date, memo:, amount_cents: raw.amount_cents,
+        date: raw.date,
+        memo: "#{memo} HCB-#{unique_hcb_short_code}",
+        amount_cents: raw.amount_cents,
         raw_pending_donation_transaction_id: raw.id, fronted: false
       )
       CanonicalPendingEventMapping.create!(
@@ -60,10 +75,8 @@ RSpec.describe Fuime::PayablesLedger do
       cpt
     end
 
-    before do
-      pending_line("fuime_pi_9", 25_00, memo: "Payment from a customer")
-      pending_line("fuime_fee_pi_9", -1_75, memo: "Fuime platform fee (7.0%)")
-    end
+    let!(:pending_sale) { pending_line("fuime_pi_9", 25_00, memo: "Payment from a customer") }
+    let!(:pending_fee) { pending_line("fuime_fee_pi_9", -1_75, memo: "Fuime platform fee (7.0%)") }
 
     # The regression, found 2026-08-20 against a real test-mode charge one day
     # before the first live sales. `Event#balance_v2_cents` excludes pending
@@ -97,7 +110,7 @@ RSpec.describe Fuime::PayablesLedger do
     it "hands the fee to the settled side once the sale settles" do
       settled = sale(intent: "pi_9", gross: 25_00, fee: 1_75, processing: 0)
 
-      CanonicalPendingTransaction.find_each do |cpt|
+      [pending_sale, pending_fee].each do |cpt|
         CanonicalPendingSettledMapping.create!(
           canonical_pending_transaction: cpt, canonical_transaction: settled.fetch(cpt.amount_cents)
         )

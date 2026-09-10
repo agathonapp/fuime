@@ -2,7 +2,12 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — CI fix on the waiver PR (annotate / strong_migrations / ERB).**
+**2026-09-10 (latest) — Isolate payables_ledger_spec from a seed-dependent HcbCode collision.**
+
+`assign_ledger_item` can attach a factory line to another example's HcbCode when
+the memo has no unique `HCB-xxxxx`. Spec-only; ledger engine untouched.
+
+**2026-09-10 — CI fix on the waiver PR (annotate / strong_migrations / ERB).**
 
 Head after this: User annotation re-padded for the new columns + index + FK;
 waiver FK split into add-column / add-FK-unvalidated / validate-FK (same
