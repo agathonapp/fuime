@@ -1,4 +1,4 @@
-# Admin ops queues — spec (not yet built)
+# Admin ops queues — spec (§4 shipped; §1–§3 unbuilt)
 
 **Status: spec'd 2026-08-05.** §4 (subscriptions) shipped 2026-08-21
 (`/admin/subscriptions`). §1 payouts, §2 connected accounts, and

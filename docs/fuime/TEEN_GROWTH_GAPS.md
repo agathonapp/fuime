@@ -1,8 +1,11 @@
 # Teen growth gaps — what to build to get more teens on Fuime
 
-**2026-09-10.** Read-only audit of `main` @ `149185483` (`agathonapp/fuime`).
-No product code was changed. This is a punch list for Rushmore, grounded in
-the repo — not a launch-legal memo and not generic growth advice.
+**2026-09-10.** Read-only audit of `main` at
+[`1491854831cae8bdbfc5bbf293190bc717185edd`](https://github.com/agathonapp/fuime/commit/1491854831cae8bdbfc5bbf293190bc717185edd)
+(`agathonapp/fuime`, #90). No product code was changed. This is a punch
+list for Rushmore, grounded in the repo — not a launch-legal memo and
+not generic growth advice. G2 (#93) and G3 (#94) landed on `main` after
+that snapshot; the rest of the file still describes that commit.
 
 **Trust this for:** "what still blocks a teenager from signing up, activating,
 selling, and coming back with a friend."
@@ -542,11 +545,12 @@ Do not let them steal the week if the goal is seats.
 ## 8. Suggested build order if the goal is "more teens on"
 
 Do these, in this order, and refuse work that is not on the list until
-the first four are shipped or explicitly killed.
+the first four are shipped or explicitly killed. G2 (#93) and G3 (#94)
+have already landed; remaining order is G1 → G5 → G10.
 
-1. **G3** — tell the truth on fuime.com and `/billing` (S, copy).
+1. **G3** — tell the truth on fuime.com and `/billing` (S, copy). **Shipped** (#94).
 2. **G1** — waitlist invite email + optional cohort stamp (M).
-3. **G2** — Cohorts in admin nav + a one-page "how we admit" runbook (S).
+3. **G2** — Cohorts in admin nav + a one-page "how we admit" runbook (S). **Shipped** (#93).
 4. **G5** — guardian reminder + stale queue (M).
 5. **G10** — Fuime Stripe CLI webhook pass (M, but unlocks G8 and G11).
 
