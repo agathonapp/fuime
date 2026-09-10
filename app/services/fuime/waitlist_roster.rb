@@ -212,6 +212,10 @@ module Fuime
     # Stamp an address that is already on the list. Refuses to SADD — inventing
     # a signup from the admin console would mix ops actions into the capture
     # roster the site owns.
+    #
+    # A blank cohort_code leaves any existing stamp alone, so Resend (which
+    # does not re-submit the cohort) cannot wipe the event promised in the
+    # first invite. Pass a code to set or replace it.
     def mark_invited(email, invited_by:, cohort_code: nil)
       raise WriteFailed, "waitlist store is not configured" unless configured?
 
@@ -223,14 +227,8 @@ module Fuime
         "invited_at" => Time.current.utc.iso8601,
         "invited_by" => invited_by.to_s
       }
-      redis.pipelined do |pipe|
-        pipe.hset("#{META_PREFIX}#{normalized}", fields)
-        if cohort_code.present?
-          pipe.hset("#{META_PREFIX}#{normalized}", "cohort_code", cohort_code.to_s)
-        else
-          pipe.hdel("#{META_PREFIX}#{normalized}", "cohort_code")
-        end
-      end
+      fields["cohort_code"] = cohort_code.to_s if cohort_code.present?
+      redis.hset("#{META_PREFIX}#{normalized}", fields)
       Rails.cache.delete(NAV_CACHE_KEY)
       true
     rescue Redis::BaseError, SocketError, IOError => e

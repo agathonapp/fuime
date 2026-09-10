@@ -98,6 +98,32 @@ RSpec.describe "waitlist invite accept", type: :request do
     expect(application.fuime_cohort).to eq(cohort)
   end
 
+  it "does not stamp another signed-in user's application with this invite's cohort" do
+    store("maya@example.com")
+    cohort = Fuime::Cohort.create!(
+      name: "Founders Weekend", code: "FOUNDERS26", created_by: admin,
+      rationale: "I'm running this event and I know everyone attending.",
+      expires_at: 3.days.from_now, max_members: 50, risk_level: "slight"
+    )
+    result = Fuime::WaitlistInviteService
+             .new(invited_by: admin, cohort_code: "FOUNDERS26")
+             .invite!("maya@example.com")
+    other = create(:user, birthday: 16.years.ago.to_date, full_name: "Other Founder")
+    login_as!(other)
+
+    get waitlist_invite_path(result.token)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:error]).to include("signed in as #{other.email}")
+
+    get start_applications_path, params: { teen_led: "true" }
+
+    application = Event::Application.order(:id).last
+    expect(application.user).to eq(other)
+    expect(application.fuime_cohort).to be_nil
+    expect(application.fuime_cohort).not_to eq(cohort)
+  end
+
   it "still applies a Redis-stamped cohort when they log in the ordinary way" do
     store("maya@example.com")
     cohort = Fuime::Cohort.create!(

@@ -20,15 +20,20 @@ class WaitlistInvitesController < ApplicationController
     end
 
     user, cohort_code = verified
-    remember_cohort_code(cohort_code)
+
+    # Do not write a cohort into the session until we know this browser is
+    # (or is about to become) that user. A signed-in stranger who opens the
+    # link must not inherit the invitee's event code on their next apply.
+    if signed_in? && current_user.id != user.id
+      flash[:error] = "You're signed in as #{current_user.email}. Sign out to use this invite."
+      redirect_to root_path
+      return
+    end
+
+    store_cohort_stamp(user, cohort_code)
 
     if signed_in?
-      if current_user.id == user.id
-        redirect_to after_waitlist_login_path(user)
-      else
-        flash[:error] = "You're signed in as #{current_user.email}. Sign out to use this invite."
-        redirect_to root_path
-      end
+      redirect_to after_waitlist_login_path(user)
       return
     end
 
@@ -64,9 +69,11 @@ class WaitlistInvitesController < ApplicationController
 
   private
 
-  def remember_cohort_code(code)
+  def store_cohort_stamp(user, code)
     if code.present?
-      session[:waitlist_cohort_code] = code
+      session[:waitlist_cohort] = { "uid" => user.id, "code" => code }
+    else
+      session.delete(:waitlist_cohort)
     end
   end
 

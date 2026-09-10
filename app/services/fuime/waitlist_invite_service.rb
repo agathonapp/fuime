@@ -44,7 +44,12 @@ module Fuime
       user = User.create_with(creation_method: :waitlist).find_or_create_by!(email: normalized)
       token = self.class.generate_token(user:)
 
-      WaitlistMailer.invite(user:, token:, cohort:).deliver_now
+      begin
+        WaitlistMailer.invite(user:, token:, cohort:).deliver_now
+      rescue => e
+        Rails.error.report(e, handled: true, context: { email: normalized })
+        raise Error, "couldn't send the invite email. try again in a moment."
+      end
       roster.mark_invited(normalized, invited_by: @invited_by.email, cohort_code: cohort&.code)
 
       Result.new(email: normalized, user:, token:, cohort:)
@@ -95,9 +100,11 @@ module Fuime
     def resolve_cohort
       return nil if @cohort_code.blank?
 
+      # Same gate as the application form: live (not archived / expired).
+      # Full or auto_approve-off codes still attach; CohortAdmission decides
+      # at submit whether they skip the human gates.
       cohort = Cohort.for_code(@cohort_code)
       raise Error, "that cohort code is not admitting anyone right now" if cohort.nil?
-      raise Error, cohort.admission_blocker unless cohort.admitting?
 
       cohort
     end

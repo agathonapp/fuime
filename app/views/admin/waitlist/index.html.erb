@@ -81,7 +81,7 @@
 </div>
 
 <% uninvited = Fuime::WaitlistRoster.uninvited(@signups) %>
-<% if @configured && @error.blank? && @signups.any? %>
+<% if @configured && @error.blank? && uninvited.any? %>
   <div class="card mb-4">
     <h2 class="h4 mt0">Invite people in</h2>
     <p class="muted mt0">

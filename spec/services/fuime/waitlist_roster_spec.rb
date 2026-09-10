@@ -181,6 +181,16 @@ RSpec.describe Fuime::WaitlistRoster do
         described_class.new.mark_invited("ghost@example.com", invited_by: "ops@fuime.com")
       }.to raise_error(described_class::WriteFailed, /not on the waitlist/)
     end
+
+    it "keeps an existing cohort stamp when resend does not pass a new one" do
+      store("a@example.com", at: "2026-08-05T10:00:00Z", source: "home-hero")
+      roster = described_class.new
+      roster.mark_invited("a@example.com", invited_by: "ops@fuime.com", cohort_code: "FOUNDERS26")
+
+      roster.mark_invited("a@example.com", invited_by: "ops@fuime.com")
+
+      expect(roster.fetch[:signups].first.cohort_code).to eq "FOUNDERS26"
+    end
   end
 
   describe ".invite_stamp" do

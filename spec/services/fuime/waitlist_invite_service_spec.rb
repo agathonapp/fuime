@@ -86,6 +86,16 @@ RSpec.describe Fuime::WaitlistInviteService do
       expect(User.find_by(email: "stranger@example.com")).to be_nil
     end
 
+    it "turns a mail outage into a service error instead of a 500" do
+      store("maya@example.com")
+      allow(WaitlistMailer).to receive(:invite).and_raise(StandardError, "smtp down")
+
+      expect {
+        described_class.new(invited_by: admin).invite!("maya@example.com")
+      }.to raise_error(described_class::Error, /couldn't send the invite email/)
+      expect(Fuime::WaitlistRoster.new.invite_stamp("maya@example.com")).to be_nil
+    end
+
     it "refuses a dead cohort code" do
       store("maya@example.com")
       Fuime::Cohort.create!(

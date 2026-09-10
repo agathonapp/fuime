@@ -402,13 +402,18 @@ class Event
 
     # A waitlist admit may have stamped a cohort. Apply it the same way a typed
     # code is applied — through Fuime::Cohort.for_code — so a dead or full code
-    # cannot sneak onto the application. Session first (they clicked the invite
-    # link); Redis stamp as fallback (they logged in with a regular code).
+    # cannot sneak onto the application. Session first, and only if it was
+    # written for this user (they clicked their own invite); Redis stamp as
+    # fallback (they logged in with a regular code).
     def apply_waitlist_cohort_stamp
       return if @application.fuime_cohort_id.present?
 
-      code = session[:waitlist_cohort_code].presence ||
-             Fuime::WaitlistRoster.invite_stamp(current_user.email)&.cohort_code
+      stored = session[:waitlist_cohort]
+      if stored.is_a?(Hash) && stored["uid"].to_i == current_user.id
+        code = stored["code"].to_s.presence
+        session.delete(:waitlist_cohort)
+      end
+      code ||= Fuime::WaitlistRoster.invite_stamp(current_user.email)&.cohort_code
       return if code.blank?
 
       cohort = ::Fuime::Cohort.for_code(code)
