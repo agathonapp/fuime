@@ -15,10 +15,27 @@ RSpec.describe Fuime::ConnectSettlementSweep do
                                    stripe_id: "acct_sweep_test")
   end
 
+  # Same isolation as payables_ledger_spec: a unique HCB-xxxxx in the memo
+  # gives the settled CanonicalTransaction its own short_code. Without one,
+  # assign_ledger_item can collide with a seed or leftover Ledger::Item
+  # (CI shard flake: "calculated a different ledger item from its local_hcb_code").
+  def unique_hcb_short_code
+    loop do
+      token = SecureRandom.alphanumeric(5).upcase
+      unless Ledger::Item.exists?(short_code: token) || HcbCode.exists?(short_code: token)
+        break token
+      end
+    end
+  end
+
+  def isolated_memo(text)
+    "#{text} HCB-#{unique_hcb_short_code}"
+  end
+
   def post_pending!(intent_id:, amount_cents:, memo:)
     Fuime::VentureLedger.new(event: venture).post!(
       key: Fuime::VentureLedger.payment_key(intent_id),
-      amount_cents:, memo:, date: Time.current
+      amount_cents:, memo: isolated_memo(memo), date: Time.current
     )
     CanonicalPendingTransaction.order(:id).last
   end
@@ -76,7 +93,7 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     Fuime::VentureLedger.new(event: venture).post!(
       key: Fuime::VentureLedger.reversal_key(intent_id: "pi_ref1", kind: "refund",
                                              object_id: "ch_1", amount_cents: 500),
-      amount_cents: -5_00, memo: "Refunded payment", date: Time.current
+      amount_cents: -5_00, memo: isolated_memo("Refunded payment"), date: Time.current
     )
     allow(Stripe::Refund).to receive(:list)
       .with(hash_including(payment_intent: "pi_ref1"), anything)
@@ -92,7 +109,7 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     Fuime::VentureLedger.new(event: venture).post!(
       key: Fuime::VentureLedger.reversal_key(intent_id: "pi_disp1", kind: "dispute",
                                              object_id: "dp_1", amount_cents: 300),
-      amount_cents: -3_00, memo: "Disputed payment (chargeback)", date: Time.current
+      amount_cents: -3_00, memo: isolated_memo("Disputed payment (chargeback)"), date: Time.current
     )
     # No Stripe stub on purpose: matching a dispute key would raise on the
     # unstubbed call, so a clean pass proves the key filter excluded it.
@@ -114,7 +131,7 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     def post_mor_pending!(intent_id:, amount_cents:, memo:)
       Fuime::VentureLedger.new(event: mor_venture).post!(
         key: Fuime::VentureLedger.payment_key(intent_id),
-        amount_cents:, memo:, date: Time.current
+        amount_cents:, memo: isolated_memo(memo), date: Time.current
       )
       CanonicalPendingTransaction.order(:id).last
     end
@@ -167,7 +184,7 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     orphan = create(:event, name: "Never onboarded")
     Fuime::VentureLedger.new(event: orphan).post!(
       key: Fuime::VentureLedger.payment_key("pi_orphan"),
-      amount_cents: 10_00, memo: "Orphan sale", date: Time.current
+      amount_cents: 10_00, memo: isolated_memo("Orphan sale"), date: Time.current
     )
 
     expect { described_class.new(event: orphan).sweep! }

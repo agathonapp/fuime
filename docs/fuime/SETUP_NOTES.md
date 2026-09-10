@@ -2,7 +2,14 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G3: tell the truth on fuime.com and /billing.**
+**2026-09-10 (latest) — Isolate connect_settlement_sweep_spec HcbCode collision.**
+
+Same flake as payables_ledger_spec: a settled memo with no `HCB-xxxxx`
+lets `assign_ledger_item` collide with a seed/leftover Ledger::Item
+(`CanonicalTransaction … different ledger item from its local_hcb_code`).
+Spec-only unique tokens on every `post!` memo. Ledger engine untouched.
+
+**2026-09-10 — G3: tell the truth on fuime.com and /billing.**
 
 Pro is `$19.99/mo + 7%` (same take-rate as Free). It unlocks unlimited ventures
 and API keys, not a cheaper fee. Stripe Billing creates `fuime_monthly_<cents>`
