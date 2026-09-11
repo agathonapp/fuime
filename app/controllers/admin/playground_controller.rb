@@ -15,8 +15,9 @@ module Admin
       warning = result[:warnings].any? ? " (#{result[:warnings].size} warning(s))" : ""
       redirect_to playground_admin_index_path,
                   flash: { success: "Playground ready: /#{result[:event].slug}. Become Maya and click What you sell.#{warning}" }
-    rescue StandardError => e
+    rescue => e
       redirect_to playground_admin_index_path, flash: { error: e.message }
     end
+
   end
 end

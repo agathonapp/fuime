@@ -205,8 +205,9 @@ module Fuime
 
         CanonicalEventMapping.create!(canonical_transaction: canonical, event:)
       end
-    rescue StandardError => e
+    rescue => e
       @warnings << "Ledger seed skipped: #{e.message}"
     end
+
   end
 end
