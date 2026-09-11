@@ -1,80 +1,240 @@
 <% title "Pitch playground (Fuime)" %>
 
-<%# FUIME: product demo on the same production app. Become is existing
-    admin impersonate. Safe while Stripe is live. %>
+<%# FUIME: the demo control room. One venture flagged Playground Mode on the
+    same production app; three personas; Become is existing admin impersonate.
+    Safe while Stripe is live — checkout never calls Stripe. %>
 
 <% impersonating = current_session&.impersonated? %>
 <% event = @status[:event] %>
 <% teen = @status[:teen] %>
+<% guardian = @status[:guardian] %>
+<% new_founder = @status[:new_founder] %>
+<% offer = @status[:published_offer] %>
+<% seeded = event.present? && teen.present? %>
+<% storefront_url = event ? fuime_storefront_url(slug: event.slug) : nil %>
+<% pay_url = event && offer ? fuime_payment_page_url(event_slug: event.slug, offer: offer.to_param) : nil %>
 
-<h1>Pitch playground</h1>
-
-<p>
-  Same production app. <code>Event#demo_mode</code> — not a second Render,
-  not <code>FUIME_DEMO_SANDBOX</code>, not test-mode Stripe.
-  <strong>Become</strong> uses impersonate. Checkout never charges.
+<div class="flex items-baseline justify-between gap-2 flex-wrap">
+  <h1 class="mb0">Pitch playground</h1>
+  <p class="muted text-sm mb0">
+    Stripe <strong><%= @status[:stripe_live] ? "live" : "test" %></strong>
+    · <code><%= @status[:slug] %></code>
+    <% if seeded %>
+      · reset <%= time_ago_in_words(@status[:last_seeded_at]) %> ago
+      · <%= pluralize(@status[:ledger_lines], "ledger line") %>
+    <% else %>
+      · not seeded yet
+    <% end %>
+  </p>
+</div>
+<p class="mt1">
+  One venture in Playground Mode on this deploy. Nothing on it moves real money;
+  its Buy button never reaches Stripe. <strong>Become</strong> is the existing
+  admin impersonation — an hour-long session you leave with <em>Exit demo</em>
+  on the blue strip.
 </p>
 
-<p class="muted">
-  Stripe <strong><%= @status[:stripe_live] ? "live" : "test" %></strong>
-  · slug <code><%= @status[:slug] %></code>
-  · <%= event ? "ready" : "not seeded" %>
-</p>
+<% if @status[:warnings].any? %>
+  <div class="card mb2">
+    <h2 class="mt0 text-lg">Warnings</h2>
+    <ul class="mb0">
+      <% @status[:warnings].each do |warning| %>
+        <li><%= warning %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
 
 <% if impersonating %>
-  <div class="card mb2">
-    <p class="mb0">
-      You are impersonating
-      <strong><%= current_user(allow_unverified: true)&.name %></strong>.
+  <div class="card mb2 border b--info">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <p class="mb0">
+        You're currently
+        <strong><%= current_user(allow_unverified: true)&.name.presence || current_user(allow_unverified: true)&.email %></strong>.
+        Open a page from the script below, or come back to yourself.
+      </p>
       <%= button_to "Back to admin",
                     unimpersonate_user_path(current_user(allow_unverified: true)&.id, return_to: playground_admin_index_path),
                     method: :post,
                     class: "btn bg-accent",
                     form: { data: { turbo_frame: "_top" } } %>
-    </p>
+    </div>
   </div>
 <% end %>
 
+<%# ── Start ─────────────────────────────────────────────────────────────── %>
 <div class="card mb2">
-  <%= button_to event ? "Refresh playground (rewrite ledger)" : "Seed pitch venture",
-                playground_seed_admin_index_path,
-                method: :post,
-                class: "btn bg-success" %>
-  <p class="muted text-sm mb0 mt1">
-    Idempotent. Creates <code><%= @status[:slug] %></code>, Maya + parent,
-    a published offer and a draft. No Stripe calls.
-  </p>
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div class="flex-1" style="min-width: 16rem;">
+      <h2 class="mt0 mb1 text-lg">Start the demo</h2>
+      <p class="muted mb0 text-sm">
+        One click resets Maya's venture — ledger rewritten with recent dates, the
+        two sample products restored, the welcome tour re-armed, Sam wiped back to
+        a blank slate — and signs you in as Maya on her home page.
+      </p>
+    </div>
+    <div class="flex gap-2 flex-wrap items-center">
+      <%= button_to "Reset & start as Maya",
+                    playground_start_admin_index_path,
+                    method: :post,
+                    class: "btn bg-success",
+                    form: { data: { turbo_frame: "_top" } } %>
+      <% reset_label = seeded ? "Reset only" : "Seed the playground" %>
+      <%= button_to reset_label,
+                    playground_seed_admin_index_path,
+                    method: :post,
+                    class: "btn bg-muted",
+                    form: { data: { turbo_confirm: "Rewrite the playground ledger, restore the sample products, and reset Sam?" } } %>
+    </div>
+  </div>
 </div>
 
-<% if event && teen %>
-  <div class="card mb2">
-    <h2 class="mt0 text-lg">Become Maya and click</h2>
-    <ol>
-      <li>
+<%# ── Personas ─────────────────────────────────────────────────────────── %>
+<h2 class="mb1">Three people, in pitch order</h2>
+<div class="grid grid--wide mb2">
+  <div class="card flex flex-col gap-2">
+    <div>
+      <span class="badge bg-muted m0">1 · Signing up</span>
+      <h3 class="mt1 mb0">Sam</h3>
+      <p class="muted text-sm mb0">A founder who has never used Fuime. Lands on the very first screen.</p>
+    </div>
+    <p class="text-sm mb0">
+      Watch a teenager sign up: name and 13+, their business, their parent's
+      email, and a venture of their own the moment they submit.
+    </p>
+    <p class="muted text-xs mb0">
+      <code><%= Fuime::Playground::NEW_FOUNDER_EMAIL %></code>
+      <% if new_founder %>
+        · <%= @status[:new_founder_fresh] ? "fresh" : "mid-demo — reset puts them back" %>
+      <% end %>
+    </p>
+    <div class="mt-auto pt2">
+      <%= button_to "Start fresh as Sam",
+                    playground_fresh_founder_admin_index_path,
+                    method: :post,
+                    class: "btn bg-accent",
+                    form: { data: { turbo_frame: "_top" } } %>
+    </div>
+  </div>
+
+  <div class="card flex flex-col gap-2">
+    <div>
+      <span class="badge bg-muted m0">2 · Running it</span>
+      <h3 class="mt1 mb0">Maya</h3>
+      <p class="muted text-sm mb0">16. Runs Maya's Lawn Care — vetted, listing, getting paid.</p>
+    </div>
+    <p class="text-sm mb0">
+      Home with the checklist done, what she sells with a share link and QR,
+      the storefront a customer sees, and a ledger with a Fuime service fee on it.
+    </p>
+    <p class="muted text-xs mb0"><code><%= Fuime::Playground::TEEN_EMAIL %></code></p>
+    <div class="mt-auto pt2 flex gap-2 flex-wrap">
+      <% if seeded %>
         <%= button_to "Become Maya",
                       impersonate_user_path(teen.id, return_to: event_path(event)),
                       method: :post,
                       class: "btn bg-accent",
-                      form: { data: { turbo_confirm: "Impersonate Maya on the playground venture?", turbo_frame: "_top" } } %>
-      </li>
-      <li><%= link_to "Home", event_path(event) %></li>
-      <li><%= link_to "What you sell", fuime_offers_path(event_slug: event.slug) %> — list, wizard, share</li>
-      <li><%= link_to "Add something to sell", new_fuime_offer_path(event_slug: event.slug) %></li>
-      <li><%= link_to "Storefront", fuime_storefront_path(slug: event.slug) %> — Buy is a mock success</li>
-    </ol>
-    <p class="muted text-sm mb0">
-      <%= @status[:published] %> published /
-      <%= @status[:offers].size %> live offers.
-      Discover excludes <code>demo_mode</code>.
+                      form: { data: { turbo_frame: "_top" } } %>
+      <% else %>
+        <span class="muted text-sm">Seed first.</span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card flex flex-col gap-2">
+    <div>
+      <span class="badge bg-muted m0">3 · Watching over it</span>
+      <h3 class="mt1 mb0">Denise</h3>
+      <p class="muted text-sm mb0">Maya's parent. Signed the guardian agreement; sees everything.</p>
+    </div>
+    <p class="text-sm mb0">
+      The guardian overview: every venture she signed for, every transaction,
+      and where payouts go. Maya can't turn that off.
     </p>
+    <p class="muted text-xs mb0"><code><%= Fuime::Playground::GUARDIAN_EMAIL %></code></p>
+    <div class="mt-auto pt2">
+      <% if seeded && guardian %>
+        <%= button_to "Become Denise",
+                      impersonate_user_path(guardian.id, return_to: guardianships_path),
+                      method: :post,
+                      class: "btn bg-accent",
+                      form: { data: { turbo_frame: "_top" } } %>
+      <% else %>
+        <span class="muted text-sm">Seed first.</span>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% if seeded %>
+  <%# ── Show the room ───────────────────────────────────────────────────── %>
+  <div class="card mb2">
+    <div class="flex gap-4 flex-wrap items-start">
+      <div class="flex-1" style="min-width: 16rem;">
+        <h2 class="mt0 mb1 text-lg">Let the room buy something</h2>
+        <p class="text-sm mb2">
+          The storefront is public. Anyone can scan this, press <strong>Buy</strong>,
+          and see the thank-you screen — no card is charged and nothing is written.
+          When <em>you</em> press Buy while being Maya, the sale lands on her ledger.
+        </p>
+        <p class="mb1">
+          <strong>Storefront</strong>
+          <%= link_to storefront_url, storefront_url, target: "_blank", rel: "noopener", class: "break-all" %>
+        </p>
+        <% if pay_url %>
+          <p class="mb0">
+            <strong><%= offer.name %></strong> — <%= offer.price_sentence %>
+            <br>
+            <%= link_to pay_url, pay_url, target: "_blank", rel: "noopener", class: "break-all" %>
+          </p>
+        <% end %>
+      </div>
+      <% if pay_url %>
+        <div class="text-center">
+          <%# Server-rendered so it works on the admin bundle, which does not
+              register the <qr-code> element the app bundle uses. %>
+          <%= fuime_qr_svg(pay_url) %>
+          <p class="muted text-xs mt1 mb0">Scan to buy — no real charge</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Script ──────────────────────────────────────────────────────────── %>
+  <div class="card mb2">
+    <h2 class="mt0 mb1 text-lg">The three-minute script</h2>
+    <ol class="steps mb0 mt2">
+      <li>
+        <strong>Start fresh as Sam.</strong> Sign up as a teenager would: name,
+        13+, the business, a parent's email. Submit — a venture exists immediately.
+        <span class="muted">Exit demo from the strip when you're done.</span>
+      </li>
+      <li>
+        <strong>Reset &amp; start as Maya.</strong> The welcome screen and a five-bubble
+        tour, then <%= link_to "Home", event_path(event) %>: the checklist is complete
+        and the balance is real.
+      </li>
+      <li>
+        <strong><%= link_to "What you sell", fuime_offers_path(event_slug: event.slug) %>.</strong>
+        Maya named it and priced it. Copy the link, show the QR, or
+        <%= link_to "add something", new_fuime_offer_path(event_slug: event.slug) %> live.
+      </li>
+      <li>
+        <strong><%= link_to "Storefront", fuime_storefront_path(slug: event.slug) %>.</strong>
+        What a customer sees. Press <strong>Buy</strong> — the thank-you page, then
+        back to <%= link_to "Transactions", event_transactions_path(event_id: event.slug) %>:
+        it's on the ledger, with the Fuime service fee pending next to it.
+      </li>
+      <li>
+        <strong>Become Denise.</strong> <%= link_to "The guardian overview", guardianships_path %>:
+        what a parent sees, and the part a teenager can't switch off.
+      </li>
+    </ol>
   </div>
 <% end %>
 
-<div class="card mb2">
-  <h2 class="mt0 text-lg">Any existing venture</h2>
-  <p class="mb0">
-    Settings → Admin → <strong>Is in Playground Mode?</strong> then seed
-    products here, or list offers yourself. Publish works; live Checkout
-    does not.
-  </p>
-</div>
+<p class="muted text-sm">
+  <strong>Any other venture</strong> can join the playground: Settings → Admin →
+  <em>Is in Playground Mode?</em>. It gets the strip, may publish listings, and its
+  Buy button mocks; only Maya's venture gets the seeded ledger and the recorded sale.
+</p>

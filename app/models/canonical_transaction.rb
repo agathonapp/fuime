@@ -89,6 +89,12 @@ class CanonicalTransaction < ApplicationRecord
   scope :svb_sweep_account, -> { where(transaction_source_type: RawIntrafiTransaction.name) }
   scope :svb_sweep_interest, -> { where(transaction_source_type: RawIntrafiTransaction.name, memo: "Interest Capitalization") }
   scope :mapped_by_human, -> { includes(:canonical_event_mapping).where("canonical_event_mappings.user_id is not null").references(:canonical_event_mapping) }
+  # Fuime: Playground Mode money is sample money. A venture in `demo_mode`
+  # (Fuime::Playground, or any org an admin flips) carries a seeded ledger and
+  # the sales a demo driver clicks, and none of it may reach a platform figure
+  # — "$X moved through Fuime" on the admin panel and the funders page both
+  # read this scope. Reporting only; the ingestion and mapping pipeline is
+  # untouched (CLAUDE.md Rule 3).
   scope :included_in_stats, -> {
     includes(
       canonical_event_mapping: { event: :plan }
@@ -96,7 +102,7 @@ class CanonicalTransaction < ApplicationRecord
       event_plans: {
         type: Event::Plan.that(:omit_stats).collect(&:name)
       }
-    )
+    ).where(events: { demo_mode: false })
   }
 
   scope :with_column_transaction_type, ->(type) { column_transaction.where("raw_column_transactions.column_transaction->>'transaction_type' LIKE ?", "#{sanitize_sql_like(type)}%") }

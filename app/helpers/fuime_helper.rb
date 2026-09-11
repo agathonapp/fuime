@@ -2,6 +2,18 @@
 
 # Fuime-specific view helpers.
 module FuimeHelper
+  # An inline SVG QR code for `url`, for pages served by the admin bundle,
+  # which does not register the <qr-code> element the app bundle uses
+  # (fuime/offers/_share_link). Same library the raffle and donation pages
+  # already use. The output is RQRCode's own markup, not user content.
+  def fuime_qr_svg(url, size: 4)
+    svg = RQRCode::QRCode.new(url).as_svg(
+      module_size: size, standalone: true, use_path: true, viewbox: true,
+      color: "1f2d3d", fill: "ffffff"
+    )
+    svg.html_safe # rubocop:disable Rails/OutputSafety
+  end
+
   # Standing status line for marketing and app chrome. Stripe mode is not named
   # here; the seller of record is Ninth Street Labs, LLC (Fuime is the brand).
   def fuime_status_line

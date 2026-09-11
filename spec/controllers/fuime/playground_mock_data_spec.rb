@@ -86,6 +86,28 @@ RSpec.describe EventsController, type: :controller do
       )
     end
 
+    # The strip is the presenter's script: the four stops of the pitch with
+    # the current page lit, and an exit only when there is an impersonation
+    # to exit from.
+    it "renders the demo path with the current stop marked and no exit for a real session" do
+      get :show, params: { id: playground.friendly_id }
+
+      expect(response.body).to include("playground-strip")
+      expect(response.body).to include('data-tour-step="playground_mode"')
+      expect(response.body).to match(/is-current[^>]*aria-current="page"[^>]*>.*?Home/m)
+      expect(response.body).to include(fuime_storefront_path(slug: playground.slug))
+      expect(response.body).not_to include("Exit demo")
+    end
+
+    it "offers Exit demo while impersonating" do
+      current_session!.update!(impersonated_by: create(:user, :make_admin))
+
+      get :show, params: { id: playground.friendly_id }
+
+      expect(response.body).to include("Exit demo")
+      expect(response.body).to include(unimpersonate_user_path(manager.id, return_to: playground_admin_index_path))
+    end
+
     it "offers the off switch once mock data is on" do
       get :transactions_list, params: { event_id: playground.friendly_id, show_mock_data: "true" }
       get :show, params: { id: playground.friendly_id }
@@ -157,4 +179,3 @@ RSpec.describe EventsController, type: :controller do
     end
   end
 end
-

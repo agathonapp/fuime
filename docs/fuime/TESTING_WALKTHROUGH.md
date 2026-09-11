@@ -7,7 +7,7 @@ do not treat this file as a second copy.
 | If you want… | Open |
 |---|---|
 | The click-through | **`rake fuime:demo`** then **`/admin/demo`** |
-| A billionaire pitch on **live** Stripe (same Render) | **`rake fuime:playground`** then **`/admin/playground`** — Become Maya → Home → Transactions (lawn-job income + pending Fuime service fee) → What you sell → share / storefront Buy (no real charge) |
+| A pitch on **live** Stripe (same Render) | **`/admin/playground`** — *Reset & start as Maya* (or *Start fresh as Sam* for the signup, *Become Denise* for the parent view). The blue strip on every page of the venture is the script; *Exit demo* brings you back. Storefront Buy is mocked — yours lands on the ledger, a stranger's writes nothing. `rake fuime:playground` seeds the same thing from a shell |
 | MoR sale → ledger (`stripe listen`) | `MOR_WEBHOOK_PASS.md` |
 | Connect / cards / payouts against Stripe | `STRIPE_PASS.md` |
 | Automated lock on the seed + checklist | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |

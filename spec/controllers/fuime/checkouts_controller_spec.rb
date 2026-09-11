@@ -11,6 +11,8 @@ require "rails_helper"
 # This is a public, unauthenticated endpoint that talks to Stripe and writes to
 # a child's business ledger, so the guards below matter more than usual.
 RSpec.describe Fuime::CheckoutsController, type: :controller do
+  include SessionSupport
+
   let(:event) { create(:event, slug: "mayas-prints", is_public: true) }
 
   # The controller refuses at `event.accepts_payments?` before it ever reaches the
@@ -211,6 +213,67 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
 
         expect(Fuime::PaymentLinkService).not_to have_received(:new)
         expect(flash[:alert]).to match(/isn't for sale/i)
+      end
+
+      # Nobody is billed in Playground Mode, so the adult-buyer rule has no
+      # adult to find. The person pressing Buy is usually an admin impersonating
+      # the 16-year-old whose venture it is; refusing her broke the demo's own
+      # Buy button, and it broke silently — the guest path above stayed green.
+      it "does not refuse a signed-in minor" do
+        create_session(create(:user, :minor), verified: true)
+
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param }
+
+        expect(response).to redirect_to(fuime_payment_page_path(event_slug: playground.slug, offer: offer.to_param, paid: 1))
+        expect(flash[:alert]).to be_nil
+      end
+
+      it "writes nothing for a guest" do
+        recorder = instance_double(Fuime::Playground)
+        allow(Fuime::Playground).to receive(:new).and_return(recorder)
+
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param }
+
+        expect(Fuime::Playground).not_to have_received(:new)
+        expect(flash[:notice]).to eq(Fuime::CheckoutsController::PLAYGROUND_NOTICE)
+      end
+
+      # The demo driver — staff, or an admin impersonating a persona — gets the
+      # sale on the ledger, so "and now it's on her ledger" is true on stage.
+      it "records the sale for a staff driver at the offer's own price" do
+        create_session(create(:user, :make_admin), verified: true)
+        recorder = instance_double(Fuime::Playground, record_mock_sale!: instance_double(CanonicalTransaction))
+        allow(Fuime::Playground).to receive(:new).and_return(recorder)
+
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param, amount: "1.00" }
+
+        expect(recorder).to have_received(:record_mock_sale!).with(
+          event: playground, memo: "Front lawn — storefront", amount_cents: offer.price_cents
+        )
+        expect(flash[:notice]).to eq(Fuime::CheckoutsController::PLAYGROUND_RECORDED_NOTICE)
+      end
+
+      it "records the sale for an impersonated persona" do
+        minor = create(:user, :minor)
+        create_session(minor, verified: true)
+        current_session!.update!(impersonated_by: create(:user, :make_admin))
+        recorder = instance_double(Fuime::Playground, record_mock_sale!: instance_double(CanonicalTransaction))
+        allow(Fuime::Playground).to receive(:new).and_return(recorder)
+
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param }
+
+        expect(recorder).to have_received(:record_mock_sale!)
+        expect(flash[:notice]).to match(/on the ledger now/)
+      end
+
+      it "keeps the plain notice when the sale did not land" do
+        create_session(create(:user, :make_admin), verified: true)
+        recorder = instance_double(Fuime::Playground, record_mock_sale!: nil)
+        allow(Fuime::Playground).to receive(:new).and_return(recorder)
+
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param }
+
+        expect(flash[:notice]).to eq(Fuime::CheckoutsController::PLAYGROUND_NOTICE)
       end
     end
   end
