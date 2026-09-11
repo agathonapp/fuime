@@ -37,6 +37,13 @@ module Fuime
   class PayoutsController < ApplicationController
     before_action :set_event
     before_action :set_request, only: [:approve, :reject, :settle]
+    # The teen-request / guardian-send form is Connect money-out: it calls
+    # PayoutService, which creates a Stripe::Payout on a connected account.
+    # Under MoR that account is never created; the bank path is Plaid at
+    # /:slug/payout-method and ops marks the weekly run paid. Same
+    # retirement as PaymentSetupsController — hide the form on #index, refuse
+    # the writes so a stale POST cannot start a Connect payout.
+    before_action :refuse_connect_money_out_under_mor, only: [:create, :approve, :reject, :settle]
 
     def index
       authorize @event, :payouts?
@@ -61,7 +68,16 @@ module Fuime
       # Kept alongside the payables figure rather than replaced by it: the two
       # answer different questions ("what am I owed?" vs "can it move today?") and
       # collapsing them is what produced a page that went blank on a Stripe hiccup.
-      @available_cents = service.available_balance_cents
+      # Under MoR there is no connected-account balance. PayoutService would
+      # return 0, and the view's leftover "of that, $0 can be sent today"
+      # callout would fire whenever anything is owed. Matching the payables
+      # figure hides that Connect comparison without editing the view.
+      @available_cents =
+        if ::Fuime::Features.merchant_of_record?
+          @payables.amount_owed_cents
+        else
+          service.available_balance_cents
+        end
       @pending_request = @event.payout_requests.awaiting_approval.first
       # Approved school transfers the business office still has to pay. Shown
       # separately from history because they are work outstanding, not a record.
@@ -72,9 +88,10 @@ module Fuime
       # otherwise told a school student to ask a guardian who does not exist.
       @school_settled = @event.shares_payment_account?
 
-      @can_request = policy(@event).request_payout?
-      @can_decide = policy(@event).decide_payout?
-      @can_settle = policy(@event).settle_payout?
+      connect_money_out = !::Fuime::Features.merchant_of_record?
+      @can_request = connect_money_out && policy(@event).request_payout?
+      @can_decide = connect_money_out && policy(@event).decide_payout?
+      @can_settle = connect_money_out && policy(@event).settle_payout?
     end
 
     def create
@@ -146,6 +163,15 @@ module Fuime
 
     def set_event
       @event = Event.find_by!(slug: params[:event_slug])
+    end
+
+    def refuse_connect_money_out_under_mor
+      return unless ::Fuime::Features.merchant_of_record?
+
+      skip_authorization
+      redirect_to fuime_payout_method_path(event_slug: @event.slug),
+                  notice: "Fuime pays you on a schedule to the bank account on file — " \
+                          "you don't send a Stripe payout from here."
     end
 
     # Scoped through the venture, not found globally: a bare

@@ -5764,6 +5764,41 @@ for an expired link.
 | `/admin/guardianships` + nav + admin_tools | Stale queue; resend reuses existing action; verifications tab is consent record only (L4) | `app/controllers/admin_controller.rb`, `app/views/admin/guardianships.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
 | Specs + how-to-test | Model / job / mailer / request / nav | `spec/models/guardianship_spec.rb`, `spec/jobs/fuime/guardian_invite_reminder_job_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/requests/fuime_guardianships_admin_spec.rb`, `spec/models/admin/nav_spec.rb` |
 
+## 2026-09-11 — Under MoR, stop Connect onboarding and Connect money-out
+
+Production is merchant-of-record. Connect screens were already redirected
+from the nav and `/payments/setup`, but accepting a guardianship still
+provisioned a connected account, `/payments/verify` still rendered KYC,
+and Payouts still offered "Ask my guardian" → `Stripe::Payout` on an
+account MoR never creates. The only bank path under MoR is Plaid at
+`/:slug/payout-method`. Code left in place (Rule 2); gated on
+`FEATURE_MERCHANT_OF_RECORD`. No originator, no Stripe/Plaid env change.
+
+| Change | Why | Files |
+|---|---|---|
+| Job + onboarding service refuse account create | A guardianship accept must not open a live connected account | `app/jobs/fuime/provision_connect_account_job.rb`, `app/services/fuime/connect_onboarding_service.rb` |
+| Requirement-collection + payout writes redirect | Leftover Connect KYC and "Ask my guardian" / Approve-and-send | `app/controllers/fuime/requirement_collections_controller.rb`, `app/controllers/fuime/payouts_controller.rb` |
+| `PayoutService` refuses under MoR | Belt: leftover connected account must not send a Stripe payout | `app/services/fuime/payout_service.rb` |
+| Policy hides Connect setup predicates | Leftover links that read `setup_payments?` / `payment_setup_status?` | `app/policies/event_policy.rb` |
+| Specs for the gated paths | Job, service, request, controller, policy | `spec/jobs/fuime/provision_connect_account_job_spec.rb`, `spec/services/fuime/connect_onboarding_profile_spec.rb`, `spec/services/fuime/payout_service_spec.rb`, `spec/requests/fuime_connect_screens_retired_spec.rb`, `spec/controllers/fuime/payouts_controller_spec.rb`, `spec/controllers/fuime/requirement_collections_controller_spec.rb`, `spec/policies/event_policy_payment_setup_spec.rb` |
+
+## 2026-09-11 — Marketing + legal copy: MoR, live payments, Ninth Street Labs seller
+
+User-facing copy on fuime.com (`site/`) and app.fuime.com legal/chrome pages now
+matches production: Ninth Street Labs, LLC is the seller of record (Fuime is the
+brand). Status line is `Private beta · live payments. Ninth Street Labs, LLC
+(Fuime) is the seller of record.` Connect-era "parent owns the Stripe account /
+never in the flow of funds" and "test mode / no real money" claims are gone.
+Guardian agreement §5 is a new versioned partial (`2026-09-11-v3`).
+
+| Change | Why | Files |
+|---|---|---|
+| Marketing + app legal/footer copy | Site described Connect + test mode; production is MoR + live Checkout | `site/*.html`, `app/views/static_pages/*`, `app/views/application/_footer.html.erb`, `app/views/fuime/*` |
+| Guardian agreement v3 | Do not rewrite signed v2; §5 now states seller / legal payee / payable | `app/views/guardianships/agreements/_2026_09_11_v3.html.erb`, `app/models/guardianship.rb` |
+| Shared status/ownership helpers | One seam for the seller sentence | `app/helpers/fuime_helper.rb` |
+| Checkout + sold-by merchant name | Receipts/Checkout said "sold by Fuime"; storefront said Fuime LLC | `app/services/fuime/payment_link_service.rb`, `app/views/fuime/_seller_of_record.html.erb`, `app/views/layouts/fuime_payment_page.html.erb` |
+| School payment-setup leftover | `institutionally_sponsored?` still said the school "will own that account" | `app/views/fuime/payment_setups/*`, `app/views/fuime/payouts/index.html.erb`, `app/views/fuime/payout_methods/show.html.erb`, `app/models/event/plan/school.rb` |
+
 ## 2026-09-10 — G10: MoR Checkout webhook posts the first sale
 
 Production is merchant-of-record. A successful storefront Checkout must appear

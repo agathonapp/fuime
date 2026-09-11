@@ -45,8 +45,7 @@
     Fuime is a product of <%= Rails.configuration.constants.legal_entity_name %>,
     a financial technology company, not a bank. Fuime does not hold
     deposits and does not offer FDIC-insured products. Payments are processed by
-    Stripe. Venture accounts are opened and owned by a parent or legal guardian;
-    young founders operate them with guardian oversight.
+    Stripe. <%= fuime_footer_ownership %>
   </p>
 
   <% if !Rails.env.production? || auditor_signed_in? %>

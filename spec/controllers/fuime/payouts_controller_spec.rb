@@ -79,6 +79,29 @@ RSpec.describe Fuime::PayoutsController do
 
       expect(response).not_to have_http_status(:ok)
     end
+
+    describe "under merchant-of-record", :merchant_of_record do
+      it "still shows what is owed, without the Connect request form" do
+        create_session(minor, verified: true)
+
+        get :index, params: { event_slug: venture.slug }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("500.00")
+        expect(response.body).not_to include("Ask my guardian")
+        expect(response.body).not_to include("Approve and send")
+      end
+
+      it "does not read a connected-account Stripe balance" do
+        allow(Stripe::Balance).to receive(:retrieve)
+        create_session(minor, verified: true)
+
+        get :index, params: { event_slug: venture.slug }
+
+        expect(Stripe::Balance).not_to have_received(:retrieve)
+        expect(response.body).not_to match(/can't reach Stripe right now/)
+      end
+    end
   end
 
   describe "POST #create" do
@@ -134,6 +157,16 @@ RSpec.describe Fuime::PayoutsController do
 
       expect(PayoutRequest.count).to eq(0)
     end
+
+    it "refuses the Connect request under merchant-of-record", :merchant_of_record do
+      create_session(minor, verified: true)
+
+      expect {
+        post :create, params: { event_slug: venture.slug, amount: "50.00" }
+      }.not_to change(PayoutRequest, :count)
+
+      expect(response).to redirect_to(fuime_payout_method_path(event_slug: venture.slug))
+    end
   end
 
   describe "POST #approve" do
@@ -188,6 +221,17 @@ RSpec.describe Fuime::PayoutsController do
 
       expect(other_request.reload).to be_pending
       expect(Stripe::Payout).not_to have_received(:create)
+    end
+
+    it "refuses Approve and send under merchant-of-record", :merchant_of_record do
+      stub_payout
+      create_session(guardian, verified: true)
+
+      post :approve, params: { event_slug: venture.slug, id: payout_request.id }
+
+      expect(payout_request.reload).to be_pending
+      expect(Stripe::Payout).not_to have_received(:create)
+      expect(response).to redirect_to(fuime_payout_method_path(event_slug: venture.slug))
     end
 
     it "surfaces a Stripe refusal without approving" do

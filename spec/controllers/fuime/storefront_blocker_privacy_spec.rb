@@ -68,12 +68,16 @@ RSpec.describe Fuime::StorefrontsController, "blocker privacy", type: :controlle
   context "when the venture is merely unreviewed" do
     before { event.update!(operator_vetting_status: :unvetted) }
 
-    it "says nothing about approval" do
+    it "says nothing about Fuime approving the venture" do
       get :show, params: { slug: event.slug }
 
       expect(response).to have_http_status(:ok)
       expect_no_pay_form
-      expect(rendered_text).not_to match(/not been approved|approv/i)
+      # The standing footer says a guardian must approve the payout
+      # destination — that is not a claim about this venture's review.
+      # What must not leak is the selling-blocker reason.
+      expect(rendered_text).not_to match(/not been approved/i)
+      expect(rendered_text).not_to match(/approved by Fuime/i)
     end
   end
 

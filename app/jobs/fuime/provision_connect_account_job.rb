@@ -38,6 +38,13 @@ module Fuime
     # enqueue and perform is re-read in its current state rather than acted on as
     # it was.
     def perform(guardianship_id)
+      # Under merchant-of-record there is no guardian-owned Stripe account to
+      # open. Creating one would leave a live connected account on a product that
+      # never shows the onboarding screen and never pays out through it. The
+      # enqueue from Guardianship#accept! is left in place (Rule 2); this is
+      # the gate that makes the job a no-op.
+      return if ::Fuime::Features.merchant_of_record?
+
       guardianship = ::Guardianship.find_by(id: guardianship_id)
       return if guardianship.blank?
       # Revoked between enqueue and run. The guardian is no longer the responsible

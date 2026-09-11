@@ -66,33 +66,15 @@
       </div>
       <p class="muted m-0">Thank you for supporting <%= @event.name %>.</p>
       <p class="text-sm muted mt-2">
-        <% if StripeService.live? %>
-          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
-        <% else %>
-          That was a <strong>test payment</strong> — no real money changed hands.
-          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
-        <% end %>
+        It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
       </p>
     <% else %>
-      <%# Fuime: this form talks to whichever Stripe mode the deployment is in.
-          In test mode a customer entering a real card is declined — so
-          rendering a plain "Pay" button would be a promise the page cannot
-          keep, on a public URL a teenager has shared with actual customers.
-          The form stays functional, because the beta and every demo need it;
-          it just stops pretending. %>
-      <% stripe_live = StripeService.live? %>
-      <h3 class="m-0 mb-2">
-        <%= stripe_live ? "Support this business" : "Payments aren't live yet" %>
-      </h3>
-      <% if stripe_live %>
-        <p class="muted m-0 mb-4">Make a payment directly to <%= @event.name %></p>
-      <% else %>
-        <p class="muted m-0 mb-4">
-          <%= @event.name %> is on Fuime while we're still in beta. You can try
-          the checkout below, but it runs in Stripe's test mode —
-          <strong>a real card will not be charged.</strong>
-        </p>
-      <% end %>
+      <h3 class="m-0 mb-2">Support this business</h3>
+      <p class="muted m-0 mb-4">
+        Pay via Fuime checkout.
+        <%= Rails.configuration.constants.legal_entity_name %> is the seller of
+        record; <%= @event.name %> fulfills the order.
+      </p>
 
       <%# Fuime: a venture can only be paid once its guardian has completed Stripe
           setup — there is otherwise no account for the money to land in, and the
@@ -121,7 +103,7 @@
                   <%= button_to "Buy", fuime_storefront_pay_path(slug: @event.slug),
                                 method: :post,
                                 params: { offer_token: offer.to_param },
-                                class: "btn #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
+                                class: "btn btn--primary" %>
                 <% end %>
               </div>
               <% if offer.description.present? %>
@@ -145,8 +127,8 @@
             <%= form.text_field :description, placeholder: "Custom print",
                                               class: "w-full" %>
           </div>
-          <%= form.submit stripe_live ? "Pay #{@event.name}" : "Try a test payment",
-                          class: "btn btn--lg #{stripe_live ? 'btn--primary' : 'bg-muted'}" %>
+          <%= form.submit "Pay #{@event.name}",
+                          class: "btn btn--lg btn--primary" %>
         <% end %>
 
         <p class="text-sm muted mt-3 m-0">
@@ -197,12 +179,6 @@
             A parent or guardian still needs to finish setting up the account money
             is paid into. Please check back soon.
           <% end %>
-        </p>
-      <% end %>
-      <% unless stripe_live %>
-        <p class="text-sm mt-1 m-0">
-          Test card <strong>4242 4242 4242 4242</strong>, any future expiry,
-          any CVC.
         </p>
       <% end %>
     <% end %>
@@ -291,7 +267,7 @@
     <p class="muted text-xs mt-3 mx-auto" style="max-width: 34rem;">
       Fuime is a financial technology company, not a bank. Fuime does not hold
       deposits and does not offer FDIC-insured products. Payments are processed
-      by Stripe. This venture's account is owned by a parent or legal guardian.
+      by Stripe. <%= fuime_footer_ownership %>
     </p>
   </div>
 </div>

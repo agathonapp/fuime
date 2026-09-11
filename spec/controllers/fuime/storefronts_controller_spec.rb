@@ -120,45 +120,21 @@ RSpec.describe Fuime::StorefrontsController, type: :controller do
       end
     end
 
-    # The storefront is a public URL a teenager hands to real customers. While
-    # Stripe is in test mode a real card is declined, so a plain "Pay" button
-    # here is a promise the page cannot keep — and the person let down is the
-    # teen's customer, in front of the teen.
-    context "when Stripe is in test mode" do
-      before { allow(StripeService).to receive(:live?).and_return(false) }
+    it "offers Fuime checkout as seller of record" do
+      get :show, params: { slug: event.slug }
 
-      it "says plainly that a real card will not be charged" do
-        get :show, params: { slug: event.slug }
-
-        expect(response.body).to include("Payments aren&#39;t live yet")
-        expect(response.body).to include("a real card will not be charged")
-      end
-
-      it "does not offer a bare Pay button" do
-        get :show, params: { slug: event.slug }
-
-        expect(response.body).to include("Try a test payment")
-        expect(response.body).not_to include("Pay #{event.name}")
-      end
-
-      it "marks the confirmation as a test payment, not a received one" do
-        get :show, params: { slug: event.slug, paid: 1 }
-
-        expect(response.body).to include("test payment")
-        expect(response.body).to include("no real money changed hands")
-      end
+      expect(response.body).to include("Pay #{event.name}")
+      expect(response.body).to include("Pay via Fuime checkout")
+      expect(response.body).to include("Ninth Street Labs, LLC")
+      expect(response.body).not_to include("a real card will not be charged")
+      expect(response.body).not_to include("4242 4242 4242 4242")
     end
 
-    context "when Stripe is live" do
-      before { allow(StripeService).to receive(:live?).and_return(true) }
+    it "confirms a received payment without calling it a trial charge" do
+      get :show, params: { slug: event.slug, paid: 1 }
 
-      it "offers a real payment without test-mode hedging" do
-        get :show, params: { slug: event.slug }
-
-        expect(response.body).to include("Pay #{event.name}")
-        expect(response.body).not_to include("a real card will not be charged")
-        expect(response.body).not_to include("4242 4242 4242 4242")
-      end
+      expect(response.body).to include("Payment received")
+      expect(response.body).not_to include("test payment")
     end
   end
 

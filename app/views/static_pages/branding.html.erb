@@ -36,12 +36,14 @@
       <li>Fuime is a financial technology company, not a bank.</li>
       <li>
         Never describe what you have as a bank account, checking, savings, deposits,
-        or as insured or FDIC-backed. It is a <strong>payment account</strong>, opened
-        and owned by your parent or guardian.
+        or as insured or FDIC-backed. What the app shows is a <strong>payable</strong>
+        owed to your venture, not a bank balance.
       </li>
       <li>
-        Payments are processed and funds are held by Stripe. Fuime never takes custody
-        of your money.
+        Payments are processed by Stripe.
+        <%= Rails.configuration.constants.legal_entity_name %>, doing business as
+        Fuime, is the seller of record. Fuime keeps its fee and owes the rest to
+        your venture as a payable.
       </li>
     </ul>
   <% end %>
@@ -50,8 +52,8 @@
     <ul>
       <li>"<%= @event_name %> uses Fuime for payments and bookkeeping."</li>
       <li>
-        "<%= @event_name %>'s payment account is opened and owned by a parent or guardian
-        through Fuime."
+        "<%= @event_name %> sells through Fuime. <%= Rails.configuration.constants.legal_entity_name %>
+        is the seller of record; a parent or guardian is the legal payee on payouts."
       </li>
     </ul>
   <% end %>
@@ -63,8 +65,9 @@
     If you need a sentence for a website, a listing, or a school form, use this one:
   </p>
   <code>
-    <%= @event_name %> runs on Fuime, a financial platform for teen-run businesses. The
-    account is opened and owned by a parent or guardian. Fuime is a financial technology
+    <%= @event_name %> runs on Fuime, a financial platform for teen-run businesses.
+    <%= Rails.configuration.constants.legal_entity_name %> is the seller of record.
+    A parent or guardian is the legal payee. Fuime is a financial technology
     company, not a bank.
   </code>
 
