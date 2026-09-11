@@ -474,7 +474,9 @@ module Fuime
       return if event.organizer_positions.exists?(user:)
 
       invite = OrganizerPositionInvite.create!(event:, user:, sender: user, role:)
-      invite.accept(show_onboarding: false)
+      return if invite.accept(show_onboarding: false)
+
+      raise Error, "could not seat #{user.email} on #{event.slug}: #{invite.errors.full_messages.to_sentence}"
     end
 
     def save_unvalidated!(record)
@@ -500,6 +502,14 @@ module Fuime
       if event_ids.any?
         OrganizerPositionInvite.unscoped.where(event_id: event_ids).delete_all
         OrganizerPosition.unscoped.where(event_id: event_ids).delete_all
+        Event::Configuration.where(event_id: event_ids).delete_all
+        if defined?(PublicActivity::Activity)
+          PublicActivity::Activity.where(trackable_type: "Event", trackable_id: event_ids).delete_all
+        end
+        conn = ActiveRecord::Base.connection
+        if conn.table_exists?("event_tags_events")
+          conn.delete("DELETE FROM event_tags_events WHERE event_id IN (#{event_ids.join(',')})")
+        end
       end
       if user_ids.any?
         OrganizerPositionInvite.unscoped.where(user_id: user_ids).or(
