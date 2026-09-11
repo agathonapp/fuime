@@ -2,7 +2,54 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Hide Connect leftovers under MoR.**
+**2026-09-11 (latest) — Isolate sweep/payables HCB short_codes for real.**
+
+Shards 7/8 flaked on `assign_ledger_item` (UniqueViolation / unexpected
+mismatch). A memo `HCB-xxxxx` that no HcbCode owns falls through to
+`HCB-000` and a random short_code. Specs now pre-create the HcbCode and
+Ledger::Item (`spec/support/hcb_short_code_isolation.rb`). Spec-only;
+ledger engine untouched. Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — No-code submit is FounderAdmission, not a queue.**
+
+`cohort_admission_spec` still expected `event` nil when no invite code.
+That was the old "Waiting on Fuime" queue, and it only stayed green
+while applicant-as-POC failed. No code means no auto-vet; FounderAdmission
+still stands an unvetted venture up.
+
+**2026-09-11 — Applicant can be Event point of contact.**
+
+HCB required an admin POC. FounderAdmission passes the teen; Event
+now allows that when they are the application's user. Admin activate
+paths unchanged.
+
+**2026-09-11 — Submit-only auto-admit; rebase onto #101.**
+
+FounderAdmission runs only after `mark_submitted` (a flag, not every
+`aasm_state` write). Factory/admin `update!(aasm_state: :approved)` no
+longer steals the Event. `activation_blockers` keys on `event_id` so an
+unsaved ghost Event is not "already has a business". Publish still
+needs human review. Rebased onto main (#101 Connect hide).
+
+**2026-09-11 — Draft without vetting; publish still reviewed.**
+
+FounderAdmission still stands the venture up on submit (no "Waiting on
+Fuime"). Unvetted founders can draft the full offer wizard. Publish and
+`accepts_payments?` stay gated on `operator_vetting_approved?`.
+Suspended still freezes. FounderProgress says "Add something to sell"
+then "We'll do a quick review before you go live" — never "waiting on
+Fuime to finish setting up." Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — Teen onboarding + offer wizard.**
+
+Marketing primary CTA is `/signup` (waitlist stays at `#join`). Signup is
+name + 13+ + terms. Application no longer asks how-did-you-hear / political
+/ previously-applied / under-18 after 13+. Submit runs
+`Fuime::FounderAdmission` (approve+activate, no vet). Home and venture
+show `Fuime::FounderProgress`. New offer: `/:slug/offers/new` (what →
+price → storefront → review → share). Parent dashboard is a follow-up.
+
+**2026-09-11 — Hide Connect leftovers under MoR.**
 
 With `FEATURE_MERCHANT_OF_RECORD=true`, Connect onboarding and Connect
 money-out are retired. `/payments` + `/payments/setup` + `/payments/verify`

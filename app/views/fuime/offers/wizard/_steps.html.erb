@@ -1,0 +1,9 @@
+<%# locals: (current:) %>
+<% labels = { "what" => "What", "price" => "Price", "storefront" => "Storefront", "review" => "Review", "share" => "Share" } %>
+<ol class="flex flex-wrap gap-2 list-none pl-0 mt-0 mb-6 text-sm">
+  <% Fuime::OffersController::WIZARD_STEPS.each_with_index do |step, i| %>
+    <li class="<%= step == current ? "bold" : "muted" %>">
+      <%= i + 1 %>. <%= labels[step] %>
+    </li>
+  <% end %>
+</ol>

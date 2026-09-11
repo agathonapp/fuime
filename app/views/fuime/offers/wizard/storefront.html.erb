@@ -1,0 +1,44 @@
+<% title "Your storefront — #{@event.name}" %>
+<% content_for :progress, wizard_progress %>
+<% content_for :wizard_title, "Your storefront" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">How your shop looks</h2>
+  <p class="mt-0 text-lg muted">
+    A one-line pitch and an optional logo. You can change this later.
+  </p>
+<% end %>
+
+<%= render "fuime/offers/wizard/steps", current: "storefront" %>
+
+<%= form_with url: fuime_offer_wizard_path(event_slug: @event.slug, step: "storefront"),
+              method: :post, scope: :event, local: true,
+              id: "offer_wizard" do |form| %>
+  <div class="field">
+    <%= form.label :storefront_tagline, "One line about your business" %>
+    <%= form.text_field :storefront_tagline, value: @event.storefront_tagline,
+                        class: "w-full max-w-full", maxlength: 140,
+                        placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :logo, "Logo (optional)" %>
+    <%= form.file_field :logo, accept: "image/png,image/jpeg,image/webp" %>
+  </div>
+
+  <div class="field">
+    <%= form.check_box :is_public, checked: @event.is_public %>
+    <%= form.label :is_public, "Show my storefront publicly" %>
+    <p class="muted text-sm mt-1 mb-0">
+      Turning this off hides your storefront <strong>and</strong> stops your
+      payment links working.
+    </p>
+  </div>
+<% end %>
+
+<% content_for :footer do %>
+  <div class="flex flex-row-reverse justify-between items-center w-full">
+    <button type="submit" class="btn bg-blue" form="offer_wizard">Continue →</button>
+    <%= link_to "← Back", new_fuime_offer_step_path(event_slug: @event.slug, step: "price"), class: "btn bg-muted" %>
+  </div>
+<% end %>

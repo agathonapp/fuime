@@ -5880,3 +5880,40 @@ Ledger engine internals untouched.
 |---|---|---|
 | Demo money/subscription/waive teardown | So reset survives the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
 | Reset leftover + write-guard specs | Lock the advertised path | `spec/services/fuime/demo_sandbox_spec.rb` |
+
+## 2026-09-11 — Teen onboarding + multi-screen offer wizard
+
+HCB approve+activate parked founders on "Waiting on Fuime" until an admin
+clicked. Fuime's publish gate is vetting. `Fuime::FounderAdmission` stands
+the venture up on submit without vetting. Signup/application field cuts
+and a FounderProgress checklist on the teen home. Marketing primary CTA
+is live signup; waitlist remains. Product creation is a five-screen
+wizard; nothing in it suggests a price.
+
+Did not touch Plaid, payout methods, Connect onboarding, `STRIPE_MODE`,
+or `FUIME_DEMO_SANDBOX`.
+
+| Change | Why | Files |
+|---|---|---|
+| `Fuime::FounderAdmission` | Admit on submit; do not vet | `app/services/fuime/founder_admission.rb`, `app/models/event/application.rb` |
+| Signup + application field cuts | Fields the system does not need | `app/views/users/edit.html.erb`, `app/views/event/applications/*` |
+| FounderProgress on home/venture | Founders could not see the checklist | `app/services/fuime/founder_progress.rb`, `app/views/fuime/_founder_progress.html.erb` |
+| Marketing primary CTA → `/signup` | Waitlist was the only door | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/server.js` |
+| Offer wizard | One jammed page → what/price/storefront/review/share | `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/wizard/` |
+
+## 2026-09-11 — Draft while unvetted; publish still reviewed
+
+Teens land in the venture on submit. They can draft offers through the
+wizard without a human. Going live still requires operator vetting
+(suspended still freezes). Founder-facing copy asks them to add something
+to sell, then says we'll do a quick review before they go live.
+
+| Change | Why | Files |
+|---|---|---|
+| `activate_event!` keeps `self.event` | AASM after-callback save was orphaning the new venture | `app/models/event/application.rb` |
+| Submit-only admit flag + `event_id` blocker | Auto-admit must not fire on factory/admin aasm writes; ghost Events must not look like a business | `app/models/event/application.rb` |
+| Applicant may be Event POC | HCB required an admin POC (fiscal sponsor). FounderAdmission has no staff vouched | `app/models/event.rb` |
+| No-code submit still admits (unvetted) | CohortAdmission must not vet without a voucher; FounderAdmission still creates the venture | `spec/services/fuime/cohort_admission_spec.rb` |
+| Pre-create HcbCode+Ledger::Item for spec memos | Bare `HCB-xxxxx` tokens fall through to HCB-000 and flake assign_ledger_item | `spec/support/hcb_short_code_isolation.rb`, `spec/services/fuime/connect_settlement_sweep_spec.rb`, `spec/services/fuime/payables_ledger_spec.rb` |
+| FounderProgress founder copy | Draft first, then review — not "waiting on Fuime" | `app/services/fuime/founder_progress.rb` |
+| Selling-blockers / review copy | Same posture in the operator UI | `app/views/fuime/_selling_blockers.html.erb`, `app/views/fuime/offers/wizard/review.html.erb` |

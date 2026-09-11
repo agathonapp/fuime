@@ -30,41 +30,20 @@
       <h1 class="border-0 mt-10 mb-2">Create your account</h1>
       <turbo-frame id="settings" autoscroll data-autoscroll-behavior="smooth">
         <p class="muted">Let's get your profile set up in less than two minutes.</p>
-        <%= form_with(model: @user, local: true, html: { onsubmit: "onSubmit()" }, data: { turbo_frame: "_top" }) do |form| %>
+        <%= form_with(model: @user, local: true, data: { turbo_frame: "_top" }) do |form| %>
           <%= form_errors @user, "profile", "We couldn't update your" %>
-          <div class="md:flex gap-2">
-            <div class="field flex-1">
-              <%= form.label :full_name %>
-              <%= form.text_field :full_name, required: true, placeholder: "Fiona Hackworth III", style: "max-width:100%", pattern: '^\S+.+' %>
-              <% @user.errors.full_messages_for(:full_name).each do |message| %>
-                <div class="primary"><%= message %></div>
-              <% end %>
-            </div>
-            <div class="field flex-1">
-              <%= form.label :preferred_name, "Preferred name (optional)" %>
-              <%= form.text_field :preferred_name, style: "max-width:100%", placeholder: @user.full_name.presence || "FiFi Hacks", maxlength: 30 %>
-            </div>
+          <div class="field">
+            <%= form.label :full_name %>
+            <%= form.text_field :full_name, required: true, placeholder: "Fiona Hackworth III", style: "max-width:100%", pattern: '^\S+.+' %>
+            <% @user.errors.full_messages_for(:full_name).each do |message| %>
+              <div class="primary"><%= message %></div>
+            <% end %>
           </div>
 
-          <div class="md:flex items-center gap-2">
-            <div class="field flex-1">
-              <%= form.label :phone_number, "Mobile phone number" %>
-              <%= form.hidden_field :phone_number, required: true, placeholder: "555-555-5555", id: "phone_number" %>
-              <input type="tel" id="phone_raw" style="max-width:100%;" value="<%= @user.phone_number.presence %>" required="required">
-              <% if phone_verification_available? && @user.phone_number_in_database.present? && !@user.phone_number_verified? %>
-                <p class="h5 mt1 m0 warning flex items-center">
-                  <%= inline_icon "important-fill", class: "warning mr1" %>
-                  <span>Your phone number is unverified. <%= link_to "Click here", "#", class: "info", data: { behavior: "modal_trigger", modal: "verify_phone" } %>
-                    to verify it.</span>
-                </p>
-              <% end %>
-            </div>
-            <%# Fuime: a confirmation, not a date of birth (2026-08-20).
-                Signup asked every user for month, day and year. It now asks the
-                one question the platform needs from a teenager — see
-                AddAgeAttestationToUsers. The box on THIS page can only ever say
-                "13 or older"; adulthood is asserted in the guardian flow. %>
-            <div class="field flex-1">
+          <%# Fuime (2026-09-11): signup asks only what admission needs —
+              full name, write-once 13+, terms. Phone, photo, and preferred
+              name stay on the settings page. Do not add a date of birth. %>
+          <div class="field">
               <% if @user.age_attestation.present? || @user.birthday.present? %>
                 <%= form.label :age_attestation, "Your age" %>
                 <p class="h5 muted mt0 mb0">
@@ -87,16 +66,6 @@
                   to add a parent or guardian to your account.
                 </p>
               <% end %>
-            </div>
-          </div>
-          <%= form.label :profile_picture %>
-          <div class="flex items-center mt1">
-            <%= avatar_for @user, size: 48, class: "mr2" %>
-            <div data-controller="file-upload">
-              <%= form.file_field :profile_picture, accept: "image/png, image/jpeg", class: "field--fileupload__field", direct_upload: true, data: { "file-upload-target": "input" } %>
-              <button data-file-upload-target="preview" type="button"></button>
-              <div data-file-upload-target="clear"></div>
-            </div>
           </div>
           <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to] %>
 
@@ -118,18 +87,6 @@
               <%= inline_icon "enter", size: 40 %>
             </button>
           </div>
-        <% end %>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js" integrity="sha512-QMUqEPmhXq1f3DnAVdXvu40C8nbTgxvBGvNruP6RFacy3zWKbNTmx7rdQVVM2gkd2auCWhlPYtcW2tHwzso4SA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css" integrity="sha512-gxWow8Mo6q6pLa1XH/CcH8JyiSDEtiwJV78E+D+QP0EVasFs8wKXq16G8CLD4CJ2SnonHr4Lm/yY2fSI2+cbmw==" crossorigin="anonymous" referrerpolicy="no-referrer">
-        <%= javascript_include_tag "phone_input.js" %>
-        </section>
-
-        <% if phone_verification_available? && @user.phone_number_in_database.present? %>
-          <section class="modal modal--scroll bg-snow" data-behavior="modal" role="dialog" id="verify_phone">
-            <%= modal_header "Verify phone number" %>
-            <%= react_component "settings/SmsVerification",
-                                phone_number: @user.phone_number_in_database %>
-          </section>
         <% end %>
       </turbo-frame>
     </div>

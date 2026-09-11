@@ -276,8 +276,14 @@ RSpec.describe "Learn", type: :request do
     it "carries the words through from the template" do
       get fuime_offers_path(event_slug: event.slug, name: "Front and back lawn mow", unit_label: "per visit")
 
+      expect(response).to redirect_to(new_fuime_offer_path(event_slug: event.slug, name: "Front and back lawn mow", unit_label: "per visit"))
+      follow_redirect!
+
       expect(response).to have_http_status(:ok)
       expect(CGI.unescapeHTML(response.body)).to include("Front and back lawn mow")
+
+      get new_fuime_offer_step_path(event_slug: event.slug, step: "price")
+      expect(response).to have_http_status(:ok)
       expect(CGI.unescapeHTML(response.body)).to include("per visit")
     end
 
@@ -285,6 +291,7 @@ RSpec.describe "Learn", type: :request do
     # suggested rate that needed no code change to introduce — just a link.
     it "refuses to carry a price through, however it is spelled" do
       get fuime_offers_path(event_slug: event.slug, name: "Lawn mow", price: "35", price_cents: "3500")
+      follow_redirect!
 
       expect(response).to have_http_status(:ok)
       # The words arrived, so the pre-fill definitely ran on this request…

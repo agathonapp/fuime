@@ -65,18 +65,12 @@ RSpec.describe Event::Application, type: :model do
       expect(complete_teen_application.may_mark_submitted?).to be true
     end
 
-    it "does not treat answering \"no\" to previously_applied as missing" do
+    it "does not demand how-did-you-hear or previously-applied" do
       application = complete_teen_application
-      application.update!(previously_applied: false)
+      application.update!(referrer: nil, previously_applied: nil)
 
       expect(application.submission_blockers).to be_empty
-    end
-
-    it "reports an unanswered previously_applied question" do
-      application = complete_teen_application
-      application.update!(previously_applied: nil)
-
-      expect(application.submission_blockers).to include("Whether you've used Fuime before")
+      expect(application.may_mark_submitted?).to be true
     end
 
     it "names each missing field" do
@@ -155,7 +149,7 @@ RSpec.describe Event::Application, type: :model do
 
       expect(application.submission_blockers.empty?).to eq(application.may_mark_submitted?)
 
-      application.update!(referrer: nil)
+      application.update!(address_country: nil)
 
       expect(application.submission_blockers.empty?).to eq(application.may_mark_submitted?)
     end

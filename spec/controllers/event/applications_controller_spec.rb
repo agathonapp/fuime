@@ -233,6 +233,7 @@ RSpec.describe Event::ApplicationsController, type: :controller do
       expect(application.event).to be_nil
       expect(application.next_step).to be_present
       expect(application.next_step).not_to eq("We're reviewing your application")
+      expect(application.next_step).not_to match(/Waiting on Fuime/)
     end
   end
 

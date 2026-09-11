@@ -1,0 +1,61 @@
+<% title "Review and publish — #{@event.name}" %>
+<% content_for :progress, wizard_progress %>
+<% content_for :wizard_title, "Review" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">Ready to publish?</h2>
+  <p class="mt-0 text-lg muted">
+    <% if @event.operator_vetting_unvetted? %>
+      We'll do a quick review before you go live. Save a draft now — sale terms
+      are required to publish.
+    <% else %>
+      Sale terms are required to publish. You can save a draft without them.
+    <% end %>
+  </p>
+<% end %>
+
+<%= render "fuime/offers/wizard/steps", current: "review" %>
+
+<% if @selling_blockers.any? %>
+  <%= render "fuime/selling_blockers", event: @event,
+                                       title: "You can't publish yet" %>
+<% end %>
+
+<div class="card mb-4">
+  <p class="mt-0 mb-1"><strong><%= @offer.name.presence || "Untitled" %></strong></p>
+  <% if @offer.price_cents.present? %>
+    <p class="muted mt-0 mb-1"><%= @offer.price_sentence %></p>
+  <% end %>
+  <% if @offer.description.present? %>
+    <p class="mt-0 mb-0"><%= @offer.description %></p>
+  <% end %>
+</div>
+
+<%= render "fuime/operator_sale_terms", event: @event, confirmable: false %>
+
+<%= form_with url: fuime_offer_wizard_path(event_slug: @event.slug, step: "review"),
+              method: :post, local: true, id: "offer_wizard" do |form| %>
+  <% if ::Fuime::Features.merchant_of_record? && !@event.sale_terms_acknowledged? %>
+    <label class="flex items-start gap-2 mt-4" style="cursor: pointer;">
+      <%= check_box_tag :acknowledged, "1", false, required: false %>
+      <span class="text-sm">
+        I've read this and I understand it. Fuime is the seller, I set my own
+        prices, and refunds come off what I'm owed.
+      </span>
+    </label>
+  <% end %>
+<% end %>
+
+<% content_for :footer do %>
+  <div class="flex flex-row-reverse justify-between items-center w-full gap-2 flex-wrap">
+    <div class="flex gap-2">
+      <button type="submit" name="intent" value="draft" class="btn bg-muted" form="offer_wizard">
+        Save draft
+      </button>
+      <button type="submit" name="intent" value="publish" class="btn bg-blue" form="offer_wizard">
+        Publish
+      </button>
+    </div>
+    <%= link_to "← Back", new_fuime_offer_step_path(event_slug: @event.slug, step: "storefront"), class: "btn bg-muted" %>
+  </div>
+<% end %>

@@ -10,7 +10,9 @@ require "rails_helper"
 # operator has is an amount Fuime owes them on a stated date, not a balance held
 # on deposit.
 RSpec.describe Fuime::PayablesLedger do
-  let(:event)  { create(:event) }
+  include HcbShortCodeIsolation
+
+  let(:event) { create(:event) }
   subject(:payables) { described_class.new(event:) }
 
   # Settled lines carry their Fuime::VentureLedger key in the memo as "[key]" —
@@ -21,17 +23,11 @@ RSpec.describe Fuime::PayablesLedger do
   # is an HTTP request and "corrects" the arguments into params:/session:, which
   # silently rewrote every line in this file into a request spec that tests
   # nothing. Renamed so the cop cannot mistake a ledger helper for a route.
-  # A unique HCB-xxxxx in the memo gives this line its own short_code. Without
-  # one, CanonicalTransaction#assign_ledger_item looks up Ledger::Item /
-  # HcbCode by nil and can attach to a leftover row from another example
-  # (seed-dependent: "calculated a different ledger item from its local_hcb_code").
+  # The token must already own an HcbCode + Ledger::Item. A bare unused string
+  # makes assign_ledger_item report a mismatch and flake
+  # (see spec/support/hcb_short_code_isolation.rb).
   def unique_hcb_short_code
-    loop do
-      token = SecureRandom.alphanumeric(5).upcase
-      unless Ledger::Item.exists?(short_code: token) || HcbCode.exists?(short_code: token)
-        break token
-      end
-    end
+    isolated_hcb_short_code
   end
 
   def post_line(key, amount_cents, memo: "Line")

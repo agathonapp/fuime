@@ -136,11 +136,16 @@ try {
   })
 
   await run('/login and /signup 307 to the app origin', async () => {
-    for (const p of ['/login', '/signup']) {
-      const r = await get(p)
-      assert.equal(r.status, 307, p)
-      assert.equal(r.headers.get('location'), 'https://app.example.test/users/auth')
-    }
+    const login = await get('/login')
+    assert.equal(login.status, 307, '/login')
+    assert.equal(login.headers.get('location'), 'https://app.example.test/users/auth')
+
+    const signup = await get('/signup')
+    assert.equal(signup.status, 307, '/signup')
+    assert.equal(
+      signup.headers.get('location'),
+      'https://app.example.test/users/auth?signup=true'
+    )
   })
 
   await run('canonicalises .html and trailing slashes', async () => {

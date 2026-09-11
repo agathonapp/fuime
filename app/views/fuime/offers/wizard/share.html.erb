@@ -1,0 +1,25 @@
+<% title "Share — #{@offer.name}" %>
+<% content_for :progress, 100 %>
+<% content_for :wizard_title, "Share it" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">It's live</h2>
+  <p class="mt-0 text-lg muted">
+    Copy the link, share it, or show the QR code. Anyone with the link can pay.
+  </p>
+<% end %>
+
+<%= render "fuime/offers/wizard/steps", current: "share" %>
+
+<div class="card">
+  <p class="mt-0 mb-1"><strong><%= @offer.name %></strong></p>
+  <p class="muted mt-0 mb-3"><%= @offer.price_sentence %></p>
+  <%= render "fuime/offers/share_link", offer: @offer, event: @event, show_qr: true %>
+</div>
+
+<% content_for :footer do %>
+  <div class="flex flex-row-reverse justify-between items-center w-full">
+    <%= link_to "Done", fuime_offers_path(event_slug: @event.slug), class: "btn bg-blue" %>
+    <%= link_to "Add another", new_fuime_offer_path(event_slug: @event.slug), class: "btn bg-muted" %>
+  </div>
+<% end %>

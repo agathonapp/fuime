@@ -21,18 +21,15 @@
     model demands can no longer disagree. A checkbox-only applicant is treated as
     a minor, which is the correct default for a platform whose users are teens. %>
   <div class="card mb-6" x-data="{ minor: <%= @application.user.minor_or_unknown_age? || false %>, country: '<%= @application.address_country.presence %>', disallowed_countries: '<%= Event::Application::DISALLOWED_COUNTRIES.join(",") %>'.split(',') }">
-    <div class="md:flex items-end gap-2">
-      <div class="field flex-1">
+    <%# Fuime: do not re-ask name when signup already collected it. %>
+    <% if @application.user.full_name.blank? %>
+      <div class="field">
         <%= form.label :full_name do %>
           Full name <span class="text-primary">*</span>
         <% end %>
         <%= form.text_field :full_name, value: @application.user.full_name.presence, required: true, placeholder: "Fiona Hackworth III", style: "max-width:100%", pattern: '^\S+.+' %>
       </div>
-      <div class="field flex-1">
-        <%= form.label :preferred_name, "Preferred name (optional)" %>
-        <%= form.text_field :preferred_name, value: @application.user.preferred_name.presence, style: "max-width:100%", placeholder: "FiFi Hacks", maxlength: 30 %>
-      </div>
-    </div>
+    <% end %>
 
     <%# Fuime: the mobile phone field is gone.
         Nothing in the application, the contract or Connect onboarding reads it —
@@ -105,23 +102,11 @@
 
     <hr class="col-span-2 mt-5 invisible mb-4">
 
-    <div class="field">
-      <%= form.label :referrer do %>
-        How did you hear about Fuime? <span class="text-primary">*</span>
-      <% end %>
-      <%= form.text_field :referrer, class: "w-full !max-w-full", required: true %>
-    </div>
-
-    <div class="field">
-      <%= form.label :accessibility_notes, "Accessibility needs" %>
-      <%= form.text_area :accessibility_notes, class: "w-full max-w-full" %>
-    </div>
-
     <div class="field col-span-2" x-show="minor">
       <%= form.label :cosigner_email do %>
         Parent email <span class="text-primary">*</span>
       <% end %>
-      <p class="h5 muted mt0 mb1">We&#39;ll need a parent or legal guardian to sign the Fuime agreement. They&#39;re giving you permission to run a business on Fuime, and they will be able to see your business activity.</p>
+      <p class="h5 muted mt0 mb1">We&#39;ll invite them now. They approve payouts — you can start selling before they accept.</p>
       <%= form.email_field :cosigner_email, class: "w-full !max-w-full", required: true, placeholder: "parent@example.com", "x-bind:required": "minor", "x-on:input": "$el.value == '#{@application.user.email}' ? $el.setCustomValidity('You cannot use your own email') : $el.setCustomValidity('')" %>
     </div>
   </div>
