@@ -79,6 +79,7 @@ module StaticPagesHelper
         { name: "Flipper", path: flipper_path },
         { name: "Common docs", path: common_documents_path },
         { name: "Search by user", path: admin_search_path },
+        *([{ name: "Demo sandbox", path: demo_admin_index_path }] if Fuime::DemoSandbox.enabled?),
       ],
     }
   end

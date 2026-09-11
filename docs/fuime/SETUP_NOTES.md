@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G10: MoR Checkout webhook → ledger.**
+**2026-09-11 (latest) — Demo sandbox: test every flow without real users.**
+
+`rake fuime:demo:seed` (then `status`, `login_code[demo+admin@fuime.test]`).
+Roster at `/admin/demo` — hidden if Stripe is live. Cast is
+`demo+…@fuime.test`. Reset is `rake fuime:demo:reset` (that cast only).
+15-minute click path: `docs/fuime/TESTING_WALKTHROUGH.md`. Specs:
+`demo_sandbox_spec`, `fuime_demo_sandbox_smoke_spec`. Does not invent
+Stripe money. Maya / playground / `stripe_pass` / `mor_webhook_pass` still
+exist for their slices.
+
+**2026-09-10 — G10: MoR Checkout webhook → ledger.**
 
 A Dashboard that only forwarded `checkout.session.completed` dropped the first
 sale: the handler ignored that event (old double-post fix) and waited for

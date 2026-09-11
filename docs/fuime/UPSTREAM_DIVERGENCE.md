@@ -5789,3 +5789,25 @@ Did not redo G1–G5. Did not change Connect recorders or the ledger engine.
 | Handler + HTTP + sweep specs | Session alone, twin events, unpaid/subscription skip, signed endpoint, backfill | `spec/services/fuime/payment_webhook_handler_spec.rb`, `spec/requests/fuime_mor_checkout_ledger_spec.rb`, `spec/services/fuime/missed_mor_payment_sweep_spec.rb` |
 | Stub `Rails.error.unexpected` in `connect_settlement_sweep_spec` | Pipeline CT memo short_code ≠ grouping HcbCode; the report raises in test and flakes shard 2 | `spec/services/fuime/connect_settlement_sweep_spec.rb` |
 | Pin founder name on cohorts admin roster spec | Faker apostrophe (`O'Keefe`) escapes in HTML; same pin as subscriptions / operator vetting | `spec/requests/fuime_cohorts_admin_spec.rb` |
+
+## 2026-09-11 — Demo sandbox: one cast to click every flow
+
+Rushmore had almost no real users and no single way to exercise waitlist,
+guardianship, waive, admit, vetting, MoR checkout, billing, and the admin
+queues without inventing people each time. Existing Maya / playground /
+`stripe_pass` / `mor_webhook_pass` seeds each cover a slice.
+
+`Fuime::DemoSandbox` seeds a marked cast (`demo+…@fuime.test`,
+`creation_method: :demo`). Rake + `/admin/demo` (hidden when Stripe is
+live). Reset deletes only that cast. No Stripe objects, no fake live
+money. Walkthrough rewritten as the 15-minute path.
+
+Did not change the ledger engine, Maya/playground scripts, or production
+credentials.
+
+| Change | Why | Files |
+|---|---|---|
+| `creation_method: :demo` | Mark sandbox users without a migration | `app/models/user.rb` |
+| `Fuime::DemoSandbox` + `fuime:demo:*` | Idempotent seed / scoped reset / login codes / reminder / smoke | `app/services/fuime/demo_sandbox.rb`, `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` + nav | Roster + mint codes; off when Stripe is live | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
+| Specs + walkthrough | Seed/reset contract; request smoke of every queue | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb`, `spec/models/admin/nav_spec.rb`, `docs/fuime/TESTING_WALKTHROUGH.md` |

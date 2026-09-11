@@ -1,0 +1,131 @@
+<% title "Demo sandbox (Fuime)" %>
+
+<%# FUIME: the click-through cast. Every mailbox is demo+…@fuime.test.
+    Seed invents no Stripe money. This page is hidden when Stripe is live. %>
+
+<h1>Demo sandbox</h1>
+
+<p class="muted">
+  A known cast so you can click every major flow without real teens or parents.
+  Walkthrough: <code>docs/fuime/TESTING_WALKTHROUGH.md</code>.
+  Test card <code>4242 4242 4242 4242</code>. Never live Stripe.
+</p>
+
+<% if @status[:warnings].any? %>
+  <div class="card mb2">
+    <h2 class="mt0 text-lg">Warnings</h2>
+    <ul class="mb0">
+      <% @status[:warnings].each do |warning| %>
+        <li><%= warning %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<div class="card mb2">
+  <p class="mb0">
+    Stripe <strong><%= @status[:stripe_mode] %></strong>
+    · MoR <strong><%= @status[:merchant_of_record] ? "on" : "off" %></strong>
+    · Waitlist store <strong><%= @status[:waitlist_configured] ? "configured" : "unset" %></strong>
+  </p>
+  <div class="flex flex-wrap gap-2 mt2">
+    <%= button_to "Seed / refresh cast", demo_seed_admin_index_path, method: :post, class: "btn bg-success" %>
+    <%= button_to "Run reminder job", demo_remind_admin_index_path, method: :post, class: "btn" %>
+  </div>
+  <%= form_with url: demo_reset_admin_index_path, method: :post, class: "mt2", data: { turbo: false } do %>
+    <label class="muted">Type <code>reset</code> to remove only this cast</label>
+    <%= text_field_tag :confirm, nil, class: "input", autocomplete: "off" %>
+    <%= submit_tag "Reset demo cast", class: "btn bg-error" %>
+  <% end %>
+</div>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Operator</h2>
+  <% if @status[:admin] %>
+    <p>
+      <%= @status[:admin][:name] %>
+      · <%= @status[:admin][:email] %>
+      · <%= link_to "user admin", admin_user_path(@status[:admin][:id]) %>
+    </p>
+    <%= button_to "Mint login code", demo_login_code_admin_index_path,
+                  method: :post,
+                  params: { email: @status[:admin][:email] },
+                  class: "btn" %>
+  <% else %>
+    <p class="muted">No admin yet — seed the cast.</p>
+  <% end %>
+</div>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Queues this cast fills</h2>
+  <ul class="mb0">
+    <li><%= link_to "Waitlist", admin_waitlist_index_path %> — Invite <code>demo+waitlist.fresh@fuime.test</code></li>
+    <li><%= link_to "Applications", applications_admin_index_path %> — Demo Solo Lawn is under review</li>
+    <li><%= link_to "Cohorts", cohorts_admin_index_path %> — code <code>DEMOFOUNDERS</code></li>
+    <li><%= link_to "Operator vetting", operator_vetting_admin_index_path %> — Demo Window Wash</li>
+    <li><%= link_to "Guardian invites", guardianships_admin_index_path %> — stale + all-pending</li>
+  </ul>
+</div>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">People</h2>
+  <table class="w-full">
+    <thead>
+      <tr>
+        <th>Mailbox</th>
+        <th>Why they exist</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @status[:people].each do |row| %>
+        <tr>
+          <td>
+            <code><%= row[:email] %></code>
+            <% unless row[:present] %><span class="muted">missing</span><% end %>
+          </td>
+          <td><%= row[:purpose] %></td>
+          <td>
+            <% if row[:present] %>
+              <%= button_to "Code", demo_login_code_admin_index_path,
+                            method: :post,
+                            params: { email: row[:email] },
+                            class: "btn btn--sm" %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <p class="muted mb0">Mint a code, open <code>/login</code>, paste it. Or impersonate from the user admin page.</p>
+</div>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Ventures</h2>
+  <ul class="mb0">
+    <% @status[:ventures].each do |row| %>
+      <li>
+        <% if row[:present] %>
+          <%= link_to "/#{row[:slug]}", event_path(row[:slug]) %>
+          — <%= row[:name] %>
+          (<%= row[:vetted] ? "vetted" : "unvetted" %>,
+          <%= row[:accepts_payments] ? "can sell" : "cannot sell" %>)
+          <% if row[:key] == :storefront %>
+            · <%= link_to "storefront", "/b/#{row[:slug]}" %>
+          <% end %>
+        <% else %>
+          <code>/<%= row[:slug] %></code> <span class="muted">missing</span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>
+
+<% if @status[:cohort] %>
+  <p class="muted">
+    Cohort <code><%= @status[:cohort][:code] %></code>
+    — <%= @status[:cohort][:name] %>
+    (<%= @status[:cohort][:members] %> members,
+    <%= @status[:cohort][:live] ? "admitting" : "not admitting" %>)
+  </p>
+<% end %>

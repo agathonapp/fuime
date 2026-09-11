@@ -410,6 +410,18 @@ module Admin
             count: ->{ Fuime::WaitlistRoster.cached_total.to_i },
             count_type: :records
           ),
+          # FUIME: the click-through cast. Hidden when Stripe is live so a
+          # production console cannot mint demo login codes.
+          *(if Fuime::DemoSandbox.enabled?
+              [make_item(
+                name: "Demo sandbox (Fuime)",
+                path: demo_admin_index_path,
+                count: -> { User.where("email LIKE ?", "demo+%@fuime.test").count },
+                count_type: :records
+              )]
+            else
+              []
+            end),
           make_item(
             name: "Blazer",
             path: blazer_path,

@@ -519,6 +519,13 @@ Rails.application.routes.draw do
       get "checks", to: "admin#checks"
       get "increase_checks", to: "admin#increase_checks"
       get "applications", to: "admin#applications"
+      # FUIME: demo sandbox roster. Hidden when Stripe is live — see
+      # Fuime::DemoSandbox.enabled? and Admin::DemoController.
+      get "demo", to: "admin/demo#show"
+      post "demo/seed", to: "admin/demo#seed", as: "demo_seed"
+      post "demo/reset", to: "admin/demo#reset", as: "demo_reset"
+      post "demo/login_code", to: "admin/demo#login_code", as: "demo_login_code"
+      post "demo/remind", to: "admin/demo#remind", as: "demo_remind"
       # FUIME: cohorts — one person vouching for a group in advance, so an event
       # does not need 150 clicks while it is running. See Fuime::Cohort.
       # `cohort` doubles as the live roster board: where every founder is stuck.
