@@ -1,0 +1,58 @@
+<%# locals: (event:) %>
+<%# Fuime: the Playground Mode strip — the presenter's script, on every page of
+    a demo venture.
+
+    Replaces the upstream Playground banner (restored in 73d010de6's reversal).
+    That banner was a headline and two buttons; this is the pitch path in order
+    — Home, What you sell, Storefront, Transactions — with the current page
+    marked, so whoever is driving never has to remember what comes next, and
+    an "Exit demo" that lands back on /admin/playground while impersonating.
+
+    `data-tour-step="playground_mode"` lives here, not on the Transactions
+    callout, so the demo tour's first bubble attaches on whichever page the
+    tour starts (tour/TourOverlay.js filters steps to targets on the page).
+
+    The mock-data toggle stays: spec/controllers/fuime/playground_mock_data_spec.rb
+    pins the exact links, and a venture with no seeded ledger still needs it. %>
+<% impersonating = current_session&.impersonated? %>
+<% path = request.path %>
+<% steps = [
+     { label: "Home", href: event_path(event), current: path == event_path(event) },
+     { label: "What you sell", href: fuime_offers_path(event_slug: event.slug), current: path.start_with?(fuime_offers_path(event_slug: event.slug)) },
+     { label: "Storefront", href: fuime_storefront_path(slug: event.slug), current: path.start_with?(fuime_storefront_path(slug: event.slug)) || path.start_with?("/pay/#{event.slug}") },
+     { label: "Transactions", href: event_transactions_path(event_id: event.slug), current: path.start_with?(event_transactions_path(event_id: event.slug)) },
+   ] %>
+<div class="playground-strip" data-tour-step="playground_mode" role="region" aria-label="Playground Mode">
+  <div class="playground-strip__inner">
+    <div class="playground-strip__title">
+      <span class="playground-strip__dot" aria-hidden="true"></span>
+      <strong>Playground</strong>
+      <span class="playground-strip__sub">Nothing here moves real money.</span>
+    </div>
+
+    <nav class="playground-strip__path" aria-label="Demo path">
+      <% steps.each_with_index do |step, i| %>
+        <%= link_to step[:href],
+                    class: "playground-strip__step #{"is-current" if step[:current]}",
+                    aria: { current: (step[:current] ? "page" : nil) } do %>
+          <span class="playground-strip__num" aria-hidden="true"><%= i + 1 %></span><%= step[:label] %>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <div class="playground-strip__actions">
+      <%= link_to(event_transactions_path(event_id: event.slug, show_mock_data: !show_mock_data?),
+                  class: "playground-strip__link") do %>
+        <%= show_mock_data? ? "Hide" : "Show" %> mock data
+      <% end %>
+      <% if impersonating %>
+        <%= button_to "Exit demo",
+                      unimpersonate_user_path(current_user(allow_unverified: true)&.id, return_to: playground_admin_index_path),
+                      method: :post,
+                      class: "btn btn-small playground-strip__exit",
+                      form_class: "inline m0",
+                      form: { data: { turbo_frame: "_top" } } %>
+      <% end %>
+    </div>
+  </div>
+</div>

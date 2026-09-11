@@ -16,9 +16,8 @@ RSpec.describe EventsController, type: :controller do
   let(:real_org) { create(:event, :with_positive_balance) }
 
   def mock_descriptions
-    MockTransactionEngineService::GenerateMockTransaction::NEGATIVE_DESCRIPTIONS.map { |d| d[:desc] } +
-      MockTransactionEngineService::GenerateMockTransaction::POSITIVE_DESCRIPTIONS.map { |d| d[:desc] } +
-      ["Fuime platform fee (4%)"]
+    MockTransactionEngineService::GenerateMockTransaction::POSITIVE_DESCRIPTIONS.map { |d| d[:desc] } +
+      [MockTransactionEngineService::GenerateMockTransaction::SERVICE_FEE_LABEL]
   end
 
   def rendered_mock_memos
@@ -87,6 +86,28 @@ RSpec.describe EventsController, type: :controller do
       )
     end
 
+    # The strip is the presenter's script: the four stops of the pitch with
+    # the current page lit, and an exit only when there is an impersonation
+    # to exit from.
+    it "renders the demo path with the current stop marked and no exit for a real session" do
+      get :show, params: { id: playground.friendly_id }
+
+      expect(response.body).to include("playground-strip")
+      expect(response.body).to include('data-tour-step="playground_mode"')
+      expect(response.body).to match(/is-current[^>]*aria-current="page"[^>]*>.*?Home/m)
+      expect(response.body).to include(fuime_storefront_path(slug: playground.slug))
+      expect(response.body).not_to include("Exit demo")
+    end
+
+    it "offers Exit demo while impersonating" do
+      current_session!.update!(impersonated_by: create(:user, :make_admin))
+
+      get :show, params: { id: playground.friendly_id }
+
+      expect(response.body).to include("Exit demo")
+      expect(response.body).to include(unimpersonate_user_path(manager.id, return_to: playground_admin_index_path))
+    end
+
     it "offers the off switch once mock data is on" do
       get :transactions_list, params: { event_id: playground.friendly_id, show_mock_data: "true" }
       get :show, params: { id: playground.friendly_id }
@@ -130,7 +151,31 @@ RSpec.describe EventsController, type: :controller do
     # An OpenStruct field is arity 0, so each of those was a 500 in turn.
     it "renders without hitting the partial's argument-taking calls" do
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Fuime platform fee (4%)").or include("🎪 Farmers market booth fee")
+      expect(response.body).to include(MockTransactionEngineService::GenerateMockTransaction::SERVICE_FEE_LABEL)
+    end
+
+    it "does not invent card-like spend" do
+      expect(response.body).not_to include("Business cards")
+      expect(response.body).not_to include("Farmers market booth fee")
+      expect(response.body).not_to include("Fiscal sponsorship")
+    end
+  end
+
+  describe "the pending take-rate row" do
+    it "labels FeeEngine's accrual Fuime service fee, not Fiscal sponsorship" do
+      venture = create(:event, :demo_mode, plan_type: Event::Plan::Free)
+      create(:organizer_position, event: venture, user: manager, role: :manager)
+      create(
+        :canonical_event_mapping,
+        event: venture,
+        canonical_transaction: create(:canonical_transaction, amount_cents: 10_000, memo: "Lawn — Saturday block")
+      )
+
+      get :transactions_list, params: { event_id: venture.friendly_id }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Fuime service fee")
+      expect(response.body).not_to include("Fiscal sponsorship")
     end
   end
 end

@@ -27,3 +27,160 @@
     border-color: map-get($palette, info);
   }
 }
+
+// Fuime: the Playground Mode strip (application/_playground_strip.html.erb).
+// A thin, always-present script for whoever is driving a demo: the venture
+// name, the four stops of the pitch with the current one lit, the mock-data
+// toggle, and Exit demo while impersonating.
+.playground-strip {
+  width: 100%;
+  font-size: 0.875rem;
+  color: $black;
+  background: linear-gradient(
+    90deg,
+    rgba($fuime-blue, 0.1),
+    rgba(map-get($palette, accent), 0.14)
+  );
+  border-bottom: 1px solid rgba($fuime-blue, 0.18);
+  backdrop-filter: blur(1rem);
+
+  html[data-dark='true'] & {
+    color: $snow;
+    background: linear-gradient(
+      90deg,
+      rgba($fuime-blue, 0.26),
+      rgba(map-get($palette, accent), 0.12)
+    );
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 1rem;
+    max-width: 88rem;
+    margin: 0 auto;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  &__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: $fuime-blue;
+    box-shadow: 0 0 0 4px rgba($fuime-blue, 0.2);
+    animation: playground-pulse 2.4s ease-in-out infinite;
+  }
+
+  &__sub {
+    opacity: 0.7;
+  }
+
+  &__path {
+    display: flex;
+    gap: 0.25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.65rem 0.2rem 0.25rem;
+    border-radius: 999px;
+    color: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover,
+    &:focus {
+      color: inherit;
+      background-color: rgba($fuime-blue, 0.12);
+    }
+
+    &.is-current {
+      font-weight: 600;
+      background-color: $white;
+      box-shadow: var(--shadow-border-sm);
+
+      html[data-dark='true'] & {
+        background-color: $darkless;
+      }
+    }
+  }
+
+  &__num {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba($fuime-blue, 0.15);
+    color: $fuime-blue;
+
+    .is-current & {
+      background: $fuime-blue;
+      color: $white;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+  }
+
+  &__link {
+    color: inherit;
+    opacity: 0.7;
+    text-decoration: underline;
+
+    &:hover,
+    &:focus {
+      color: inherit;
+      opacity: 1;
+    }
+  }
+
+  &__exit {
+    height: 28px;
+    min-height: 28px !important;
+    font-size: 0.8125rem;
+  }
+}
+
+@keyframes playground-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba($fuime-blue, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba($fuime-blue, 0.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playground-strip__dot {
+    animation: none;
+  }
+}

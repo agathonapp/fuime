@@ -24,11 +24,41 @@ const tours = {
 
     const isMobile = window.matchMedia('(max-width: 56em)').matches
 
+    // Playground Mode: the pitch, narrated. Five bubbles that follow the
+    // order a room hears the story in — what this is, what she sells, where
+    // the money goes, what tax season looks like, who the adult is. Each
+    // attaches to something on the page (the strip is on every page of a
+    // demo venture; the rest are nav items) and onlyVisible() drops any that
+    // is not, so the tour never floats loose.
     if (options.demo) {
       steps.push({
         attachTo: 'playground_mode',
-        text: "You're in demo mode — nothing here moves real money, so try anything you like.",
+        text: "This is Maya's Lawn Care, a demo venture. Nothing here moves real money, so click anything.",
         placement: 'bottom',
+      })
+      steps.push({
+        attachTo: 'offers',
+        text: 'What Maya sells. She named it and set the price. Fuime never suggests a number.',
+        placement: isMobile ? 'bottom' : 'right',
+        strategy: 'fixed',
+      })
+      steps.push({
+        attachTo: 'payouts',
+        text: "Money from her sales lands on the ledger. When it's time to get paid, it goes to the family's own account, which a parent or guardian sets up.",
+        placement: isMobile ? 'top' : 'right',
+        strategy: 'fixed',
+      })
+      steps.push({
+        attachTo: 'taxes',
+        text: 'A running total of what she has earned, so nothing about tax season is a surprise.',
+        placement: isMobile ? 'top' : 'right',
+        strategy: 'fixed',
+      })
+      steps.push({
+        attachTo: 'team',
+        text: "Denise, Maya's mom, is on the account as the responsible adult. She sees every transaction, and Maya can't turn that off.",
+        placement: isMobile ? 'top' : 'right',
+        strategy: 'fixed',
       })
       return steps
     }

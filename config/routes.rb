@@ -541,6 +541,10 @@ Rails.application.routes.draw do
       # does not call DemoSandbox.guard_enabled!.
       get "playground", to: "admin/playground#show"
       post "playground/seed", to: "admin/playground#seed", as: "playground_seed"
+      # Reset + Become in one POST, through the same impersonate helper the
+      # users#impersonate action uses. See Admin::PlaygroundController.
+      post "playground/start", to: "admin/playground#start", as: "playground_start"
+      post "playground/fresh_founder", to: "admin/playground#fresh_founder", as: "playground_fresh_founder"
       # FUIME: cohorts — one person vouching for a group in advance, so an event
       # does not need 150 clicks while it is running. See Fuime::Cohort.
       # `cohort` doubles as the live roster board: where every founder is stuck.

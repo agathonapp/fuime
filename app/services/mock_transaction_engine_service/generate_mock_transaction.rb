@@ -2,37 +2,20 @@
 
 module MockTransactionEngineService
   class GenerateMockTransaction
-    # Fuime: rewritten from upstream's club-and-donation copy. The originals
-    # described a fiscally sponsored nonprofit — "Fiscal sponsorship fee",
-    # donations from strangers, club discos — which is the product Fuime is
-    # explicitly not (CLAUDE.md, and docs/fuime/BRAND_STRINGS.md on user-facing
-    # strings). These are a teen business's costs and takings instead.
-    NEGATIVE_DESCRIPTIONS = [
-      { desc: "📦 Packaging and mailers (bulk)" },
-      { desc: "🧵 Filament restock — 6 spools" },
-      { desc: "🎪 Farmers market booth fee" },
-      { desc: "🛒 Restaurant Depot — flour, butter, chocolate" },
-      { desc: "🖨️ Sticker printing (500 count)" },
-      { desc: "🚲 Delivery bike repair" },
-      { desc: "📸 Product photos for the shop page" },
-      { desc: "🧼 Cleaning supplies for the kitchen" },
-      { desc: "🏷️ Labels and hang tags" },
-      { desc: "☕ Coffee for a 6am prep shift" },
-      { desc: "🧾 Business cards" },
-      { desc: "🔌 Extension cords for the market stall" },
-      { desc: "🪧 A-frame sign for the sidewalk" },
-      { desc: "🧊 Ice for the cooler" },
-      { desc: "📱 Card reader for in-person sales" },
-      { desc: "🎨 Logo design (traded for cookies, mostly)" },
-      { desc: "🚚 Shipping to the wholesale account" },
-      { desc: "🧰 Replacement mixer paddle" },
-    ].freeze
+    # Fuime: income + the platform take-rate only. Family MoR has no operator
+    # spend rail (Issuing off, reimbursements hidden), so random negative
+    # "supply/card" lines imply a debit card Maya does not have. Upstream's
+    # club-and-donation copy ("Fiscal sponsorship fee", discos, stranger
+    # donations) is the product Fuime is explicitly not.
+    SERVICE_FEE_RATE = Event::Plan::Free::REVENUE_FEE
+    SERVICE_FEE_LABEL = "Fuime service fee (#{(SERVICE_FEE_RATE * 100).to_i}%)".freeze
+
     POSITIVE_DESCRIPTIONS = [
-      { desc: "🛍️ Online store payout" },
-      { desc: "🤝 Wholesale order — Ridge Coffee", monthly: true },
-      { desc: "🎪 Farmers market — Saturday takings" },
-      { desc: "🎂 Custom order deposit" },
-      { desc: "🔁 Weekly subscription boxes", monthly: true },
+      { desc: "Lawn — Saturday block" },
+      { desc: "Weekly lawn subscription", monthly: true },
+      { desc: "Hedge trim — weekend visit" },
+      { desc: "Tutoring — algebra, 1 hour" },
+      { desc: "Tutoring — weekly sessions", monthly: true },
     ].freeze
 
     def initialize
@@ -57,7 +40,7 @@ module MockTransactionEngineService
       OpenStruct.new(
         amount: Money.new(trans[:amount].round(2) * 100),
         amount_cents: (trans[:amount].round(2) * 100).to_i,
-        fee_payment?: trans[:desc].include?("Fuime platform fee"),
+        fee_payment?: trans[:desc].include?("Fuime service fee"),
         date: trans[:date],
         local_hcb_code: hcb_code
       )
@@ -65,12 +48,8 @@ module MockTransactionEngineService
 
     def mock_hcb_code(trans)
       OpenStruct.new(
-        receipts: if trans[:amount] > 0 || trans[:desc].include?("Fuime platform fee")
-                    []
-                  else
-                    Array.new(rand(100) < 90 ? 1 : 0)
-                  end, # 90% chance of 1 receipt, 10% chance of no receipts
-        comments: Array.new(rand(9) > 1 || trans[:desc].include?("Fuime platform fee") ? 0 : rand(1..2)), # 1/3 chance of no comments, 2/3 chance of 1 or 2 comments
+        receipts: [],
+        comments: [],
         # `donation?`/`donation` stay: the transaction partial calls them on
         # every row, so these are interface, not copy.
         donation?: trans[:amount].positive?,
@@ -92,48 +71,39 @@ module MockTransactionEngineService
         hcb_code.define_singleton_method(:memo) { |event: nil| trans[:desc] }
         hcb_code.define_singleton_method(:not_admin_only_comments_count) { comments.size }
         hcb_code.define_singleton_method(:association) { |_name| OpenStruct.new(reader: receipts) }
-        hcb_code.define_singleton_method(:receipt_optional?) { |*| trans[:amount].positive? }
-        hcb_code.define_singleton_method(:missing_receipt?) { |*| trans[:amount].negative? && receipts.empty? }
+        hcb_code.define_singleton_method(:receipt_optional?) { |*| true }
+        hcb_code.define_singleton_method(:missing_receipt?) { |*| false }
       end
     end
 
-    def generate_mock_tx
-      NEGATIVE_DESCRIPTIONS[rand(NEGATIVE_DESCRIPTIONS.length)].merge({ amount: rand(0..@mock_balance) * -1 })
-    end
-
     def generate_mock_sale
-      POSITIVE_DESCRIPTIONS[rand(POSITIVE_DESCRIPTIONS.length)].merge({ amount: rand(1000) })
+      POSITIVE_DESCRIPTIONS[rand(POSITIVE_DESCRIPTIONS.length)].merge({ amount: rand(40.0..180.0) })
     end
 
-    def generate_mock_platform_fee(sale_amount)
-      { desc: "Fuime platform fee (4%)", amount: -0.04 * sale_amount }
+    def generate_mock_service_fee(sale_amount)
+      { desc: SERVICE_FEE_LABEL, amount: -SERVICE_FEE_RATE * sale_amount }
     end
 
     def generate_mock_transaction_list
       @mock_tx = []
-      index = 0
-      while index < @mock_tx_num
-        if @mock_balance > rand(1..40)
-          @mock_tx << generate_mock_tx
-          @mock_balance += @mock_tx[index][:amount] # add the negative transaction amount to the balance
-          index += 1
-        else # else, generate a random sale
-          @mock_tx << generate_mock_sale
-          @mock_tx << generate_mock_platform_fee(@mock_tx.last[:amount])
-          @mock_balance += @mock_tx[index][:amount] # add the sale amount to the balance
-          @mock_balance += @mock_tx.last[:amount] # add the negative fiscal fee amount to the balance
-          index += 2 # increment the index by 2 to account for the sale and the fee
-        end
+      while @mock_tx.length < @mock_tx_num
+        sale = generate_mock_sale
+        fee = generate_mock_service_fee(sale[:amount])
+        @mock_tx << sale
+        @mock_tx << fee
+        @mock_balance += sale[:amount] + fee[:amount]
       end
 
       current_date = DateTime.now
-      @mock_tx.reverse.each do |tx|
-        random_interval = tx[:desc].include?("Fuime platform fee") ? 7 : rand(8..180) # If the transaction is not a fiscal sponsorship fee, generate a random interval between 8 and 180 days
-        tx[:date] = current_date.strftime("%Y-%m-%d") # Format the date
-        current_date -= random_interval # Increment the date by the random interval, or 7 if the transaction is a fiscal sponsorship fee
+      pairs = @mock_tx.each_slice(2).to_a
+      pairs.reverse_each do |sale, fee|
+        sale[:date] = current_date.strftime("%Y-%m-%d")
+        current_date -= rand(8..180)
+        fee[:date] = current_date.strftime("%Y-%m-%d")
+        current_date -= 7
       end
 
-      @mock_tx.reverse
+      pairs.reverse.flatten
     end
 
   end

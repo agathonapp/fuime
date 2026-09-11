@@ -5975,3 +5975,59 @@ site cannot branch and are written to be true under both.
 | `/guardian-agreement` wrapper and `/faq` no longer say withdrawal means "can no longer operate a business"; FAQ: guardian gates payouts under MoR, fee read from `Event::Plan::Free::REVENUE_FEE` (was a 5% fallback constant), family plan fee from `Event::Plan::Pro`, "balances" dropped, standing disclosure verbatim, "During the beta" removed | L8 on public pages | `app/views/static_pages/guardian_agreement.html.erb`, `app/views/static_pages/faq.html.erb`, `spec/requests/fuime/legal_pages_spec.rb` |
 
 Not touched, still false under MoR, needs the founder/counsel (G19): `app/views/static_pages/terms.html.erb` beta banner ("no real money moves through Fuime"), §3 bullet, §10 ("can no longer operate"), and §8's seller name vs `legal_entity_name`. v3 links to the Terms only for refunds and disputes so as not to vouch for the rest.
+
+## 2026-09-11 — Playground ledger honesty + Fuime service fee copy
+
+Prod pitch showed invented card spend (Maya cannot spend — Issuing off,
+reimbursements hidden) and a pending −$31.73 labeled **Fiscal
+sponsorship**. That line is HCB FeeEngine accruing Standard's 5% on
+seeded income, not a second product. Refresh now wipes the mock ledger
+and posts lawn-job money-in only on Free (7%). Operator-facing BankFee /
+pending-fee / memo copy says **Fuime service fee**. Mock-data banner
+path is income + that fee only. Legal contract models untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Playground LEDGER_LINES income-only; wipe+rewrite on seed | Invented spend is a lie in a pitch; prod was stuck with the old rows | `app/services/fuime/playground.rb` |
+| Playground plan Standard → Free | Pending fee was 5% of collections; Free/Pro take-rate is 7% | `app/services/fuime/playground.rb` |
+| Fiscal sponsorship → Fuime service fee on ledger surfaces | HCB leftover on operator-facing memos | `app/models/hcb_code/memo.rb`, `app/models/ledger/item.rb`, `app/models/raw_pending_bank_fee_transaction.rb`, `app/views/events/_pending_fee_transaction.html.erb`, `app/views/ledgers/_pending_fee_transaction.html.erb`, `app/views/hcb_codes/_icon.html.erb`, `app/services/transaction_engine/friendly_memo_service/generate.rb` |
+| Mock ledger: income + 7% Fuime service fee only | Banner path implied a debit card | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |
+
+## 2026-09-11 — Playground demo polish (one-click start, three personas, sale on the ledger)
+
+The pitch venture worked but was not a demo: `/admin/playground` was a seed
+button and a list of links, the welcome tour had one bubble that only attached
+on the Transactions page, "Become Maya → storefront Buy" was refused because
+the adult-buyer rule saw a 16-year-old, and nothing showed the signup or the
+parent's side. This makes the playground something one person can drive in
+front of a room with no preparation. No ledger internals, no money path, no
+Stripe call; the only ledger write is the same CSV import the seed uses.
+
+| Change | Why | Files |
+|---|---|---|
+| Third persona **Sam** (`playground+new@fuime.test`): no name, no age answer, no venture; `Playground#reset_new_founder!` soft-deletes ventures, positions, applications and guardian invites a signup demo created and clears name/attestation by `update_columns` (both are validated as write-once for real users) | The signup itself is the first thing a room asks to see; it has to be repeatable | `app/services/fuime/playground.rb` |
+| `POST /admin/playground/start` (seed + impersonate Maya → venture home) and `POST /admin/playground/fresh_founder` (reset + impersonate Sam → root → onboarding) through `SessionsHelper#impersonate_user`, the helper `users#impersonate` calls; `authorize current_user, :impersonate?` | One click to start; not a second login door — same admin-only, one-hour impersonated session | `app/controllers/admin/playground_controller.rb`, `config/routes.rb` |
+| Admin page rewritten: start card, three persona cards in pitch order, server-rendered QR (`RQRCode` via `FuimeHelper#fuime_qr_svg`, since the admin bundle does not register `<qr-code>`) of the published pay link, the three-minute script, seeded-ago and ledger-line counts | Presenter's control room | `app/views/admin/playground/show.html.erb`, `app/helpers/fuime_helper.rb` |
+| Playground banner → **strip** partial: Home · What you sell · Storefront · Transactions with the current stop lit, mock-data toggle kept (spec-pinned), *Exit demo* while impersonating (→ `/admin/playground`); `data-tour-step="playground_mode"` moves here from the Transactions callout | The script on every page; the tour can start from any page | `app/views/application/_playground_strip.html.erb`, `app/views/layouts/application.html.erb`, `app/views/events/transactions.html.erb`, `app/assets/stylesheets/components/_banners.scss` |
+| Demo tour: five narrated bubbles (strip, What you sell, Payouts, Taxes, Team); `onlyVisible` still drops any target not on the page | One bubble that attached nowhere on Home | `app/javascript/components/tour/TourOverlay.js` |
+| Checkout: `refuse_minor_buyer` skipped on a `demo_mode` venture; `complete_playground_checkout!` records the sale via `Playground#record_mock_sale!` only for the demo driver (`current_session.impersonated?` or staff), with a distinct notice | The demo's own Buy bounced the impersonated 16-year-old; "it's on the ledger now" has to be true for the driver and impossible for a stranger | `app/controllers/fuime/checkouts_controller.rb` |
+| Seed: `created_at` backdated `VENTURE_AGE` (10 weeks) on first create; eight income lines over nine weeks; `public_message`; Maya's position `first_time: true` and started tours retired on every seed (Denise's stays false); extra live offers archived, the draft sample unpublished | Storefront "On Fuime since", Insights timeframes, a balance chart with a shape, first-run experience on every reset | `app/services/fuime/playground.rb` |
+| `CanonicalTransaction.included_in_stats` and `CanonicalPendingTransaction.included_in_stats` also require `events.demo_mode = false` | The admin panel's "$851.12 moved through Fuime" and the funders page figure were counting the playground's sample lawn money. Reporting scope only; ingestion and mapping untouched (Rule 3) | `app/models/canonical_transaction.rb`, `app/models/canonical_pending_transaction.rb`, `spec/models/fuime/playground_stats_exclusion_spec.rb` |
+| Transactions "type" filter labels the `fiscal_sponsorship_fee` filter **Fuime service fee** (both filter menus) | The row was relabelled in PR #105 but the filter that selects it still said "Fiscal sponsorship fee", which its own spec asserts against | `app/views/events/filters/_filter_menu.html.erb`, `app/views/ledgers/filters/_filter_menu.html.erb` |
+| Specs | | `spec/services/fuime/playground_spec.rb`, `spec/controllers/admin/playground_controller_spec.rb`, `spec/controllers/fuime/checkouts_controller_spec.rb`, `spec/controllers/fuime/playground_mock_data_spec.rb` |
+
+## 2026-09-11 — Freeze playground SERVICE_FEE_LABEL (Style/MutableConstant)
+
+Rubocop CI on PR #106: interpolated string assigned to a constant. `.freeze` only; no behavior change.
+
+| Change | Why | Files |
+|---|---|---|
+| `SERVICE_FEE_LABEL = "...".freeze` | Style/MutableConstant; CI / Rubocop | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |
+
+## 2026-09-11 — Include SessionSupport in playground checkout specs
+
+RSpec shard 8/8 on PR #106: four Playground Mode examples called `create_session` without the helper the adjacent "signed-in buyer age" context already includes. Spec-only.
+
+| Change | Why | Files |
+|---|---|---|
+| `include SessionSupport` in Playground Mode context | undefined `create_session` | `spec/controllers/fuime/checkouts_controller_spec.rb` |

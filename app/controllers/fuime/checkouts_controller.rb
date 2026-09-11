@@ -119,8 +119,24 @@ module Fuime
     def refuse_minor_buyer
       return unless current_user
       return if adult?
+      # Playground Mode bills nobody, so there is no adult to bill. The person
+      # pressing Buy on the pitch venture is usually an admin impersonating
+      # Maya, who is 16 — refusing her bounced the demo's own Buy button.
+      return if playground_event?
 
       refuse_minor
+    end
+
+    def playground_event?
+      ::Event.not_hidden.find_by(slug: params[:slug])&.demo_mode? || false
+    end
+
+    # Whoever is driving the demo: an admin impersonating a persona, or staff
+    # signed in as themselves. Only their Buy writes a ledger line — a stranger
+    # who finds the public storefront gets the thank-you screen and nothing
+    # else, so the endpoint cannot be used to grow the ledger from outside.
+    def demo_driver?
+      current_session&.impersonated? || current_user&.staff? || false
     end
 
     def adult?
@@ -159,6 +175,7 @@ module Fuime
     # offer is one the operator has deliberately taken off sale — a stale link
     # must not still be able to buy it.
     PLAYGROUND_NOTICE = "Playground Mode — no real charge. This is what a customer sees after paying."
+    PLAYGROUND_RECORDED_NOTICE = "Playground Mode — no real charge. This is what a customer sees after paying, and the sale is on the ledger now."
 
     def complete_playground_checkout!(event)
       offer = find_offer(event)
@@ -168,7 +185,18 @@ module Fuime
         return
       end
 
-      redirect_to return_url(event, offer, paid: true), notice: PLAYGROUND_NOTICE
+      notice = PLAYGROUND_NOTICE
+      if demo_driver?
+        amount_cents = offer&.price_cents || parse_amount(params[:amount])
+        recorded = ::Fuime::Playground.new.record_mock_sale!(
+          event:,
+          memo: offer ? "#{offer.name} — storefront" : "#{payment_description(event)} — storefront",
+          amount_cents:
+        )
+        notice = PLAYGROUND_RECORDED_NOTICE if recorded
+      end
+
+      redirect_to return_url(event, offer, paid: true), notice:
     end
 
     def find_offer(event)
