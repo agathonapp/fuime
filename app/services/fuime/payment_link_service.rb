@@ -51,8 +51,9 @@ module Fuime
     # No `stripe_account:` and no `application_fee_amount`, and both omissions are
     # the point rather than a simplification:
     #
-    #   * no `stripe_account:` — the customer is buying from Fuime LLC, so the
-    #     money lands in Fuime's balance as Fuime's own revenue. That is what makes
+    #   * no `stripe_account:` — the customer is buying from Ninth Street Labs,
+    #     LLC, so the money lands in Fuime's balance as Fuime's own revenue. That
+    #     is what makes
     #     it lawful without a licence (§0.2): Fuime is a principal receiving its own
     #     sale proceeds, not a conduit holding a stranger's money.
     #   * no application fee — an application fee is how a PLATFORM takes a cut of
@@ -82,10 +83,11 @@ module Fuime
                 currency: "usd",
                 product_data: {
                   name: @description,
-                  # "Sold by Fuime" rather than "Payment to <venture>": under MoR
-                  # the buyer's counterparty IS Fuime, and a receipt naming the
-                  # venture as the seller would contradict the terms of sale.
-                  description: "#{@event.name} — sold by Fuime",
+                  # "Sold by Ninth Street Labs, LLC" rather than "Payment to
+                  # <venture>": under MoR the buyer's counterparty is the legal
+                  # entity, and a receipt naming the venture as the seller would
+                  # contradict the terms of sale. Fuime is the brand only.
+                  description: "#{@event.name} — sold by #{Rails.configuration.constants.legal_entity_name}",
                 },
                 unit_amount: @amount_cents,
               },

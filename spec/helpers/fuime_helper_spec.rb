@@ -3,6 +3,13 @@
 require "rails_helper"
 
 RSpec.describe FuimeHelper, type: :helper do
+  describe "#fuime_legal_seller" do
+    it "is Ninth Street Labs, LLC and not Fuime LLC" do
+      expect(helper.fuime_legal_seller).to eq("Ninth Street Labs, LLC")
+      expect(helper.fuime_legal_seller).not_to include("Fuime LLC")
+    end
+  end
+
   describe "#fuime_status_line" do
     it "names Ninth Street Labs, LLC as seller without calling the brand Fuime LLC" do
       expect(helper.fuime_status_line).to eq(

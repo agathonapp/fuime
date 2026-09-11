@@ -20,9 +20,9 @@
     Local `event` is the venture fulfilling the order. %>
 <% if ::Fuime::Features.merchant_of_record? %>
   <p class="text-sm muted mt-3 mb-0">
-    Sold by <strong><%= Rails.configuration.constants.legal_entity_name %></strong>
-    (Fuime) · fulfilled by <%= event.name %>.
-    Fuime handles payment, receipts and refunds —
+    Sold by <strong><%= fuime_legal_seller %></strong> (Fuime)
+    · fulfilled by <%= event.name %>.
+    <%= fuime_legal_seller %> handles payment, receipts and refunds —
     <%= link_to "terms of sale", terms_path %>.
   </p>
 <% end %>

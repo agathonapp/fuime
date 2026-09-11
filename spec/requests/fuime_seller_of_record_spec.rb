@@ -32,14 +32,18 @@ RSpec.describe "seller of record disclosure", type: :request do
     it "names Ninth Street Labs, LLC as the seller on the storefront" do
       get fuime_storefront_path(slug: venture.slug)
 
+      expect(response.body).to include("Sold by")
       expect(response.body).to include("Ninth Street Labs, LLC")
+      expect(response.body).not_to include("Fuime LLC")
       expect(response.body).to match(/fulfilled by/i)
     end
 
     it "names Ninth Street Labs, LLC as the seller on the page where the buyer actually pays" do
       get fuime_payment_page_path(event_slug: venture.slug, offer: offer.to_param)
 
+      expect(response.body).to include("Sold by")
       expect(response.body).to include("Ninth Street Labs, LLC")
+      expect(response.body).not_to include("Fuime LLC")
     end
 
     # The refund obligation is the substance of the claim. A page that says Fuime
@@ -50,6 +54,7 @@ RSpec.describe "seller of record disclosure", type: :request do
 
       expect(response.body).to include("support@fuime.com")
       expect(response.body).to match(/Ninth Street Labs, LLC is the\s+seller/i)
+      expect(response.body).not_to include("Fuime LLC")
       # \s+ rather than a literal space: the sentence wraps in the ERB source, so
       # the rendered HTML carries a newline and indentation mid-phrase. A literal
       # space here fails for a reason that has nothing to do with the copy.

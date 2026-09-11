@@ -11,6 +11,12 @@ module FuimeHelper
 
   # Ownership sentence shared by the app footer and the storefront disclosure.
   # Guardians are the legal payee, not the owner of a Stripe connected account.
+  # Legal merchant name on sold-by / receipt / checkout copy. Fuime is the brand
+  # and may appear next to this; it is not a second seller.
+  def fuime_legal_seller
+    Rails.configuration.constants.legal_entity_name
+  end
+
   def fuime_footer_ownership
     "#{Rails.configuration.constants.legal_entity_name}, doing business as Fuime, " \
       "is the seller of record on purchases. Guardians are the legal payee on " \
