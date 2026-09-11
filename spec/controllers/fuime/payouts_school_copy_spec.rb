@@ -176,12 +176,14 @@ RSpec.describe Fuime::PayoutsController do
       expect(response.body).to match(/Fuime owes you/)
     end
 
-    it "still describes payouts as going to the guardian's bank" do
+    it "still describes payouts as going to the guardian-approved destination" do
       create_session(minor, verified: true)
 
       get :index, params: { event_slug: venture.slug }
 
-      expect(response.body).to match(/bank account\s+the parent or guardian connected/)
+      expect(response.body).to match(/destination a parent or guardian approved/)
+      expect(response.body).not_to match(/own that account/)
+      expect(response.body).not_to match(/owns the account/)
     end
 
     it "offers no settlement step, because Stripe says when the money landed" do

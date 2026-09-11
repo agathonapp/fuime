@@ -105,19 +105,21 @@ RSpec.describe "the Connect screens under merchant-of-record", type: :request do
       end
     end
 
-    # The Connect path is untouched: there the guardian really does own the Stripe
-    # account, and a venture without one really is waiting on them.
+    # The Connect path is still reachable when the flag is off. Copy there
+    # must not say the guardian owns a Stripe account; it asks them to
+    # approve a destination instead.
     context "under Connect" do
       # A guardian, because under Connect a parentless minor cannot act on the
       # venture at all (User#permitted_to_operate_business?) and gets redirected
       # before the page renders — which would make this pass or fail for a reason
       # that has nothing to do with the copy being asserted.
-      it "still asks for the payment account" do
+      it "still asks for a payout destination, not an owned Stripe account" do
         create(:guardianship, :active, guardian:, minor: teen)
 
         get fuime_payouts_path(event_slug: event.slug)
 
-        expect(response.body).to include("payment account")
+        expect(response.body).to include("payout destination")
+        expect(response.body).not_to include("They will own that account")
       end
     end
   end

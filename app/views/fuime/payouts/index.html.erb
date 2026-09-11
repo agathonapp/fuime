@@ -75,8 +75,8 @@
           <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
         <% else %>
           A parent or guardian needs to approve a payout destination first.
-          They are the legal payee; they do not own a Stripe or payment
-          account through Fuime.
+          They are the legal payee; they do not own a Stripe or payment account
+          through Fuime.
           <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
         <% end %>
       <% else %>
