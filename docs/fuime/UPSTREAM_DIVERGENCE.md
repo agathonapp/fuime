@@ -5912,5 +5912,6 @@ to sell, then says we'll do a quick review before they go live.
 |---|---|---|
 | `activate_event!` keeps `self.event` | AASM after-callback save was orphaning the new venture | `app/models/event/application.rb` |
 | Submit-only admit flag + `event_id` blocker | Auto-admit must not fire on factory/admin aasm writes; ghost Events must not look like a business | `app/models/event/application.rb` |
+| Applicant may be Event POC | HCB required an admin POC (fiscal sponsor). FounderAdmission has no staff vouched | `app/models/event.rb` |
 | FounderProgress founder copy | Draft first, then review — not "waiting on Fuime" | `app/services/fuime/founder_progress.rb` |
 | Selling-blockers / review copy | Same posture in the operator UI | `app/views/fuime/_selling_blockers.html.erb`, `app/views/fuime/offers/wizard/review.html.erb` |

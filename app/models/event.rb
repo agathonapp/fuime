@@ -1546,6 +1546,11 @@ class Event < ApplicationRecord
     return unless point_of_contact_changed?
     return unless point_of_contact
     return if point_of_contact&.admin_override_pretend?
+    # Fuime self-serve: FounderAdmission activates with the applicant as
+    # point of contact (there is no staff member who vouched). HCB required
+    # an admin because the POC was the fiscal sponsor. The applicant on
+    # this Event's application is that founder, not a third party.
+    return if application&.user_id == point_of_contact_id
 
     errors.add(:point_of_contact, "must be an admin")
   end
