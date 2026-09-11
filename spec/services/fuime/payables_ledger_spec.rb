@@ -12,7 +12,7 @@ require "rails_helper"
 RSpec.describe Fuime::PayablesLedger do
   include HcbShortCodeIsolation
 
-  let(:event)  { create(:event) }
+  let(:event) { create(:event) }
   subject(:payables) { described_class.new(event:) }
 
   # Settled lines carry their Fuime::VentureLedger key in the memo as "[key]" —
