@@ -2,7 +2,16 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Demo sandbox raised: one command + living checklist.**
+**2026-09-11 (latest) — Demo reset survives the advertised 15-minute path.**
+
+CI on `c81ce1ed` failed two required jobs — `RSpec (shard 5/8)` and
+`RSpec (shard 8/8)` — because `reset!` deleted users while `events`
+still referenced them (`fk_rails_79be34ec79`). HEAD already hard-deletes
+demo events. This pass also tears down checkout ledger rows, billing
+subscriptions, waive FKs, and Solo-admit ventures so `rake fuime:demo`
+can run again after the checklist. Mint/remind now use `guard_write!`.
+
+**2026-09-11 — Demo sandbox raised: one command + living checklist.**
 
 `rake fuime:demo` = reset + seed + banner. Then `/admin/demo`: numbered
 15-minute checklist, **Become** via existing impersonate (no new login

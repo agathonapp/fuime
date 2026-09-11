@@ -134,7 +134,7 @@ module Fuime
       self.class.guard_write!
 
       user_ids = demo_users.pluck(:id)
-      event_ids = demo_events.pluck(:id)
+      event_ids = collect_demo_event_ids(user_ids)
       cohort_ids = Fuime::Cohort.where(code: COHORT_CODE).pluck(:id)
 
       ActiveRecord::Base.transaction do
@@ -168,7 +168,7 @@ module Fuime
       routes = Rails.application.routes.url_helpers
       pending = pending_for("teen.pending")
       unguarded = User.find_by(email: email("teen.unguarded"))
-      solo = Event::Application.find_by(name: "Demo Solo Lawn")
+      solo = solo_application
 
       [
         {
@@ -285,7 +285,7 @@ module Fuime
     end
 
     def mint_login_code!(email)
-      self.class.guard_enabled!
+      self.class.guard_write!
       normalized = email.to_s.strip.downcase
       raise Error, "not a demo mailbox (must be #{EMAIL_PREFIX}…@#{EMAIL_DOMAIN})" unless self.class.demo_email?(normalized)
 
@@ -296,8 +296,13 @@ module Fuime
     end
 
     def remind_now!
-      self.class.guard_enabled!
-      Fuime::GuardianInviteReminderJob.perform_now
+      self.class.guard_write!
+      ids = demo_users.pluck(:id)
+      return if ids.empty?
+
+      Guardianship.due_for_invite_reminder
+                  .where("minor_id IN (:ids) OR guardian_id IN (:ids)", ids:)
+                  .find_each(&:send_invite_reminder!)
     end
 
     def smoke_checks
@@ -307,7 +312,7 @@ module Fuime
       checks << ["stale invite is stale", Guardianship.stale_pending.exists?(minor: User.find_by(email: self.class.email("teen.stale")))]
       checks << ["day-3 invite is due", Guardianship.due_for_invite_reminder.exists?(minor: User.find_by(email: self.class.email("teen.remind")))]
       checks << ["unguarded teen needs guardian", User.find_by(email: self.class.email("teen.unguarded"))&.needs_guardian? == true]
-      checks << ["solo application under review", Event::Application.under_review.exists?(name: "Demo Solo Lawn")]
+      checks << ["solo application under review", solo_application&.under_review? == true]
       checks << ["live cohort", Fuime::Cohort.live.exists?(code: COHORT_CODE)]
       checks << ["cohort teen is seated", Event.unscoped.find_by(slug: SLUGS[:cohort])&.organizer_positions&.exists?(user: User.find_by(email: self.class.email("teen.cohort"))) == true]
       checks << ["unvetted venture", Event.unscoped.exists?(slug: SLUGS[:unvetted], operator_vetting_status: :unvetted)]
@@ -331,7 +336,24 @@ module Fuime
     end
 
     def demo_events
-      Event.unscoped.where(slug: SLUGS.values)
+      Event.unscoped.where(id: collect_demo_event_ids(demo_users.pluck(:id)))
+    end
+
+    # Slugs plus ventures the checklist's Solo admit step creates (those are
+    # not one of the three reserved slugs). Collect before applications die.
+    def collect_demo_event_ids(user_ids)
+      ids = Event.unscoped.where(slug: SLUGS.values).pluck(:id)
+      if user_ids.any?
+        ids |= Event::Application.where(user_id: user_ids).where.not(event_id: nil).pluck(:event_id)
+      end
+      ids.compact.uniq
+    end
+
+    def solo_application
+      teen = User.find_by(email: email("teen.solo"))
+      return nil unless teen
+
+      Event::Application.find_by(user: teen, name: "Demo Solo Lawn")
     end
 
     def upsert_admin!
@@ -674,6 +696,8 @@ module Fuime
     def delete_demo_graph!(user_ids:, event_ids:, cohort_ids:)
       return if user_ids.empty? && event_ids.empty? && cohort_ids.empty?
 
+      delete_demo_subscriptions!(user_ids:, event_ids:)
+      delete_demo_money_graph!(event_ids)
       Fuime::Offer.where(event_id: event_ids).delete_all if event_ids.any?
       Event::Application.where(user_id: user_ids).or(Event::Application.where(event_id: event_ids)).delete_all
       if event_ids.any?
@@ -692,7 +716,6 @@ module Fuime
         Governance::Admin::Transfer::Limit.where(user_id: user_ids).delete_all
       end
       if event_ids.any?
-        Ledger.where(event_id: event_ids).delete_all
         Event::Plan.where(event_id: event_ids).delete_all
         FriendlyId::Slug.where(sluggable_type: "Event", sluggable_id: event_ids).delete_all
         Event::Follow.where(event_id: event_ids).delete_all
@@ -709,6 +732,9 @@ module Fuime
         Event.unscoped.where(operator_vetted_by_id: user_ids).update_all(operator_vetted_by_id: nil)
         Event.unscoped.where(sale_terms_acknowledged_by_id: user_ids).update_all(sale_terms_acknowledged_by_id: nil)
         Event::Follow.where(user_id: user_ids).delete_all
+        User.unscoped.where(guardian_requirement_waived_by_id: user_ids).update_all(
+          guardian_requirement_waived_by_id: nil
+        )
       end
       Fuime::Cohort.where(id: cohort_ids).delete_all if cohort_ids.any?
       if user_ids.any?
@@ -720,6 +746,86 @@ module Fuime
         end
       end
       User.where(id: user_ids).delete_all
+    end
+
+    # Billing leaves Fuime::Subscription rows (billed_to / event / granted_by).
+    # Cancel a test-mode Stripe sub when we can; always drop the local row so
+    # User/Event delete cannot FK-fail. Never call Stripe in live mode.
+    def delete_demo_subscriptions!(user_ids:, event_ids:)
+      scope = Fuime::Subscription.none
+      scope = scope.or(Fuime::Subscription.where(billed_to_id: user_ids)) if user_ids.any?
+      scope = scope.or(Fuime::Subscription.where(granted_by_id: user_ids)) if user_ids.any?
+      scope = scope.or(Fuime::Subscription.where(event_id: event_ids)) if event_ids.any?
+      return if scope.none?
+
+      unless StripeService.live?
+        scope.find_each do |subscription|
+          next unless subscription.stripe_backed?
+
+          subscription.cancel_in_stripe!
+        rescue Stripe::StripeError => e
+          @warnings << "Stripe cancel #{subscription.stripe_subscription_id}: #{e.message}"
+        end
+      end
+
+      ids = scope.pluck(:id)
+      if defined?(PaperTrail::Version)
+        PaperTrail::Version.where(item_type: "Fuime::Subscription", item_id: ids).delete_all
+      end
+      Fuime::Subscription.where(id: ids).delete_all
+    end
+
+    # MoR checkout writes CEM/CPEM + ledger mappings/items + raw pending rows.
+    # Delete that graph in FK order. Does not change ledger engine internals.
+    def delete_demo_money_graph!(event_ids)
+      return if event_ids.blank?
+
+      ledger_ids = Ledger.where(event_id: event_ids).pluck(:id)
+      item_ids = ledger_ids.any? ? Ledger::Mapping.where(ledger_id: ledger_ids).pluck(:ledger_item_id) : []
+
+      ct_ids = CanonicalEventMapping.where(event_id: event_ids).pluck(:canonical_transaction_id)
+      cpt_ids = CanonicalPendingEventMapping.where(event_id: event_ids).pluck(:canonical_pending_transaction_id)
+      if item_ids.any?
+        ct_ids |= CanonicalTransaction.where(ledger_item_id: item_ids).pluck(:id)
+        cpt_ids |= CanonicalPendingTransaction.where(ledger_item_id: item_ids).pluck(:id)
+      end
+
+      cem_scope = CanonicalEventMapping.where(event_id: event_ids)
+      cem_scope = cem_scope.or(CanonicalEventMapping.where(canonical_transaction_id: ct_ids)) if ct_ids.any?
+      cem_ids = cem_scope.pluck(:id)
+      Fee.where(canonical_event_mapping_id: cem_ids).delete_all if cem_ids.any?
+
+      if cpt_ids.any?
+        CanonicalPendingDeclinedMapping.where(canonical_pending_transaction_id: cpt_ids).delete_all
+        CanonicalPendingSettledMapping.where(canonical_pending_transaction_id: cpt_ids).delete_all
+      end
+      CanonicalPendingSettledMapping.where(canonical_transaction_id: ct_ids).delete_all if ct_ids.any?
+      CanonicalHashedMapping.where(canonical_transaction_id: ct_ids).delete_all if ct_ids.any?
+
+      cem_scope.delete_all
+      cpem_scope = CanonicalPendingEventMapping.where(event_id: event_ids)
+      cpem_scope = cpem_scope.or(CanonicalPendingEventMapping.where(canonical_pending_transaction_id: cpt_ids)) if cpt_ids.any?
+      cpem_scope.delete_all
+
+      raw_donation_ids = []
+      if cpt_ids.any?
+        raw_donation_ids = CanonicalPendingTransaction.where(id: cpt_ids).pluck(:raw_pending_donation_transaction_id).compact
+        CanonicalPendingTransaction.where(id: cpt_ids).update_all(ledger_item_id: nil)
+        CanonicalPendingTransaction.where(id: cpt_ids).delete_all
+      end
+      if ct_ids.any?
+        CanonicalTransaction.where(id: ct_ids).update_all(ledger_item_id: nil)
+        CanonicalTransaction.where(id: ct_ids).delete_all
+      end
+      RawPendingDonationTransaction.where(id: raw_donation_ids).delete_all if raw_donation_ids.any?
+
+      HcbCode.where(ledger_item_id: item_ids).update_all(ledger_item_id: nil) if item_ids.any?
+      Ledger::Mapping.where(ledger_id: ledger_ids).delete_all if ledger_ids.any?
+      if item_ids.any?
+        Ledger::Item.where(id: item_ids).update_all(author_id: nil)
+        Ledger::Item.where(id: item_ids).delete_all
+      end
+      Ledger.where(id: ledger_ids).delete_all if ledger_ids.any?
     end
 
     # acts_as_paranoid turns delete_all into a soft-delete. Soft-deleted
@@ -822,7 +928,7 @@ module Fuime
     def queue_counts
       {
         waitlist: (Fuime::WaitlistRoster.configured? ? waitlist_rows.size : nil),
-        applications_under_review: Event::Application.under_review.where(name: "Demo Solo Lawn").count,
+        applications_under_review: solo_application&.under_review? ? 1 : 0,
         live_cohorts: Fuime::Cohort.live.where(code: COHORT_CODE).count,
         unvetted: Event.not_hidden.operator_vetting_unvetted.where(slug: SLUGS[:unvetted]).count,
         stale_invites: Guardianship.stale_pending.where(minor_id: User.where(email: email("teen.stale")).select(:id)).count

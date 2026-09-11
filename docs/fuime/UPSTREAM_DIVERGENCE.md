@@ -5831,3 +5831,17 @@ Did not touch Lightspark, the ledger engine, or live Stripe.
 | `/admin/demo` Reset + seed + Become | Click-through without minting codes | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `config/routes.rb` |
 | Checklist lock + persona walk | So the demo cannot rot | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |
 | Walkthrough slimmed to a pointer | Prefer the living page over scattered docs | `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo reset after the advertised path
+
+`rake fuime:demo` after checkout / billing / waive / Solo admit could FK-fail
+(the same class of bug as CI shards 5 and 8 on `c81ce1ed`). Reset now deletes
+the demo ledger graph in FK order, drops sandbox subscriptions, clears
+`guardian_requirement_waived_by_id`, and includes Solo-admit ventures.
+Mint/remind use `guard_write!`; remind only touches demo guardianships.
+Ledger engine internals untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Demo money/subscription/waive teardown | So reset survives the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| Reset leftover + write-guard specs | Lock the advertised path | `spec/services/fuime/demo_sandbox_spec.rb` |

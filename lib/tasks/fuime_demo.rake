@@ -61,10 +61,10 @@ namespace :fuime do
       demo_abort(e)
     end
 
-    desc "Run GuardianInviteReminderJob now (day-3 / day-6 mail for due invites)"
+    desc "Send day-3 / day-6 reminder mail for due DEMO invites only"
     task remind: :environment do
       demo_sandbox.remind_now!
-      puts "GuardianInviteReminderJob finished. Check letter_opener / logs."
+      puts "Demo guardian reminders sent. Check letter_opener / logs."
     rescue Fuime::DemoSandbox::Error => e
       demo_abort(e)
     end

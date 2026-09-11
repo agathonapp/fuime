@@ -49,7 +49,7 @@ module Admin
     def remind
       Fuime::DemoSandbox.new.remind_now!
       redirect_to demo_admin_index_path,
-                  flash: { success: "Guardian invite reminder job ran. Check letter_opener / logs." }
+                  flash: { success: "Sent due demo guardian reminders. Check letter_opener / logs." }
     rescue Fuime::DemoSandbox::Error => e
       redirect_to demo_admin_index_path, flash: { error: e.message }
     end
