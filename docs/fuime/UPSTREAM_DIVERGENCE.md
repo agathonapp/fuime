@@ -6015,3 +6015,11 @@ Stripe call; the only ledger write is the same CSV import the seed uses.
 | `CanonicalTransaction.included_in_stats` and `CanonicalPendingTransaction.included_in_stats` also require `events.demo_mode = false` | The admin panel's "$851.12 moved through Fuime" and the funders page figure were counting the playground's sample lawn money. Reporting scope only; ingestion and mapping untouched (Rule 3) | `app/models/canonical_transaction.rb`, `app/models/canonical_pending_transaction.rb`, `spec/models/fuime/playground_stats_exclusion_spec.rb` |
 | Transactions "type" filter labels the `fiscal_sponsorship_fee` filter **Fuime service fee** (both filter menus) | The row was relabelled in PR #105 but the filter that selects it still said "Fiscal sponsorship fee", which its own spec asserts against | `app/views/events/filters/_filter_menu.html.erb`, `app/views/ledgers/filters/_filter_menu.html.erb` |
 | Specs | | `spec/services/fuime/playground_spec.rb`, `spec/controllers/admin/playground_controller_spec.rb`, `spec/controllers/fuime/checkouts_controller_spec.rb`, `spec/controllers/fuime/playground_mock_data_spec.rb` |
+
+## 2026-09-11 — Freeze playground SERVICE_FEE_LABEL (Style/MutableConstant)
+
+Rubocop CI on PR #106: interpolated string assigned to a constant. `.freeze` only; no behavior change.
+
+| Change | Why | Files |
+|---|---|---|
+| `SERVICE_FEE_LABEL = "...".freeze` | Style/MutableConstant; CI / Rubocop | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |

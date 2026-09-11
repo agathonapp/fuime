@@ -2,7 +2,12 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Playground: one-click demo, three personas, sale on the ledger.**
+**2026-09-11 (latest) — Rubocop on PR #106.**
+`SERVICE_FEE_LABEL` in `generate_mock_transaction.rb` needed `.freeze`
+(Style/MutableConstant). No playground behavior change. Same branch
+`fuime/playground-demo-polish`.
+
+**2026-09-11 — Playground: one-click demo, three personas, sale on the ledger.**
 
 Branch `fuime/playground-demo-polish` (off main + PR #105). `/admin/playground`
 is now a control room: *Reset & start as Maya* (seed + impersonate in one

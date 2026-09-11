@@ -8,7 +8,7 @@ module MockTransactionEngineService
     # club-and-donation copy ("Fiscal sponsorship fee", discos, stranger
     # donations) is the product Fuime is explicitly not.
     SERVICE_FEE_RATE = Event::Plan::Free::REVENUE_FEE
-    SERVICE_FEE_LABEL = "Fuime service fee (#{(SERVICE_FEE_RATE * 100).to_i}%)"
+    SERVICE_FEE_LABEL = "Fuime service fee (#{(SERVICE_FEE_RATE * 100).to_i}%)".freeze
 
     POSITIVE_DESCRIPTIONS = [
       { desc: "Lawn — Saturday block" },
