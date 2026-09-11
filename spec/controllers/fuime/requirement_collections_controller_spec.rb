@@ -63,6 +63,14 @@ RSpec.describe Fuime::RequirementCollectionsController do
       expect(response.body).to include("Verify your identity")
     end
 
+    it "is retired under merchant-of-record", :merchant_of_record do
+      create_session(guardian, verified: true)
+
+      get :show, params: { event_slug: venture.slug }
+
+      expect(response).to redirect_to(fuime_payout_method_path(event_slug: venture.slug))
+    end
+
     # The disclosure is the artifact the consent record points at, so it has to be on the
     # page the consent is given on.
     it "shows the disclosure about what happens to the details" do

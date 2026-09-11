@@ -68,6 +68,26 @@ RSpec.describe Fuime::ProvisionConnectAccountJob do
     expect { described_class.perform_now(guardianship.id) }.not_to raise_error
   end
 
+  describe "under merchant-of-record", :merchant_of_record do
+    it "does not create a connected account" do
+      give_minor_the_venture
+
+      expect(Fuime::ConnectOnboardingService).not_to receive(:new)
+      expect(Stripe::Account).not_to receive(:create)
+
+      described_class.perform_now(guardianship.id)
+    end
+
+    # The enqueue stays on Guardianship#accept! so the Connect path is one
+    # flag flip from working again (Rule 2). The job is the gate.
+    it "is still enqueued when a guardianship goes active" do
+      pending_guardianship = create(:guardianship)
+
+      expect { pending_guardianship.accept! }
+        .to have_enqueued_job(described_class).with(pending_guardianship.id)
+    end
+  end
+
   describe "Guardianship#accept!" do
     it "enqueues provisioning when a guardianship goes active" do
       pending_guardianship = create(:guardianship)
