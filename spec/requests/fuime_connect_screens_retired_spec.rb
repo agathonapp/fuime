@@ -67,6 +67,19 @@ RSpec.describe "the Connect screens under merchant-of-record", type: :request do
       expect(response.body).not_to include("needs to set up a payment")
       expect(response.body).not_to include("settles to their bank")
     end
+
+    it "is not reachable via manage, return, refresh, or the cards KYC screen" do
+      [
+        fuime_payment_setup_manage_path(event_slug: event.slug),
+        fuime_payment_setup_return_path(event_slug: event.slug),
+        fuime_payment_setup_refresh_path(event_slug: event.slug),
+        fuime_requirement_collection_path(event_slug: event.slug)
+      ].each do |path|
+        get path
+        expect(response).to redirect_to(fuime_payout_method_path(event_slug: event.slug)),
+                            "#{path} stayed reachable under merchant-of-record"
+      end
+    end
   end
 
   describe "the payouts page" do
@@ -103,6 +116,28 @@ RSpec.describe "the Connect screens under merchant-of-record", type: :request do
 
         expect(response.body).not_to include("Money can't be sent out yet")
       end
+
+      it "does not offer the Connect 'Ask my guardian' payout form" do
+        create(:fuime_payout_method, :verified, event:)
+        create(:guardianship, :active, guardian:, minor: teen)
+
+        get fuime_payouts_path(event_slug: event.slug)
+
+        expect(response.body).not_to include("Ask my guardian")
+        expect(response.body).not_to include("Ask the school")
+        expect(response.body).not_to include("Approve and send")
+      end
+
+      it "refuses a Connect payout request and sends the operator to Plaid" do
+        create(:fuime_payout_method, :verified, event:)
+        create(:guardianship, :active, guardian:, minor: teen)
+
+        expect {
+          post fuime_payouts_create_path(event_slug: event.slug), params: { amount: "50.00" }
+        }.not_to change(PayoutRequest, :count)
+
+        expect(response).to redirect_to(fuime_payout_method_path(event_slug: event.slug))
+      end
     end
 
     # The Connect path is still reachable when the flag is off. Copy there
@@ -121,6 +156,16 @@ RSpec.describe "the Connect screens under merchant-of-record", type: :request do
         expect(response.body).to include("payout destination")
         expect(response.body).not_to include("They will own that account")
       end
+    end
+  end
+
+  describe "the Plaid payout destination", :merchant_of_record do
+    before { login_as!(teen) }
+
+    it "stays reachable — it is the bank path under merchant-of-record" do
+      get fuime_payout_method_path(event_slug: event.slug)
+
+      expect(response).to have_http_status(:ok)
     end
   end
 

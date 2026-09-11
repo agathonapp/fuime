@@ -103,6 +103,16 @@ RSpec.describe Fuime::PayoutService do
         service.request!(amount_cents: 5_000, requested_by: minor)
       }.to raise_error(Fuime::PayoutService::StripeRejected)
     end
+
+    it "refuses the Connect path under merchant-of-record", :merchant_of_record do
+      stub_balance(10_000)
+      stub_payout
+
+      expect {
+        service.request!(amount_cents: 5_000, requested_by: minor)
+      }.to raise_error(Fuime::PayoutService::Error, /schedule/)
+      expect(Stripe::Payout).not_to have_received(:create)
+    end
   end
 
   describe "#approve!" do
@@ -118,6 +128,18 @@ RSpec.describe Fuime::PayoutService do
       expect(request.stripe_payout_id).to eq(payout.id)
       expect(request.approved_by).to eq(guardian)
       expect(request.approved_at).to be_present
+    end
+
+    it "does not send a connected-account payout under merchant-of-record", :merchant_of_record do
+      stub_balance(10_000)
+      stub_payout
+
+      expect {
+        service.approve!(request:, approver: guardian)
+      }.to raise_error(Fuime::PayoutService::Error, /schedule/)
+
+      expect(request.reload).to be_pending
+      expect(Stripe::Payout).not_to have_received(:create)
     end
 
     it "sends the payout on the venture's own connected account, not Fuime's" do

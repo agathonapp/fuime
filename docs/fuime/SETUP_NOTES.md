@@ -2,7 +2,19 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Payment-setup school copy leftover (PR 99).**
+**2026-09-11 (latest) — Hide Connect leftovers under MoR.**
+
+With `FEATURE_MERCHANT_OF_RECORD=true`, Connect onboarding and Connect
+money-out are retired. `/payments` + `/payments/setup` + `/payments/verify`
+already redirected (or now do); `ProvisionConnectAccountJob` and
+`ConnectOnboardingService#find_or_create_account!` no-op / raise so a
+guardianship accept cannot create a live connected account. Payouts no
+longer shows "Ask my guardian" or sends `Stripe::Payout` on a connected
+account. Plaid at `/:slug/payout-method` is unchanged. Flag off = Connect
+as before. Specs: `fuime_connect_screens_retired_spec`, provision job,
+onboarding profile, payouts controller/service, payment-setup policy.
+
+**2026-09-11 — Payment-setup school copy leftover (PR 99).**
 
 `institutionally_sponsored?` still said the school "will own that account".
 Rewrote payment_setups + matching payouts/payout_methods footers to MoR:

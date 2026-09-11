@@ -62,6 +62,13 @@ RSpec.describe EventPolicy, type: :policy do
     it "refuses a signed-out visitor" do
       expect(policy_for(nil).setup_payments?).to be false
     end
+
+    it "refuses everyone under merchant-of-record", :merchant_of_record do
+      create(:guardianship, :active, guardian:, minor:)
+
+      expect(policy_for(guardian).setup_payments?).to be false
+      expect(policy_for(create(:user, :make_admin)).setup_payments?).to be false
+    end
   end
 
   # The status page is wider than the setup action on purpose: a teen needs to
@@ -80,6 +87,13 @@ RSpec.describe EventPolicy, type: :policy do
 
     it "refuses an unrelated adult" do
       expect(policy_for(create(:user)).payment_setup_status?).to be false
+    end
+
+    it "is hidden under merchant-of-record", :merchant_of_record do
+      create(:guardianship, :active, guardian:, minor:)
+
+      expect(policy_for(minor).payment_setup_status?).to be false
+      expect(policy_for(guardian).payment_setup_status?).to be false
     end
   end
 end

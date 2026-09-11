@@ -402,6 +402,11 @@ class EventPolicy < ApplicationPolicy
   # payment-setup feature 500'd. The private section below is for helpers like
   # #reader? and #member? that only this class calls.
   def setup_payments?
+    # The Connect onboarding write. Under merchant-of-record there is no
+    # account to open; keeping this true would let leftover links and
+    # `authorize :setup_payments?` still treat the guardian as a Stripe
+    # representative.
+    return false if ::Fuime::Features.merchant_of_record?
     return false if user.blank?
     return true if user.admin?
 
@@ -424,6 +429,8 @@ class EventPolicy < ApplicationPolicy
   #
   # Public for the same reason as #setup_payments? above.
   def payment_setup_status?
+    return false if ::Fuime::Features.merchant_of_record?
+
     auditor_or_reader?
   end
 
