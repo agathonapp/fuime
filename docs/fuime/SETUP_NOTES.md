@@ -2,7 +2,36 @@
 
 ## Handoff (most recent first)
 
-**2026-09-10 (latest) — G10: MoR Checkout webhook → ledger.**
+**2026-09-11 (latest) — Demo reset survives the advertised 15-minute path.**
+
+CI on `c81ce1ed` failed two required jobs — `RSpec (shard 5/8)` and
+`RSpec (shard 8/8)` — because `reset!` deleted users while `events`
+still referenced them (`fk_rails_79be34ec79`). HEAD already hard-deletes
+demo events. This pass also tears down checkout ledger rows, billing
+subscriptions, waive FKs, and Solo-admit ventures so `rake fuime:demo`
+can run again after the checklist. Mint/remind now use `guard_write!`.
+
+**2026-09-11 — Demo sandbox raised: one command + living checklist.**
+
+`rake fuime:demo` = reset + seed + banner. Then `/admin/demo`: numbered
+15-minute checklist, **Become** via existing impersonate (no new login
+door), Reset + seed, reminder job. Cast is `demo+…@fuime.test`. Hidden
+if Stripe is live. Staging: `FUIME_DEMO_SANDBOX=1` +
+`FUIME_DEMO_CONFIRM=yes-seed-demo-cast`. Specs lock `CHECKLIST_IDS` and
+walk every href. Pointer: `docs/fuime/TESTING_WALKTHROUGH.md`. Maya /
+playground / `stripe_pass` / `mor_webhook_pass` still exist for slices.
+
+**2026-09-11 — Demo sandbox: test every flow without real users.**
+
+`rake fuime:demo:seed` (then `status`, `login_code[demo+admin@fuime.test]`).
+Roster at `/admin/demo` — hidden if Stripe is live. Cast is
+`demo+…@fuime.test`. Reset is `rake fuime:demo:reset` (that cast only).
+15-minute click path: `docs/fuime/TESTING_WALKTHROUGH.md`. Specs:
+`demo_sandbox_spec`, `fuime_demo_sandbox_smoke_spec`. Does not invent
+Stripe money. Maya / playground / `stripe_pass` / `mor_webhook_pass` still
+exist for their slices.
+
+**2026-09-10 — G10: MoR Checkout webhook → ledger.**
 
 A Dashboard that only forwarded `checkout.session.completed` dropped the first
 sale: the handler ignored that event (old double-post fix) and waited for

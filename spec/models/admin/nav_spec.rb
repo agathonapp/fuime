@@ -78,6 +78,25 @@ RSpec.describe Admin::Nav do
       expect(item.count).to eq(1)
     end
 
+    it "lists Demo sandbox in Misc when Stripe is test" do
+      instance = described_class.new(page_title: "Demo sandbox (Fuime)")
+      misc = instance.sections.find { |section| section.name == "Misc" }
+      item = misc.items.find { |entry| entry.name == "Demo sandbox (Fuime)" }
+
+      expect(item).to be_present
+      expect(item.path).to eq(Rails.application.routes.url_helpers.demo_admin_index_path)
+      expect(item).to be_active
+    end
+
+    it "hides Demo sandbox when Stripe is live" do
+      allow(StripeService).to receive(:live?).and_return(true)
+
+      instance = described_class.new(page_title: "")
+      names = instance.sections.flat_map(&:items).map(&:name)
+
+      expect(names).not_to include("Demo sandbox (Fuime)")
+    end
+
     it "badges Cohorts with the number of live codes" do
       admin = create(:user, :make_admin, birthday: 40.years.ago.to_date)
       Fuime::Cohort.create!(

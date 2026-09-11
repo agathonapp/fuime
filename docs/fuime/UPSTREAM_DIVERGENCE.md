@@ -5789,3 +5789,59 @@ Did not redo G1–G5. Did not change Connect recorders or the ledger engine.
 | Handler + HTTP + sweep specs | Session alone, twin events, unpaid/subscription skip, signed endpoint, backfill | `spec/services/fuime/payment_webhook_handler_spec.rb`, `spec/requests/fuime_mor_checkout_ledger_spec.rb`, `spec/services/fuime/missed_mor_payment_sweep_spec.rb` |
 | Stub `Rails.error.unexpected` in `connect_settlement_sweep_spec` | Pipeline CT memo short_code ≠ grouping HcbCode; the report raises in test and flakes shard 2 | `spec/services/fuime/connect_settlement_sweep_spec.rb` |
 | Pin founder name on cohorts admin roster spec | Faker apostrophe (`O'Keefe`) escapes in HTML; same pin as subscriptions / operator vetting | `spec/requests/fuime_cohorts_admin_spec.rb` |
+
+## 2026-09-11 — Demo sandbox: one cast to click every flow
+
+Rushmore had almost no real users and no single way to exercise waitlist,
+guardianship, waive, admit, vetting, MoR checkout, billing, and the admin
+queues without inventing people each time. Existing Maya / playground /
+`stripe_pass` / `mor_webhook_pass` seeds each cover a slice.
+
+`Fuime::DemoSandbox` seeds a marked cast (`demo+…@fuime.test`,
+`creation_method: :demo`). Rake + `/admin/demo` (hidden when Stripe is
+live). Reset deletes only that cast. No Stripe objects, no fake live
+money. Walkthrough rewritten as the 15-minute path.
+
+Did not change the ledger engine, Maya/playground scripts, or production
+credentials.
+
+| Change | Why | Files |
+|---|---|---|
+| `creation_method: :demo` | Mark sandbox users without a migration | `app/models/user.rb` |
+| `Fuime::DemoSandbox` + `fuime:demo:*` | Idempotent seed / scoped reset / login codes / reminder / smoke | `app/services/fuime/demo_sandbox.rb`, `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` + nav | Roster + mint codes; off when Stripe is live | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
+| Specs + walkthrough | Seed/reset contract; request smoke of every queue | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb`, `spec/models/admin/nav_spec.rb`, `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo sandbox: living checklist + Become
+
+Rushmore needed one command and a page he could click in 15 minutes, not a
+second markdown copy of the same path. Become uses the existing
+`UsersController#impersonate` (admin only) — no magic-code fight, no new
+production login door.
+
+`rake fuime:demo` is reset + seed + banner. `/admin/demo` is the checklist.
+Specs lock `CHECKLIST_IDS` and walk every href as the right persona.
+
+Did not touch Lightspark, the ledger engine, or live Stripe.
+
+| Change | Why | Files |
+|---|---|---|
+| `setup!`, `checklist`, `banner`, `CAST_PEOPLE` | One source for the cast and the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| `rake fuime:demo` | The one command | `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` Reset + seed + Become | Click-through without minting codes | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `config/routes.rb` |
+| Checklist lock + persona walk | So the demo cannot rot | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |
+| Walkthrough slimmed to a pointer | Prefer the living page over scattered docs | `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo reset after the advertised path
+
+`rake fuime:demo` after checkout / billing / waive / Solo admit could FK-fail
+(the same class of bug as CI shards 5 and 8 on `c81ce1ed`). Reset now deletes
+the demo ledger graph in FK order, drops sandbox subscriptions, clears
+`guardian_requirement_waived_by_id`, and includes Solo-admit ventures.
+Mint/remind use `guard_write!`; remind only touches demo guardianships.
+Ledger engine internals untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Demo money/subscription/waive teardown | So reset survives the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| Reset leftover + write-guard specs | Lock the advertised path | `spec/services/fuime/demo_sandbox_spec.rb` |

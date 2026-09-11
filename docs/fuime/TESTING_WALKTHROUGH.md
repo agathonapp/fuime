@@ -1,123 +1,79 @@
-# Testing walkthrough — every flow, by hand
+# Test everything — 15 minutes
 
-How to exercise everything built as of 2026-08-06, as a human with a browser.
-Companion to `docs/fuime/STRIPE_PASS.md` (which is the *automated* proof; this
-is the clicking). Everything is Stripe **test mode** — no real money anywhere,
-including production.
+How Rushmore (or anyone) exercises Fuime end-to-end **without real teens or
+parents**. Stripe **test mode only**. The living checklist lives in the app —
+do not treat this file as a second copy.
 
-## Cheat sheet
+| If you want… | Open |
+|---|---|
+| The click-through | **`rake fuime:demo`** then **`/admin/demo`** |
+| MoR sale → ledger (`stripe listen`) | `MOR_WEBHOOK_PASS.md` |
+| Connect / cards / payouts against Stripe | `STRIPE_PASS.md` |
+| Automated lock on the seed + checklist | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |
+
+## One command
+
+```bash
+# App running (Docker path from SETUP_NOTES.md)
+docker compose up -d web
+
+# Optional but needed for waitlist + first-sale:
+#   WAITLIST_REDIS_URL=…          (or your local Redis)
+#   FEATURE_MERCHANT_OF_RECORD=true
+
+docker compose run --rm -e RAILS_ENV=development \
+  -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
+  web bundle exec rake fuime:demo
+```
+
+Bare metal: `rake fuime:demo`.
+
+That **resets** the `demo+…@fuime.test` cast, **seeds** it, and prints every
+mailbox, URL, and next click. Then:
+
+1. Sign in as `demo+admin@fuime.test` (mint a code from the rake banner, or
+   impersonate Ada if you already have an admin).
+2. Open **`/admin/demo`**.
+3. Work the numbered checklist. **Become** is the existing admin impersonate
+   action — not a new login door. Use a minted code only when you want to
+   test `/login` itself.
+
+Reset later: `rake fuime:demo:reset` (this cast only) or the button on the page.
+
+### Staging
+
+Stripe must stay **test**. Set `FUIME_DEMO_SANDBOX=1` and
+`FUIME_DEMO_CONFIRM=yes-seed-demo-cast`. The page and rake refuse if
+`STRIPE_MODE=live`. Never seed against live keys.
+
+### Cheat sheet
 
 | Thing | Value |
 |---|---|
-| Test card (pay anything) | `4242 4242 4242 4242`, any future date, any CVC |
-| Test identity | DOB `01/01/1901`, SSN last-4 `0000`, EIN `000000000` |
-| Test address | line 1 `address_full_match`, any city, CA, 94080 |
-| Test bank | routing `110000000`, account `000123456789` |
-| Local login codes | http://localhost:3000/letter_opener (or the rails runner below) |
-| Local app | `docker compose up -d web` → http://localhost:3000 |
+| Test card | `4242 4242 4242 4242`, any future date, any CVC |
+| Mailboxes | `demo+<role>@fuime.test` (`creation_method: demo`) |
+| Live cohort code | `DEMOFOUNDERS` |
+| Storefront | `/b/demo-lawn-care` |
+| Listen | `POST /fuime/webhooks/stripe` — see `MOR_WEBHOOK_PASS.md` |
 
-Login code from the database when letter_opener is awkward:
+Maya (`script/seed_demo_business.rb`), playground, `fuime:stripe_pass`, and
+`fuime:mor_webhook_pass` still exist for their slices. This sandbox is the
+one command that fills **every** admin queue.
 
-    docker compose run --rm -e RAILS_ENV=development -e DATABASE_URL=postgres://postgres:postgres@db:5432 \
-      web bundle exec rails runner 'puts LoginCode.active.where(user: User.find_by(email: "EMAIL")).last&.pretty'
+## What the checklist covers
 
-Make yourself an admin (needed to approve applications):
+Waitlist invite · parent accept (checkbox) · admin waive · solo admit ·
+cohort auto-admit · operator vetting · MoR guest checkout → ledger ·
+billing / Pro · guardian reminder / stale queue.
 
-    ... web bundle exec rake "fuime:make_admin[you@example.com]"
+The titles, URLs, and “expect” strings are `Fuime::DemoSandbox::CHECKLIST_IDS`.
+If a path rots, `rake fuime:demo:smoke` and the request spec go red.
 
-## 1. The family funnel (D2C) — local
+## What this does not replace
 
-1. **Teen signs up.** Log out; sign in with a fresh email (e.g. `kid1@test.dev`).
-   Code arrives in letter_opener.
-2. **Profile.** Enter a name and a birthday that makes them 15.
-   ✅ Expect: NO wall — you land in the product with a flash saying you'll
-   invite a parent when the business is ready.
-3. **Apply.** Start a business application. The form asks for a parent email
-   (`parent1@test.dev`) — cosigner field.
-   ✅ Expect on submit: the parent is invited AUTOMATICALLY (letter_opener has
-   a guardianship invite addressed to them).
-4. **Parent accepts.** Log out, sign in as `parent1@test.dev`, set name + adult
-   DOB, open the invite link from the email, tick the agreement box, accept.
-   ✅ Expect: guardianship active.
-5. **Admin approves.** As your admin user, open the application, approve, then
-   activate.
-   ✅ Expect: venture exists; the teen is its manager.
-   Counter-test: activate BEFORE step 4 completes → refused with "minor with
-   no active guardian".
-6. **Guardian connects payments.** As the parent, venture page →
-   Set up payments. Stripe's embedded form (now themed to match the app) asks
-   for the PARENT's identity — test values from the cheat sheet, accept ToS.
-   ✅ Expect: status page flips to ready. Locally this needs
-   `stripe listen --forward-to localhost:3000/fuime/webhooks/stripe/connect`
-   for the mirror to sync automatically; without it, revisit the page to refresh.
-
-## 2. Money in / books / money out — harness (no browser needed)
-
-The venture `stripe-pass-full` is already fully onboarded. All tasks are
-idempotent-ish and print what they did:
-
-    SLUG=stripe-pass-full rake fuime:stripe_pass:status      # where things stand
-    SLUG=stripe-pass-full rake fuime:stripe_pass:charge      # $25 in -> pending ledger line
-    SLUG=stripe-pass-full rake fuime:stripe_pass:settle      # pending -> settled -> balance rises
-    SLUG=stripe-pass-full rake fuime:stripe_pass:storefront  # prints a REAL checkout URL — pay it with 4242
-    SLUG=stripe-pass-full rake fuime:stripe_pass:refund      # $5 back -> clamped reversal line
-    SLUG=stripe-pass-full rake fuime:stripe_pass:payout      # teen asks, guardian approves, real payout
-    SLUG=stripe-pass-full rake fuime:stripe_pass:payout_ledger  # the -$10 in the books
-    SLUG=stripe-pass-full rake fuime:stripe_pass:subscribe   # $19.99/mo family checkout URL
-
-(Prefix each with the usual `docker compose run --rm -e SLUG=stripe-pass-full
--e RAILS_ENV=development -e DATABASE_URL=... web bundle exec`.)
-
-Then look at the venture's ledger page in the browser: every one of those
-should be a line with a memo a fifteen-year-old could read.
-
-## 3. Billing / paywall
-
-1. `/my/billing` as the TEEN → sees the pitch and *the name of their parent*
-   to ask; no upgrade button. POSTing anyway is refused (that's a spec, but
-   feel free to try).
-2. `/my/billing` as the PARENT → **Upgrade — $19.99/mo** → Stripe Checkout → pay
-   with 4242.
-   ✅ Expect: back on /my/billing with the welcome callout. The callout must say
-   the take-rate **stays 7%** (same as Free) and that Pro unlocks more ventures
-   and API keys — not a cheaper fee. Locally the ACTIVE flip needs
-   `stripe listen --forward-to localhost:3000/fuime/webhooks/stripe`
-   (platform endpoint, not /connect); in prod it's automatic.
-3. **The slot.** Before upgrading: teen applies for a SECOND venture, admin
-   approves, activate → ❌ refused: "the free plan includes one venture".
-   After the parent upgrades → same activation succeeds. Fee stays **7%** on
-   every family venture; what changed is the second-venture slot and API keys.
-4. **Manage billing** (as subscribed parent) → Stripe's portal: card, invoices,
-   cancel. Cancel → back to one venture and no API keys; fee stays 7%.
-
-## 4. The school — local
-
-Seeded by `rake "fuime:seed_school[Founders School,8]"` +
-`rake "fuime:seed_school_cards[founders-school]"`:
-
-| Who | Email | Should see |
-|---|---|---|
-| Business office | business-office@founders-school.test | everything |
-| Guide | marisol-reyes@founders-school.test | every student, roster **Freeze** buttons + receipt badges |
-| Student | naomi-okafor@founders-school.test | her venture only; "ask your guide" on payment pages; never an invite-your-parent prompt |
-
-Click a Freeze on the roster: instant, no confirmation dialog, card shows
-Frozen. (These are fabricated `ic_FAKE_` cards — freezing writes only to the
-local database.)
-
-## 5. Production (app.fuime.com — still test-mode money)
-
-Same flows, three differences:
-- Login codes arrive by REAL email (Resend). A fresh personal address is the
-  truest signup test.
-- Webhooks are live — no `stripe listen`, mirrors and subscriptions sync on
-  their own. (First real delivery also confirms the endpoint repair.)
-- The school flow: set the School plan on the Alpha org (console commands in
-  PR #34), then walk `/[venture]/payments/setup` as a manager — the embedded
-  form should ask for the SCHOOL's EIN, in Fuime's dark theme, with copy
-  addressed to an administrator.
-
-## What can't be clicked yet
-
-Cards end-to-end (platform Issuing is sales-gated), disputes, and live-mode
-anything. See STRIPE_PASS.md for the authoritative proven/unproven table.
+- **Cards / Issuing / Connect payouts** — `rake fuime:stripe_pass:*` + `STRIPE_PASS.md`
+- **School / playground ledger** — `rake fuime:seed_school` and
+  `script/seed_playground_org.rb` (playground is fake money on purpose)
+- **Maya cookies** — `script/seed_demo_business.rb` (food category; cannot
+  sell under MoR's services/digital allowlist — use Demo Lawn Care)
+- Live-mode anything. The sandbox will not seed if `STRIPE_MODE=live`.
