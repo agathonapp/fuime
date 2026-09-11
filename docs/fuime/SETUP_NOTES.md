@@ -2,7 +2,20 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Submit-only auto-admit; rebase onto #101.**
+**2026-09-11 (latest) — No-code submit is FounderAdmission, not a queue.**
+
+`cohort_admission_spec` still expected `event` nil when no invite code.
+That was the old "Waiting on Fuime" queue, and it only stayed green
+while applicant-as-POC failed. No code means no auto-vet; FounderAdmission
+still stands an unvetted venture up.
+
+**2026-09-11 — Applicant can be Event point of contact.**
+
+HCB required an admin POC. FounderAdmission passes the teen; Event
+now allows that when they are the application's user. Admin activate
+paths unchanged.
+
+**2026-09-11 — Submit-only auto-admit; rebase onto #101.**
 
 FounderAdmission runs only after `mark_submitted` (a flag, not every
 `aasm_state` write). Factory/admin `update!(aasm_state: :approved)` no
