@@ -149,7 +149,49 @@ RSpec.describe Fuime::OffersController, type: :controller do
       expect(flash[:alert]).to match(/can't take payments/)
     end
 
-    it "publishes once the venture can sell" do
+    it "lets an unvetted venture save a draft through the wizard" do
+      event.update!(operator_vetting_status: :unvetted, operator_vetted_at: nil)
+
+      post :wizard, params: {
+        event_slug: event.slug,
+        step: "what",
+        fuime_offer: { name: "Lawn mow", description: "I bring my own mower." }
+      }
+      post :wizard, params: {
+        event_slug: event.slug,
+        step: "price",
+        fuime_offer: { price: "35" }
+      }
+
+      offer = event.fuime_offers.last
+      expect(offer).to be_present
+      expect(offer).to be_draft
+      expect(event.reload.accepts_payments?).to be(false)
+    end
+
+    it "does not publish while the venture is unvetted" do
+      event.update!(operator_vetting_status: :unvetted, operator_vetted_at: nil)
+      offer = create(:fuime_offer, event:)
+
+      post :publish, params: { event_slug: event.slug, id: offer.id }
+
+      expect(offer.reload).to be_draft
+      expect(event.accepts_payments?).to be(false)
+      expect(flash[:alert]).to match(/can't take payments|not been approved/i)
+    end
+
+    it "does not publish while the venture is suspended" do
+      event.update!(operator_vetting_status: :suspended)
+      offer = create(:fuime_offer, event:)
+
+      post :publish, params: { event_slug: event.slug, id: offer.id }
+
+      expect(offer.reload).to be_draft
+      expect(event.accepts_payments?).to be(false)
+      expect(flash[:alert]).to match(/can't take payments|suspended/i)
+    end
+
+    it "publishes once the venture is approved and can sell" do
       allow_any_instance_of(::Event).to receive(:accepts_payments?).and_return(true)
       offer = create(:fuime_offer, event:)
 

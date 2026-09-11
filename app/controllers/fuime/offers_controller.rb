@@ -58,6 +58,11 @@ module Fuime
     def new
       authorize @event, :manage_offers?
 
+      # /learn templates land here with words in the query string. Persist them
+      # into the session so "per visit" still appears on the price screen —
+      # the what-screen does not collect a unit label.
+      write_wizard_state(prefill_params) if prefill_params.any?
+
       @step = wizard_step
       @offer = wizard_offer
       @selling_blockers = @event.selling_blockers
@@ -312,8 +317,10 @@ module Fuime
         return render "fuime/offers/wizard/what", status: :unprocessable_entity
       end
 
-      write_wizard_state("name" => name.first(Fuime::Offer::MAX_NAME_LENGTH),
-                         "description" => description.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH).presence)
+      write_wizard_state(
+        name:        name.first(Fuime::Offer::MAX_NAME_LENGTH),
+        description: description.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH).presence
+      )
       if @offer.persisted?
         @offer.update(name: wizard_state["name"], description: wizard_state["description"])
       end

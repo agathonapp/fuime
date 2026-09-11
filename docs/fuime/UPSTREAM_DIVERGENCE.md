@@ -5900,3 +5900,16 @@ or `FUIME_DEMO_SANDBOX`.
 | FounderProgress on home/venture | Founders could not see the checklist | `app/services/fuime/founder_progress.rb`, `app/views/fuime/_founder_progress.html.erb` |
 | Marketing primary CTA → `/signup` | Waitlist was the only door | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/server.js` |
 | Offer wizard | One jammed page → what/price/storefront/review/share | `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/wizard/` |
+
+## 2026-09-11 — Draft while unvetted; publish still reviewed
+
+Teens land in the venture on submit. They can draft offers through the
+wizard without a human. Going live still requires operator vetting
+(suspended still freezes). Founder-facing copy asks them to add something
+to sell, then says we'll do a quick review before they go live.
+
+| Change | Why | Files |
+|---|---|---|
+| `activate_event!` keeps `self.event` | AASM after-callback save was orphaning the new venture | `app/models/event/application.rb` |
+| FounderProgress founder copy | Draft first, then review — not "waiting on Fuime" | `app/services/fuime/founder_progress.rb` |
+| Selling-blockers / review copy | Same posture in the operator UI | `app/views/fuime/_selling_blockers.html.erb`, `app/views/fuime/offers/wizard/review.html.erb` |

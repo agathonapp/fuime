@@ -73,20 +73,24 @@ module Fuime
     end
 
     # Same funnel, said to the founder. Never tells them to approve themselves.
+    # Draft first — review is the publish gate, not a waiting room.
     def founder_next_action
       return "You've made a sale." if sold?
+
       if event.nil?
         blockers = application.activation_blockers
         return blockers.first if blockers.any?
 
         return "Finish setting up your venture."
       end
-      return "We're reviewing your venture so you can publish." unless vetted?
+
+      return "Add something to sell." unless has_offer?
+      return "We'll do a quick review before you go live." unless vetted?
 
       blockers = event.selling_blockers
       return blockers.first if blockers.any?
 
-      return "Add something to sell." unless listed?
+      return "Publish something so people can buy it." unless listed?
 
       "Share your pay link and make a first sale."
     end
@@ -145,6 +149,12 @@ module Fuime
     def venture_created? = event.present?
     def vetted?          = event.present? && event.operator_vetting_approved?
     def can_sell?        = event.present? && event.accepts_payments?
+
+    def has_offer?
+      return false if event.nil?
+
+      event.fuime_offers.live.exists?
+    end
 
     def listed?
       return false if event.nil?

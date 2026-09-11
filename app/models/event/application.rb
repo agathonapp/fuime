@@ -414,6 +414,7 @@ class Event
       return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
       return "Start selling!" if event.present?
       return "" if rejected?
+
       # Submitted / under review / approved, but no Event yet. Under Fuime this
       # is an activation blocker (Connect + no guardian, free-plan slot, …),
       # not a waiting room. Never say "Waiting on Fuime" — that was the HCB
@@ -677,7 +678,7 @@ class Event
         poc_user = point_of_contact.presence || contract&.party(:hcb)&.user
         raise ArgumentError, "Cannot activate #{hashid}: no point of contact and no contract to take one from" if poc_user.nil?
 
-        Event.create!(
+        created = Event.create!(
           name:,
           country: address_country,
           point_of_contact_id: poc_user.id,
@@ -697,6 +698,12 @@ class Event
           event_tags: tags.filter { |tag| EventTag::Tags::ALL.include?(tag) }.map { |tag| EventTag.find_or_create_by!(name: tag) },
           risk_level:
         )
+        # Event.has_one :application writes event_id in the DB. This object can
+        # still hold event_id: nil (the inverse is on `contract_event`, and
+        # FounderAdmission runs from mark_submitted's after callback). An
+        # enclosing AASM save would then persist that nil and orphan the
+        # venture. Keep the in-memory application in sync.
+        self.event = created
         # Only a signed contract produces a countersigned PDF to file. Without a
         # configured agreement there is no document — this call raised on nil and
         # aborted the whole activation, so the business was never created.

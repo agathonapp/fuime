@@ -135,7 +135,7 @@
   <%# Fuime: FounderProgress used to live only on the admin cohort roster.
       A founder who had just submitted never saw the six-stage path to a
       first sale. One card per unfinished venture, above the businesses grid. %>
-  <% current_user.events.includes(:application).each do |event| %>
+  <% current_user.events.includes(:application).find_each do |event| %>
     <% next unless event.application %>
     <% progress = Fuime::FounderProgress.new(application: event.application) %>
     <% next if progress.done? %>

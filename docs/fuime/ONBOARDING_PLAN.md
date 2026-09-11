@@ -107,10 +107,11 @@ never "Waiting on Fuime to finish setting up your account".
 ## 6. FounderProgress (teen-facing)
 
 Same six stages as the admin roster: `applied`, `venture_created`, `vetted`,
-`can_sell`, `listed`, `sold`. `next_action` is rewritten for the founder
-("Draft something to sell") rather than the organiser ("Approve them to
-sell"). Guardian invite state is a separate row, not merged into the sell
-funnel.
+`can_sell`, `listed`, `sold`. Founder-facing next actions: "Add something
+to sell", then "We'll do a quick review before you go live", then share /
+first sale. Organiser copy still says "Approve them to sell". Guardian
+invite state is a separate row, not merged into the sell funnel. An
+unvetted founder can draft; they cannot publish.
 
 ---
 

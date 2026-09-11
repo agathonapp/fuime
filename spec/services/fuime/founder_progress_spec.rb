@@ -139,7 +139,16 @@ RSpec.describe Fuime::FounderProgress, :merchant_of_record do
     it "does not tell the founder to approve themselves" do
       give_them_a_venture!(vetted: false)
 
-      expect(progress.founder_next_action).to match(/reviewing your venture/i)
+      expect(progress.founder_next_action).to include("Add something to sell")
+      expect(progress.founder_next_action).not_to include("Approve them")
+      expect(progress.founder_next_action).not_to match(/Waiting on Fuime/i)
+    end
+
+    it "asks for a quick review once they have a draft and are unvetted" do
+      event = give_them_a_venture!(vetted: false)
+      Fuime::Offer.create!(event:, name: "Lawn mow", price_cents: 3500)
+
+      expect(progress.founder_next_action).to match(/quick review before you go live/i)
       expect(progress.founder_next_action).not_to include("Approve them")
     end
 

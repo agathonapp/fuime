@@ -5,7 +5,12 @@
 <% content_for :info_pane do %>
   <h2 class="text-4xl mt-0">Ready to publish?</h2>
   <p class="mt-0 text-lg muted">
-    Sale terms are required to publish. You can save a draft without them.
+    <% if @event.operator_vetting_unvetted? %>
+      We'll do a quick review before you go live. Save a draft now — sale terms
+      are required to publish.
+    <% else %>
+      Sale terms are required to publish. You can save a draft without them.
+    <% end %>
   </p>
 <% end %>
 

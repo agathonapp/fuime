@@ -25,10 +25,7 @@
     </div>
     <div class="field flex-1">
       <%= form.label :unit_label, "Per what? (optional)" %>
-      <%= form.text_field :unit_label, class: "w-full",
-                          maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
-                          value: @offer.unit_label,
-                          placeholder: "per lawn" %>
+      <%= form.text_field :unit_label, class: "w-full", maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH, value: @offer.unit_label, placeholder: "per lawn" %>
     </div>
   </div>
 <% end %>

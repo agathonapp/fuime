@@ -26,7 +26,7 @@ RSpec.describe Fuime::FounderAdmission do
       event = application.reload.event
       expect(event).to be_present
       expect(application).to be_approved
-      expect(event.operator_vetting_unvetted?).to be(true)
+      expect(event).to be_operator_vetting_unvetted
       expect(event.accepts_payments?).to be(false)
     end
 

@@ -5,12 +5,12 @@
 # HCB's approve → activate pair is a fiscal-sponsorship gate: Hack Club takes
 # custody of donated funds, so a human has to say yes twice before an Event
 # exists. Fuime's real publish gate is operator vetting. An unvetted venture
-# already cannot take payment (`Event#selling_blockers`). Parking the founder
-# on "Waiting on Fuime" until an admin clicks those two HCB buttons is a
-# leftover, not a control.
+# can draft offers through the wizard; it cannot publish or take payment
+# (`Event#selling_blockers`). Parking the founder on "Waiting on Fuime" until
+# an admin clicks those two HCB buttons is a leftover, not a control.
 #
 #   submitted ──approve──▶ approved ──activate──▶ a venture
-#                                                  └── still unvetted; cannot publish
+#                                                  └── still unvetted; can draft, cannot publish
 #
 # ── What it deliberately does NOT do ────────────────────────────────────────
 #
@@ -84,5 +84,6 @@ module Fuime
 
       event
     end
+
   end
 end

@@ -281,6 +281,9 @@ RSpec.describe "Learn", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(CGI.unescapeHTML(response.body)).to include("Front and back lawn mow")
+
+      get new_fuime_offer_step_path(event_slug: event.slug, step: "price")
+      expect(response).to have_http_status(:ok)
       expect(CGI.unescapeHTML(response.body)).to include("per visit")
     end
 

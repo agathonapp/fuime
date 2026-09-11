@@ -2,7 +2,16 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Teen onboarding + offer wizard.**
+**2026-09-11 (latest) — Draft without vetting; publish still reviewed.**
+
+FounderAdmission still stands the venture up on submit (no "Waiting on
+Fuime"). Unvetted founders can draft the full offer wizard. Publish and
+`accepts_payments?` stay gated on `operator_vetting_approved?`.
+Suspended still freezes. FounderProgress says "Add something to sell"
+then "We'll do a quick review before you go live" — never "waiting on
+Fuime to finish setting up." Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — Teen onboarding + offer wizard.**
 
 Marketing primary CTA is `/signup` (waitlist stays at `#join`). Signup is
 name + 13+ + terms. Application no longer asks how-did-you-hear / political
