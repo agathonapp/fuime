@@ -7,14 +7,15 @@
 </p>
 
 <p>
-  Fuime has lifted the suspension on <strong><%= @event.name %></strong>. It's approved to sell again.
+  <%# Plain name, not <strong>: the sentence is asserted verbatim across both
+      parts, and the text part cannot bold anything. %>
+  Fuime has lifted the suspension on <%= @event.name %>. It's approved to sell again.
   <% if @can_publish && @published_offers %>
     Your published offers are back on sale.
   <% elsif @can_publish %>
     You can publish an offer now.
   <% else %>
-    Your <em>What you sell</em> page lists anything that still needs sorting
-    before you can sell.
+    Your <em>What you sell</em> page lists anything that still needs sorting before you can sell.
   <% end %>
 </p>
 
