@@ -102,9 +102,9 @@ RSpec.describe Fuime::DemoSandbox do
       described_class.new.seed!
       steps = described_class.new.checklist.index_by { |step| step[:id] }
 
-      expect(steps["accept"][:href]).to match(%r{\A/guardian/})
-      expect(steps["waive"][:href]).to match(%r{\A/users/.+/admin\z})
-      expect(steps["solo"][:href]).to match(%r{/submission\z})
+      expect(steps["accept"][:href]).to match(/\A\/guardian\//)
+      expect(steps["waive"][:href]).to match(/\A\/users\/.+\/admin\z/)
+      expect(steps["solo"][:href]).to match(/\/submission\z/)
       expect(steps["checkout"][:href]).to eq("/b/demo-lawn-care")
       expect(steps.fetch("waitlist")[:expect]).to eq("demo+waitlist.fresh@fuime.test")
     end

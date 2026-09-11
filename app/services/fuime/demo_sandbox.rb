@@ -309,6 +309,7 @@ module Fuime
       checks << ["unguarded teen needs guardian", User.find_by(email: self.class.email("teen.unguarded"))&.needs_guardian? == true]
       checks << ["solo application under review", Event::Application.under_review.exists?(name: "Demo Solo Lawn")]
       checks << ["live cohort", Fuime::Cohort.live.exists?(code: COHORT_CODE)]
+      checks << ["cohort teen is seated", Event.unscoped.find_by(slug: SLUGS[:cohort])&.organizer_positions&.exists?(user: User.find_by(email: self.class.email("teen.cohort"))) == true]
       checks << ["unvetted venture", Event.unscoped.exists?(slug: SLUGS[:unvetted], operator_vetting_status: :unvetted)]
       checks << ["storefront venture", Event.unscoped.exists?(slug: SLUGS[:storefront])]
       checks << ["storefront offer", Fuime::Offer.exists?(event: Event.unscoped.find_by(slug: SLUGS[:storefront]))]
@@ -646,7 +647,10 @@ module Fuime
     def grant_position!(event:, user:, role:)
       return if event.organizer_positions.exists?(user:)
 
+      # Sender == invitee auto-accepts in after_create_commit. Calling
+      # accept again raises "already accepted!" even though the seat exists.
       invite = OrganizerPositionInvite.create!(event:, user:, sender: user, role:)
+      return if event.organizer_positions.exists?(user:) || invite.reload.accepted?
       return if invite.accept(show_onboarding: false)
 
       raise Error, "could not seat #{user.email} on #{event.slug}: #{invite.errors.full_messages.to_sentence}"
