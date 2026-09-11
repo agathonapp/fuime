@@ -245,10 +245,10 @@ class Event
           # who has just pressed Submit. See Fuime::CohortAdmission#call.
           ::Fuime::CohortAdmission.new(application: self).call if fuime_cohort_id.present?
 
-          # FounderAdmission runs from after_commit, not here. Calling
-          # activate_event! inside this AASM after callback left no venture —
-          # the enclosing save and the invite after_create_commit fight the
-          # nested with_lock. See #fuime_founder_admission_after_submit.
+          # Do not activate here. A flag is enough for after_commit: any
+          # draft→approved factory write used to trip a state-based hook and
+          # steal the Event from later activate_event! calls.
+          @fuime_admit_after_submit = true
         end
       end
 
@@ -540,11 +540,10 @@ class Event
     # doing that before mark_submitted's own save finished left no Event
     # (FounderAdmission, family signup, and the full-flow spec all went red).
     def fuime_founder_admission_after_submit
-      return if event_id.present?
-      return unless previous_changes.key?("aasm_state")
+      return unless @fuime_admit_after_submit
 
-      from, = previous_changes["aasm_state"]
-      return unless from == "draft"
+      @fuime_admit_after_submit = false
+      return if event_id.present?
 
       ::Fuime::FounderAdmission.new(application: self).call
     end
