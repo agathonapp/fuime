@@ -59,7 +59,8 @@ RSpec.describe "Legal pages", type: :request do
 
       expect(response.body).not_to include("no longer operate")
       expect(response.body).not_to include("you cannot create a business")
-      expect(response.body).not_to include("There is no monthly fee")
+      expect(response.body).to include("There is no monthly fee on Free")
+      expect(response.body).to include("family plan")
       expect(response.body).not_to include("During the beta")
       expect(response.body).not_to include("balances")
       expect(response.body).to include("before any money is paid out")

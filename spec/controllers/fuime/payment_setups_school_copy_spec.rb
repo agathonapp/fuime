@@ -8,8 +8,9 @@ require "rails_helper"
 # "money your young founder collects" — guardian copy, wrong and alarming for an
 # employee completing the form as the institution's representative.
 #
-# These assert the fork in both directions: school orgs get institutional copy,
-# and family ventures keep the guardian copy word for word.
+# These assert the fork in both directions: school orgs get institutional
+# sponsor / destination copy, and family ventures get legal-payee copy.
+# Neither side says a school or parent owns a Stripe or payment account.
 RSpec.describe Fuime::PaymentSetupsController do
   include SessionSupport
 
@@ -55,7 +56,9 @@ RSpec.describe Fuime::PaymentSetupsController do
 
       get(:new, params: { event_slug: venture.slug })
 
-      expect(response.body).to include("Your school owns this payment account")
+      expect(response.body).to include("institutional sponsor")
+      expect(response.body).to include("payout destination")
+      expect(response.body).to include("not the owner of a Stripe or payment account")
       expect(response.body).to include("EIN")
       # The specific guardian-callout sentences, not the bare phrase "young
       # founder" — the site-wide footer disclosure legitimately says "young
@@ -63,17 +66,19 @@ RSpec.describe Fuime::PaymentSetupsController do
       # broad negative assertion tripped over.
       expect(response.body).not_to include("Money your young founder collects")
       expect(response.body).not_to include("You will own this payment account")
+      expect(response.body).not_to include("Your school owns this payment account")
     end
 
-    it "keeps the guardian copy for a family venture" do
+    it "tells a family guardian they are the legal payee, not the account owner" do
       stub_stripe!
       venture = family_venture
       create_session(guardian, verified: true)
 
       get(:new, params: { event_slug: venture.slug })
 
-      expect(response.body).to include("You will own this payment account")
-      expect(response.body).to include("Money your young founder collects")
+      expect(response.body).to include("legal payee")
+      expect(response.body).to include("payout destination")
+      expect(response.body).not_to include("You will own this payment account")
       expect(response.body).not_to include("Your school owns")
     end
   end
@@ -95,7 +100,10 @@ RSpec.describe Fuime::PaymentSetupsController do
       expect(response).to have_http_status(:ok), "expected 200, got #{response.status} -> #{response.location.inspect} flash=#{flash.to_hash.inspect}"
       expect(response.body).to include("school administrator")
       expect(response.body).not_to include("Invite your guardian")
-      expect(response.body).to include("the sponsoring school")
+      expect(response.body).to include("payable to the school")
+      expect(response.body).not_to include("own that account")
+      expect(response.body).not_to include("owns the account")
+      expect(response.body).not_to include("Your school owns this payment account")
     end
   end
 end

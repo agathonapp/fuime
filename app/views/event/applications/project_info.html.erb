@@ -68,21 +68,6 @@
       <%= form.url_field :website_url, placeholder: "https://mayasartprints.com", class: "w-full !max-w-full", id: "website_url_field", data: { controller: "url-validator", action: "blur->url-validator#handleBlur" }, "x-bind:disabled": "teenager == null" %>
     </div>
 
-    <div class="field">
-      <%= form.label :has_political do %>
-        Is your project involved with political activity? <span class="text-primary">*</span>
-      <% end %>
-      <p class="text-sm muted mt-1 mb-2">This includes but is not limited to protests, public demonstrations, political education, and lobbying.</p>
-      <%= form.select :has_political, options_for_select([["No", "false"], ["Yes", "true"]], @application.political_description.present? ? "true" : "false"), {}, { "@change": "has_political = $event.target.value; document.getElementById('political_description_field').required = (has_political === 'true')", class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null" } %>
-    </div>
-
-    <div class="field" x-show="has_political === 'true'">
-      <%= form.label :political_description do %>
-        Please describe the political activity your project is involved in <span class="text-primary">*</span>
-      <% end %>
-      <%= form.text_area :political_description, class: "w-full max-w-full", id: "political_description_field", "x-bind:disabled": "teenager == null" %>
-    </div>
-
     <div class="field" x-show="teenager == 'false' || teenager == false">
       <%= form.label :planning_duration do %>
         How long have you been planning your project? <span class="text-primary">*</span>
@@ -131,12 +116,6 @@
       <%= form.text_field :funding_source, placeholder: "The Orpheus Endowment", class: "w-full !max-w-full", "x-bind:required": "(teenager == 'false' || teenager == false) && committed > 0" %>
     </div>
 
-    <div class="field m-0">
-      <%= form.label :previously_applied do %>
-        Have you used Fuime before? <span class="text-primary">*</span>
-      <% end %>
-      <%= form.select :previously_applied, options_for_select([["No", "false"], ["Yes", "true"]], (@application.previously_applied.nil? ? @application.user.organizer_positions.with_deleted.joins(:organizer_position_invite).where(is_signee: true, organizer_position_invite: { initial: true }).exists? : @application.previously_applied).to_s), {}, { class: "w-full max-w-full", required: true, "x-bind:disabled": "teenager == null" } %>
-    </div>
   </div>
 
 <% end %>

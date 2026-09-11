@@ -94,6 +94,23 @@ RSpec.describe Fuime::Offer do
 
       expect(build(:fuime_offer, event: blocked)).to be_valid
     end
+
+    it "lets a Playground venture publish a listing without accepting real payments" do
+      playground = create(:event, :demo_mode, is_public: true)
+      record = create(:fuime_offer, event: playground)
+
+      expect(playground.accepts_payments?).to be(false)
+      expect(record.publish!).to be(true)
+      expect(record.reload).to be_published
+    end
+
+    it "still refuses to publish when a playground venture is suspended" do
+      playground = create(:event, :demo_mode, :suspended, is_public: true)
+      record = create(:fuime_offer, event: playground)
+
+      expect(record.publish!).to be(false)
+      expect(record.reload).to be_draft
+    end
   end
 
   describe "archiving" do

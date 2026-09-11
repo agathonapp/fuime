@@ -46,6 +46,18 @@ RSpec.describe Fuime::ConnectOnboardingService, "account profiles" do
     }
   end
 
+  describe "under merchant-of-record", :merchant_of_record do
+    it "refuses to create a connected account" do
+      expect(Stripe::Account).not_to receive(:create)
+
+      expect {
+        described_class.new(event: venture, guardian:).find_or_create_account!
+      }.to raise_error(described_class::RetiredUnderMerchantOfRecord, /not provisioned/)
+
+      expect(venture.reload.stripe_connected_account).to be_nil
+    end
+  end
+
   describe "the profile definitions" do
     # These four values are the entire cost of supporting cards. If one of them
     # drifts, Fuime either silently takes on loss liability it did not intend or

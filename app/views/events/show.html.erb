@@ -68,15 +68,16 @@
       <% end %>
       <%= render "card_grants/create_modal" if @event.plan.card_grants_enabled? %>
 
-      <%# Kept. Reimbursements are deliberately NOT in any disabled list — a teen
-          reimbursing themselves for a business expense is a legitimate flow and
-          the money moves within Fuime rather than out of it. See the note in
-          Fuime::DisabledModules. %>
-      <%= link_to event_reimbursements_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "create_reimbursement" } do %>
-        <%= inline_icon "attachment", size: 20 %>
-        Get reimbursed
+      <%# Reimbursements stay out of DisabledModules (hide-nav, not disable) —
+          reports can be written. Money-out is Column + ACH from the HCB
+          clearinghouse, which Fuime does not have. Hide the CTA with the nav. %>
+      <% if Fuime::Features.sponsor_banking? %>
+        <%= link_to event_reimbursements_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "create_reimbursement" } do %>
+          <%= inline_icon "attachment", size: 20 %>
+          Get reimbursed
+        <% end %>
+        <%= render "reimbursement/reports/create_form", modal_id: "create_reimbursement" %>
       <% end %>
-      <%= render "reimbursement/reports/create_form", modal_id: "create_reimbursement" %>
 
       <% if policy(@event.check_deposits.build).create? && !fuime_module_hidden?("check_deposits") %>
         <%= link_to event_check_deposits_path(@event), class: "list-badge quick-action", data: { behavior: "modal_trigger", modal: "deposit_check" }  do %>
@@ -159,6 +160,13 @@
       Drafts are included here and nowhere else. This is the operator's own
       dashboard, where an unfinished offer is work outstanding rather than
       something to hide; the storefront reads `published` only. %>
+  <% if organizer_signed_in?(as: :member) && @event.application.present? %>
+    <% progress = Fuime::FounderProgress.new(application: @event.application) %>
+    <% unless progress.done? %>
+      <%= render "fuime/founder_progress", progress: %>
+    <% end %>
+  <% end %>
+
   <% if organizer_signed_in?(as: :member) %>
     <div class="card mb-4">
       <div class="flex items-center justify-between gap-2 flex-wrap">
@@ -173,7 +181,7 @@
           what it costs.
         </p>
         <% if policy(@event).manage_offers? %>
-          <%= link_to "List something you sell", fuime_offers_path(event_slug: @event.slug), class: "btn" %>
+          <%= link_to "Add something to sell", new_fuime_offer_path(event_slug: @event.slug), class: "btn" %>
         <% end %>
       <% else %>
         <div class="flex flex-col gap-1 mt-2">

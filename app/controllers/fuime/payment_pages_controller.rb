@@ -39,7 +39,7 @@ module Fuime
       # so rather than showing a dead button. Unlike the storefront — which stays
       # useful as a description of the business — this page has exactly one
       # purpose, so when it cannot serve it the honest thing is to say why.
-      @accepts_payments = @event.accepts_payments?
+      @accepts_payments = @event.show_public_pay_button?
       @paid = params[:paid] == "1"
     end
 

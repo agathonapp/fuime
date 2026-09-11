@@ -25,6 +25,12 @@
 module Fuime
   class RequirementCollectionsController < ApplicationController
     before_action :set_event
+    # Same retirement as PaymentSetupsController: this is the cards-profile
+    # Connect KYC screen. Under MoR there is no connected account to verify
+    # against, and /payments/verify is not covered by that controller's
+    # before_action. Redirected to the payout destination — the only bank
+    # path that still exists.
+    before_action :retired_under_merchant_of_record
     before_action :authorize_collection
     before_action :ensure_cards_profile
 
@@ -66,6 +72,15 @@ module Fuime
 
     def set_event
       @event = Event.find_by!(slug: params[:event_slug])
+    end
+
+    def retired_under_merchant_of_record
+      return unless ::Fuime::Features.merchant_of_record?
+
+      skip_authorization
+      redirect_to fuime_payout_method_path(event_slug: @event.slug),
+                  notice: "Fuime handles taking payments for you now — " \
+                          "all you need to tell us is where to send your money."
     end
 
     def authorize_collection

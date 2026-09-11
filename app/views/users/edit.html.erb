@@ -1,5 +1,5 @@
 <% if @onboarding %>
-  <% title "Create your account" %>
+  <% title "Setup your account" %>
   <% page_full %>
   <% no_app_shell %>
   <style>
@@ -30,77 +30,59 @@
       <h1 class="border-0 mt-10 mb-2">What should we call you?</h1>
       <turbo-frame id="settings" autoscroll data-autoscroll-behavior="smooth">
         <p class="muted">Your name and one checkbox. Less than two minutes.</p>
-        <%# Fuime: no inline onsubmit here — phone_input.js (which owned the
-            window.onsubmit hook) is not loaded on the onboarding branch. %>
         <%= form_with(model: @user, local: true, data: { turbo_frame: "_top" }) do |form| %>
           <%= form_errors @user, "profile", "We couldn't update your" %>
-          <div class="md:flex gap-2">
-            <div class="field flex-1">
-              <%= form.label :full_name %>
-              <%= form.text_field :full_name, required: true, placeholder: "Fiona Hackworth III", style: "max-width:100%", pattern: '^\S+.+' %>
-              <% @user.errors.full_messages_for(:full_name).each do |message| %>
-                <div class="primary"><%= message %></div>
-              <% end %>
-            </div>
-            <div class="field flex-1">
-              <%= form.label :preferred_name, "Preferred name (optional)" %>
-              <%= form.text_field :preferred_name, style: "max-width:100%", placeholder: @user.full_name.presence || "FiFi Hacks", maxlength: 30 %>
-            </div>
-          </div>
-
-          <%# Fuime: a confirmation, not a date of birth (2026-08-20).
-              Signup asked every user for month, day and year. It now asks the
-              one question the platform needs from a teenager — see
-              AddAgeAttestationToUsers. The box on THIS page can only ever say
-              "13 or older"; adulthood is asserted in the guardian flow. %>
           <div class="field">
-            <% if @user.age_attestation.present? || @user.birthday.present? %>
-              <%= form.label :age_attestation, "Your age" %>
-              <p class="h5 muted mt0 mb0">
-                <% if @user.known_adult? %>
-                  You've confirmed you're 18 or older.
-                <% else %>
-                  You've confirmed you're 13 or older<%= " on #{@user.age_attested_at.to_fs(:long)}" if @user.age_attested_at %>.
-                <% end %>
-                <br>
-                Need to correct this? Email <a href="mailto:support@fuime.com">support@fuime.com</a>.
-              </p>
-            <% else %>
-              <div class="field field--checkbox">
-                <%= check_box_tag "user[age_attestation_confirmed]", "1", false,
-                                  id: "user_age_attestation_confirmed", required: true %>
-                <%= label_tag "user_age_attestation_confirmed", "I'm 13 or older" %>
-              </div>
-              <p class="h5 muted mt0 mb0">
-                Fuime is for founders 13 and up. Under 18, a parent or guardian joins
-                your account later.
-              </p>
+            <%= form.label :full_name %>
+            <%= form.text_field :full_name, required: true, placeholder: "Fiona Hackworth III", style: "max-width:100%", pattern: '^\S+.+' %>
+            <% @user.errors.full_messages_for(:full_name).each do |message| %>
+              <div class="primary"><%= message %></div>
             <% end %>
           </div>
-          <%# Fuime: no phone number and no profile picture at signup
-              (ONBOARDING_PLAN A2, 2026-09-10). Nothing between this form and a
-              first sale reads either one: SMS login is offered only once a
-              number has been verified (Login#sms_available?), so a blank number
-              simply means email codes. Both fields stay on the settings branch
-              below — Rule 2, disable rather than delete — and the phone-less
-              check in LoginsController#complete is what keeps a user who skipped
-              them from being bounced back here on every login. %>
+
+          <%# Fuime (2026-09-11): signup asks only what admission needs —
+              full name, write-once 13+, terms. Phone, photo, and preferred
+              name stay on the settings page. Do not add a date of birth. %>
+          <div class="field">
+              <% if @user.age_attestation.present? || @user.birthday.present? %>
+                <%= form.label :age_attestation, "Your age" %>
+                <p class="h5 muted mt0 mb0">
+                  <% if @user.known_adult? %>
+                    You've confirmed you're 18 or older.
+                  <% else %>
+                    You've confirmed you're 13 or older<%= " on #{@user.age_attested_at.to_fs(:long)}" if @user.age_attested_at %>.
+                  <% end %>
+                  <br>
+                  Need to correct this? Email <a href="mailto:support@fuime.com">support@fuime.com</a>.
+                </p>
+              <% else %>
+                <div class="field field--checkbox">
+                  <%= check_box_tag "user[age_attestation_confirmed]", "1", false,
+                                    id: "user_age_attestation_confirmed", required: true %>
+                  <%= label_tag "user_age_attestation_confirmed", "I'm 13 or older" %>
+                </div>
+                <p class="h5 muted mt0 mb0">
+                  Fuime is for founders 13 and up. Under 18, a parent or guardian joins
+                  your account later.
+                </p>
+              <% end %>
+          </div>
           <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to] %>
 
           <%# Fuime: the terms have to appear where someone actually agrees to
               them. Published-but-unlinked documents are not notice, and this
               form is the moment a person becomes a Fuime user. %>
-          <%# What the guardian's signature gates depends on the money model, so
-              the last clause branches. Under merchant-of-record a vetted teen
-              sells before a guardian signs and the guardian is required before
-              any payout (Event#payout_setup_blockers); under Connect the venture
-              cannot go live without one. %>
           <p class="muted text-sm mt-3 mb-2">
             By continuing you agree to Fuime's
             <%= link_to "Terms of Service", terms_path, target: "_blank" %> and
             <%= link_to "Privacy Policy", privacy_path, target: "_blank" %>.
             If you're under 18, a parent or guardian also accepts the
             <%= link_to "Guardian Agreement", guardian_agreement_path, target: "_blank" %>
+            <%# Fuime: what the guardian gates differs by money model (L8). Under
+                merchant-of-record a vetted teen sells before a guardian signs and
+                the guardian is required before any payout
+                (Event#payout_setup_blockers); under Connect the guardian must
+                accept before the venture activates. %>
             <% if ::Fuime::Features.merchant_of_record? %>
               before you can get paid.
             <% else %>
@@ -166,10 +148,9 @@
               Changing your number will turn off SMS login codes.
             </p>
           <% end %>
-          <%# Fuime A2: optional. Signup no longer asks for a phone number, so a
-              user without one has to be able to save everything else on this
-              page; a client-side `required` here blocked exactly that. The model
-              already allows a blank (validates :phone_number, allow_blank). %>
+          <%# Fuime: not browser-required — signup no longer collects a phone, and a
+              required attribute here blocked every phoneless user from saving any
+              setting. User validates phone_number with allow_blank. %>
           <%= form.hidden_field :phone_number, placeholder: "555-555-5555", id: "phone_number" %>
           <input type="tel" id="phone_raw" value="<%= @user.phone_number.presence %>" <%= "disabled" if disabled %>>
           <% if @user.phone_number_in_database.present? && !@user.phone_number_verified? %>

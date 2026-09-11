@@ -215,13 +215,16 @@ RSpec.describe Fuime::CohortAdmission, :merchant_of_record do
       expect(application.event.operator_vetting_status).to eq("approved")
     end
 
-    it "leaves an application with no code exactly as it was" do
+    # CohortAdmission must not vet a founder nobody vouched for. Submit still
+    # stands an unvetted venture up — that is FounderAdmission, not this class.
+    it "does not vet an application with no code" do
       application = create(:event_application, user: founder, teen_led: true, name: "Lawn Care")
       allow(application).to receive(:ready_to_submit?).and_return(true)
 
       application.mark_submitted!
 
-      expect(application.reload.event).to be_nil
+      expect(application.reload.event).to be_present
+      expect(application.event).to be_operator_vetting_unvetted
     end
   end
 

@@ -20,20 +20,13 @@
   business with.
 </p>
 
-<h2>Does real money move through Fuime right now?</h2>
-<% if StripeService.live? %>
-  <p>
-    Yes. Payments made to a business on Fuime are real.
-  </p>
-<% else %>
-  <p>
-    <strong>No.</strong> Fuime is in a pre-launch beta and everything runs
-    against Stripe's test mode. Payment forms and cards work end to end so you
-    can see how the product behaves, but no real money moves and a real card
-    will not be charged. We will say so clearly, here and in the product,
-    before that changes.
-  </p>
-<% end %>
+<h2>What is Fuime's status?</h2>
+<p>
+  <%= fuime_status_line %>
+  When a client pays, they buy from
+  <%= Rails.configuration.constants.legal_entity_name %>. Fuime keeps its fee
+  and owes the rest to the venture as a payable.
+</p>
 
 <%# Fuime: what the guardian gates differs by money model (L8). Under
     merchant-of-record a teen can set up and, once Fuime approves the business,
@@ -71,8 +64,8 @@
 
 <h2>What can my parent see?</h2>
 <p>
-  Everything about the businesses they sign for: every sale, what the business
-  has earned and been paid, receipts, and who is on your team. This is not optional and you cannot turn
+  Everything about the businesses they sign for: transactions, payables,
+  receipts, and who is on your team. This is not optional and you cannot turn
   it off. It is the deal that lets a teenager run a real business.
 </p>
 
@@ -102,13 +95,15 @@
 
 <h2>What does Fuime cost?</h2>
 <%# Fuime: the rate is the Free plan's, read from the plan so this page cannot
-    drift from /billing and the pricing site (PR #94). The family plan is the
-    only monthly fee and it unlocks ventures and API keys, not a cheaper rate. %>
+    drift from /billing and the pricing site (PR #94); FUIME_PLATFORM_FEE_PERCENT
+    is the 5% fallback, not what a Free venture pays. The family plan is the only
+    monthly fee and it unlocks ventures and API keys, not a cheaper rate. %>
 <p>
   On the Free plan Fuime keeps
   <%= (Event::Plan::Free::REVENUE_FEE * 100).round %>% of each sale, shown as
-  its own line on your ledger so you can always see it. The Free plan has no
-  monthly fee. A parent or guardian can add the family plan for
+  its own line on your ledger so you can always see it.
+  There is no monthly fee on Free. Every Fuime fee is billed to the guardian, who
+  is the legal payee. A parent or guardian can add the family plan for
   <%= render_money(Event::Plan::Pro.new.monthly_fee_cents) %> a month, which
   unlocks unlimited ventures and developer API keys — it is not a cheaper rate.
 </p>

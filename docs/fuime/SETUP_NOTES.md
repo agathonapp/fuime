@@ -13,7 +13,7 @@ under MoR; footer disclosure on the accept page; expired-link renew and
 wrong-account sign-out; `Fuime::VettingMailer`; activation email points at
 selling; guardian agreement v3; FAQ and /guardian-agreement fixed. Divergence
 log entry "2026-09-11 — Onboarding Phase A". Verify: `/users/auth?signup=true`,
-`/guardian/new`, an invite email in letter_opener, `/faq`. Phases B–D not started.
+`/guardian/new`, an invite email in letter_opener, `/faq`. After merging main (#98–#103): B1, B2, C2, C3, D2 landed there; open B3, C1, D1. Agreement is **v4** (main shipped a v3 the same day that kept "software platform, not a bank"). Site pages are main's legal copy with Phase A's CTA / queue-copy / `/get-started` deltas re-applied.
 Not touched: `terms.html.erb` (still says no real money moves — counsel item).
 
 **Testing tip that saved this session:** per-agent test databases. `docker
@@ -22,7 +22,115 @@ once per N, then point each concurrent rspec at its own N. Five ran in parallel
 with no deadlocks. When passing a file list to `docker compose run … rubocop`,
 wrap it in `sh -c "…"` or the list arrives as one path.
 
-**2026-09-10 (latest) — G10: MoR Checkout webhook → ledger.**
+**2026-09-11 — Nav honesty + Playground product demo.**
+
+Empty RECEIVE was invoices?/check_deposits staying true after
+DisabledModules stripped the items. `events_nav` now drops empty
+sections. Reimbursements hidden (Column/ACH clearinghouse — not a
+family MoR money flow). Add funds hidden unless the venture is a
+school that owns a connected account. Playground is per-venture
+`demo_mode` on this deploy: `rake fuime:playground` or
+`/admin/playground` (safe on live Stripe). Pitch path: Become Maya →
+Home → What you sell → wizard/share → storefront Buy (mock, no
+Checkout). Did not flip STRIPE_MODE or FEATURE_MERCHANT_OF_RECORD.
+
+**2026-09-11 — Isolate sweep/payables HCB short_codes for real.**
+
+Shards 7/8 flaked on `assign_ledger_item` (UniqueViolation / unexpected
+mismatch). A memo `HCB-xxxxx` that no HcbCode owns falls through to
+`HCB-000` and a random short_code. Specs now pre-create the HcbCode and
+Ledger::Item (`spec/support/hcb_short_code_isolation.rb`). Spec-only;
+ledger engine untouched. Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — No-code submit is FounderAdmission, not a queue.**
+
+`cohort_admission_spec` still expected `event` nil when no invite code.
+That was the old "Waiting on Fuime" queue, and it only stayed green
+while applicant-as-POC failed. No code means no auto-vet; FounderAdmission
+still stands an unvetted venture up.
+
+**2026-09-11 — Applicant can be Event point of contact.**
+
+HCB required an admin POC. FounderAdmission passes the teen; Event
+now allows that when they are the application's user. Admin activate
+paths unchanged.
+
+**2026-09-11 — Submit-only auto-admit; rebase onto #101.**
+
+FounderAdmission runs only after `mark_submitted` (a flag, not every
+`aasm_state` write). Factory/admin `update!(aasm_state: :approved)` no
+longer steals the Event. `activation_blockers` keys on `event_id` so an
+unsaved ghost Event is not "already has a business". Publish still
+needs human review. Rebased onto main (#101 Connect hide).
+
+**2026-09-11 — Draft without vetting; publish still reviewed.**
+
+FounderAdmission still stands the venture up on submit (no "Waiting on
+Fuime"). Unvetted founders can draft the full offer wizard. Publish and
+`accepts_payments?` stay gated on `operator_vetting_approved?`.
+Suspended still freezes. FounderProgress says "Add something to sell"
+then "We'll do a quick review before you go live" — never "waiting on
+Fuime to finish setting up." Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — Teen onboarding + offer wizard.**
+
+Marketing primary CTA is `/signup` (waitlist stays at `#join`). Signup is
+name + 13+ + terms. Application no longer asks how-did-you-hear / political
+/ previously-applied / under-18 after 13+. Submit runs
+`Fuime::FounderAdmission` (approve+activate, no vet). Home and venture
+show `Fuime::FounderProgress`. New offer: `/:slug/offers/new` (what →
+price → storefront → review → share). Parent dashboard is a follow-up.
+
+**2026-09-11 — Hide Connect leftovers under MoR.**
+
+With `FEATURE_MERCHANT_OF_RECORD=true`, Connect onboarding and Connect
+money-out are retired. `/payments` + `/payments/setup` + `/payments/verify`
+already redirected (or now do); `ProvisionConnectAccountJob` and
+`ConnectOnboardingService#find_or_create_account!` no-op / raise so a
+guardianship accept cannot create a live connected account. Payouts no
+longer shows "Ask my guardian" or sends `Stripe::Payout` on a connected
+account. Plaid at `/:slug/payout-method` is unchanged. Flag off = Connect
+as before. Specs: `fuime_connect_screens_retired_spec`, provision job,
+onboarding profile, payouts controller/service, payment-setup policy.
+
+**2026-09-11 — Payment-setup school copy leftover (PR 99).**
+
+`institutionally_sponsored?` still said the school "will own that account".
+Rewrote payment_setups + matching payouts/payout_methods footers to MoR:
+Ninth Street Labs, LLC (Fuime) is seller of record; school approves the
+payout destination / payable; nobody owns a Stripe account. Plan::School
+description now says institutional sponsor, not custody.
+
+**2026-09-11 — Demo reset survives the advertised 15-minute path.**
+
+CI on `c81ce1ed` failed two required jobs — `RSpec (shard 5/8)` and
+`RSpec (shard 8/8)` — because `reset!` deleted users while `events`
+still referenced them (`fk_rails_79be34ec79`). HEAD already hard-deletes
+demo events. This pass also tears down checkout ledger rows, billing
+subscriptions, waive FKs, and Solo-admit ventures so `rake fuime:demo`
+can run again after the checklist. Mint/remind now use `guard_write!`.
+
+**2026-09-11 — Demo sandbox raised: one command + living checklist.**
+
+`rake fuime:demo` = reset + seed + banner. Then `/admin/demo`: numbered
+15-minute checklist, **Become** via existing impersonate (no new login
+door), Reset + seed, reminder job. Cast is `demo+…@fuime.test`. Hidden
+if Stripe is live. Staging: `FUIME_DEMO_SANDBOX=1` +
+`FUIME_DEMO_CONFIRM=yes-seed-demo-cast`. Specs lock `CHECKLIST_IDS` and
+walk every href. Pointer: `docs/fuime/TESTING_WALKTHROUGH.md`. Maya /
+playground / `stripe_pass` / `mor_webhook_pass` still exist for slices.
+
+**2026-09-11 — Demo sandbox: test every flow without real users.**
+
+`rake fuime:demo:seed` (then `status`, `login_code[demo+admin@fuime.test]`).
+Roster at `/admin/demo` — hidden if Stripe is live. Cast is
+`demo+…@fuime.test`. Reset is `rake fuime:demo:reset` (that cast only).
+15-minute click path: `docs/fuime/TESTING_WALKTHROUGH.md`. Specs:
+`demo_sandbox_spec`, `fuime_demo_sandbox_smoke_spec`. Does not invent
+Stripe money. Maya / playground / `stripe_pass` / `mor_webhook_pass` still
+exist for their slices.
+
+**2026-09-10 — G10: MoR Checkout webhook → ledger.**
 
 A Dashboard that only forwarded `checkout.session.completed` dropped the first
 sale: the handler ignored that event (old double-post fix) and waited for

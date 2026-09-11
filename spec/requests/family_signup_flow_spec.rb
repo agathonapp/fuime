@@ -148,4 +148,31 @@ RSpec.describe "a family signs up and activates", type: :request do
     expect(EventPolicy.new(teen, venture).send(:permitted_to_operate_business?)).to be(true)
     expect(EventPolicy.new(parent, venture).setup_payments?).to be(true)
   end
+
+  # Fuime's live posture is merchant-of-record. Under MoR a teen can sell
+  # before a parent does anything; approve+activate must not park them.
+  it "admits a teen into an unvetted venture on submit under merchant-of-record", :merchant_of_record do
+    teen = login_as!("maya-admit@example.com")
+    patch user_path(teen), params: {
+      user: { full_name: "Maya Admit", age_attestation_confirmed: "1" }
+    }
+
+    application = create(
+      :event_application,
+      user: teen.reload,
+      teen_led: true,
+      name: "Maya Admit Studio",
+      description: "I sell prints.",
+      business_category: "services",
+      address_country: "US",
+      cosigner_email: "pat-admit@example.com"
+    )
+
+    post submit_application_path(application)
+    application.reload
+
+    expect(application.event).to be_present
+    expect(application.event.operator_vetting_unvetted?).to be(true)
+    expect(response).to redirect_to(event_path(application.event))
+  end
 end

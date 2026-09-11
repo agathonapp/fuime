@@ -1,0 +1,28 @@
+<%# locals: (offer:, event:, show_qr: true) %>
+<% url = fuime_payment_page_url(event_slug: event.slug, offer: offer.to_param) %>
+<div class="flex flex-col gap-2 mt1">
+  <div class="flex gap-2 flex-wrap items-center">
+    <input type="text" readonly class="flex-1 text-sm min-w-[12rem]"
+           onclick="this.select()" value="<%= url %>">
+    <button type="button" class="btn"
+            data-controller="clipboard"
+            data-clipboard-text-value="<%= url %>"
+            data-clipboard-confirm-text-value="Copied!"
+            data-action="clipboard#copy">
+      Copy
+    </button>
+    <button type="button" class="btn bg-muted"
+            data-controller="web-share"
+            data-web-share-url-value="<%= url %>"
+            data-web-share-title-value="<%= offer.name %>"
+            data-action="web-share#share">
+      Share
+    </button>
+  </div>
+  <% if show_qr %>
+    <details>
+      <summary class="muted text-sm">QR code</summary>
+      <qr-code contents="<%= url %>" class="!block mt-2" style="width: 160px; height: 160px;"></qr-code>
+    </details>
+  <% end %>
+</div>

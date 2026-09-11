@@ -21,7 +21,16 @@
 module Fuime
   class OffersController < ApplicationController
     before_action :set_event
-    before_action :set_offer, only: %i[update publish unpublish archive restore]
+    before_action :set_offer, only: %i[update publish unpublish archive restore share]
+    layout :offers_layout
+
+    WIZARD_STEPS = %w[what price storefront review share].freeze
+    PRICE_SUGGESTION_COPY = /most people charge|typical(ly)? charge|average (price|rate)|suggested (price|rate)|we recommend charging/i
+
+    def offers_layout
+      %w[new wizard share].include?(action_name) ? "fuime_product" : "application"
+    end
+    helper_method :wizard_progress, :wizard_step_index
 
     def index
       authorize @event, :offers?
@@ -35,7 +44,56 @@ module Fuime
       # only on this authenticated page — `Event#selling_blockers` names operators
       # and states their ages, and must never reach a public page (see
       # spec/controllers/fuime/storefront_blocker_privacy_spec.rb).
-      @selling_blockers = @event.selling_blockers
+      @selling_blockers = @event.offer_publish_blockers
+
+      # /learn templates still link here with words in the query string. The
+      # create form no longer lives on this page — send them into the wizard
+      # with the same allowlisted prefill (never a price).
+      if @can_manage && prefill_params.any?
+        redirect_to new_fuime_offer_path(event_slug: @event.slug, **prefill_params)
+        return
+      end
+    end
+
+    def new
+      authorize @event, :manage_offers?
+
+      # /learn templates land here with words in the query string. Persist them
+      # into the session so "per visit" still appears on the price screen —
+      # the what-screen does not collect a unit label.
+      write_wizard_state(prefill_params) if prefill_params.any?
+
+      @step = wizard_step
+      @offer = wizard_offer
+      @selling_blockers = @event.offer_publish_blockers
+      @can_manage = true
+      render "fuime/offers/wizard/#{@step}"
+    end
+
+    def wizard
+      authorize @event, :manage_offers?
+
+      @step = wizard_step
+      @offer = wizard_offer
+      @selling_blockers = @event.offer_publish_blockers
+      @can_manage = true
+
+      case @step
+      when "what" then wizard_save_what
+      when "price" then wizard_save_price
+      when "storefront" then wizard_save_storefront
+      when "review" then wizard_save_review
+      else
+        redirect_to new_fuime_offer_path(event_slug: @event.slug)
+      end
+    end
+
+    def share
+      authorize @event, :offers?
+
+      @step = "share"
+      @pay_url = fuime_payment_page_url(event_slug: @event.slug, offer: @offer.to_param)
+      render "fuime/offers/wizard/share"
     end
 
     # What a /learn starter template may put in this form, and what it may not.
@@ -113,7 +171,7 @@ module Fuime
         return
       end
 
-      redirect_to fuime_offers_path(event_slug: @event.slug),
+      redirect_to fuime_offer_share_path(event_slug: @event.slug, id: @offer.id),
                   notice: "\"#{@offer.name}\" is live on your storefront."
     rescue AASM::InvalidTransition
       redirect_to fuime_offers_path(event_slug: @event.slug), alert: "That's already published."
@@ -208,6 +266,149 @@ module Fuime
     end
 
     private
+
+    def wizard_step
+      step = params[:step].to_s.presence || "what"
+      WIZARD_STEPS.include?(step) ? step : "what"
+    end
+
+    def wizard_step_index
+      WIZARD_STEPS.index(@step) || 0
+    end
+
+    def wizard_progress
+      ((wizard_step_index + 1) * 100.0 / WIZARD_STEPS.length).round
+    end
+
+    def wizard_state
+      ((session[:offer_wizard] || {})[@event.slug] || {}).stringify_keys
+    end
+
+    def write_wizard_state(attrs)
+      session[:offer_wizard] ||= {}
+      session[:offer_wizard][@event.slug] = wizard_state.merge(attrs.stringify_keys)
+    end
+
+    def clear_wizard_state
+      return unless session[:offer_wizard]
+
+      session[:offer_wizard].delete(@event.slug)
+    end
+
+    def wizard_offer
+      if (id = wizard_state["offer_id"]).present?
+        existing = @event.fuime_offers.find_by(id: id)
+        return existing if existing
+      end
+
+      Fuime::Offer.new(
+        name: wizard_state["name"].presence || prefill_params[:name],
+        description: wizard_state["description"].presence || prefill_params[:description],
+        unit_label: wizard_state["unit_label"].presence || prefill_params[:unit_label]
+      )
+    end
+
+    def wizard_save_what
+      name = params.dig(:fuime_offer, :name).to_s.strip
+      description = params.dig(:fuime_offer, :description).to_s.strip
+      if name.blank?
+        @offer = Fuime::Offer.new(name:, description:)
+        flash.now[:alert] = "Give it a name."
+        return render "fuime/offers/wizard/what", status: :unprocessable_entity
+      end
+
+      write_wizard_state(name: name.first(Fuime::Offer::MAX_NAME_LENGTH), description: description.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH).presence)
+      if @offer.persisted?
+        @offer.update(name: wizard_state["name"], description: wizard_state["description"])
+      end
+      redirect_to new_fuime_offer_step_path(event_slug: @event.slug, step: "price")
+    end
+
+    def wizard_save_price
+      write_wizard_state(
+        "unit_label" => params.dig(:fuime_offer, :unit_label).to_s.strip.first(Fuime::Offer::MAX_UNIT_LABEL_LENGTH).presence
+      )
+
+      attrs = {
+        name: wizard_state["name"].presence || @offer.name,
+        description: wizard_state["description"],
+        unit_label: wizard_state["unit_label"],
+        price_cents: price_cents_param
+      }
+
+      if attrs[:name].blank?
+        flash[:alert] = "Start with what it is."
+        return redirect_to new_fuime_offer_path(event_slug: @event.slug)
+      end
+
+      offer = @offer.persisted? ? @offer : @event.fuime_offers.new(position: next_offer_position)
+      offer.assign_attributes(attrs)
+
+      if offer.save
+        write_wizard_state("offer_id" => offer.id)
+        redirect_to new_fuime_offer_step_path(event_slug: @event.slug, step: "storefront")
+      else
+        @offer = offer
+        flash.now[:alert] = offer.errors.full_messages.to_sentence
+        render "fuime/offers/wizard/price", status: :unprocessable_entity
+      end
+    end
+
+    def wizard_save_storefront
+      if @event.update(storefront_params)
+        redirect_to new_fuime_offer_step_path(event_slug: @event.slug, step: "review")
+      else
+        flash.now[:alert] = @event.errors.full_messages.to_sentence
+        render "fuime/offers/wizard/storefront", status: :unprocessable_entity
+      end
+    end
+
+    def wizard_save_review
+      unless @offer.persisted?
+        flash[:alert] = "Set a price first."
+        return redirect_to new_fuime_offer_step_path(event_slug: @event.slug, step: "price")
+      end
+
+      if params[:acknowledged] == "1"
+        record_sale_terms_acknowledgement!
+      end
+
+      if params[:intent] == "publish"
+        unless @event.sale_terms_acknowledged?
+          flash.now[:alert] = "Please read and confirm how selling through Fuime works first."
+          return render "fuime/offers/wizard/review", status: :unprocessable_entity
+        end
+
+        unless @offer.publish!
+          flash.now[:alert] = @offer.errors.full_messages.to_sentence.presence ||
+                              "That couldn't be published."
+          return render "fuime/offers/wizard/review", status: :unprocessable_entity
+        end
+
+        clear_wizard_state
+        redirect_to fuime_offer_share_path(event_slug: @event.slug, id: @offer.id),
+                    notice: "\"#{@offer.name}\" is live on your storefront."
+      else
+        clear_wizard_state
+        redirect_to fuime_offers_path(event_slug: @event.slug),
+                    notice: "Saved as a draft. Publish it when you're ready for people to buy it."
+      end
+    rescue AASM::InvalidTransition
+      flash.now[:alert] = "That's already published."
+      render "fuime/offers/wizard/review", status: :unprocessable_entity
+    end
+
+    def next_offer_position
+      (@event.fuime_offers.maximum(:position) || 0) + 1
+    end
+
+    def record_sale_terms_acknowledgement!
+      @event.update_columns(
+        sale_terms_acknowledged_at: Time.current,
+        sale_terms_acknowledged_by_id: current_user.id,
+        sale_terms_version: ::Event::SALE_TERMS_VERSION
+      )
+    end
 
     # See PREFILLABLE. Truncated to each field's own maximum so a hand-edited URL
     # renders a form rather than a validation error on a page the operator never

@@ -64,8 +64,9 @@ RSpec.describe Fuime::PayoutsController, "selling blockers" do
 
       expect(rendered_text).to include("This business can't take payments yet")
       expect(rendered_text).to match(/not been approved by Fuime yet/)
-      # The distinction that saves a support email: waiting on us, not on them.
-      expect(rendered_text).to match(/We'll email you when/)
+      # Draft is allowed; publish is Fuime's move. Don't park them.
+      expect(rendered_text).to match(/quick review before you go live/)
+      expect(rendered_text).to match(/we'll email you when/i)
     end
 
     it "tells the guardian too, since they are who usually fixes it" do

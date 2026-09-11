@@ -21,12 +21,17 @@
 <% end %>
 
 <% if @paid %>
-  <%# The return leg. Stripe sends the buyer back here with ?paid=1. %>
+  <%# The return leg. Stripe sends the buyer back here with ?paid=1.
+      Playground Mode never calls Stripe — same screen, honest copy. %>
   <div class="card text-center">
     <h1 class="text-2xl mt-0 mb-2">Thanks — you're paid up</h1>
     <p class="muted mb-0">
       <%= @event.name %> has your payment for <strong><%= @offer.name %></strong>.
-      Stripe has emailed you a receipt.
+      <% if @event.demo_mode? %>
+        Playground Mode — no real charge and no receipt.
+      <% else %>
+        Stripe has emailed you a receipt.
+      <% end %>
     </p>
   </div>
 <% else %>
@@ -41,7 +46,7 @@
         </div>
       <% end %>
       <div>
-        <div class="muted text-sm">Pay</div>
+        <div class="muted text-sm">Fulfilled by</div>
         <strong><%= @event.name %></strong>
       </div>
     </div>

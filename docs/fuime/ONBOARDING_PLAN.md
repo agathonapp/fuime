@@ -13,8 +13,11 @@ Those stay in `LAUNCH_SPEC.md` §0–§2 and `LEGAL_RESEARCH.md`. Nothing here
 loosens a control — §3 lists what must not move.
 
 **Status 2026-09-11: Phase A shipped** on branch `fuime/onboarding-a-copy-routing`
-(UPSTREAM_DIVERGENCE.md "2026-09-11 — Onboarding Phase A"). Corrections the build
-forced on this plan are marked *[corrected 2026-09-11]* below. Phases B–D not started.
+(UPSTREAM_DIVERGENCE.md "2026-09-11 — Onboarding Phase A"). The same day a parallel
+session shipped PRs #98–#103 to `main`, which cover most of Phases B and C — §0.5
+reconciles the two so this stays the one plan. Corrections the build forced on this
+plan are marked *[corrected 2026-09-11]*. **Still open after the merge: B3, C1, D1,
+E1–E3.**
 
 **Production posture assumed throughout:** merchant-of-record
 (`render.yaml`: `FEATURE_MERCHANT_OF_RECORD=true`, `FUIME_MINIMUM_OPERATOR_AGE=13`).
@@ -55,6 +58,31 @@ Under MoR a teen can sell before a parent has done anything; the parent gates
 5. **Send the emails the copy already promises.** "We'll email you when
    yours is approved" and "you'll receive important notifications" are both
    in shipped copy and both have no mailer.
+
+---
+
+## 0.5 What landed on `main` the same day (PRs #98–#103) — reconciled
+
+A parallel session shipped a founder-priority onboarding cut while Phase A was
+being built, with its own shorter `ONBOARDING_PLAN.md` (five moves, PR order,
+must-not-move list). That file's content is folded in here; the two plans agreed
+on every move and differed only in scope. Mapping:
+
+| Landed on `main` | This plan's item | Status |
+|---|---|---|
+| Signup asks name + write-once 13+ + terms only; application stops re-asking name/13+, pre-answers `teen_led` from `!known_adult?`, drops required `referrer`, political and previously-applied | A2, C2 | **Shipped** (#102). Phase A adds the copy on top: "What should we call you?", the 13+ helper, "Let's go", the MoR/Connect terms clause, and drops the settings-branch phone `required`. |
+| Admit on submit: `Fuime::FounderAdmission` approves + activates, never vets; cohort code still auto-vets; `next_step` names a blocker instead of "Waiting on Fuime" | C3 | **Shipped** (#102). §6 decision 1 is answered: yes. |
+| `Fuime::FounderProgress` on the teen home and venture page, with a separate guardian status line and invite link | B1 | **Shipped** (#102). |
+| Marketing primary CTA → `/signup` on index / parents / pricing | A1 | **Half shipped** (#102): those three pages are `CLOSED`; the live front door `start.html` still had no link into the app and every page kept the "early access / your turn" queue copy. Phase A finishes it: `/get-started`, CTA on `start.html` + `start-scroll.html`, queue copy removed, waitlist relabelled for cohorts, L8 sweep pinned by `spec/fuime_marketing_copy_spec.rb`. |
+| Offer creation as a wizard: what → price → storefront → review (sale terms) → share, with copy / share / QR (`fuime/offers/_share_link`) | B2, D2 | **Shipped** (#102). |
+| Site and legal copy for MoR: Ninth Street Labs, LLC named as seller of record, guardian as legal payee and clawback obligor; guardian agreement `2026-09-11-v3` | A1, A6 | **Shipped** (#99). The entity naming is kept and carried into Phase A's site copy. v3 still says "software platform, not a bank" and its §2/§4 say consent gates "create or run" and revocation ends operation — false under MoR — so Phase A's agreement text is **v4** (`2026-09-11-v4`); v3 stays resolvable for anyone who signed it. |
+| Draft while unvetted, publish still reviewed; nav honesty; Playground Mode; demo sandbox | — | **Shipped** (#98, #101, #103). Outside this plan. |
+
+Their must-not-move list (13+ checkbox, no DOB, guardian gates payouts under MoR,
+vetting before publish, MoR seller-of-record copy, no second auth system, no
+price suggestions in the offer wizard, ledger internals, no `Event`/`HcbCode`
+rename) is a subset of §3 here plus one new item worth keeping: **no price
+suggestions anywhere on the offer wizard.**
 
 ---
 
@@ -354,6 +382,10 @@ guardian invitation — that's what confirms you're the adult on the account."*
 
 ## 5. The work, in PR order
 
+**Status after the 2026-09-11 merge:** Phase A shipped on this branch; B1, B2, C2,
+C3 and D2 shipped on `main` (§0.5). **Open: B3, C1, D1, E1–E3.** C1 is now the
+single biggest remaining win — the parent still needs a login-code email.
+
 One phase = one branch = one PR (Rule 5). Sizes are shape, not days. Each row
 names the friction it removes from §1/§2.
 
@@ -431,6 +463,12 @@ Every phase ends with `bundle exec rspec`, a line per change in
    "can no longer operate a business". Real money has moved since 2026-08-21.
    This is G19 (counsel-drafted terms); agreement v3 links to the Terms only for
    refunds and disputes so as not to vouch for the rest. *[added 2026-09-11]*
+8. **"Nothing is billed during the private beta."** `site/pricing.html` (meta, plans
+   lead), `site/parents.html` (FAQ + JSON-LD) and "price list at launch" on
+   `index.html` arrived with #99, while `/billing` offers the $19.99 family plan on
+   live Stripe. Either the site is right and billing should be paused, or the copy
+   should go. Not changed here; it is a pricing promise only the founder can make.
+   *[added 2026-09-11, surfaced during the merge]*
 
 ---
 

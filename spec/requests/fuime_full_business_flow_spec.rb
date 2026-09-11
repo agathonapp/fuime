@@ -47,32 +47,25 @@ RSpec.describe "the full business flow", type: :request do
                                              "the category has to be derived, or the venture is born unable to sell"
     expect(application.service.name).to eq("Lawn & garden")
 
-    # ── 3. Activation creates the venture and seats the teen ────────────────
-    application.update!(aasm_state: :approved)
-    application.activate_event!(risk_level: 0, point_of_contact: admin)
+    # ── 3. Submit admits the founder. Approve+activate are HCB leftover
+    # gates; Fuime's publish gate is vetting. The teen already has a guardian
+    # so FounderAdmission is not blocked under Connect either.
+    application.update!(address_country: "US")
+    application.mark_submitted!
+    Fuime::FounderAdmission.new(application: application.reload).call
     venture = application.reload.event
 
     expect(venture).to be_present
-    expect(venture.business_category).to eq("services"),
-                                         "the category must survive the trip, or vetting blocks a venture nobody mispriced"
+    expect(venture).to be_operator_vetting_unvetted
+    expect(venture.business_category).to eq("services")
     expect(venture.organizer_positions.find_by(user: teen)&.role).to eq("manager")
 
-    # ── 4. Vetting binds before anything can be sold ────────────────────────
+    # ── 4. Draft while unvetted; publish waits on a human review ────────────
     #
-    # The column defaults to unvetted, so this is the state every real venture
-    # starts in. A human approving each operator is the compensating control for
-    # letting minors sell at all.
-    venture.update!(operator_vetting_status: :unvetted)
+    # Admission must not vet. The teen can write the offer. Going live is the
+    # compensating control for letting minors sell at all.
     expect(venture.accepts_payments?).to be(false)
 
-    venture.record_vetting_decision!(status: "approved", by: admin, notes: "Lawn care, 16, services only.")
-    expect(venture.reload.operator_vetting_approved?).to be(true)
-
-    # Still cannot sell — vetting is necessary and not sufficient. Payment setup
-    # is the guardian's job and has not happened.
-    expect(venture.accepts_payments?).to be(false)
-
-    # ── 5. The teen lists what they sell, at their own price ────────────────
     offer = venture.fuime_offers.create!(
       name: "Front and back lawn mow",
       description: "Includes edging. I bring my own mower.",
@@ -81,8 +74,15 @@ RSpec.describe "the full business flow", type: :request do
     )
 
     expect(offer).to be_draft
-    # Publishing is refused until the venture can actually take money — a
-    # published offer is a public promise that a payment will work.
+    expect(offer.publish!).to be(false)
+    expect(offer.reload).to be_draft
+
+    venture.record_vetting_decision!(status: "approved", by: admin, notes: "Lawn care, 16, services only.")
+    expect(venture.reload.operator_vetting_approved?).to be(true)
+
+    # Still cannot sell — vetting is necessary and not sufficient. Payment setup
+    # is the guardian's job and has not happened.
+    expect(venture.accepts_payments?).to be(false)
     expect(offer.publish!).to be(false)
     expect(offer.reload).to be_draft
 

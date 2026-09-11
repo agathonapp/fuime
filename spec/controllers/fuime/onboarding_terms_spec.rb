@@ -87,7 +87,7 @@ RSpec.describe UsersController, type: :controller do
 
       expect(response.body).to include("What should we call you?")
       expect(response.body).to include("user[full_name]")
-      expect(response.body).to include("user[preferred_name]")
+      expect(response.body).not_to include("user[preferred_name]")
       expect(response.body).to include("user[age_attestation_confirmed]")
       expect(response.body).to include("Under 18, a parent or guardian joins")
       expect(response.body).to include("Let's go")

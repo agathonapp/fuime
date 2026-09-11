@@ -112,7 +112,10 @@ class User < ApplicationRecord
     grant: 4,
     application_form: 5,
     first_robotics_form: 6,
-    waitlist: 7
+    waitlist: 7,
+    # Fuime: the demo sandbox cast (`demo+…@fuime.test`). Additive integer —
+    # no migration. See Fuime::DemoSandbox.
+    demo: 8
   }
 
   has_many :logins

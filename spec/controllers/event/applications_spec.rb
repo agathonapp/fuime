@@ -34,6 +34,12 @@ RSpec.describe Event::ApplicationsController, type: :controller do
       expect(Event::Application.last.teen_led).to be true
     end
 
+    it "pre-answers teen_led when the form omits it" do
+      post :create, params: {}
+
+      expect(Event::Application.last.teen_led).to be true
+    end
+
     # Fuime: the business-type fork now comes first — a founder says what kind of
     # business this is before describing it, because "describe your business" is a
     # wall to a teenager who has not decided what to sell yet. See
@@ -76,11 +82,11 @@ RSpec.describe Event::ApplicationsController, type: :controller do
     it "does not strand a submitted application in the draft state" do
       post :submit, params: { id: application.hashid }
 
-      expect(application.reload.aasm_state).to be_in(%w[submitted under_review])
+      expect(application.reload.aasm_state).to be_in(%w[submitted under_review approved])
     end
 
     it "sends an incomplete application back to review with an explanation" do
-      application.update!(referrer: nil)
+      application.update!(address_country: nil)
 
       post :submit, params: { id: application.hashid }
 

@@ -266,6 +266,13 @@ module Fuime
     end
 
     def ensure_payouts_possible!
+      # Connect money-out. Under MoR a leftover connected account (from the
+      # unguarded provision job) must not become a live Stripe::Payout.
+      if ::Fuime::Features.merchant_of_record?
+        raise Error, "This payout path is for a parent-owned Stripe account. " \
+                     "Fuime pays on a schedule to the bank account on file."
+      end
+
       raise NotSetUp, "This venture hasn't finished payment setup yet." if account&.stripe_id.blank?
 
       unless account.ready_for_payouts?

@@ -56,10 +56,19 @@ module Fuime
     # Ordered by what blocks what: no venture is upstream of everything, and
     # there is no point telling somebody to publish an offer when their venture
     # cannot sell.
+    #
+    # This copy is organiser-facing ("Approve them to sell"). Founders see
+    # `#founder_next_action` — same funnel, different person.
     def next_action
       return "Nothing — they've made a sale." if sold?
       return "Set up the business (automatic admission didn't run)." if event.nil?
       return "Approve them to sell — vetting is #{event.operator_vetting_status}." unless vetted?
+
+      if event.demo_mode?
+        return "Publish something to sell — nothing is listed yet." unless listed?
+
+        return "Share the pay link — Playground Mode, no real charges."
+      end
 
       blockers = event.selling_blockers
       return blockers.first if blockers.any?
@@ -67,6 +76,74 @@ module Fuime
       return "Publish something to sell — nothing is listed yet." unless listed?
 
       "Make a first sale."
+    end
+
+    # Same funnel, said to the founder. Never tells them to approve themselves.
+    # Draft first — review is the publish gate, not a waiting room.
+    def founder_next_action
+      return "You've made a sale." if sold?
+
+      if event.nil?
+        blockers = application.activation_blockers
+        return blockers.first if blockers.any?
+
+        return "Finish setting up your venture."
+      end
+
+      return "Add something to sell." unless has_offer?
+      return "We'll do a quick review before you go live." unless vetted?
+
+      if event.demo_mode?
+        return "Publish something so people can buy it." unless listed?
+
+        return "Share your pay link — Playground Mode, no real charges."
+      end
+
+      blockers = event.selling_blockers
+      return blockers.first if blockers.any?
+
+      return "Publish something so people can buy it." unless listed?
+
+      "Share your pay link and make a first sale."
+    end
+
+    # :ok / :needed / :pending / :failed — never merged into the sell funnel.
+    #
+    # Under merchant-of-record a missing parent does not block selling. A
+    # bounced invite used to disappear into a log line; `:failed` is how the
+    # founder sees it.
+    def guardian_status
+      return :ok unless guardian_pending?
+      return :pending if pending_guardian_invite?
+      return :failed if guardian_invite_failed?
+
+      :needed
+    end
+
+    def pending_guardian_invite?
+      founder.guardianships_as_minor.pending.exists?
+    end
+
+    def guardian_invite_failed?
+      return true if application.guardian_invite_error.present?
+      return false unless application.submitted? || application.under_review? || application.approved?
+
+      application.cosigner_email.present? && !pending_guardian_invite? && guardian_pending?
+    end
+
+    def guardian_status_sentence
+      case guardian_status
+      when :ok then nil
+      when :pending then "Waiting on #{application.cosigner_email.presence || "your parent"} to accept the invite."
+      when :failed
+        reason = application.guardian_invite_error
+        if reason.present?
+          "We couldn't invite your parent: #{reason}"
+        else
+          "The parent invite didn't go through. Invite them again from your account."
+        end
+      when :needed then "Invite a parent or guardian — they approve payouts, not selling."
+      end
     end
 
     # Separate from the funnel, deliberately, because it does not block selling.
@@ -84,6 +161,12 @@ module Fuime
     def venture_created? = event.present?
     def vetted?          = event.present? && event.operator_vetting_approved?
     def can_sell?        = event.present? && event.accepts_payments?
+
+    def has_offer?
+      return false if event.nil?
+
+      event.fuime_offers.live.exists?
+    end
 
     def listed?
       return false if event.nil?

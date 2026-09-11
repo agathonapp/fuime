@@ -45,22 +45,19 @@ class Guardianship < ApplicationRecord
   # stored version to its own file, so a guardian who signed an earlier version
   # keeps seeing the text they actually signed.
   #
-  # v2 (2026-08-06) names Ninth Street Labs, LLC as the counterparty. v1 was
-  # "between Fuime and you", and Fuime is a product rather than a legal person,
-  # so v1 recorded consent to an agreement with nobody.
-  #
-  # v3 (2026-09-10) carries the L5 standing disclosure ("a financial technology
-  # company, not a bank" — v2 said "software platform") and drops v2's §5, which
-  # described a per-venture Stripe account in the guardian's name that does not
-  # exist under merchant-of-record. Consent and revocation are now described as
-  # gating payouts, which is what they gate; v2 said they gated running the
-  # business. Written to be true under both postures, because the partial cannot
-  # branch on a runtime flag: the signed text must reproduce from the version.
-  #
-  # There is no version→partial table to extend: `agreement_partial_for` derives
-  # the filename from the version string and checks the file exists, so adding
-  # app/views/guardianships/agreements/_<version>.html.erb IS the registration.
-  CURRENT_AGREEMENT_VERSION = "2026-09-10-v3"
+  # v4 (2026-09-11) is the merchant-of-record text with the L5 standing
+  # disclosure ("financial technology company, not a bank") and §2/§4 that say
+  # what consent and revocation actually gate — payouts, not whether the minor
+  # may run a business. Two v3s were produced in parallel the same day; the one
+  # that reached main (2026-09-11-v3, PR #99) shipped, may have been signed, and
+  # stays resolvable. It names Ninth Street Labs, LLC as seller of record and
+  # the guardian as legal payee and clawback obligor — v4 keeps that framing —
+  # but still said "software platform, not a bank" and described revocation as
+  # ending the business. v2 named the entity but described a parent-owned Stripe
+  # account (Connect). v1 said "between Fuime and you", and Fuime is a product
+  # rather than a legal person, so v1 recorded consent to an agreement with
+  # nobody.
+  CURRENT_AGREEMENT_VERSION = "2026-09-11-v4"
 
   # Invite links are bearer tokens granting authority over a minor's account.
   # They expire so a forwarded or leaked email doesn't stay usable forever.

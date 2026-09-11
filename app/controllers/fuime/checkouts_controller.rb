@@ -44,6 +44,14 @@ module Fuime
         return
       end
 
+      # Playground Mode: click the real Buy / share path, never live Stripe.
+      # Handled before `accepts_payments?` — demo ventures fail that check on
+      # purpose (OperatorEligibility administrative blocker).
+      if event.demo_mode?
+        complete_playground_checkout!(event)
+        return
+      end
+
       # …and only ventures whose guardian has completed Stripe setup. `is_public`
       # defaults to true, so it never gated anything meaningful — every activated
       # venture presented a working payment form. Under the connected-account
@@ -150,6 +158,19 @@ module Fuime
     # not sell and credit the wrong operator's ledger, and a draft or archived
     # offer is one the operator has deliberately taken off sale — a stale link
     # must not still be able to buy it.
+    PLAYGROUND_NOTICE = "Playground Mode — no real charge. This is what a customer sees after paying."
+
+    def complete_playground_checkout!(event)
+      offer = find_offer(event)
+      if params[:offer_token].present? && offer.nil?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "That isn't for sale right now."
+        return
+      end
+
+      redirect_to return_url(event, offer, paid: true), notice: PLAYGROUND_NOTICE
+    end
+
     def find_offer(event)
       return nil if params[:offer_token].blank?
 

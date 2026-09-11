@@ -51,6 +51,7 @@ module Fuime
     class UnknownProfile < StandardError; end
     class OnboardingPathNotImplemented < StandardError; end
     class AccountNotProvisioned < StandardError; end
+    class RetiredUnderMerchantOfRecord < StandardError; end
 
     # ── Embedded component sets ─────────────────────────────────────────────
     #
@@ -234,6 +235,16 @@ module Fuime
     # An existing row whose profile disagrees with the one requested is a hard
     # error rather than a silent re-use, since the two are not interchangeable.
     def find_or_create_account!
+      # Belt for ProvisionConnectAccountJob and any future caller. Under MoR
+      # Fuime is the seller; a connected account created here is unused and,
+      # on live keys, a real Stripe object in a parent's name.
+      if ::Fuime::Features.merchant_of_record?
+        raise RetiredUnderMerchantOfRecord, <<~MSG.squish
+          Connected accounts are not provisioned under merchant-of-record.
+          Fuime is the seller; the family's bank path is the Plaid payout destination.
+        MSG
+      end
+
       existing = @event.stripe_connected_account
       if existing&.stripe_id.present?
         verify_existing_profile!(existing)

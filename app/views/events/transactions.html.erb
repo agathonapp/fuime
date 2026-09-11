@@ -35,8 +35,10 @@
     <p class="mt0">
       <strong>Welcome to Playground Mode</strong>
       <br>
-      Nothing here moves real money. Turn on mock data from the banner above to
-      see what a busy month looks like, or invite your team and click around.
+      Nothing here moves real money. The pitch path is
+      <%= link_to "What you sell", fuime_offers_path(event_slug: @event.slug) %>
+      → create or publish an offer → storefront / share. Mock data on this
+      page is the ledger demo only.
     </p>
   </div>
 <% end %>

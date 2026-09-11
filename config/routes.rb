@@ -198,6 +198,13 @@ Rails.application.routes.draw do
   # storefront a store rather than a tip jar.
   get "/:event_slug/offers", to: "fuime/offers#index", as: :fuime_offers
   post "/:event_slug/offers", to: "fuime/offers#create", as: :fuime_offers_create
+  # Fuime: multi-screen product creation. Declared before `/:id` so `new` is
+  # never captured as an offer id. See Fuime::OffersController#new.
+  get "/:event_slug/offers/new", to: "fuime/offers#new", as: :new_fuime_offer
+  get "/:event_slug/offers/new/:step", to: "fuime/offers#new", as: :new_fuime_offer_step,
+                                      constraints: { step: /what|price|storefront|review|share/ }
+  post "/:event_slug/offers/wizard/:step", to: "fuime/offers#wizard", as: :fuime_offer_wizard
+  get "/:event_slug/offers/:id/share", to: "fuime/offers#share", as: :fuime_offer_share
   patch "/:event_slug/storefront", to: "fuime/offers#update_storefront", as: :fuime_storefront_settings
   patch "/:event_slug/offers/:id", to: "fuime/offers#update", as: :fuime_offer
   # FUIME: the operator affirms they were told what selling through Fuime means.
@@ -522,6 +529,18 @@ Rails.application.routes.draw do
       get "checks", to: "admin#checks"
       get "increase_checks", to: "admin#increase_checks"
       get "applications", to: "admin#applications"
+      # FUIME: demo sandbox roster. Hidden when Stripe is live — see
+      # Fuime::DemoSandbox.enabled? and Admin::DemoController.
+      get "demo", to: "admin/demo#show"
+      post "demo/setup", to: "admin/demo#setup", as: "demo_setup"
+      post "demo/seed", to: "admin/demo#seed", as: "demo_seed"
+      post "demo/reset", to: "admin/demo#reset", as: "demo_reset"
+      post "demo/login_code", to: "admin/demo#login_code", as: "demo_login_code"
+      post "demo/remind", to: "admin/demo#remind", as: "demo_remind"
+      # FUIME: Playground Mode pitch venture. Safe while Stripe is live —
+      # does not call DemoSandbox.guard_enabled!.
+      get "playground", to: "admin/playground#show"
+      post "playground/seed", to: "admin/playground#seed", as: "playground_seed"
       # FUIME: cohorts — one person vouching for a group in advance, so an event
       # does not need 150 clicks while it is running. See Fuime::Cohort.
       # `cohort` doubles as the live roster board: where every founder is stuck.

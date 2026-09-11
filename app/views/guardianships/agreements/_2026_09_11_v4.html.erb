@@ -1,8 +1,18 @@
 <%# locals: (minor:, guardian: nil) %>
 <%#
-  Fuime Guardian Agreement, version 2026-09-10-v3.
+  Fuime Guardian Agreement, version 2026-09-11-v4.
 
-  Changed from v2:
+  Why a v4 the same day as v3: two sessions produced a v3 in parallel. The one
+  that reached main first (2026-09-11-v3, PR #99) was deployed, so it may have
+  been signed and is immutable. It still says "software platform, not a bank"
+  (L5 prescribes the standing disclosure), and its §2 and §4 say consent gates
+  whether the minor can "create or run" a business and that revocation means
+  they "will no longer be able to operate" — both false under merchant-of-record,
+  where the guardian gates payouts. v4 keeps v3's legal framing (Ninth Street
+  Labs, LLC doing business as Fuime is the seller of record; the guardian is the
+  legal payee and clawback obligor) and corrects the rest.
+
+  Changed from v2 and v3:
 
   - Section 5 described Fuime as "a software platform, not a bank". L5 (CLAUDE.md,
     LEGAL_RESEARCH.md §7) prescribes the standing disclosure "Fuime is a financial
@@ -64,8 +74,8 @@
 <div class="guardian-agreement">
   <p>
     This agreement is between
-    <strong><%= Rails.configuration.constants.legal_entity_name %></strong>, the
-    company that operates Fuime (&ldquo;Fuime&rdquo;, &ldquo;we&rdquo;), and you,
+    <strong><%= Rails.configuration.constants.legal_entity_name %></strong>,
+    doing business as Fuime (&ldquo;Fuime&rdquo;, &ldquo;we&rdquo;), and you,
     the parent or legal guardian of
     <strong><%= minor.name.presence || minor.email %></strong> (&ldquo;the minor&rdquo;).
     By signing, you agree to the following.
@@ -139,10 +149,13 @@
     decision is yours to make, not the minor's.
   </p>
   <p>
-    Where Fuime is the seller of record for the business's sales, Fuime collects
-    the customer's payment and then pays the business what it has earned, after
-    any fees, refunds and disputes. Refunds and disputes on the business's sales
-    may reduce what it is paid. Fuime's
+    Where Fuime is the seller of record for the business's sales, the customer
+    buys from <%= Rails.configuration.constants.legal_entity_name %>. Fuime
+    collects the customer's payment, keeps its fee, and owes the rest to the
+    business as a payable, which it pays to the destination above after any
+    fees, refunds and disputes. You are the legal payee and the clawback
+    obligor: refunds and disputes on the business's sales may reduce what it is
+    paid, and where they exceed it, the shortfall is yours. Fuime's
     <%= link_to "Terms of Service", terms_path %> govern sales made through
     Fuime, including refunds and disputes.
   </p>
@@ -164,7 +177,7 @@
   </p>
 
   <p class="muted text-sm">
-    Agreement version 2026-09-10-v3, between you and
+    Agreement version 2026-09-11-v4, between you and
     <%= Rails.configuration.constants.legal_entity_name %>.
     Questions? Email <%= mail_to "support@fuime.com" %>.
   </p>

@@ -5764,6 +5764,41 @@ for an expired link.
 | `/admin/guardianships` + nav + admin_tools | Stale queue; resend reuses existing action; verifications tab is consent record only (L4) | `app/controllers/admin_controller.rb`, `app/views/admin/guardianships.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
 | Specs + how-to-test | Model / job / mailer / request / nav | `spec/models/guardianship_spec.rb`, `spec/jobs/fuime/guardian_invite_reminder_job_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/requests/fuime_guardianships_admin_spec.rb`, `spec/models/admin/nav_spec.rb` |
 
+## 2026-09-11 — Under MoR, stop Connect onboarding and Connect money-out
+
+Production is merchant-of-record. Connect screens were already redirected
+from the nav and `/payments/setup`, but accepting a guardianship still
+provisioned a connected account, `/payments/verify` still rendered KYC,
+and Payouts still offered "Ask my guardian" → `Stripe::Payout` on an
+account MoR never creates. The only bank path under MoR is Plaid at
+`/:slug/payout-method`. Code left in place (Rule 2); gated on
+`FEATURE_MERCHANT_OF_RECORD`. No originator, no Stripe/Plaid env change.
+
+| Change | Why | Files |
+|---|---|---|
+| Job + onboarding service refuse account create | A guardianship accept must not open a live connected account | `app/jobs/fuime/provision_connect_account_job.rb`, `app/services/fuime/connect_onboarding_service.rb` |
+| Requirement-collection + payout writes redirect | Leftover Connect KYC and "Ask my guardian" / Approve-and-send | `app/controllers/fuime/requirement_collections_controller.rb`, `app/controllers/fuime/payouts_controller.rb` |
+| `PayoutService` refuses under MoR | Belt: leftover connected account must not send a Stripe payout | `app/services/fuime/payout_service.rb` |
+| Policy hides Connect setup predicates | Leftover links that read `setup_payments?` / `payment_setup_status?` | `app/policies/event_policy.rb` |
+| Specs for the gated paths | Job, service, request, controller, policy | `spec/jobs/fuime/provision_connect_account_job_spec.rb`, `spec/services/fuime/connect_onboarding_profile_spec.rb`, `spec/services/fuime/payout_service_spec.rb`, `spec/requests/fuime_connect_screens_retired_spec.rb`, `spec/controllers/fuime/payouts_controller_spec.rb`, `spec/controllers/fuime/requirement_collections_controller_spec.rb`, `spec/policies/event_policy_payment_setup_spec.rb` |
+
+## 2026-09-11 — Marketing + legal copy: MoR, live payments, Ninth Street Labs seller
+
+User-facing copy on fuime.com (`site/`) and app.fuime.com legal/chrome pages now
+matches production: Ninth Street Labs, LLC is the seller of record (Fuime is the
+brand). Status line is `Private beta · live payments. Ninth Street Labs, LLC
+(Fuime) is the seller of record.` Connect-era "parent owns the Stripe account /
+never in the flow of funds" and "test mode / no real money" claims are gone.
+Guardian agreement §5 is a new versioned partial (`2026-09-11-v3`).
+
+| Change | Why | Files |
+|---|---|---|
+| Marketing + app legal/footer copy | Site described Connect + test mode; production is MoR + live Checkout | `site/*.html`, `app/views/static_pages/*`, `app/views/application/_footer.html.erb`, `app/views/fuime/*` |
+| Guardian agreement v3 | Do not rewrite signed v2; §5 now states seller / legal payee / payable | `app/views/guardianships/agreements/_2026_09_11_v3.html.erb`, `app/models/guardianship.rb` |
+| Shared status/ownership helpers | One seam for the seller sentence | `app/helpers/fuime_helper.rb` |
+| Checkout + sold-by merchant name | Receipts/Checkout said "sold by Fuime"; storefront said Fuime LLC | `app/services/fuime/payment_link_service.rb`, `app/views/fuime/_seller_of_record.html.erb`, `app/views/layouts/fuime_payment_page.html.erb` |
+| School payment-setup leftover | `institutionally_sponsored?` still said the school "will own that account" | `app/views/fuime/payment_setups/*`, `app/views/fuime/payouts/index.html.erb`, `app/views/fuime/payout_methods/show.html.erb`, `app/models/event/plan/school.rb` |
+
 ## 2026-09-10 — G10: MoR Checkout webhook posts the first sale
 
 Production is merchant-of-record. A successful storefront Checkout must appear
@@ -5790,6 +5825,119 @@ Did not redo G1–G5. Did not change Connect recorders or the ledger engine.
 | Stub `Rails.error.unexpected` in `connect_settlement_sweep_spec` | Pipeline CT memo short_code ≠ grouping HcbCode; the report raises in test and flakes shard 2 | `spec/services/fuime/connect_settlement_sweep_spec.rb` |
 | Pin founder name on cohorts admin roster spec | Faker apostrophe (`O'Keefe`) escapes in HTML; same pin as subscriptions / operator vetting | `spec/requests/fuime_cohorts_admin_spec.rb` |
 
+## 2026-09-11 — Demo sandbox: one cast to click every flow
+
+Rushmore had almost no real users and no single way to exercise waitlist,
+guardianship, waive, admit, vetting, MoR checkout, billing, and the admin
+queues without inventing people each time. Existing Maya / playground /
+`stripe_pass` / `mor_webhook_pass` seeds each cover a slice.
+
+`Fuime::DemoSandbox` seeds a marked cast (`demo+…@fuime.test`,
+`creation_method: :demo`). Rake + `/admin/demo` (hidden when Stripe is
+live). Reset deletes only that cast. No Stripe objects, no fake live
+money. Walkthrough rewritten as the 15-minute path.
+
+Did not change the ledger engine, Maya/playground scripts, or production
+credentials.
+
+| Change | Why | Files |
+|---|---|---|
+| `creation_method: :demo` | Mark sandbox users without a migration | `app/models/user.rb` |
+| `Fuime::DemoSandbox` + `fuime:demo:*` | Idempotent seed / scoped reset / login codes / reminder / smoke | `app/services/fuime/demo_sandbox.rb`, `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` + nav | Roster + mint codes; off when Stripe is live | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
+| Specs + walkthrough | Seed/reset contract; request smoke of every queue | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb`, `spec/models/admin/nav_spec.rb`, `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo sandbox: living checklist + Become
+
+Rushmore needed one command and a page he could click in 15 minutes, not a
+second markdown copy of the same path. Become uses the existing
+`UsersController#impersonate` (admin only) — no magic-code fight, no new
+production login door.
+
+`rake fuime:demo` is reset + seed + banner. `/admin/demo` is the checklist.
+Specs lock `CHECKLIST_IDS` and walk every href as the right persona.
+
+Did not touch Lightspark, the ledger engine, or live Stripe.
+
+| Change | Why | Files |
+|---|---|---|
+| `setup!`, `checklist`, `banner`, `CAST_PEOPLE` | One source for the cast and the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| `rake fuime:demo` | The one command | `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` Reset + seed + Become | Click-through without minting codes | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `config/routes.rb` |
+| Checklist lock + persona walk | So the demo cannot rot | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |
+| Walkthrough slimmed to a pointer | Prefer the living page over scattered docs | `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo reset after the advertised path
+
+`rake fuime:demo` after checkout / billing / waive / Solo admit could FK-fail
+(the same class of bug as CI shards 5 and 8 on `c81ce1ed`). Reset now deletes
+the demo ledger graph in FK order, drops sandbox subscriptions, clears
+`guardian_requirement_waived_by_id`, and includes Solo-admit ventures.
+Mint/remind use `guard_write!`; remind only touches demo guardianships.
+Ledger engine internals untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Demo money/subscription/waive teardown | So reset survives the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| Reset leftover + write-guard specs | Lock the advertised path | `spec/services/fuime/demo_sandbox_spec.rb` |
+
+## 2026-09-11 — Teen onboarding + multi-screen offer wizard
+
+HCB approve+activate parked founders on "Waiting on Fuime" until an admin
+clicked. Fuime's publish gate is vetting. `Fuime::FounderAdmission` stands
+the venture up on submit without vetting. Signup/application field cuts
+and a FounderProgress checklist on the teen home. Marketing primary CTA
+is live signup; waitlist remains. Product creation is a five-screen
+wizard; nothing in it suggests a price.
+
+Did not touch Plaid, payout methods, Connect onboarding, `STRIPE_MODE`,
+or `FUIME_DEMO_SANDBOX`.
+
+| Change | Why | Files |
+|---|---|---|
+| `Fuime::FounderAdmission` | Admit on submit; do not vet | `app/services/fuime/founder_admission.rb`, `app/models/event/application.rb` |
+| Signup + application field cuts | Fields the system does not need | `app/views/users/edit.html.erb`, `app/views/event/applications/*` |
+| FounderProgress on home/venture | Founders could not see the checklist | `app/services/fuime/founder_progress.rb`, `app/views/fuime/_founder_progress.html.erb` |
+| Marketing primary CTA → `/signup` | Waitlist was the only door | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/server.js` |
+| Offer wizard | One jammed page → what/price/storefront/review/share | `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/wizard/` |
+
+## 2026-09-11 — Draft while unvetted; publish still reviewed
+
+Teens land in the venture on submit. They can draft offers through the
+wizard without a human. Going live still requires operator vetting
+(suspended still freezes). Founder-facing copy asks them to add something
+to sell, then says we'll do a quick review before they go live.
+
+| Change | Why | Files |
+|---|---|---|
+| `activate_event!` keeps `self.event` | AASM after-callback save was orphaning the new venture | `app/models/event/application.rb` |
+| Submit-only admit flag + `event_id` blocker | Auto-admit must not fire on factory/admin aasm writes; ghost Events must not look like a business | `app/models/event/application.rb` |
+| Applicant may be Event POC | HCB required an admin POC (fiscal sponsor). FounderAdmission has no staff vouched | `app/models/event.rb` |
+| No-code submit still admits (unvetted) | CohortAdmission must not vet without a voucher; FounderAdmission still creates the venture | `spec/services/fuime/cohort_admission_spec.rb` |
+| Pre-create HcbCode+Ledger::Item for spec memos | Bare `HCB-xxxxx` tokens fall through to HCB-000 and flake assign_ledger_item | `spec/support/hcb_short_code_isolation.rb`, `spec/services/fuime/connect_settlement_sweep_spec.rb`, `spec/services/fuime/payables_ledger_spec.rb` |
+| FounderProgress founder copy | Draft first, then review — not "waiting on Fuime" | `app/services/fuime/founder_progress.rb` |
+| Selling-blockers / review copy | Same posture in the operator UI | `app/views/fuime/_selling_blockers.html.erb`, `app/views/fuime/offers/wizard/review.html.erb` |
+
+## 2026-09-11 — Nav honesty + Playground Mode product demo
+
+Family MoR sidebar showed an empty RECEIVE header (section proc ORed
+`invoices?` / check-deposit index while `module_prefix` items were
+stripped) and SPEND with only Reimbursements. Reimbursements are not
+in DisabledModules on purpose, but they pay out through Column book
+transfers + ACH from the HCB clearinghouse — not a live family MoR
+flow. Playground was ledger-only; pitch demos need offers / wizard /
+storefront / share on the same production app without flipping Stripe
+to test or standing up a second Render.
+
+| Change | Why | Files |
+|---|---|---|
+| Drop empty nav sections after DisabledModules filter | Empty RECEIVE/SPEND headers | `app/helpers/events_helper.rb` |
+| Hide reimbursements / contractor payments unless sponsor banking | Cannot move money on MoR | `app/helpers/events_helper.rb`, `app/views/events/show.html.erb` |
+| Hide Add funds unless school + connected account | Admin short-circuit showed it on Fuime HQ | `app/helpers/events_helper.rb` |
+| `EventPolicy#invoices?` false | Close the overview the way donations were closed | `app/policies/event_policy.rb` |
+| Playground may publish listings; checkout mocks | Product click-through, never live Stripe | `app/models/fuime/offer.rb`, `app/models/event.rb`, `app/controllers/fuime/checkouts_controller.rb` |
+| `Fuime::Playground` + `/admin/playground` | Seed + Become while Stripe is live | `app/services/fuime/playground.rb`, `app/controllers/admin/playground_controller.rb` |
+
 ## 2026-09-11 — Onboarding Phase A: copy and routing (docs/fuime/ONBOARDING_PLAN.md §5)
 
 Both onboarding flows were traced on `main` (plan §1–§2) and the copy the teen
@@ -5809,7 +5957,7 @@ site cannot branch and are written to be true under both.
 
 | Change | Why | Files |
 |---|---|---|
-| Site: `/get-started` (307 → app `?signup=true`) is the canonical CTA; `/start`, `/signup` 307 to the same target; front door `start.html` + `start-scroll.html` + index/parents/pricing carry "Start your business" → `/get-started` and "Log in"; waitlist forms kept (Rule 2) but relabelled for schools/teachers/cohorts with `*-cohort` data-sources; every "early access / your turn / test mode / no real money / Connect plan" sentence rewritten to MoR facts; no price changed | The app is open; the primary CTA was a queue. `/start` had served a cacheable 308 → `/`. L8 | `site/server.js`, `site/start.html`, `site/start-scroll.html`, `site/index.html`, `site/parents.html`, `site/pricing.html`, `site/site.js`, `site/sitemap.xml`, `site/docs/BRIEF.md`, `site/test/server.test.mjs`, new `spec/fuime_marketing_copy_spec.rb` |
+| Site (merged onto #99's legal copy — Ninth Street Labs, LLC as seller of record, guardian as legal payee): `/get-started` (307 → app `?signup=true`) is the canonical CTA; `/start`, `/signup` 307 to the same target; front door `start.html` + `start-scroll.html` + index/parents/pricing carry "Start your business" → `/get-started` and "Log in"; waitlist forms kept (Rule 2) but relabelled for schools/teachers/cohorts with `*-cohort` data-sources; every "early access / your turn / test mode / no real money / Connect plan" sentence rewritten to MoR facts; no price changed | The app is open; the primary CTA was a queue. `/start` had served a cacheable 308 → `/`. L8 | `site/server.js`, `site/start.html`, `site/start-scroll.html`, `site/index.html`, `site/parents.html`, `site/pricing.html`, `site/site.js`, `site/sitemap.xml`, `site/docs/BRIEF.md`, `site/test/server.test.mjs`, new `spec/fuime_marketing_copy_spec.rb` |
 | Signup page (`?signup=true`) reads "Start your business on Fuime" with a MoR/Connect sub-line ("sell as soon as Fuime approves your business — a parent or guardian signs off before you get paid") | Sign-up was the sign-in page with a different `<title>` | `app/views/logins/new.html.erb`, `spec/controllers/logins_controller_spec.rb` |
 | Onboarding profile form asks name, optional preferred name, 13+ only; phone, profile picture, intl-tel-input, verify-phone modal and the dead `onsubmit` leave the onboarding branch (settings branch keeps them, minus client-side `required` on phone); h1 "What should we call you?", button "Let's go"; terms clause branches ("before you can get paid" / "before you can run a business") | Phone was HTML-required and read nowhere before a first sale; a phoneless user was then browser-blocked from saving any setting | `app/views/users/edit.html.erb`, `app/assets/javascripts/phone_input.js` (guard missing `#phone_raw`), `spec/controllers/fuime/onboarding_terms_spec.rb` |
 | `LoginsController#complete` and `WaitlistInvitesController#after_waitlist_login_path` send a user to the profile form only when `full_name` is blank (upstream: name OR phone) | Otherwise every phoneless user bounces to the form on every login; matches `User#onboarding?` | `app/controllers/logins_controller.rb`, `app/controllers/waitlist_invites_controller.rb`, `spec/requests/family_signup_flow_spec.rb`, `spec/requests/fuime_waitlist_invite_spec.rb` |
@@ -5823,7 +5971,7 @@ site cannot branch and are written to be true under both.
 | Revoke copy (controller flash, guardian index/record confirms, admin confirm) split: MoR "No money will be paid out … until a parent or guardian is on the account again"; Connect keeps "can no longer operate" | `User#permitted_to_operate_business?` is `true` under MoR; revocation re-arms `Event#payout_setup_blockers` | `app/controllers/guardianships_controller.rb`, `app/views/guardianships/{index,record}.html.erb`, `app/views/users/_admin_guardianship.html.erb`, `app/models/guardianship.rb` (comment) |
 | New `Fuime::VettingMailer#approved` / `#reinstated` to manager-or-above organizers; `Event#record_vetting_decision!` enqueues one only on a transition INTO approved (reinstated when coming from suspended), after commit because `Fuime::CohortAdmission` calls it inside the cohort lock | `_selling_blockers` has promised "We'll email you when yours is approved" since vetting shipped; nothing sent it | `app/mailers/fuime/vetting_mailer.rb`, `app/views/fuime/vetting_mailer/*`, `app/models/event.rb`, `spec/mailers/fuime/vetting_mailer_spec.rb`, `spec/models/event_operator_vetting_spec.rb`, `spec/services/fuime/cohort_admission_spec.rb`, `spec/mailers/previews/fuime/vetting_mailer_preview.rb` |
 | `Event::ApplicationMailer#activated` body: Add what you sell → Share your storefront (`/b/:slug`) → guardian line gated on `needs_guardian?` (pending → resend; none/revoked → invite; "You can sell now" only when `accepts_payments?`) → "Fuime is reviewing … by hand … We'll email you" while unvetted; team invite last, roles named via `RolesHelper` | Upstream led with team invites; vetting was never mentioned | `app/views/event/application_mailer/activated.html.erb`, new `spec/mailers/event/application_mailer_spec.rb` |
-| Guardian agreement **v3** (`2026-09-10-v3`, new partial; v1/v2 untouched): L5 standing disclosure in §5 (sentence 4 adapted — "opened" dropped, addressed to the signer — reason in the header); Connect-only §5 sentences removed; §2/§4 gate payouts not "create or run"; school and admin-waiver exceptions stated once in §5; §4 says a payout already scheduled or released may still be sent; "balances" dropped; Terms pointer softened | L5 on the one document a parent signs; L8 — v2 described Connect | `app/views/guardianships/agreements/_2026_09_10_v3.html.erb`, `app/models/guardianship.rb` (`CURRENT_AGREEMENT_VERSION`), `spec/models/guardianship_agreement_spec.rb` |
+| Guardian agreement **v4** (`2026-09-11-v4`, new partial; v1/v2/v3 untouched — main's `2026-09-11-v3` shipped the same day and may have been signed): L5 standing disclosure in §5 (sentence 4 adapted — "opened" dropped, addressed to the signer — reason in the header); Connect-only §5 sentences removed; §2/§4 gate payouts not "create or run"; school and admin-waiver exceptions stated once in §5; §4 says a payout already scheduled or released may still be sent; "balances" dropped; Terms pointer softened | L5 on the one document a parent signs; L8 — v2 described Connect | `app/views/guardianships/agreements/_2026_09_11_v4.html.erb`, `app/models/guardianship.rb` (`CURRENT_AGREEMENT_VERSION`), `spec/models/guardianship_agreement_spec.rb` |
 | `/guardian-agreement` wrapper and `/faq` no longer say withdrawal means "can no longer operate a business"; FAQ: guardian gates payouts under MoR, fee read from `Event::Plan::Free::REVENUE_FEE` (was a 5% fallback constant), family plan fee from `Event::Plan::Pro`, "balances" dropped, standing disclosure verbatim, "During the beta" removed | L8 on public pages | `app/views/static_pages/guardian_agreement.html.erb`, `app/views/static_pages/faq.html.erb`, `spec/requests/fuime/legal_pages_spec.rb` |
 
 Not touched, still false under MoR, needs the founder/counsel (G19): `app/views/static_pages/terms.html.erb` beta banner ("no real money moves through Fuime"), §3 bullet, §10 ("can no longer operate"), and §8's seller name vs `legal_entity_name`. v3 links to the Terms only for refunds and disputes so as not to vouch for the rest.
