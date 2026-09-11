@@ -21,8 +21,9 @@ RSpec.describe Fuime::FounderAdmission do
     let(:application) { complete_application_for(teen, cosigner_email: "parent@example.com") }
 
     it "approves and activates without vetting" do
-      application.mark_submitted!
+      result = described_class.new(application:).call
 
+      expect(result.status).to eq(:admitted), result.message.to_s
       event = application.reload.event
       expect(event).to be_present
       expect(application).to be_approved
@@ -30,9 +31,18 @@ RSpec.describe Fuime::FounderAdmission do
       expect(event.accepts_payments?).to be(false)
     end
 
-    it "is idempotent when the venture already exists" do
+    it "runs from submit, after the AASM save commits" do
       application.mark_submitted!
+
       event = application.reload.event
+      expect(event).to be_present
+      expect(event).to be_operator_vetting_unvetted
+    end
+
+    it "is idempotent when the venture already exists" do
+      described_class.new(application:).call
+      event = application.reload.event
+      expect(event).to be_present
 
       result = described_class.new(application:).call
 

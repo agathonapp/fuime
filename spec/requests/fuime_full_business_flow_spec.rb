@@ -52,6 +52,7 @@ RSpec.describe "the full business flow", type: :request do
     # so FounderAdmission is not blocked under Connect either.
     application.update!(address_country: "US")
     application.mark_submitted!
+    Fuime::FounderAdmission.new(application: application.reload).call
     venture = application.reload.event
 
     expect(venture).to be_present

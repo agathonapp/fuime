@@ -124,6 +124,7 @@ class Event
     before_validation :derive_business_category
 
     after_save :check_cosigner_update
+    after_commit :fuime_founder_admission_after_submit, on: :update
 
     monetize :annual_budget_cents, allow_nil: true
     monetize :committed_amount_cents, allow_nil: true
@@ -244,11 +245,10 @@ class Event
           # who has just pressed Submit. See Fuime::CohortAdmission#call.
           ::Fuime::CohortAdmission.new(application: self).call if fuime_cohort_id.present?
 
-          # Fuime: stand the venture up the moment they submit. Approve+activate
-          # are HCB fiscal-sponsorship gates; Fuime's publish gate is vetting.
-          # FounderAdmission does not vet. It no-ops if CohortAdmission (or a
-          # previous run) already created the Event. See ONBOARDING_PLAN.md §5.
-          ::Fuime::FounderAdmission.new(application: self).call
+          # FounderAdmission runs from after_commit, not here. Calling
+          # activate_event! inside this AASM after callback left no venture —
+          # the enclosing save and the invite after_create_commit fight the
+          # nested with_lock. See #fuime_founder_admission_after_submit.
         end
       end
 
@@ -533,6 +533,20 @@ class Event
 
     def record_pageview(last_page_viewed)
       update!(last_viewed_at: Time.current, last_page_viewed:)
+    end
+
+    # Fuime: stand the venture up after Submit commits, not inside the AASM
+    # after callback. activate_event! takes a with_lock and writes event_id;
+    # doing that before mark_submitted's own save finished left no Event
+    # (FounderAdmission, family signup, and the full-flow spec all went red).
+    def fuime_founder_admission_after_submit
+      return if event_id.present?
+      return unless previous_changes.key?("aasm_state")
+
+      from, = previous_changes["aasm_state"]
+      return unless from == "draft"
+
+      ::Fuime::FounderAdmission.new(application: self).call
     end
 
     # Why activation would refuse, in words an operator can act on.

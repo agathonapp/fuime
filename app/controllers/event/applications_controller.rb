@@ -341,6 +341,10 @@ class Event
 
       begin
         @application.mark_submitted!
+        # after_commit on the application also runs this; a second call is
+        # already_has_venture. Kept here so a request that submits still
+        # admits even if the commit hook is skipped in a wrapping transaction.
+        ::Fuime::FounderAdmission.new(application: @application.reload).call
         confetti!
         invite_error = @application.guardian_invite_error
         @application.reload

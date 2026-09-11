@@ -317,10 +317,7 @@ module Fuime
         return render "fuime/offers/wizard/what", status: :unprocessable_entity
       end
 
-      write_wizard_state(
-        name:        name.first(Fuime::Offer::MAX_NAME_LENGTH),
-        description: description.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH).presence
-      )
+      write_wizard_state(name: name.first(Fuime::Offer::MAX_NAME_LENGTH), description: description.first(Fuime::Offer::MAX_DESCRIPTION_LENGTH).presence)
       if @offer.persisted?
         @offer.update(name: wizard_state["name"], description: wizard_state["description"])
       end

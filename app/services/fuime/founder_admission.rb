@@ -75,7 +75,7 @@ module Fuime
     # `#accept` already handles.
     def activate!
       @application.activate_event!(
-        risk_level: :zero,
+        risk_level: 0,
         point_of_contact: @application.user
       )
 
