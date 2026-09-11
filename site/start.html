@@ -6,7 +6,7 @@
     <title>fuime — invoicing and books for founders aged 13 to 17</title>
     <meta
       name="description"
-      content="fuime is the financial platform for teen-run businesses. Send real invoices, get paid into a Stripe account your parent owns and you run, keep clean books, and know what you owe at tax time. A parent co-signs once; after that the business is yours to run."
+      content="fuime is the financial platform for teen-run businesses. Send real invoices, get paid, keep clean books, and know what you owe at tax time. Every new business is reviewed by hand before it can sell, and a parent or guardian signs off before anything is paid out."
     />
     <link rel="canonical" href="https://fuime.com/" />
     <meta property="og:type" content="website" />
@@ -19,7 +19,7 @@
     />
     <meta
       property="og:description"
-      content="Send a real invoice, get paid into a Stripe account your parent owns and you run, and know what you owe at tax time. A parent co-signs once. After that it's yours."
+      content="Send a real invoice, get paid, and know what you owe at tax time. Every new business is reviewed by hand, and a parent or guardian signs off before you get paid."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -36,7 +36,7 @@
     />
     <meta
       name="twitter:description"
-      content="Send a real invoice, get paid into a Stripe account your parent owns and you run, and know what you owe at tax time. A parent co-signs once. After that it's yours."
+      content="Send a real invoice, get paid, and know what you owe at tax time. Every new business is reviewed by hand, and a parent or guardian signs off before you get paid."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -189,9 +189,14 @@
            Scroll flies into the laptop on that desk and lands on the sign-up.
 
            The panel below is not a picture of a screen — it is the sign-up
-           itself, a real form that happens to be registered onto the laptop's
-           glass. That is the whole idea of the page: you do not arrive
-           somewhere and then find a form, you fly into the form.
+           door itself, registered onto the laptop's glass. That is the whole
+           idea of the page: you do not arrive somewhere and then find the way
+           in, you fly into it. The door is two links — into the app's sign-up
+           and into its sign-in — because the app is open: anyone can create
+           an account, so a form that parked the address in a queue was the
+           wrong thing to fly into (docs/fuime/ONBOARDING_PLAN.md §1 #1). The
+           waitlist form still exists, at the bottom of the page, for schools
+           and closed cohorts.
 
            It is in the markup from first paint and it is styled by
            style.css's resting rules, so it exists whether or not the dive ever
@@ -201,9 +206,8 @@
            are simply two blocks stacked in a page.
 
            The panel carries real controls, so fx/dive.js holds `inert` on it
-           for the whole flight and drops it when the panel comes to rest — an
-           email field at opacity 0 is one a Tab key finds long before an eye
-           does. -->
+           for the whole flight and drops it when the panel comes to rest — a
+           link at opacity 0 is one a Tab key finds long before an eye does. -->
       <section class="dive" data-fx-dive>
         <div class="dive__track">
           <div class="dive__stage">
@@ -227,42 +231,33 @@
                 >
                   <use href="#arch" />
                 </svg>
-                <p class="dv-join__eyebrow">Early access</p>
+                <p class="dv-join__eyebrow">Free to start</p>
                 <h1 class="dv-join__h">
                   You're already working.<br />Start billing.
                 </h1>
                 <p class="dv-join__lead">
                   Invoicing and books for founders aged 13 to 17. Tutoring, lawn
-                  care, photo, DJ work — send a real invoice, get paid into a
-                  Stripe account your parent owns and you run, and know what you
-                  owe at tax time.
+                  care, photo, DJ work — send a real invoice, get paid, and know
+                  what you owe at tax time.
                 </p>
-                <form class="capture" data-source="start-dive" novalidate>
-                  <div class="capture__row">
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="you@school.edu"
-                      autocomplete="email"
-                      aria-label="Email address"
-                      required
-                    />
-                    <button type="submit" class="btn btn--accent">
-                      Get early access
-                    </button>
-                  </div>
-                  <p class="capture__msg" role="status" aria-live="polite"></p>
-                  <p class="capture__done">
-                    <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-                    <span>You're on the list. We'll send a login link when it's your turn.</span>
-                  </p>
-                </form>
+                <!-- A div wearing the form's class, on purpose. `.dv-join
+                     .capture .btn` is the one rule that sizes a button for a
+                     panel drawn at 1600px and scaled onto the glass (66px, and
+                     50px stacked on a phone), and style.css is not this
+                     change's to edit. Nothing binds to it: site.js and
+                     fx/field.js both select `form.capture`, and this is not a
+                     form. /get-started rather than /start: /start spent weeks
+                     answering a cacheable 308 to this very page. -->
+                <div class="capture">
+                  <a class="btn btn--accent" href="/get-started">Start your business</a>
+                  <a class="btn btn--light" href="/login">Log in</a>
+                </div>
                 <p class="dv-join__fine">
-                  One email when it's your turn — a login link, nothing after that. fuime is a
-                  financial technology company, not a bank, and is in private
-                  beta in Stripe test mode — no real money moves yet. Venture
-                  accounts are owned by a parent or legal guardian; young
-                  founders operate them.
+                  Free to start. fuime reviews every new business by hand before
+                  it can sell, and under 18 a parent or guardian signs off before
+                  you get paid. fuime is a financial technology company, not a
+                  bank. Venture accounts are owned by a parent or legal guardian;
+                  young founders operate them.
                 </p>
               </div>
             </div>
@@ -363,8 +358,8 @@
               </svg>
               <h3 class="h4">Invoices a client can pay</h3>
               <p>
-                Numbered, itemised, with your business name on it — paid by card
-                or bank transfer, with every deduction shown before you send it.
+                Numbered, itemised, with your business name on it — paid online
+                through Stripe, with every deduction shown before you send it.
                 Not a Venmo request from a group chat.
               </p>
             </article>
@@ -403,9 +398,10 @@
               </svg>
               <h3 class="h4">A guardian who signs, not one who runs it</h3>
               <p>
-                Your parent owns the account and approves money leaving it.
-                Day to day it is yours: you send the invoices, you keep the
-                books, you decide what the business does.
+                Your parent owns the account, sets up where payouts go, and
+                nothing is paid out without them. Day to day it is yours: you
+                send the invoices, you keep the books, you decide what the
+                business does.
               </p>
             </article>
 
@@ -427,11 +423,12 @@
                 <path d="M11 2.5 3.5 5.5v5.25c0 4.25 3.1 7.75 7.5 8.75 4.4-1 7.5-4.5 7.5-8.75V5.5z" />
                 <path d="M8 11l2.25 2.25L14.5 9" />
               </svg>
-              <h3 class="h4">Money that never touches us</h3>
+              <h3 class="h4">Money with a paper trail</h3>
               <p>
-                Payments go from your client into a Stripe account your parent
-                owns, and payouts go to your family's own bank. fuime is not a
-                bank, holds no balance, and is never in the flow of funds.
+                Your client pays fuime, as the seller of record, and Stripe
+                processes the payment. fuime pays your business what it has
+                earned — only after your parent or guardian has signed, and only
+                to a destination they set up.
               </p>
             </article>
           </div>
@@ -458,17 +455,18 @@
             <article class="card">
               <h3 class="h4">Where it is today</h3>
               <p>
-                Private beta, running in Stripe test mode — the flows are real
-                and no real money moves yet. Early access goes out in order, and
-                we will tell you which stage you are in.
+                Live. fuime reviews every new business by hand before it can
+                sell — set your venture up now and publish once you're approved.
+                Under 18, a parent or guardian signs off before you get paid.
               </p>
             </article>
             <article class="card">
-              <h3 class="h4">Who holds the money</h3>
+              <h3 class="h4">Who the client pays</h3>
               <p>
-                Stripe does, in an account your parent or guardian owns. fuime
-                is not a bank, holds no balance, and never sits in the middle of
-                a payment. Payouts go to your family's own bank.
+                fuime, as the seller of record, with Stripe processing the
+                payment. fuime then pays your business what it has earned, to a
+                destination your parent or guardian sets up. Nothing is paid out
+                without them.
               </p>
             </article>
             <article class="card">
@@ -483,9 +481,9 @@
             <article class="card">
               <h3 class="h4">How much your parent sees</h3>
               <p>
-                Every invoice and every payment, in a read-only view, and they
-                approve money leaving the account. They cannot spend it, and
-                their own cards stay out of it.
+                Every invoice and every payment, in a read-only view. They set
+                up where payouts go and decide any payout that needs a decision.
+                They cannot spend it, and their own cards stay out of it.
               </p>
             </article>
           </div>
@@ -494,15 +492,22 @@
       </section>
 
       <!-- ── the second exit ──────────────────────────────────────────────
-           The panel's form is four screens back by the time anyone reaches the
+           The panel's door is four screens back by the time anyone reaches the
            bottom of this page. Asking them to scroll back up to it is asking
-           them to leave. -->
+           them to leave.
+
+           This is also where the waitlist form lives now, relabelled: the app
+           is open, so a queue is the wrong thing to offer a founder, but a
+           teacher bringing a class or a programme bringing a cohort still needs
+           a way to reach a person before anyone signs up. The data-source is
+           what tells the admin roster (/admin/waitlist) that this address is a
+           cohort enquiry and not a legacy teen sign-up. -->
       <section class="band band--night" id="join" style="padding-top: 0">
         <div class="wrap st-join rise">
-          <p class="eyebrow">Early access</p>
-          <h2 class="h2">We're onboarding the first businesses now.</h2>
-          <p class="lead mt-5">One email when it's your turn — a login link, nothing after that.</p>
-          <form class="capture mt-7" data-source="start-foot" novalidate>
+          <p class="eyebrow">Schools, teachers and cohorts</p>
+          <h2 class="h2">Bringing a class or a closed group?</h2>
+          <p class="lead mt-5">Leave your address. We read every one and follow up by email.</p>
+          <form class="capture mt-7" data-source="start-cohort" novalidate>
             <div class="capture__row">
               <input
                 type="email"
@@ -513,15 +518,19 @@
                 required
               />
               <button type="submit" class="btn btn--accent">
-                Get early access
+                Get in touch
               </button>
             </div>
             <p class="capture__msg" role="status" aria-live="polite"></p>
             <p class="capture__done">
               <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-              <span>You're on the list. We'll send a login link when it's your turn.</span>
+              <span>Got it. We'll follow up by email.</span>
             </p>
           </form>
+          <p class="small muted mt-5">
+            On your own? You don't need this —
+            <a class="tlink" href="/get-started">start your business</a>.
+          </p>
         </div>
       </section>
     </main>
@@ -535,11 +544,12 @@
          three pages already use for exactly this paragraph.
 
          No nav. The other three pages are the marketing site and it is not open
-         yet, so the only navigable thing on the front door is the form —
-         everything a reader needs to decide is on this page, by construction.
-         The mark links to `/`, which is this page; it is the wordmark doing
-         what a wordmark does, not a way out. The address is the one exit, and
-         it goes to a person rather than to a page. -->
+         yet, so the only ways off the front door are into the app — the
+         sign-up door and Log in on the glass above — and the address here,
+         which goes to a person rather than to a page. Everything a reader
+         needs to decide is on this page, by construction. The mark links to
+         `/`, which is this page; it is the wordmark doing what a wordmark does,
+         not a way out. -->
     <footer class="foot">
       <div class="wrap">
         <div class="foot__top">
@@ -559,15 +569,16 @@
         <div class="lrow foot__status">
           <span>Status</span>
           <span class="lrow__lead" aria-hidden="true"></span>
-          <span class="lrow__val">Private beta · test mode</span>
+          <span class="lrow__val">Live · payments processed by Stripe</span>
         </div>
         <p class="foot__legal">
           fuime is a financial technology company, not a bank. fuime does not
           hold deposits and does not offer FDIC-insured products. Payments are
           processed by Stripe. Venture accounts are opened and owned by a parent
           or legal guardian; young founders operate them with guardian
-          oversight. fuime is in private beta in Stripe test mode: payments are
-          not live and no real money moves yet.
+          oversight. fuime is live: every new business is reviewed by hand
+          before it can sell, and nothing is paid out until a parent or legal
+          guardian has signed.
         </p>
       </div>
     </footer>

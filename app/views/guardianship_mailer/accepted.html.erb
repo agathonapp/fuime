@@ -7,9 +7,20 @@
   guardian invitation on Fuime.
 </p>
 
+<%# Fuime: what their acceptance unblocks differs by money model (L8). Under
+    merchant-of-record it clears the guardian half of Event#payout_setup_blockers
+    — the destination is still theirs to set up, and activation is Fuime's
+    vetting, not this. Under Connect it clears the activation blocker
+    (Event::Application#activation_blockers). %>
 <p>
-  Your venture can now be fully activated. You can accept payments from
-  customers, track income and expenses, and keep a record of the business.
+  <% if @merchant_of_record %>
+    That clears the parent-or-guardian step for getting paid. Once
+    <%= @guardian_name %> sets up where the money goes, payouts to your
+    business can go ahead.
+  <% else %>
+    Your venture can now be fully activated. You can accept payments from
+    customers, track income and expenses, and keep a record of the business.
+  <% end %>
 </p>
 
 <p>

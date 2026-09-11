@@ -966,6 +966,11 @@ class Event < ApplicationRecord
   # November, and it is exactly what the automated risk model this replaces will
   # need as training data.
   def record_vetting_decision!(status:, by:, notes: nil)
+    # Read before the write: the approval email below is owed on the transition
+    # INTO approved, not on every save that leaves the venture approved — and
+    # WHICH email depends on where the venture is coming from.
+    previous_status = operator_vetting_status
+
     stamped = [
       notes.presence && "#{Time.current.to_fs(:long)} — #{by&.name}: #{notes.strip}",
       operator_vetting_notes.presence
@@ -977,6 +982,34 @@ class Event < ApplicationRecord
       operator_vetted_by: by,
       operator_vetting_notes: stamped.presence
     )
+
+    # Fuime: the email vetting sends — the one _selling_blockers.html.erb has
+    # promised all along ("We'll email you when yours is approved"). Only on a
+    # transition INTO approved: an admin re-approving to append a note must not
+    # re-send it, and there is deliberately no rejection or suspension template —
+    # that conversation is a human's to have.
+    #
+    # Two templates, chosen by where the venture came FROM. unvetted or rejected
+    # → approved is a venture that has never sold, so it gets "publish your first
+    # offer". suspended → approved is a venture that was already trading — its
+    # offers stayed published while the Buy button was withheld (nothing
+    # unpublishes on suspension; see Fuime::Offer) — so "publish your first offer"
+    # would tell a founder with three live offers to make a fourth. That one gets
+    # "approved to sell again" instead.
+    #
+    # After commit rather than inline because Fuime::CohortAdmission calls this
+    # inside the cohort's row lock, in the same transaction that just created the
+    # venture. Enqueued inline, Sidekiq can pick the job up before that
+    # transaction commits and find no such Event; enqueued after, it cannot, and
+    # a rolled-back admission sends nothing. With no open transaction (the admin
+    # queue) the block runs immediately.
+    if operator_vetting_approved? && previous_status != "approved"
+      notice = previous_status == "suspended" ? :reinstated : :approved
+
+      ActiveRecord.after_all_transactions_commit do
+        ::Fuime::VettingMailer.public_send(notice, event: self).deliver_later
+      end
+    end
   end
 
   # Fuime: the adults legally responsible for this venture.

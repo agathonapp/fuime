@@ -3,20 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Get early access · fuime</title>
+    <title>Start your business · fuime</title>
     <meta
       name="description"
-      content="Fly into the desk and land on the app. Then put your email in and we will tell you when it is your turn."
+      content="Fly into the desk and land on the app. Then start your business, or log in if you already have one."
     />
     <link rel="canonical" href="https://fuime.com/start" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="fuime" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/start" />
-    <meta property="og:title" content="See it, then get in line." />
+    <meta property="og:title" content="See it, then start." />
     <meta
       property="og:description"
-      content="A scroll that flies into the laptop on the desk and lands inside fuime. Early access at the end of it."
+      content="A scroll that flies into the laptop on the desk and lands inside fuime. The sign-up is at the end of it."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -27,10 +27,10 @@
       content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="See it, then get in line." />
+    <meta name="twitter:title" content="See it, then start." />
     <meta
       name="twitter:description"
-      content="A scroll that flies into the laptop on the desk and lands inside fuime. Early access at the end of it."
+      content="A scroll that flies into the laptop on the desk and lands inside fuime. The sign-up is at the end of it."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -419,14 +419,28 @@
           </div>
 
           <div class="portal__in">
-            <p class="beta">Private beta · test mode · payments are not live</p>
-            <p class="eyebrow">Early access</p>
+            <p class="beta">Live · payments processed by Stripe</p>
+            <p class="eyebrow">Free to start</p>
             <h1 class="h2">That's the app.</h1>
             <p class="lead">
-              We're onboarding the first businesses now. One email when it's
-              your turn — a login link, nothing after that.
+              Set your business up now. fuime reviews every new business by hand
+              before it can sell, and under 18 a parent or guardian signs off
+              before you get paid.
             </p>
-            <form class="capture" data-source="start-dive" novalidate>
+            <!-- /get-started, not /start: /start spent weeks answering a
+                 cacheable 308 and may still be held by browsers. -->
+            <p>
+              <a class="btn btn--accent" href="/get-started">Start your business</a>
+              <a class="btn btn--ghost" href="/login">Log in</a>
+            </p>
+            <!-- The waitlist, kept (CLAUDE.md Rule 2) and relabelled: the app is
+                 open, so this is for schools and closed cohorts, not a queue
+                 for founders. The data-source tells the admin roster so. -->
+            <p class="small muted">
+              Schools, teachers and cohorts — bringing a class or a closed group?
+              Leave your address. We read every one and follow up by email.
+            </p>
+            <form class="capture" data-source="start-scroll-cohort" novalidate>
               <div class="capture__row">
                 <input
                   type="email"
@@ -437,13 +451,13 @@
                   required
                 />
                 <button type="submit" class="btn btn--accent">
-                  Get early access
+                  Get in touch
                 </button>
               </div>
               <p class="capture__msg" role="status" aria-live="polite"></p>
               <p class="capture__done">
                 <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-                <span>You're on the list. We'll send a login link when it's your turn.</span>
+                <span>Got it. We'll follow up by email.</span>
               </p>
             </form>
             <p class="disclaimer mt-6">
@@ -451,8 +465,9 @@
               hold deposits and does not offer FDIC-insured products. Payments
               are processed by Stripe. Venture accounts are opened and owned by a
               parent or legal guardian; young founders operate them with guardian
-              oversight. We are in private beta in Stripe test mode, so no real
-              money moves yet.
+              oversight. fuime is live: every new business is reviewed by hand
+              before it can sell, and nothing is paid out until a parent or legal
+              guardian has signed.
             </p>
           </div>
         </div>

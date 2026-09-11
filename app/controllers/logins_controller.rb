@@ -177,7 +177,11 @@ class LoginsController < ApplicationController
         redirect_to first_index_path
       elsif @referral_link.present?
         redirect_to referral_link_path(@referral_link)
-      elsif (@user.full_name.blank? || @user.phone_number.blank?) && !@login.for_application?
+      # Fuime A2: a name is the whole of onboarding — the same test as
+      # User#onboarding?. Signup no longer asks for a phone number, so checking
+      # one here would send every phoneless user back to the profile form on
+      # every login.
+      elsif @user.full_name.blank? && !@login.for_application?
         redirect_to edit_user_path(@user.slug, return_to: @login.return_to)
       elsif @login.authenticated_with_backup_code && @user.backup_codes.active.empty?
         redirect_to security_user_path(@user), flash: { warning: "You've just used your last backup code, and we recommend generating more." }

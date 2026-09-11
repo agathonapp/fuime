@@ -153,4 +153,82 @@ RSpec.describe Event, "operator vetting" do
       expect(event.reload.accepts_payments?).to be(false)
     end
   end
+
+  # The email app/views/fuime/_selling_blockers.html.erb promises ("We'll email
+  # you when yours is approved"). Owed on the transition INTO approved and on
+  # nothing else: a re-approval that only appends a note is not news, and a
+  # rejection or suspension is a conversation for a human, not a template.
+  describe "the approval email" do
+    let(:event) { create(:event, :unvetted) }
+    let(:reviewer) { create(:user, :make_admin) }
+
+    # `not_to` cannot be chained with `.and`, so the "and NOT the other template"
+    # half of the examples below is a negated matcher. Defined by name so
+    # `have_enqueued_mail` is resolved inside the example, where it exists.
+    RSpec::Matchers.define_negated_matcher :not_enqueue_mail, :have_enqueued_mail
+
+    it "enqueues exactly one approval email when an unvetted venture is approved" do
+      expect { event.record_vetting_decision!(status: :approved, by: reviewer, notes: "Spoke to the parent") }
+        .to have_enqueued_mail(Fuime::VettingMailer, :approved).with(event:).once
+    end
+
+    # The admin queue posts the enum key as a string; the cohort path passes a
+    # symbol. Both have to count as the same transition.
+    it "treats a string status the way the admin queue sends it" do
+      expect { event.record_vetting_decision!(status: "approved", by: reviewer) }
+        .to have_enqueued_mail(Fuime::VettingMailer, :approved).once
+    end
+
+    it "does not send again when an approved venture is re-approved" do
+      event.record_vetting_decision!(status: :approved, by: reviewer)
+
+      expect { event.record_vetting_decision!(status: :approved, by: reviewer, notes: "Second look, still fine") }
+        .not_to have_enqueued_mail(Fuime::VettingMailer, :approved)
+    end
+
+    it "sends nothing on a suspension" do
+      event.record_vetting_decision!(status: :approved, by: reviewer)
+
+      expect { event.record_vetting_decision!(status: :suspended, by: reviewer, notes: "Chargebacks") }
+        .not_to have_enqueued_mail(Fuime::VettingMailer, :approved)
+    end
+
+    it "sends nothing on a rejection" do
+      expect { event.record_vetting_decision!(status: :rejected, by: reviewer) }
+        .not_to have_enqueued_mail(Fuime::VettingMailer, :approved)
+    end
+
+    # A lifted suspension is a transition into approved from somewhere else, so
+    # it is news the founder is owed — they were told they could not sell. But it
+    # is different news: this venture was already trading and its offers stayed
+    # published through the suspension, so "publish your first offer" would be
+    # false. It gets the reinstatement notice, and not the first-offer one.
+    it "sends the reinstatement notice, not the first-offer one, when a suspension is lifted" do
+      event.record_vetting_decision!(status: :approved, by: reviewer)
+      event.record_vetting_decision!(status: :suspended, by: reviewer)
+
+      expect { event.record_vetting_decision!(status: :approved, by: reviewer, notes: "Resolved") }
+        .to have_enqueued_mail(Fuime::VettingMailer, :reinstated).with(event:).once
+        .and not_enqueue_mail(Fuime::VettingMailer, :approved)
+    end
+
+    # A rejected venture never sold, so approving it later is its first approval
+    # in every sense that matters to the founder.
+    it "sends the first-offer mail when a rejected venture is later approved" do
+      event.record_vetting_decision!(status: :rejected, by: reviewer)
+
+      expect { event.record_vetting_decision!(status: :approved, by: reviewer, notes: "Re-reviewed") }
+        .to have_enqueued_mail(Fuime::VettingMailer, :approved).once
+        .and not_enqueue_mail(Fuime::VettingMailer, :reinstated)
+    end
+
+    it "sends nothing on a re-approval after a reinstatement either" do
+      event.record_vetting_decision!(status: :approved, by: reviewer)
+      event.record_vetting_decision!(status: :suspended, by: reviewer)
+      event.record_vetting_decision!(status: :approved, by: reviewer)
+
+      expect { event.record_vetting_decision!(status: :approved, by: reviewer, notes: "Note only") }
+        .not_to have_enqueued_mail(Fuime::VettingMailer)
+    end
+  end
 end

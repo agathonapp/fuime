@@ -2,7 +2,11 @@ Hi <%= @minor.first_name || @minor.name %>,
 
 <%= @guardian.name || @guardian.email %> accepted your guardian invitation on Fuime.
 
+<% if @merchant_of_record -%>
+That clears the parent-or-guardian step for getting paid. Once <%= @guardian_name %> sets up where the money goes, payouts to your business can go ahead.
+<% else -%>
 Your venture can now be fully activated. You can accept payments from customers, track income and expenses, and keep a record of the business.
+<% end -%>
 
 <%= root_url %>
 

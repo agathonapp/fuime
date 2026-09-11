@@ -54,6 +54,25 @@ RSpec.describe GuardianshipsController do
       expect(response.body).to include("Sunset Cookies")
     end
 
+    # The withdraw-consent confirm must say what withdrawing actually does (L8).
+    # Under merchant-of-record User#permitted_to_operate_business? is
+    # unconditionally true — the venture keeps existing — and revocation re-arms
+    # the guardian blocker in Event#payout_setup_blockers. Under Connect it
+    # removes the minor's ability to operate.
+    it "warns that no money will be paid out until an adult is back, under merchant-of-record", :merchant_of_record do
+      get :index
+
+      expect(response.body).to include("No money will be paid out of their business until a parent or guardian is on the account again.")
+      expect(response.body).not_to include("lose the ability to operate")
+    end
+
+    it "warns that the minor will lose the ability to operate, under Connect" do
+      get :index
+
+      expect(response.body).to include("They will immediately lose the ability to operate a venture on Fuime.")
+      expect(response.body).not_to include("No money will be paid out")
+    end
+
     # The summary is a table of contents; the oversight is the ledger it points
     # at. A page that named the venture but could not link into it would satisfy
     # the letter of §3 and none of its purpose.

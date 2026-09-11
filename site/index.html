@@ -8,7 +8,7 @@
     <title>fuime · invoicing for people who aren't 18 yet</title>
     <meta
       name="description"
-      content="Invoicing and books for under-18 founders. A parent or guardian owns the account and you operate it. Private beta in test mode — payments are not live yet."
+      content="Invoicing and books for under-18 founders. A parent or guardian owns the account and you operate it. Every new business is reviewed by hand before it can sell, and a parent or guardian signs off before you get paid."
     />
     <link rel="canonical" href="https://fuime.com/home" />
     <meta property="og:type" content="website" />
@@ -21,7 +21,7 @@
     />
     <meta
       property="og:description"
-      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Private beta, test mode — payments are not live yet."
+      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Every new business is reviewed by hand, and a parent or guardian signs off before you get paid."
     />
     <!-- Width and height let a scraper lay the card out before it has the
          bytes, and alt is the only thing a screen reader gets when this is
@@ -43,7 +43,7 @@
     />
     <meta
       name="twitter:description"
-      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Private beta, test mode — payments are not live yet."
+      content="Invoicing and books for under-18 service businesses. A parent or guardian owns the account; you operate it. Every new business is reviewed by hand, and a parent or guardian signs off before you get paid."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -127,7 +127,7 @@
             "url": "https://fuime.com/home",
             "logo": "https://fuime.com/img/apple-touch-icon.png",
             "email": "rushil@fuime.com",
-            "description": "Invoicing and books for under-18 service businesses. A parent or legal guardian owns the venture account and the young founder operates it. Fuime is a financial technology company, not a bank, and is in private beta in test mode."
+            "description": "Invoicing and books for under-18 service businesses. A parent or legal guardian owns the venture account and the young founder operates it. Fuime is a financial technology company, not a bank. Fuime is the seller of record for a venture's sales and Stripe processes the payments; every new business is reviewed by hand before it can sell."
           },
           {
             "@type": "WebSite",
@@ -204,7 +204,7 @@
           <a class="nav__link" href="/pricing">What it costs</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="#join">Get early access</a>
+          <a class="btn btn--accent" href="/get-started">Start your business</a>
         </nav>
       </div>
       <div
@@ -272,7 +272,7 @@
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <p class="beta">Private beta · test mode · payments are not live</p>
+            <p class="beta">Live · payments processed by Stripe</p>
             <h1>You're already working.<br />Start billing.</h1>
             <p class="lead">
               Write a real invoice, keep books that hold up, and know what you
@@ -282,26 +282,12 @@
             </p>
 
             <div class="hero__cta">
-              <form class="capture" data-source="home-hero" novalidate>
-                <div class="capture__row">
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="you@school.edu"
-                    autocomplete="email"
-                    aria-label="Email address"
-                    required
-                  />
-                  <button type="submit" class="btn btn--accent">
-                    Get early access
-                  </button>
-                </div>
-                <p class="capture__msg" role="status" aria-live="polite"></p>
-                <p class="capture__done">
-                  <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-                  <span>You're on the list. We'll send a login link when it's your turn.</span>
-                </p>
-              </form>
+              <a class="btn btn--accent" href="/get-started">Start your business</a>
+              <a class="btn btn--ghost" href="/parents">Parents: what you'll be asked to sign</a>
+              <p class="hero__note">
+                Free to start. Under 18? A parent or guardian signs off before
+                you get paid.
+              </p>
               <p class="hero__note">
                 Built for tutoring, lawn care, photo, video, web, and DJ work.
               </p>
@@ -311,12 +297,12 @@
 
         <div class="wrap hero__disclaimer">
           <p class="disclaimer">
-            fuime is a financial technology company, not a bank. We are in
-            private beta in Stripe test mode, so no real money moves yet. When
-            we turn on live payments, each venture's account will be a Stripe
-            account owned by a parent or legal guardian, so funds settle to your
-            family and fuime never holds your money. That architecture is the
-            plan, not something running today.
+            fuime is a financial technology company, not a bank. fuime is live:
+            a young founder's sales are made through fuime as the seller of
+            record, and Stripe processes the payment. fuime reviews every new
+            business by hand before it can sell. A parent or legal guardian must
+            accept the guardian agreement before anything is paid out, and
+            payouts go only to a destination that parent or guardian sets up.
           </p>
         </div>
       </section>
@@ -605,15 +591,14 @@
             <h2 class="h2">An invoice with your name on it.</h2>
             <p class="lead mt-5" style="max-width: 54ch">
               Not a Venmo request. A numbered invoice, with every deduction shown
-              before you agree to it. Card and bank payments run in Stripe test
-              mode during the beta, so this is what the arithmetic will be at
-              launch rather than a payment you can take today.
+              before you agree to it. Stripe processes the payment, and this is
+              the arithmetic on every one.
             </p>
           </div>
 
           <div class="calc mt-8">
             <div>
-              <p class="calc__label">Move it. This is the price list at launch.</p>
+              <p class="calc__label">Move it. This is the price list.</p>
               <p class="calc__figure num" data-out="lands">$360.10</p>
               <p class="calc__hint">
                 is left for the venture on a
@@ -854,9 +839,9 @@
               <p>
                 We email your parent or legal guardian the Guardian Agreement.
                 They accept it, and that makes them the account holder and you
-                the operator. Today that acceptance is the entire check: there is
-                no identity verification yet, and we are not going to imply
-                there is. It arrives with live payments, run by Stripe.
+                the operator. That acceptance is what we record — it is not an
+                identity check, and we are not going to imply it is. You can set
+                up while you wait; nothing is paid out until they have signed.
               </p>
               <picture>
                 <source
@@ -891,10 +876,10 @@
               <p class="step__n">03</p>
               <h3 class="h4">Invoice clients and keep the books</h3>
               <p>
-                Send a link. fuime keeps the books as it goes: income, expenses,
-                net, and a warning when you cross the $400 the IRS cares about.
-                Payments run in Stripe test mode for now, so nothing settles for
-                real until we turn live payments on.
+                Once fuime has reviewed your business by hand, send a link. Your
+                client pays through Stripe, with fuime as the seller of record,
+                and fuime keeps the books as it goes: income, expenses, net, and
+                a warning when you cross the $400 the IRS cares about.
               </p>
               <picture>
                 <source
@@ -939,8 +924,7 @@
               $19.99/mo + 7% — the same take-rate — and unlocks unlimited
               ventures and API keys. Stripe's card processing — 2.9% plus 30
               cents a payment — applies on top of both and goes to Stripe, not
-              to us. Nobody is billed anything during the private beta, because
-              no real money moves yet.
+              to us.
             </p>
           </div>
 
@@ -1082,10 +1066,11 @@
               </p>
             </article>
             <article class="card">
-              <h3 class="h4">Where the money will sit</h3>
+              <h3 class="h4">Where the money goes</h3>
               <p>
-                At live launch, into a Stripe account you own — fuime holds no
-                balance. Today it is test mode, so no real money moves.
+                Your kid's client pays fuime, as the seller of record, and Stripe
+                processes the payment. Nothing is paid out until you have signed,
+                and payouts go only to a destination you set up.
               </p>
             </article>
           </div>
@@ -1125,10 +1110,10 @@
           </div>
 
           <div class="portal__in">
-            <p class="eyebrow">Early access</p>
-            <h2 class="h2">We're onboarding the first businesses now.</h2>
-            <p class="lead">One email when it's your turn — a login link, nothing else.</p>
-            <form class="capture" data-source="home-foot" novalidate>
+            <p class="eyebrow">Schools, teachers and cohorts</p>
+            <h2 class="h2">Bringing a class or a closed group?</h2>
+            <p class="lead">Leave your address. We read every one and follow up by email.</p>
+            <form class="capture" data-source="home-cohort" novalidate>
               <div class="capture__row">
                 <input
                   type="email"
@@ -1139,15 +1124,19 @@
                   required
                 />
                 <button type="submit" class="btn btn--accent">
-                  Get early access
+                  Get in touch
                 </button>
               </div>
               <p class="capture__msg" role="status" aria-live="polite"></p>
               <p class="capture__done">
                 <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-                <span>You're on the list. We'll send a login link when it's your turn.</span>
+                <span>Got it. We'll follow up by email.</span>
               </p>
             </form>
+            <p class="small muted">
+              On your own? You don't need this —
+              <a class="tlink" href="/get-started">start your business</a>.
+            </p>
           </div>
         </div>
       </section>
@@ -1179,7 +1168,7 @@
         <div class="lrow foot__status">
           <span>Status</span>
           <span class="lrow__lead" aria-hidden="true"></span>
-          <span class="lrow__val">Private beta · test mode</span>
+          <span class="lrow__val">Live · payments processed by Stripe</span>
         </div>
         <p class="foot__legal">
           fuime is a financial technology company, not a bank. fuime does not
@@ -1190,7 +1179,7 @@
         </p>
         <div class="foot__bot">
           <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span>Private beta in test mode — no real money moves yet.</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
         </div>
       </div>
     </footer>

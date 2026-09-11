@@ -20,20 +20,26 @@ account, with you on it" — is a defect, not a wording choice.
 This section exists because an earlier version of this brief described the
 target architecture in the present tense, and the site was built from it. The
 result was a public site claiming a KYC process and a fund flow the product did
-not have. State on the page which of these you are describing.
+not have. Then the reverse happened: the product went live (2026-08-20/21) and
+the site kept saying "private beta, test mode" for weeks. Both are the same
+defect. State on the page what is running, and only that; the banned phrases
+are pinned in `spec/fuime_marketing_copy_spec.rb`.
 
-**Shipped today:** private beta in Stripe **test mode** — no real money moves.
-Ledger, invoicing, receipts, storefront preview. The guardian flow is an emailed
-invitation plus acceptance of the Guardian Agreement. There is **no identity
-verification of any kind**, and funds (in test mode) land in fuime's own pooled
-Stripe account, not the family's.
+**Shipped today (merchant-of-record, live):** fuime is the seller of record for
+a venture's sales — a client pays fuime, Stripe processes the payment, and fuime
+pays the venture what it has earned after fees, refunds and disputes. Ledger,
+invoicing, receipts, storefront, offers. A human at fuime reviews every new
+business before it can sell. The guardian flow is an emailed invitation plus
+acceptance of the Guardian Agreement; there is **no identity verification of
+any kind**, and the acceptance record (date, IP, agreement version) is all that
+is kept. Nothing is paid out until a parent or legal guardian has accepted, and
+payouts go only to a destination a parent or legal guardian sets up.
 
-**Roadmap, and must be labelled as such:** each venture's account becomes a
-guardian-owned Stripe connected account, so payments go client → the guardian's
-own Stripe account and fuime never holds the money. Stripe performs the identity
-check and holds the documents. Guardian identity verification ships with live
-payments. Until it is built, the site may describe this as what *will* happen —
-never as what does.
+**Not shipped, and must not be described as shipped:** guardian identity
+verification; the account-holder handover at 18; any per-venture Stripe account
+owned by the guardian. The Connect architecture an earlier brief described is
+not what runs, and pages may not describe it as the plan either — say what
+runs. Never quote a review-time SLA; there is none.
 
 ### Pricing
 
@@ -54,8 +60,7 @@ option, the guardian's is not.
 1. **The kid.** Already working, tired of being paid in a group chat. Decides
    to _want_ it.
 2. **The parent.** Has to accept the Guardian Agreement and become the legal
-   signer before any of it works — and, once live payments ship, complete
-   Stripe's identity check. Decides whether it _happens_.
+   signer before anything is paid out. Decides whether it _happens_.
 
 The landing page converts the kid. `/parents` survives the parent's scrutiny.
 Different jobs, different pages.
@@ -119,8 +124,10 @@ Copy the `<nav>` and `<footer>` markup between pages verbatim. Only the
 `aria-current="page"` attribute changes.
 
 Nav links: `How it works` → `/#how` · `What it costs` → `/pricing` ·
-`Parents` → `/parents` · then a `.btn.btn--accent` "Get early access".
-On `/pricing` and `/parents`, `How it works` still points at `/#how`.
+`Parents` → `/parents` · `Log in` → `/login` · then a `.btn.btn--accent`
+"Start your business" → `/get-started`, the app's sign-up door. Never `/start`:
+it answered a cacheable 308 to the dive for weeks and browsers may still hold
+it. On `/pricing` and `/parents`, `How it works` still points at `/#how`.
 
 Footer columns:
 
@@ -132,21 +139,28 @@ Footer columns:
   Stripe. Venture accounts are opened and owned by a parent or legal guardian;
   young founders operate them with guardian oversight.`
 - Bottom line: `fuime · invoicing for people who aren't 18 yet` and
-  `Private beta in test mode — no real money moves yet.`
-- A `.beta` chip above the headline in every hero, saying the product is in
-  private beta in test mode and that payments are not live. `/` and
-  `/start-scroll` have no footer bar, so the standing disclosure goes in a bare
-  `.foot` / `.disclaimer` block below the dive — never inside the glass panel,
-  which is clipped on a phone.
+  `Live. Every new business is reviewed by hand before it can sell.`
+- A `.beta` chip above the headline in every hero, saying the product is live
+  and that Stripe processes payments (`Live · payments processed by Stripe`).
+  `/` and `/start-scroll` have no footer bar, so the standing disclosure goes in
+  a bare `.foot` / `.disclaimer` block below the dive — never inside the glass
+  panel, which is clipped on a phone.
 
 **Every href must resolve.** No `#`, no dead anchors, no 404s.
 
-## The email form — exact markup, all three pages
+## The email form — schools, teachers and cohorts only
+
+The app is open, so the primary action on every page is the `/get-started`
+button, never this form. The form is kept (CLAUDE.md Rule 2) for a teacher
+bringing a class or a programme bringing a closed cohort, labelled as exactly
+that, and its copy may not imply a queue for founders ("early access", "your
+turn", "onboarding the first businesses" are all banned — `server.test.mjs` and
+`spec/fuime_marketing_copy_spec.rb` both check).
 
 `site.js` binds every `form.capture`. It needs this shape:
 
 ```html
-<form class="capture" data-source="UNIQUE_SOURCE_ID" novalidate>
+<form class="capture" data-source="UNIQUE_SOURCE_ID-cohort" novalidate>
   <div class="capture__row">
     <input
       type="email"
@@ -156,15 +170,20 @@ Footer columns:
       aria-label="Email address"
       required
     />
-    <button type="submit" class="btn btn--accent">Get early access</button>
+    <button type="submit" class="btn btn--accent">Get in touch</button>
   </div>
   <p class="capture__msg" role="status" aria-live="polite"></p>
-  <p class="capture__done">You're on the list. We'll send a login link when it's your turn.</p>
+  <p class="capture__done">
+    <svg class="capture__plane" …></svg>
+    <span>Got it. We'll follow up by email.</span>
+  </p>
 </form>
 ```
 
-`data-source` must be unique per form: `home-hero`, `home-foot`,
-`pricing-foot`, `parents-foot`.
+`data-source` must be unique per form and must end in `-cohort` — that suffix
+is what lets the admin roster tell a cohort enquiry from a legacy teen sign-up:
+`start-cohort`, `start-scroll-cohort`, `home-cohort`, `pricing-cohort`,
+`parents-cohort`.
 
 `api/waitlist.js` and `test/waitlist.test.mjs` are **off limits to design and
 copy work** — they are the capture path, and a page change has no business
@@ -227,13 +246,14 @@ Three steps. One of them needs a parent.
    guardian's email address, because of step two.
 02 Your parent becomes the legal signer — They accept the Guardian Agreement, which
    makes them the account owner and responsible adult. You're the operator: you
-   send the invoices, you track the money, you run the business. (Roadmap, label
-   it: Stripe permits a guardian to own an account on behalf of someone 13 or
-   older, and Stripe's identity check ships with live payments.)
-03 Invoice clients and get paid — Send a link. In the beta this runs in Stripe test
-   mode, so nothing is really charged. fuime keeps your books as it goes: income,
-   expenses, net, and a warning when you cross the $400 of net self-employment
-   income at which the IRS expects a return.
+   send the invoices, you track the money, you run the business. (Their
+   acceptance is recorded, not identity-checked. You can set up while you wait;
+   nothing is paid out until they have signed.)
+03 Invoice clients and get paid — Once fuime has reviewed your business by hand,
+   send a link. Your client pays through Stripe, with fuime as the seller of
+   record. fuime keeps your books as it goes: income, expenses, net, and a
+   warning when you cross the $400 of net self-employment income at which the
+   IRS expects a return.
 
 Pricing on the page must match the Pricing section above, including Stripe's
 separate processing fee. A flat monthly fee on a kid making $80 a month is a tax
@@ -246,8 +266,7 @@ Free      $0/mo + 7% of what you collect. One venture. No fee on an invoice nobo
 Pro       $19.99/mo + 7%. Same take-rate. Unlimited ventures and API keys.
 Founders  0% for the launch cohort, by invitation.
 Stripe    2.9% + 30¢ a card payment, on top of every plan above, paid to Stripe.
-Billed to the guardian who holds the account, never to the young founder — and
-not billed at all during the beta, because no real money moves.
+Billed to the guardian who holds the account, never to the young founder.
 
 For parents
 You sign once. You keep the controls.
@@ -260,12 +279,13 @@ You see everything — Every invoice and every payment, in a read-only view. You
   can revoke the guardianship and shut it off.
 Tax time is legible — Income, expenses, and net for the year, with the $400
   self-employment threshold flagged.
-Where the money will sit — Roadmap, label it: at live launch, a Stripe account
-  you own, with fuime holding no balance. Today it is test mode, so no real
-  money moves.
+Where the money goes — A client pays fuime, as the seller of record, and Stripe
+  processes the payment. Nothing is paid out until you have signed, and payouts
+  go only to a destination you set up.
 
-We're onboarding the first businesses now.
-One email when it's your turn — a login link, nothing else.
+Schools, teachers and cohorts
+Bringing a class or a closed group?
+Leave your address. We read every one and follow up by email.
 hi@fuime.com
 ```
 
@@ -288,10 +308,16 @@ hides Stripe's is the FTC-deception shape this brief exists to prevent, and
 ## Claims that must not appear
 
 - fuime is a bank, holds funds, is FDIC-insured, or is a financial institution.
-- Any present-tense claim that an identity or KYC check happens, that a document
-  is uploaded or held by anyone, or that funds reach a family's own account.
-  Those are roadmap, and the future tense plus a visible label is the only way
-  they may appear.
+- Any present-tense claim that an identity or KYC check happens or that a
+  document is uploaded or held by anyone. None exists.
+- Any claim that fuime is in beta or test mode, that payments are not live, or
+  that no real money moves; any queue language ("early access", "your turn",
+  "onboarding the first businesses"); any description of a guardian-owned
+  Stripe account or a fund flow that bypasses fuime. The live model is
+  merchant-of-record — a client pays fuime, Stripe processes it, fuime pays the
+  venture out — and `spec/fuime_marketing_copy_spec.rb` pins the banned phrases.
+- A review-time promise ("usually within a day"). Vetting is human and has no
+  SLA.
 - The words bank, banking, checking, savings, deposits, neobank, insured, FDIC,
   or any form of "your money is safe / protected / guaranteed" — except inside
   the standing disclosure's own negations.
@@ -360,9 +386,9 @@ so nothing shifts on load.
    fallback. `test/waitlist.test.mjs` passes unmodified.
 7. `/parents` states in plain language that the guardian is the account holder
    and the young founder the operator, that there is **no identity verification
-   yet**, and that payments run in Stripe test mode today with the parent-owned
-   no-custody account named as roadmap — and carries an FAQ of at least six
-   questions.
+   yet**, that fuime is the seller of record and Stripe processes the payment,
+   and that nothing is paid out until the guardian has signed — and carries an
+   FAQ of at least six questions.
 8. At 390px, 768px and 1440px: no horizontal scroll, no clipped or overlapping
    text, nav collapses cleanly, hero type stays clear of the subject. Verified
    by **screenshot at each width**, looked at — not by an assertion that only

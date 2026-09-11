@@ -376,8 +376,9 @@
   // the invoice recomputes with the arithmetic Free and Pro both run — 7%
   // platform fee, with Stripe's own 2.9% + 30c shown as its own line because
   // an all-in figure that hides the processor is a deceptive one. Pro does not
-  // cut this rate; it is $19.99/mo for a second venture and API keys.
-  // Nothing is billed today: payments run in Stripe test mode.
+  // cut this rate; it is $19.99/mo for a second venture and API keys. Every
+  // fuime fee is billed to the guardian who holds the account, never the
+  // young founder.
   var STRIPE_PCT = 0.029
   var STRIPE_FIXED = 0.3
   var FUIME_PCT = 0.07

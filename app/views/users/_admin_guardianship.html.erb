@@ -140,7 +140,7 @@
                           class: "btn bg-error",
                           form: { data: { turbo_frame: "_top" } },
                           data: {
-                            turbo_confirm: "Revoke this guardianship? #{user.name || user.email} will immediately lose the ability to operate a business.",
+                            turbo_confirm: (::Fuime::Features.merchant_of_record? ? "Revoke this guardianship? No money will be paid out of #{user.name || user.email}'s business until a parent or guardian is on the account again." : "Revoke this guardianship? #{user.name || user.email} will immediately lose the ability to operate a business."),
                             turbo_confirm_danger: true,
                           } %>
           <% end %>

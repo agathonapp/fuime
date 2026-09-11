@@ -52,6 +52,20 @@ RSpec.describe "waitlist invite accept", type: :request do
     expect(response).to redirect_to(edit_user_path(user.slug))
   end
 
+  # Fuime A2: onboarding is finished once a user has a name. Signup does not
+  # ask for a phone number, so a blank one must not decide where the invite
+  # lands — the same name-only test LoginsController#complete uses.
+  it "sends an invitee who already has a name straight to the product, phone or no phone" do
+    store("maya@example.com")
+    user = create(:user, email: "maya@example.com", full_name: "Maya Founder", phone_number: nil)
+    result = Fuime::WaitlistInviteService.new(invited_by: admin).invite!("maya@example.com")
+
+    get waitlist_invite_path(result.token)
+
+    expect(User::Session.where(user:)).to exist
+    expect(response).to redirect_to(root_path)
+  end
+
   it "keeps a 2FA user on the existing login flow for the second factor" do
     store("maya@example.com")
     user = create(:user, email: "maya@example.com",

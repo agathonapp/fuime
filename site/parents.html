@@ -6,7 +6,7 @@
     <title>For parents · fuime</title>
     <meta
       name="description"
-      content="What a parent or guardian is agreeing to: you are the account holder, they operate it, you get a read-only view of every invoice, and you can revoke it. fuime is in private beta in test mode — no real money moves yet."
+      content="What a parent or guardian is agreeing to: you are the account holder, they operate it, you get a read-only view of every invoice, and you can revoke it. Nothing is paid out until you have signed, and payouts go only to a destination you set up."
     />
     <link rel="canonical" href="https://fuime.com/parents" />
     <meta property="og:type" content="website" />
@@ -16,7 +16,7 @@
     <meta property="og:title" content="You sign once. You keep the controls." />
     <meta
       property="og:description"
-      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Private beta in test mode — payments are not live yet."
+      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Nothing is paid out until you have signed."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -33,7 +33,7 @@
     />
     <meta
       name="twitter:description"
-      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Private beta in test mode — payments are not live yet."
+      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Nothing is paid out until you have signed."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -127,7 +127,7 @@
                 "name": "Is fuime a bank?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No. fuime is a financial technology company, not a bank. It does not hold deposits and does not offer FDIC-insured products. Payments are processed by Stripe. And right now fuime is in private beta with payments running in Stripe test mode, so no real money moves at all."
+                  "text": "No. fuime is a financial technology company, not a bank. It does not hold deposits and does not offer FDIC-insured products. Payments are processed by Stripe, and fuime is the seller of record for your kid's sales: a client pays fuime, and fuime pays the venture what it has earned."
                 }
               },
               {
@@ -135,7 +135,7 @@
                 "name": "Where does the money actually sit?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Today, nowhere. Payments run in Stripe test mode, in a Stripe account fuime controls, and nothing settles to anyone. At live launch the design is a Stripe account you own as the guardian, holding the money from the moment a client pays until Stripe pays out to the bank account you connected. We are telling you the plan, not describing something that already runs."
+                  "text": "A client pays fuime, as the seller of record, and Stripe processes the payment. fuime then pays the venture what it has earned, after fees, refunds and disputes. Nothing is paid out until you have accepted the Guardian Agreement, and payouts go only to a destination you set up — only a parent or legal guardian on the account can add or change it."
                 }
               },
               {
@@ -143,7 +143,7 @@
                 "name": "What if my kid loses interest and stops using it?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Then it stops costing you anything on Free. Nothing is billed during the private beta in the first place. At launch the platform fee only applies to money actually collected. Pro is $19.99 a month for unlimited ventures and API keys — same 7% take-rate as Free, not a cheaper fee — and it is a plan you choose rather than a threshold you trip. A quiet Free account bills nothing, and you can close either plan whenever you like."
+                  "text": "Then it stops costing you anything on Free. The platform fee only applies to money actually collected. Pro is $19.99 a month for unlimited ventures and API keys — same 7% take-rate as Free, not a cheaper fee — and it is a plan you choose rather than a threshold you trip. A quiet Free account bills nothing, and you can close either plan whenever you like."
                 }
               },
               {
@@ -159,7 +159,7 @@
                 "name": "Who is liable if something goes wrong?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "You are, as the account holder. Once live payments are on, a chargeback, a refund or a negative balance lands on the account holder, and that is you. That is the trade for a 15-year-old being able to accept a card at all, and we would rather you weigh it now than find out later. In the beta there is nothing to land, because no real money moves."
+                  "text": "You are, as the account holder. A chargeback, a refund or a dispute on the venture's sales reduces what it is paid, and under the Guardian Agreement you are the responsible adult for the venture. That is the trade for a 15-year-old being able to accept a card at all, and we would rather you weigh it now than find out later."
                 }
               },
               {
@@ -167,7 +167,7 @@
                 "name": "What happens when they turn 18?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "At 18 they can open and own a Stripe account in their own name, and the point is that they move onto it and you step off. We have not shipped that handover yet. When we do we will say how it works, rather than implying it already exists."
+                  "text": "At 18 they can be the account holder in their own name, and the point is that they move onto that and you step off. We have not shipped that handover yet. When we do we will say how it works, rather than implying it already exists."
                 }
               }
             ]
@@ -238,7 +238,7 @@
           <a class="nav__link" href="/pricing">What it costs</a>
           <a class="nav__link" href="/parents" aria-current="page">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="#join">Get early access</a>
+          <a class="btn btn--accent" href="/get-started">Start your business</a>
         </nav>
       </div>
       <div
@@ -302,7 +302,7 @@
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Private beta · test mode · payments are not live</p>
+            <p class="beta">Live · payments processed by Stripe</p>
             <h1>You sign once.<br />You keep the controls.</h1>
             <p class="lead">
               Your kid is going to keep taking money for work either way. This
@@ -310,19 +310,19 @@
             </p>
 
             <div class="hero__cta">
-              <a class="btn btn--light" href="#join">Get early access</a>
+              <a class="btn btn--light" href="/get-started">Have your teen start</a>
               <p class="hero__note">
-                One agreement, accepted by email.<br />That is the whole ask
-                today.
+                They sign up first. You'll get an email to review and sign.
               </p>
             </div>
 
             <p class="disclaimer">
-              fuime is a financial technology company, not a bank. We are in
-              private beta and payments run in Stripe test mode, so no real money
-              moves yet. When we turn on live payments, the venture's account
-              will be a Stripe account you own as the guardian, so funds settle
-              to your family and fuime never holds your money.
+              fuime is a financial technology company, not a bank. fuime is live:
+              your kid's sales are made through fuime as the seller of record,
+              and Stripe processes the payment. fuime reviews every new business
+              by hand before it can sell. Nothing is paid out until you have
+              accepted the guardian agreement, and payouts go only to a
+              destination you set up.
             </p>
           </div>
         </div>
@@ -339,8 +339,7 @@
             <p class="lead">
               We email you the Guardian Agreement. You accept it, and from then
               on you are the account holder for your kid's venture and they are
-              the operator. Here is exactly what that is today, and what it
-              becomes when live payments arrive.
+              the operator. Here is exactly what that is.
             </p>
             <div class="lrow--boxed" style="display: grid; gap: var(--s3)">
               <div class="lrow">
@@ -349,24 +348,24 @@
                 <span class="lrow__val">You</span>
               </div>
               <div class="lrow">
-                <span>How you accept, today</span>
+                <span>How you accept</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
                 <span class="lrow__val">An emailed agreement</span>
               </div>
               <div class="lrow">
-                <span>Identity verification, today</span>
+                <span>Identity verification</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">None yet</span>
+                <span class="lrow__val">None</span>
               </div>
               <div class="lrow">
-                <span>Where the money lands, today</span>
+                <span>Who the client pays</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">Nowhere — test mode</span>
+                <span class="lrow__val">fuime, as the seller of record</span>
               </div>
               <div class="lrow">
-                <span>Where it will land at live launch</span>
+                <span>Where payouts go</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">A Stripe account you own</span>
+                <span class="lrow__val">A destination you set up</span>
               </div>
             </div>
             <p>
@@ -377,11 +376,11 @@
             </p>
             <p>
               fuime is the software: the invoice, the books, the guardianship
-              record, the receipts. The plan at live launch is that the money
-              never passes through us — a Stripe account in your name receives
-              it, and our platform fee is collected as a fee on the payment. That
-              plan is not built yet, and until it is, payments here run in Stripe
-              test mode and nothing settles for anyone.
+              record, the receipts. It is also the seller of record for the
+              venture's sales: a client pays fuime, Stripe processes the payment,
+              and fuime pays the venture what it has earned after fees, refunds
+              and disputes. Nothing is paid out until you have accepted the
+              agreement, and only to a destination you set up.
             </p>
             <p>
               <a class="tlink" href="/home#how"
@@ -495,10 +494,9 @@
           </div>
 
           <p class="small muted mt-5">
-            The fuime row is what a live account looks like. Today the books,
-            the receipts and the guardianship record are real; the payments
-            behind them run in Stripe test mode, so nothing has actually been
-            collected through us yet.
+            The fuime row is a live account. The books, the receipts and the
+            guardianship record are real, and the payments behind them are
+            processed by Stripe with fuime as the seller of record.
           </p>
 
           <details class="reasoning mt-6">
@@ -537,9 +535,9 @@
               <p>
                 You accept the agreement, so the account is yours and your kid
                 operates it. That split is the only reason any of this works
-                before they turn 18. At live launch it is meant to be literal:
-                Stripe lets a guardian own an account on behalf of someone 13 or
-                older, and that is the architecture we are building toward.
+                before they turn 18. To the client, fuime is the seller of
+                record; to fuime, you are the responsible adult and the owner of
+                record of the venture's account.
               </p>
             </article>
 
@@ -554,11 +552,10 @@
               <h3 class="h4">Nobody checks your ID yet</h3>
               <p>
                 There is no identity verification in fuime today. You accept the
-                Guardian Agreement by email and we record that you did — that is
-                the whole of it, and you should read it as exactly that much.
-                Verification arrives with live payments, run by Stripe as the
-                party required to do it, and we will not ask you for a document
-                before then.
+                Guardian Agreement by email and we record that you did — the
+                date, your IP address and the agreement version — and you should
+                read it as exactly that much. We do not ask you for a document to
+                sign. When there is money to send, we ask where it should go.
               </p>
             </article>
 
@@ -569,12 +566,12 @@
               </svg>
               <h3 class="h4">You will carry the account holder's risk</h3>
               <p>
-                Once live payments are on: chargebacks, refunds, a negative
-                balance, a client who disputes a payment — Stripe comes to the
-                account holder, and that is you. It will work the way it would if
-                you opened a Stripe account for yourself, because that is what
-                you will be doing. In the beta there is nothing to dispute,
-                because no real money moves.
+                Chargebacks, refunds, a client who disputes a payment: they
+                reduce what the venture is paid, and under the Guardian Agreement
+                you are the responsible adult for the venture and the owner of
+                record of its account. That is the trade for a 15-year-old being
+                able to accept a card at all, and we would rather you weigh it
+                now than find out later.
               </p>
             </article>
 
@@ -591,7 +588,7 @@
                 cohort. Stripe's card processing — 2.9% plus 30 cents a
                 payment — is charged on top of all of them and goes to Stripe.
                 Every fuime fee is billed to you as the account holder, never to
-                your kid, and nothing is billed during the private beta.
+                your kid.
               </p>
             </article>
           </div>
@@ -645,12 +642,13 @@
             </article>
 
             <article class="card">
-              <h3 class="h4">Where the money will land</h3>
+              <h3 class="h4">Where the money goes</h3>
               <p>
-                At live launch, payouts go from a Stripe account in your name to
-                a bank account in your name, and fuime holds no balance and takes
-                no custody. That is the plan. Today payments run in Stripe test
-                mode, so there is nothing to pay out.
+                A client pays fuime, as the seller of record, and Stripe
+                processes the payment. fuime pays the venture what it has earned,
+                only after you have accepted the agreement and only to a
+                destination you set up. Only a parent or legal guardian on the
+                account can add or change that destination.
               </p>
             </article>
 
@@ -718,21 +716,21 @@
               <p class="faq__a">
                 No. fuime is a financial technology company, not a bank. It does
                 not hold deposits and does not offer FDIC-insured products.
-                Payments are processed by Stripe. And right now fuime is in
-                private beta with payments running in Stripe test mode, so no
-                real money moves at all.
+                Payments are processed by Stripe, and fuime is the seller of
+                record for your kid's sales: a client pays fuime, and fuime pays
+                the venture what it has earned.
               </p>
             </details>
 
             <details>
               <summary>Where does the money actually sit?</summary>
               <p class="faq__a">
-                Today, nowhere. Payments run in Stripe test mode, in a Stripe
-                account fuime controls, and nothing settles to anyone. At live
-                launch the design is a Stripe account you own as the guardian,
-                holding the money from the moment a client pays until Stripe pays
-                out to the bank account you connected. We are telling you the
-                plan, not describing something that already runs.
+                A client pays fuime, as the seller of record, and Stripe
+                processes the payment. fuime then pays the venture what it has
+                earned, after fees, refunds and disputes. Nothing is paid out
+                until you have accepted the Guardian Agreement, and payouts go
+                only to a destination you set up — only a parent or legal
+                guardian on the account can add or change it.
               </p>
             </details>
 
@@ -741,8 +739,7 @@
                 What if my kid loses interest and stops using it?
               </summary>
               <p class="faq__a">
-                Then it stops costing you anything. Nothing is billed during the
-                private beta in the first place. At launch the platform fee only
+                Then it stops costing you anything on Free. The platform fee only
                 applies to money actually collected. Pro is $19.99 a month for
                 unlimited ventures and API keys — same 7% take-rate as Free, not
                 a cheaper fee — and it is a plan you choose rather than a
@@ -763,22 +760,22 @@
             <details>
               <summary>Who is liable if something goes wrong?</summary>
               <p class="faq__a">
-                You are, as the account holder. Once live payments are on, a
-                chargeback, a refund or a negative balance lands on the account
-                holder, and that is you. That is the trade for a 15-year-old
-                being able to accept a card at all, and we would rather you weigh
-                it now than find out later. In the beta there is nothing to land,
-                because no real money moves.
+                You are, as the account holder. A chargeback, a refund or a
+                dispute on the venture's sales reduces what it is paid, and under
+                the Guardian Agreement you are the responsible adult for the
+                venture. That is the trade for a 15-year-old being able to accept
+                a card at all, and we would rather you weigh it now than find out
+                later.
               </p>
             </details>
 
             <details>
               <summary>What happens when they turn 18?</summary>
               <p class="faq__a">
-                At 18 they can open and own a Stripe account in their own name,
-                and the point is that they move onto it and you step off. We
-                have not shipped that handover yet. When we do we will say how
-                it works, rather than implying it already exists.
+                At 18 they can be the account holder in their own name, and the
+                point is that they move onto that and you step off. We have not
+                shipped that handover yet. When we do we will say how it works,
+                rather than implying it already exists.
               </p>
             </details>
           </div>
@@ -789,12 +786,12 @@
       <section class="band band--night" id="join">
         <div class="wrap rise stack-lg">
           <div>
-            <p class="eyebrow">Early access</p>
-            <h2 class="h2">We're onboarding the first businesses now.</h2>
+            <p class="eyebrow">Schools, teachers and cohorts</p>
+            <h2 class="h2">Bringing a class or a closed group?</h2>
           </div>
-          <p class="lead">One email when it's your turn — a login link, nothing else.</p>
+          <p class="lead">Leave your address. We read every one and follow up by email.</p>
 
-          <form class="capture" data-source="parents-foot" novalidate>
+          <form class="capture" data-source="parents-cohort" novalidate>
             <div class="capture__row">
               <input
                 type="email"
@@ -805,15 +802,20 @@
                 required
               />
               <button type="submit" class="btn btn--accent">
-                Get early access
+                Get in touch
               </button>
             </div>
             <p class="capture__msg" role="status" aria-live="polite"></p>
             <p class="capture__done">
               <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-              <span>You're on the list. We'll send a login link when it's your turn.</span>
+              <span>Got it. We'll follow up by email.</span>
             </p>
           </form>
+
+          <p class="small muted">
+            Here for one teen? You don't need this —
+            <a class="tlink" href="/get-started">have them start their business</a>.
+          </p>
 
           <p class="small muted">
             Anything this page doesn't answer:
@@ -855,7 +857,7 @@
         </p>
         <div class="foot__bot">
           <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span>Private beta in test mode — no real money moves yet.</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
         </div>
       </div>
     </footer>

@@ -77,6 +77,16 @@ RSpec.describe Fuime::CohortAdmission, :merchant_of_record do
       expect(admit.event.fuime_cohort).to eq(cohort)
       expect(cohort.reload.events).to include(admit.event)
     end
+
+    # The email _selling_blockers.html.erb promises. Admission approves the
+    # venture like any other decision, so it owes the same email — and it does so
+    # inside the cohort's row lock, which is exactly where enqueuing before commit
+    # would hand Sidekiq an Event that does not exist yet.
+    # Event#record_vetting_decision! defers to after commit for that reason; this
+    # example is the one that exercises that path.
+    it "emails the founder that they may publish" do
+      expect { admit }.to have_enqueued_mail(Fuime::VettingMailer, :approved).once
+    end
   end
 
   # The property that makes automatic admission safe. A cohort says "I vouch for

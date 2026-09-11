@@ -82,6 +82,17 @@
       <% if @is_staff && !current_user.known_adult? %>
         <p class="muted text-sm mb-0">You're seeing the adult view as Fuime staff. This subscribes <strong><%= current_user.email %></strong>.</p>
       <% end %>
+    <% elsif @pending_guardian_invite %>
+      <%# Fuime: an invited parent who has not signed yet. Accepting is what
+          makes them a known adult (GuardianshipsController#accept), so say the
+          ordering rather than "ask your parent". The accept link lives in the
+          email; the guardian page can resend it if that email is gone. %>
+      <p class="mb-0">
+        You can upgrade once you've accepted a guardian invitation — that's what
+        confirms you're the adult on the account. Open the link in the email a young
+        founder sent you, or
+        <%= link_to "resend it from your guardian page", guardianships_path %>.
+      </p>
     <% elsif @guardians.any? %>
       <p class="mb-0">
         The family plan is billed to a parent or guardian — ask

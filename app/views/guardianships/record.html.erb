@@ -62,7 +62,7 @@
                   method: :post,
                   class: "btn bg-error",
                   data: {
-                    turbo_confirm: "Withdraw consent? #{@guardianship.minor.name || 'This minor'} will immediately lose the ability to operate a business on Fuime.",
+                    turbo_confirm: (::Fuime::Features.merchant_of_record? ? "Withdraw consent for #{@guardianship.minor.name || @guardianship.minor.email}? No money will be paid out of their business until a parent or guardian is on the account again." : "Withdraw consent? #{@guardianship.minor.name || 'This minor'} will immediately lose the ability to operate a business on Fuime."),
                     turbo_confirm_danger: true,
                   } %>
   <% end %>

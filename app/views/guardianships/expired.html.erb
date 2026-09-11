@@ -1,0 +1,55 @@
+<% title "Guardian Invitation" %>
+<% page_full %>
+
+<%# Fuime: the way out of a dead invite link (ONBOARDING_PLAN §2 #9).
+    Guardianship.find_by_token returns nil past INVITE_VALID_FOR, and before this
+    page the parent got "Invalid or expired invitation link." and a bounce to a
+    dashboard they cannot sign in to. GuardianshipsController#set_guardianship
+    renders this instead when the token still belongs to a PENDING row that has
+    merely aged out; accepted and revoked tokens keep the generic message.
+
+    No sign-in is asked for. The button re-mints the invite through
+    Guardianship#resend_invite! — the one resend path, no second token — and the
+    only thing it can do is mail the guardian's own inbox. The address is shown
+    redacted, the same way the wrong-account page shows it. %>
+<main class="center max-w-xl card mt4 md-p3 mx-auto">
+  <% if @renewed %>
+    <h1 class="mt0 border-0 mb-2">A fresh link is on its way</h1>
+
+    <p class="text-lg mb-3">
+      A fresh link is on its way to <strong><%= @guardianship.guardian.redacted_email %></strong>.
+      Open the newest email from Fuime — this link no longer works.
+    </p>
+
+    <p class="text-sm muted mb-0">
+      The new link is good for <%= Guardianship::INVITE_VALID_FOR.inspect %>.
+    </p>
+  <% else %>
+    <h1 class="mt0 border-0 mb-2">This link has expired</h1>
+
+    <p class="text-lg mb-3">
+      This link has expired. We can send a fresh one to
+      <strong><%= @guardianship.guardian.redacted_email %></strong>.
+    </p>
+
+    <p class="mb-4">
+      Guardian invitation links stop working after <%= Guardianship::INVITE_VALID_FOR.inspect %>,
+      so a forwarded email doesn't stay usable forever.
+    </p>
+
+    <%# `turbo: false` — the response is a rendered page, not a redirect, and Turbo
+        drops a 200 HTML answer to a form submit. Same reason billing/show does it. %>
+    <%= button_to "Send me a fresh link", renew_guardianship_path(@guardianship.invite_token),
+                  method: :post,
+                  class: "btn bg-accent",
+                  form: { data: { turbo: false } } %>
+
+    <p class="text-sm muted mt-4 text-center">
+      Not expecting this? Ignore it — nothing happens unless you accept.
+    </p>
+  <% end %>
+
+  <p class="text-sm muted mt-4 text-center">
+    Questions? Contact us at <%= mail_to "support@fuime.com" %>
+  </p>
+</main>

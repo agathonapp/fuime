@@ -1,17 +1,40 @@
 <% title "Invite Your Parent or Guardian" %>
 <% page_full %>
 
+<%# Fuime: what the parent's signature gates depends on the money model, and
+    this page has to say the true one (ONBOARDING_PLAN §4.1, L8). Under
+    merchant-of-record the guardian requirement sits at the payout seam
+    (Event#payout_setup_blockers) — a teen can keep setting up first. Under
+    Connect it sits at activation (Event::Application#activation_blockers). The
+    old copy promised "your venture will be fully activated", which under MoR
+    described a gate that is not there.
+
+    It deliberately does NOT say "you can start selling now": selling under MoR
+    waits on Fuime's human vetting (Fuime::OperatorEligibility), not on the
+    parent, and this page is usually reached before that decision. What is true
+    here is only that the parent is not what holds up the teen's setup. %>
+<% merchant_of_record = ::Fuime::Features.merchant_of_record? %>
 <main class="center max-w-xl card mt4 md-p3 mx-auto">
-  <h1 class="mt0 border-0 mb-2">Almost there!</h1>
+  <h1 class="mt0 border-0 mb-2">Invite your parent or guardian</h1>
 
   <p class="text-lg mb-4">
-    Since you're under 18, Fuime needs a parent or guardian to sign off on your account.
-    They'll be able to see your business activity and will be the legal signer.
+    Since you're under 18, Fuime needs a parent or guardian to be the legal signer
+    and responsible adult on your account. They'll be able to see your business activity.
+    <% if merchant_of_record %>
+      You can keep setting up. Your parent or guardian signs before you get paid.
+    <% else %>
+      Your venture can't go live until they sign.
+    <% end %>
   </p>
 
   <%= render "application/callout", type: "info" do %>
-    <strong>What happens next:</strong> We'll send your parent an email with a link to accept.
-    Once they do, your venture will be fully activated.
+    <strong>What happens next:</strong> We'll email them a link to read and accept the
+    guardian agreement.
+    <% if merchant_of_record %>
+      Until they accept, you can't be paid.
+    <% else %>
+      Once they accept, your venture can be activated.
+    <% end %>
   <% end %>
 
   <%= form_with model: @guardianship, url: guardianships_path, class: "mt-4" do |f| %>

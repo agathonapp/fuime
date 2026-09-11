@@ -48,7 +48,19 @@ class Guardianship < ApplicationRecord
   # v2 (2026-08-06) names Ninth Street Labs, LLC as the counterparty. v1 was
   # "between Fuime and you", and Fuime is a product rather than a legal person,
   # so v1 recorded consent to an agreement with nobody.
-  CURRENT_AGREEMENT_VERSION = "2026-08-06-v2"
+  #
+  # v3 (2026-09-10) carries the L5 standing disclosure ("a financial technology
+  # company, not a bank" — v2 said "software platform") and drops v2's §5, which
+  # described a per-venture Stripe account in the guardian's name that does not
+  # exist under merchant-of-record. Consent and revocation are now described as
+  # gating payouts, which is what they gate; v2 said they gated running the
+  # business. Written to be true under both postures, because the partial cannot
+  # branch on a runtime flag: the signed text must reproduce from the version.
+  #
+  # There is no version→partial table to extend: `agreement_partial_for` derives
+  # the filename from the version string and checks the file exists, so adding
+  # app/views/guardianships/agreements/_<version>.html.erb IS the registration.
+  CURRENT_AGREEMENT_VERSION = "2026-09-10-v3"
 
   # Invite links are bearer tokens granting authority over a minor's account.
   # They expire so a forwarded or leaked email doesn't stay usable forever.
@@ -309,8 +321,11 @@ class Guardianship < ApplicationRecord
   end
 
   # A guardian must be able to withdraw consent — that is a legal requirement,
-  # not a feature. Revoking immediately removes the minor's ability to operate
-  # a business (see User#permitted_to_operate_business?).
+  # not a feature. What revoking removes depends on the money model: under
+  # merchant-of-record it stops payouts (Event#payout_setup_blockers reads
+  # status live; a line already in a generated weekly run is not pulled — see
+  # agreement v3 §4); under Connect it also removes the minor's ability to
+  # operate a business (User#permitted_to_operate_business?).
   def revoke!(revoked_by: nil)
     update!(
       status: :revoked,

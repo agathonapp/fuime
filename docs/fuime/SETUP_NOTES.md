@@ -2,6 +2,26 @@
 
 ## Handoff (most recent first)
 
+**2026-09-11 (latest) — Onboarding Phase A: copy and routing.**
+
+Branch `fuime/onboarding-a-copy-routing`. Plan: `docs/fuime/ONBOARDING_PLAN.md`
+(§1–§2 the traced flows, §5 the phases). Phase A shipped: site CTA →
+`/get-started` and the L8 sweep of the five public pages (the real front door is
+`site/start.html`, not index — the plan's §1 #1 was stale); lean signup form
+(name + 13+; phone/photo stay in settings); guardian invite/accept/new copy true
+under MoR; footer disclosure on the accept page; expired-link renew and
+wrong-account sign-out; `Fuime::VettingMailer`; activation email points at
+selling; guardian agreement v3; FAQ and /guardian-agreement fixed. Divergence
+log entry "2026-09-11 — Onboarding Phase A". Verify: `/users/auth?signup=true`,
+`/guardian/new`, an invite email in letter_opener, `/faq`. Phases B–D not started.
+Not touched: `terms.html.erb` (still says no real money moves — counsel item).
+
+**Testing tip that saved this session:** per-agent test databases. `docker
+compose run --rm -T -e RAILS_ENV=test -e DATABASE_URL=postgres://postgres:postgres@db:5432/bank_test_N web bundle exec rails db:create db:schema:load`
+once per N, then point each concurrent rspec at its own N. Five ran in parallel
+with no deadlocks. When passing a file list to `docker compose run … rubocop`,
+wrap it in `sh -c "…"` or the list arrives as one path.
+
 **2026-09-10 (latest) — G10: MoR Checkout webhook → ledger.**
 
 A Dashboard that only forwarded `checkout.session.completed` dropped the first

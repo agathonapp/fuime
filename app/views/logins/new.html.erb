@@ -1,6 +1,18 @@
 <% turbo_page_requires_reload if params[:require_reload].present? %>
-<% title_text = @login.for_application? ? "Verify your email" : @signup ? "Sign up for Fuime" : "Sign in to Fuime" %>
+<% title_text = @login.for_application? ? "Verify your email" : @signup ? "Start your business on Fuime" : "Sign in to Fuime" %>
 <% title title_text %>
+<%# The sign-up sub-line has to be true for the money model that is actually
+    running. Under merchant-of-record a teen can set up before a guardian has
+    done anything — the guardian gates payouts — but not sell: a human at Fuime
+    approves every venture first (Fuime::OperatorEligibility, "This venture has
+    not been approved by Fuime yet."), so "start selling now" was a promise the
+    product does not keep. Under Connect the guardian owns the account, so
+    nothing is live until they have signed (docs/fuime/ONBOARDING_PLAN.md §3,
+    "sell first, paperwork when there is money"). Never promise the MoR sentence
+    when MoR is off. %>
+<% mor_subline = "Free to start. About two minutes. Under 18? You can set up now and sell as soon as Fuime approves your business — a parent or guardian signs off before you get paid." %>
+<% connect_subline = "Free to start. About two minutes. Under 18? You can set up now — a parent or guardian signs off before your venture goes live." %>
+<% signup_subline = ::Fuime::Features.merchant_of_record? ? mor_subline : connect_subline %>
 
 <% content_for :info_pane do %>
   <%= render partial: "logins/apply_info_pane" %>
@@ -10,6 +22,10 @@
   <div class="my-auto">
     <%= render "logins/header", header_label: @login.for_application? ? "Apply for Fuime" : "Fuime" do %>
       <%= title_text %>
+    <% end %>
+
+    <% if @signup && !@login.for_application? %>
+      <p class="mt-2 mb-0 muted"><%= signup_subline %></p>
     <% end %>
 
     <%= form_for @login, class: "mt-1", id: "login", 'data-action': "webauthn-auth#submit", 'data-webauthn-auth-target': "authForm" do |form| %>

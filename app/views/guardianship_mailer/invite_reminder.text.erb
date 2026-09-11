@@ -1,18 +1,39 @@
-Hello,
+Hi —
 
-This is a reminder: <%= @minor_name %> invited you to be their parent or guardian on Fuime, a financial platform for teen-run businesses, and the invitation is still waiting.
+This is a reminder: <%= @minor_name %> set up <%= @venture_name.presence || "a business" %> on Fuime, a financial platform for young founders, and they're still waiting for a parent or guardian to sign off. <%= @minor_name %> named you.
 <% if @stage == :day6 %>
 
-The link expires <%= @expires_at ? l(@expires_at.to_date, format: :long) : "soon" %>. After that they will need a new invite.
+The link expires <%= @expires_at ? l(@expires_at.to_date, format: :long) : "soon" %>. After that, opening it will offer to send you a fresh one.
 <% end %>
 
-Until you accept, they can sell but they cannot get paid. Accepting makes you the legal signer and responsible adult for their venture.
+<% if @merchant_of_record -%>
+Until you accept, they cannot get paid.
+<% else -%>
+Until you accept, their business cannot go live and they cannot get paid.
+<% end -%>
+Accepting makes you the legal signer and responsible adult for <%= @venture_name.presence || "their business" %>; <%= @minor_name %> runs it day to day.
 
-Review the invitation and the guardian agreement here:
+What you're agreeing to (one page, about two minutes)
+
+- You're the legal signer for <%= @venture_name.presence || "their business" %>. <%= @minor_name %> runs it day to day.
+- You can see every sale and every dollar, always. <%= @minor_name %> can't turn that off.
+<% if @merchant_of_record -%>
+- Nothing is paid out until you've accepted and set up where the money goes.
+<% else -%>
+- Nothing goes live until you accept.
+<% end -%>
+
+Review and sign:
 
 <%= @accept_url %>
 
-If you already accepted, you can ignore this. If you did not expect this invitation, or if you do not know <%= @minor_name %>, you can ignore this email. Nothing happens unless you accept.
+<% if @merchant_of_record -%>
+We won't ask for a Social Security number, an ID, or a payment. When there's money to send, we'll ask where it should go.
+<% else -%>
+Accepting is free and doesn't ask for an ID. Before any money moves, Stripe will need identity details from the account owner.
+<% end -%>
+
+If you already accepted, you can ignore this. Not expecting this? Ignore it — nothing happens unless you accept.
 
 Questions? Reply to this email or write to <%= @support_email %>.
 
