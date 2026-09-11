@@ -6,7 +6,7 @@
 #
 # Safe while Stripe is live. Does not call DemoSandbox.guard_enabled!.
 namespace :fuime do
-  desc "Seed / refresh the pitch Playground venture (safe on live Stripe)"
+  desc "Seed / refresh the pitch Playground venture (wipes mock ledger; safe on live Stripe)"
   task playground: :environment do
     playground = Fuime::Playground.new
     result = playground.seed!

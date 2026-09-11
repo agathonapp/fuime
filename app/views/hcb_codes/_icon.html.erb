@@ -1,7 +1,7 @@
 <%# This partial combines `CanonicalPendingTransaction`, `CanonicalTransaction`, and `CanonicalTransactionGrouped` icons. `tx` can be either of these! %>
 
   <% if tx.local_hcb_code.bank_fee? || tx.try(:fee_payment?) %>
-    <% label = "Fiscal sponsorship fee" %>
+    <% label = "Fuime service fee" %>
     <% icon = inline_icon "bank-icon" %>
     <% fee = true %>
   <% elsif tx.local_hcb_code.fee_revenue? %>

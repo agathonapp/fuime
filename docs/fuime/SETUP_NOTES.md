@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Nav honesty + Playground product demo.**
+**2026-09-11 (latest) — Playground ledger is income + Fuime service fee.**
+
+Invented card spend (business cards, booth fee, leaf bags, trimmer
+string) is gone. `rake fuime:playground` / `/admin/playground` Seed
+wipes this venture's mock ledger and rewrites lawn-job money-in only.
+Plan is Free (7%), so FeeEngine's pending row is the take-rate — now
+labeled **Fuime service fee**, not Fiscal sponsorship. Click: Become
+Maya → `/fuime-playground` → Transactions. Show mock data is the same
+shape. Did not flip Stripe or stand up a second Render.
+
+**2026-09-11 — Nav honesty + Playground product demo.**
 
 Empty RECEIVE was invoices?/check_deposits staying true after
 DisabledModules stripped the items. `events_nav` now drops empty

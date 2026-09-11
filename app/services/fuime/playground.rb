@@ -8,6 +8,13 @@
 #
 #   rake fuime:playground          seed / refresh the pitch venture
 #   open /admin/playground         Become the teen + click the product path
+#
+# The ledger is money-in from lawn jobs only. Family MoR has no operator
+# spend rail (Issuing off, reimbursements hidden), so invented card-like
+# expenses are a lie in a pitch. The pending take-rate line is FeeEngine
+# accruing Event::Plan::Free (7% of collections) — the same pending row
+# the founder saw labeled "Fiscal sponsorship". Do not add a second fee
+# line here; relabel that row (see BankFee / pending fee copy).
 module Fuime
   class Playground
     SLUG = "fuime-playground"
@@ -32,18 +39,24 @@ module Fuime
       }
     ].freeze
 
+    # Income only. FeeEngine::Create runs on each CanonicalEventMapping and
+    # accrues event.revenue_fee (Free = 7%) into fronted_fee_balance — that is
+    # the pending "Fuime service fee" on the transactions list. A negative
+    # LEDGER_LINE would invent spend Maya cannot make, or a second fee.
     LEDGER_LINES = [
       { days_ago: 24, memo: "Lawn — Grand Lake block", cents: 18_600 },
-      { days_ago: 22, memo: "Gas and line trimmer string", cents: -8_842 },
       { days_ago: 17, memo: "Birthday party yard (front + back)", cents: 9_600 },
-      { days_ago: 15, memo: "Leaf bags and gloves", cents: -6_120 },
       { days_ago: 10, memo: "Weekly lawn subscriptions", cents: 14_250 },
-      { days_ago: 8, memo: "Farmers market booth fee", cents: -4_500 },
       { days_ago: 4, memo: "Ridge Coffee — weekly mow", cents: 21_000 },
-      { days_ago: 3, memo: "Business cards", cents: -2_200 },
     ].freeze
 
     def self.slug = SLUG
+
+    def self.service_fee_cents
+      LEDGER_LINES.sum do |line|
+        BigDecimal(line[:cents]) * BigDecimal(Event::Plan::Free::REVENUE_FEE.to_s)
+      end
+    end
 
     def initialize
       @warnings = []
@@ -55,10 +68,12 @@ module Fuime
         teen = upsert_user!(email: TEEN_EMAIL, name: "Maya Okafor", birthday: 16.years.ago.to_date)
         ensure_guardianship!(guardian:, teen:)
         event = upsert_venture!(teen:)
+        ensure_free_plan!(event)
         upsert_position!(user: teen, event:, role: :manager)
         upsert_position!(user: guardian, event:, role: :reader)
         seed_offers!(event)
-        fund!(event) if event.canonical_event_mappings.none?
+        wipe_mock_ledger!(event)
+        fund!(event)
         event.reload
 
         { event:, teen:, guardian:, warnings: @warnings }
@@ -87,7 +102,8 @@ module Fuime
       <<~BANNER
         Pitch playground  /#{event.slug}  (demo_mode=#{event.demo_mode})
           Become Maya via /admin/playground (existing impersonate)
-          Click: Home → What you sell → Add something / share → storefront Buy
+          Click: Home → Transactions (lawn-job income + pending Fuime service fee)
+                Home → What you sell → Add something / share → storefront Buy
           Checkout never hits Stripe. Discover excludes this venture.
       BANNER
     end
@@ -145,9 +161,20 @@ module Fuime
         sale_terms_version: Event::SALE_TERMS_VERSION,
         country: event.country.presence || "US"
       )
-      event.plan ||= Event::Plan::Standard.new
       save_unvalidated!(event)
       event
+    end
+
+    # Pitch take-rate is Free/Pro 7%, not Standard's leftover 5%. Prod already
+    # had a Standard row; `plan ||=` would leave the 5% FeeEngine accrual
+    # ($31.73 on $634.50) looking like a mystery spend.
+    def ensure_free_plan!(event)
+      current = Event::Plan.find_by(event_id: event.id, aasm_state: "active")
+      return if current.is_a?(Event::Plan::Free)
+
+      current&.update_columns(aasm_state: "inactive", inactive_at: Time.current, updated_at: Time.current)
+      save_unvalidated!(Event::Plan::Free.new(event:))
+      event.association(:plan).reset
     end
 
     def upsert_position!(user:, event:, role:)
@@ -186,6 +213,59 @@ module Fuime
       end
     end
 
+    # Replace this venture's mock ledger so a prod pitch is not stuck with
+    # invented spend. Deletes mappings + FeeEngine accruals + FUIMEPLAYGROUND
+    # raw CSV rows. Does not touch ledger engine internals (Rule 3).
+    def wipe_mock_ledger!(event)
+      return unless event.persisted?
+
+      mappings = CanonicalEventMapping.where(event_id: event.id)
+      cem_ids = mappings.pluck(:id)
+      ct_ids = mappings.pluck(:canonical_transaction_id)
+
+      raws = RawCsvTransaction.where(unique_bank_identifier: BANK_IDENTIFIER)
+      raw_ids = raws.pluck(:id)
+      hashed_ids = HashedTransaction.where(raw_csv_transaction_id: raw_ids).pluck(:id)
+      ct_ids |= CanonicalTransaction.where(
+        transaction_source_type: "RawCsvTransaction",
+        transaction_source_id: raw_ids
+      ).pluck(:id)
+
+      ledger_ids = Ledger.where(event_id: event.id).pluck(:id)
+      item_ids = ledger_ids.any? ? Ledger::Mapping.where(ledger_id: ledger_ids).pluck(:ledger_item_id) : []
+      if item_ids.any?
+        ct_ids |= CanonicalTransaction.where(ledger_item_id: item_ids).pluck(:id)
+      end
+
+      Fee.where(canonical_event_mapping_id: cem_ids).delete_all if cem_ids.any?
+      Fee.where(event_id: event.id).delete_all
+      CanonicalHashedMapping.where(canonical_transaction_id: ct_ids).delete_all if ct_ids.any?
+      CanonicalHashedMapping.where(hashed_transaction_id: hashed_ids).delete_all if hashed_ids.any?
+      CanonicalPendingSettledMapping.where(canonical_transaction_id: ct_ids).delete_all if ct_ids.any?
+      mappings.delete_all
+
+      if ct_ids.any?
+        CanonicalTransaction.where(id: ct_ids).update_all(ledger_item_id: nil)
+        CanonicalTransaction.where(id: ct_ids).delete_all
+      end
+
+      if hashed_ids.any?
+        HashedTransaction.where(id: hashed_ids).update_all(duplicate_of_hashed_transaction_id: nil)
+        HashedTransaction.where(duplicate_of_hashed_transaction_id: hashed_ids).update_all(duplicate_of_hashed_transaction_id: nil)
+        HashedTransaction.where(id: hashed_ids).delete_all
+      end
+      raws.delete_all
+
+      HcbCode.where(ledger_item_id: item_ids).update_all(ledger_item_id: nil) if item_ids.any?
+      Ledger::Mapping.where(ledger_id: ledger_ids).delete_all if ledger_ids.any?
+      if item_ids.any?
+        Ledger::Item.where(id: item_ids).update_all(author_id: nil)
+        Ledger::Item.where(id: item_ids).delete_all
+      end
+    rescue StandardError => e
+      @warnings << "Ledger wipe skipped: #{e.message}"
+    end
+
     def fund!(event, lines = LEDGER_LINES)
       raws = lines.map do |line|
         ::RawCsvTransactionService::Create.new(
@@ -205,7 +285,7 @@ module Fuime
 
         CanonicalEventMapping.create!(canonical_transaction: canonical, event:)
       end
-    rescue => e
+    rescue StandardError => e
       @warnings << "Ledger seed skipped: #{e.message}"
     end
 

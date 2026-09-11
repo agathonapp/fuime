@@ -65,11 +65,11 @@ class HcbCode
 
       def bank_fee_memo
         if bank_fee.amount_cents.negative? && bank_fee.fee_revenue.present?
-          return "Fiscal sponsorship fee for #{bank_fee.fee_revenue.start.strftime("%-m/%-d")} to #{bank_fee.fee_revenue.end.strftime("%-m/%-d")}"
+          return "Fuime service fee for #{bank_fee.fee_revenue.start.strftime("%-m/%-d")} to #{bank_fee.fee_revenue.end.strftime("%-m/%-d")}"
         elsif bank_fee.amount_cents.negative?
-          return "Fiscal sponsorship"
+          return "Fuime service fee"
         else
-          return "Fiscal sponsorship fee credit"
+          return "Fuime service fee credit"
         end
       end
 

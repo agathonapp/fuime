@@ -21,7 +21,7 @@ module TransactionEngine
       private
 
       def handle_hack_club_bank_fee
-        return "FISCAL SPONSORSHIP" if hack_club_fee?
+        return "FUIME SERVICE FEE" if hack_club_fee?
       end
 
       def handle_linked_object
