@@ -364,7 +364,7 @@ module Fuime
         conn.sadd(Fuime::WaitlistRoster::LIST_KEY, address)
         meta = {
           "source" => WAITLIST_SOURCE,
-          "at" => row[:days_ago].days.ago.utc.iso8601
+          "at"     => row[:days_ago].days.ago.utc.iso8601
         }
         if row[:invited]
           meta["invited_at"] = 1.day.ago.utc.iso8601
