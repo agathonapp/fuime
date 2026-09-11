@@ -395,33 +395,33 @@ module Admin
     end
 
     def misc
-      Section.new(
-        name: "Misc",
-        items: [
-          # FUIME: the marketing site's waitlist. Unlike every other count here
-          # this one is not a DB query but a read of another service over HTTP,
-          # so it goes through a 5-minute cache that swallows its own failures
-          # — the nav renders on every admin page and must not be able to take
-          # the console down or add a round trip to each request. `to_i` because
-          # Section#counter_sum adds these up and cannot take a nil.
-          make_item(
-            name: "Waitlist",
-            path: admin_waitlist_index_path,
-            count: ->{ Fuime::WaitlistRoster.cached_total.to_i },
-            count_type: :records
-          ),
-          # FUIME: the click-through cast. Hidden when Stripe is live so a
-          # production console cannot mint demo login codes.
-          *(if Fuime::DemoSandbox.enabled?
-              [make_item(
-                name: "Demo sandbox (Fuime)",
-                path: demo_admin_index_path,
-                count: -> { User.where("email LIKE ?", "demo+%@fuime.test").count },
-                count_type: :records
-              )]
-            else
-              []
-            end),
+      items = [
+        # FUIME: the marketing site's waitlist. Unlike every other count here
+        # this one is not a DB query but a read of another service over HTTP,
+        # so it goes through a 5-minute cache that swallows its own failures
+        # — the nav renders on every admin page and must not be able to take
+        # the console down or add a round trip to each request. `to_i` because
+        # Section#counter_sum adds these up and cannot take a nil.
+        make_item(
+          name: "Waitlist",
+          path: admin_waitlist_index_path,
+          count: ->{ Fuime::WaitlistRoster.cached_total.to_i },
+          count_type: :records
+        )
+      ]
+
+      # FUIME: the click-through cast. Hidden when Stripe is live so a
+      # production console cannot mint demo login codes.
+      if Fuime::DemoSandbox.enabled?
+        items << make_item(
+          name: "Demo sandbox (Fuime)",
+          path: demo_admin_index_path,
+          count: -> { User.where("email LIKE ?", "demo+%@fuime.test").count },
+          count_type: :records
+        )
+      end
+
+      items += [
           make_item(
             name: "Blazer",
             path: blazer_path,
@@ -522,8 +522,9 @@ module Admin
             count: ->{ 0 }, # I think this would be expensive to calculate
             count_type: :records,
           )
-        ]
-      )
+      ]
+
+      Section.new(name: "Misc", items:)
     end
 
   end
