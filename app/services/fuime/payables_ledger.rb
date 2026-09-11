@@ -5,7 +5,7 @@
 # ── Why this class exists at all ────────────────────────────────────────────
 #
 # The distinction it enforces is legal, not cosmetic. Under the umbrella
-# merchant-of-record model Fuime LLC is the seller: a customer pays Fuime for a
+# merchant-of-record model Ninth Street Labs, LLC is the seller: a customer pays Fuime for a
 # sale Fuime made, that money is Fuime's own revenue, and the operator is a vendor
 # Fuime pays on a fixed cadence. What the operator has is a RECEIVABLE against
 # Fuime — an amount owed, payable on a stated date.
@@ -361,10 +361,10 @@ module Fuime
                "bank balance, not a deposit, and it is not held for you on account."
       end
 
-      "Fuime is the seller of record for your sales, so payments arrive in Fuime's " \
-        "account and Fuime pays you on a fixed schedule. This figure is what Fuime " \
-        "owes you — it is not a bank balance, not a deposit, and it is not held for " \
-        "you on account."
+      "Ninth Street Labs, LLC (Fuime) is the seller of record for your sales, so " \
+        "payments arrive in Fuime's account and Fuime pays you on a fixed schedule. " \
+        "This figure is what Fuime owes you — it is not a bank balance, not a " \
+        "deposit, and it is not held for you on account."
     end
 
     # Sum of settled lines whose Fuime ledger key starts with `prefix`, optionally

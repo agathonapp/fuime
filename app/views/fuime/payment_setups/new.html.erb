@@ -54,8 +54,9 @@
         any of it</strong> — it goes directly to Stripe.
       </li>
       <li class="mb-1">
-        You will own this payment account. Money your young founder collects settles
-        to the bank account you connect, not to Fuime.
+        You are the legal payee and clawback obligor. You must approve the payout
+        destination before the first payout. Your young founder runs the venture
+        day to day.
       </li>
     <% end %>
     <li class="mb-0">
@@ -67,17 +68,7 @@
   </ul>
 <% end %>
 
-<% if StripeService.live? %>
-  <p class="muted text-sm">This is a real Stripe account and real money will move.</p>
-<% else %>
-  <%= render "application/callout", type: "warning", title: "Test mode" do %>
-    <p class="mb-0">
-      Fuime is running against Stripe's test mode, so this creates a
-      <strong>test</strong> account and no real money can move. You do not need to
-      enter real personal details.
-    </p>
-  <% end %>
-<% end %>
+<p class="muted text-sm"><%= fuime_status_line %></p>
 
 <%# The component mounts here. Stripe's Connect JS is loaded and driven by the
     Stimulus controller in app/javascript/controllers/stripe_connect_onboarding_controller.js;

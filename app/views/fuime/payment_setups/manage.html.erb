@@ -23,12 +23,6 @@
   <%= link_to "Payment status", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
 </p>
 
-<% unless @connected_account.livemode %>
-  <p class="muted text-sm">
-    This is a Stripe <strong>test</strong> account — no real money can move through it.
-  </p>
-<% end %>
-
 <%# One controller instance wraps the whole region so all four components share a
     single Account Session. See stripe_connect_component_controller.js for why
     that matters (one instance per component would mint one session per box). %>

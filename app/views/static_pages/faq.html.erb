@@ -20,20 +20,13 @@
   business with.
 </p>
 
-<h2>Does real money move through Fuime right now?</h2>
-<% if StripeService.live? %>
-  <p>
-    Yes. Payments made to a business on Fuime are real.
-  </p>
-<% else %>
-  <p>
-    <strong>No.</strong> Fuime is in a pre-launch beta and everything runs
-    against Stripe's test mode. Payment forms and cards work end to end so you
-    can see how the product behaves, but no real money moves and a real card
-    will not be charged. We will say so clearly, here and in the product,
-    before that changes.
-  </p>
-<% end %>
+<h2>What is Fuime's status?</h2>
+<p>
+  <%= fuime_status_line %>
+  When a client pays, they buy from
+  <%= Rails.configuration.constants.legal_entity_name %>. Fuime keeps its fee
+  and owes the rest to the venture as a payable.
+</p>
 
 <h2>Who can use Fuime?</h2>
 <p>
@@ -54,7 +47,7 @@
 
 <h2>What can my parent see?</h2>
 <p>
-  Everything about the businesses they sign for: transactions, balances,
+  Everything about the businesses they sign for: transactions, payables,
   receipts, and who is on your team. This is not optional and you cannot turn
   it off. It is the deal that lets a teenager run a real business.
 </p>
@@ -79,8 +72,8 @@
 <p>
   Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of
   each payment processed for your business, shown as its own line on your
-  ledger so you can always see it. There is no monthly fee. During the beta no
-  real payments are processed, so nothing is charged.
+  ledger so you can always see it. There is no monthly fee on Free. Every Fuime
+  fee is billed to the guardian, who is the legal payee.
 </p>
 
 <h2>Is Fuime a bank?</h2>

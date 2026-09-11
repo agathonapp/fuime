@@ -1,15 +1,13 @@
 <% title "Privacy Policy" %>
 
 <h1 class="heading">Privacy Policy</h1>
-<p class="muted">Last updated 2 August 2026.</p>
+<p class="muted">Last updated 11 September 2026.</p>
 
-<%= render "application/callout", type: "warning", title: "This covers Fuime's pre-launch beta" do %>
+<%= render "application/callout", type: "info", title: "Private beta" do %>
   <p class="m0">
-    Fuime is not yet handling real money. Payments and cards run against
-    Stripe's test mode, so no real funds move through the platform. This policy
-    describes what Fuime collects today. Before Fuime handles real money it
-    will be replaced by a policy reviewed by a lawyer, and you will be told
-    before that happens.
+    <%= fuime_status_line %>
+    This policy describes what Fuime collects today. If a change materially
+    affects what we do with your information, we will email you.
   </p>
 <% end %>
 
@@ -18,8 +16,9 @@
   Fuime is a financial record-keeping platform for businesses run by teenagers
   aged 13 to 17, with a parent or legal guardian on the account. It is a product
   of <strong><%= Rails.configuration.constants.legal_entity_name %></strong>,
-  which is the company responsible for the information described here and the
-  one to contact about it. When this policy says &ldquo;we&rdquo; it means
+  doing business as Fuime, which is the company responsible for the information
+  described here and the one to contact about it. When this policy says
+  &ldquo;we&rdquo; it means
   <%= Rails.configuration.constants.legal_entity_name %>;
   &ldquo;you&rdquo; means anyone with a Fuime account, whether a teen or a
   guardian.
@@ -53,12 +52,12 @@
 <ul>
   <li>Business details you enter — name, category, description, storefront text.</li>
   <li>
-    Your date of birth, but <em>only</em> if you are issued a Fuime card. Our card
-    issuer requires it by law and we cannot issue one without it. If you never get
-    a card, we never ask.
+    Your date of birth, but <em>only</em> if a card is ever issued on the
+    account. Cards are not generally available. If you never get a card, we
+    never ask.
   </li>
   <li>
-    Transaction records, balances, receipts you upload, and comments you write
+    Transaction records, payables, receipts you upload, and comments you write
     on the ledger.
   </li>
 </ul>
@@ -96,7 +95,7 @@
 </p>
 <p>We also use these companies to run Fuime, and they process data on our behalf:</p>
 <ul>
-  <li><strong>Stripe</strong> — payments and card issuing. Currently test mode only.</li>
+  <li><strong>Stripe</strong> — payment processing.</li>
   <li><strong>Amazon Web Services (S3)</strong> — storage for receipts and uploaded files.</li>
   <li><strong>Render</strong> — application hosting and the database.</li>
   <li><strong>Resend</strong> — outbound email.</li>
@@ -110,8 +109,9 @@
 <p>
   A business can publish a storefront page. When it is public, anyone on the
   internet can see the business name, its description, and its transaction
-  history. We deliberately do <em>not</em> publish the account balance, and we
-  do not publish the owner's name when the owner is a minor. Publishing is off
+  history. We deliberately do <em>not</em> publish the payable owed to the
+  venture, and we do not publish the operator's name when the operator is a
+  minor. Publishing is off
   unless someone turns it on, and we recommend a guardian be part of that
   decision.
 </p>

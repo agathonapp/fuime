@@ -1,7 +1,7 @@
 <% title "Directory | Fuime" %>
 
 <% content_for :head do %>
-  <meta name="description" content="Businesses run by teenagers on Fuime. Browse by what they do and pay them directly.">
+  <meta name="description" content="Businesses run by teenagers on Fuime. Browse by what they do and pay via Fuime checkout.">
   <meta property="og:site_name" content="Fuime">
   <meta property="og:title" content="Teen-run businesses on Fuime">
   <meta property="og:url" content="<%= fuime_directory_url %>">
@@ -27,8 +27,10 @@
   <div class="mb-8">
     <h1 class="text-3xl font-bold mb-2">Teen-run businesses</h1>
     <p class="muted m-0">
-      Every business here is run by a young founder, with a parent or guardian on
-      the account. Browse, then pay them directly.
+      Every business here is run by a young founder, with a parent or guardian as
+      the legal payee. Browse, then pay via Fuime checkout.
+      <%= Rails.configuration.constants.legal_entity_name %> is the seller of
+      record.
     </p>
   </div>
 

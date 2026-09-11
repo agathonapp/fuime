@@ -5764,6 +5764,21 @@ for an expired link.
 | `/admin/guardianships` + nav + admin_tools | Stale queue; resend reuses existing action; verifications tab is consent record only (L4) | `app/controllers/admin_controller.rb`, `app/views/admin/guardianships.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
 | Specs + how-to-test | Model / job / mailer / request / nav | `spec/models/guardianship_spec.rb`, `spec/jobs/fuime/guardian_invite_reminder_job_spec.rb`, `spec/mailers/guardianship_mailer_spec.rb`, `spec/requests/fuime_guardianships_admin_spec.rb`, `spec/models/admin/nav_spec.rb` |
 
+## 2026-09-11 — Marketing + legal copy: MoR, live payments, Ninth Street Labs seller
+
+User-facing copy on fuime.com (`site/`) and app.fuime.com legal/chrome pages now
+matches production: Ninth Street Labs, LLC is the seller of record (Fuime is the
+brand). Status line is `Private beta · live payments. Ninth Street Labs, LLC
+(Fuime) is the seller of record.` Connect-era "parent owns the Stripe account /
+never in the flow of funds" and "test mode / no real money" claims are gone.
+Guardian agreement §5 is a new versioned partial (`2026-09-11-v3`).
+
+| Change | Why | Files |
+|---|---|---|
+| Marketing + app legal/footer copy | Site described Connect + test mode; production is MoR + live Checkout | `site/*.html`, `app/views/static_pages/*`, `app/views/application/_footer.html.erb`, `app/views/fuime/*` |
+| Guardian agreement v3 | Do not rewrite signed v2; §5 now states seller / legal payee / payable | `app/views/guardianships/agreements/_2026_09_11_v3.html.erb`, `app/models/guardianship.rb` |
+| Shared status/ownership helpers | One seam for the seller sentence | `app/helpers/fuime_helper.rb` |
+
 ## 2026-09-10 — G10: MoR Checkout webhook posts the first sale
 
 Production is merchant-of-record. A successful storefront Checkout must appear

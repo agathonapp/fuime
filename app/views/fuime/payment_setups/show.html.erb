@@ -58,9 +58,9 @@
         payment account with Stripe. The school will own that account; money
         settles to the school's bank, not to Fuime.
       <% else %>
-        Before <%= @event.name %> can accept money, a parent or guardian needs to set
-        up a payment account with Stripe. They will own that account; money settles
-        to their bank, not to Fuime.
+        Before <%= @event.name %> can accept money, a parent or guardian needs to
+        approve a payout destination. They are the legal payee; the young founder
+        runs the venture day to day.
       <% end %>
     </p>
     <% if @can_set_up %>
@@ -173,13 +173,6 @@
                     class: "btn bg-accent" %>
       <% end %>
     <% end %>
-  <% end %>
-
-  <% unless account.livemode %>
-    <p class="muted text-sm">
-      This is a Stripe <strong>test</strong> account — no real money can move
-      through it.
-    </p>
   <% end %>
 
   <p class="muted text-sm">

@@ -2,18 +2,27 @@
 
 # Fuime-specific view helpers.
 module FuimeHelper
-  # Whether to show the app-wide "test mode — no real money moves" banner.
+  # Standing status line for marketing and app chrome. Stripe mode is not named
+  # here; the seller of record is Ninth Street Labs, LLC (Fuime is the brand).
+  def fuime_status_line
+    "Private beta · live payments. " \
+      "#{Rails.configuration.constants.legal_entity_name} (Fuime) is the seller of record."
+  end
+
+  # Ownership sentence shared by the app footer and the storefront disclosure.
+  # Guardians are the legal payee, not the owner of a Stripe connected account.
+  def fuime_footer_ownership
+    "#{Rails.configuration.constants.legal_entity_name}, doing business as Fuime, " \
+      "is the seller of record on purchases. Guardians are the legal payee on " \
+      "operator payouts and must approve the destination before the first payout; " \
+      "young founders run the venture day to day."
+  end
+
+  # Whether to show the leftover Stripe-not-live banner.
   #
-  # Fuime runs Stripe in test mode in production, deliberately: the
-  # money-transmission structure is not legally settled
-  # (docs/fuime/PRODUCTION_READINESS.md §1.5). That is a defensible posture, but
-  # only if it is stated. A storefront takes a card number and a card page issues
-  # a card that looks real — a visitor has no way to know neither does anything
-  # unless the app says so.
-  #
-  # This lives in a helper rather than inline in the banner partial so the rule
-  # is testable: the banner is suppressed in development and test, so a view
-  # spec could never exercise it.
+  # Hidden once Stripe is live, and suppressed in development and test so a view
+  # spec does not have to dance around it. The banner copy itself is the status
+  # line, not a claim about simulated payments.
   def show_test_mode_banner?
     return false if StripeService.live?
 

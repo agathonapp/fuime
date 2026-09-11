@@ -38,12 +38,11 @@
 
   <div class="marketing-footer__legal">
     <p>
-      Fuime is a program of The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit
-      (EIN: 81-2908499).
+      Fuime is a product of <%= Rails.configuration.constants.legal_entity_name %>,
+      a financial technology company, not a bank. Fuime does not hold deposits and
+      does not offer FDIC-insured products. Payments are processed by Stripe.
+      <%= fuime_footer_ownership %>
     </p>
-    <p>
-      Fuime Visa® Commercial cards are powered by Stripe and issued by Celtic Bank. Banking
-      services provided by Column N.A., Member FDIC.
-    </p>
+    <p><%= fuime_status_line %></p>
   </div>
 </footer>

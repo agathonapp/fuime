@@ -45,10 +45,13 @@ class Guardianship < ApplicationRecord
   # stored version to its own file, so a guardian who signed an earlier version
   # keeps seeing the text they actually signed.
   #
-  # v2 (2026-08-06) names Ninth Street Labs, LLC as the counterparty. v1 was
-  # "between Fuime and you", and Fuime is a product rather than a legal person,
-  # so v1 recorded consent to an agreement with nobody.
-  CURRENT_AGREEMENT_VERSION = "2026-08-06-v2"
+  # v3 (2026-09-11) states merchant-of-record: Ninth Street Labs, LLC is the
+  # seller; the guardian is the legal payee and clawback obligor, not the owner
+  # of a Stripe connected account. v2 named the entity but still described a
+  # parent-owned Stripe account. v1 said "between Fuime and you", and Fuime is a
+  # product rather than a legal person, so v1 recorded consent to an agreement
+  # with nobody.
+  CURRENT_AGREEMENT_VERSION = "2026-09-11-v3"
 
   # Invite links are bearer tokens granting authority over a minor's account.
   # They expire so a forwarded or leaked email doesn't stay usable forever.

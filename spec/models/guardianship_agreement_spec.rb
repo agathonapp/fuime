@@ -10,7 +10,7 @@ RSpec.describe Guardianship, type: :model do
   describe ".agreement_partial_for" do
     it "resolves the current version to its partial" do
       expect(described_class.agreement_partial_for(described_class::CURRENT_AGREEMENT_VERSION))
-        .to eq("guardianships/agreements/2026_08_06_v2")
+        .to eq("guardianships/agreements/2026_09_11_v3")
     end
 
     it "translates dashes in the version to underscores in the filename" do
@@ -24,6 +24,8 @@ RSpec.describe Guardianship, type: :model do
     it "still resolves every superseded version whose text is on disk" do
       expect(described_class.agreement_partial_for("2026-08-01-v1"))
         .to eq("guardianships/agreements/2026_08_01_v1")
+      expect(described_class.agreement_partial_for("2026-08-06-v2"))
+        .to eq("guardianships/agreements/2026_08_06_v2")
     end
 
     it "is nil for a version with no partial on disk" do

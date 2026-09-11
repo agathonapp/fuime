@@ -3,10 +3,27 @@
 require "rails_helper"
 
 RSpec.describe FuimeHelper, type: :helper do
-  # The banner is the one place Fuime tells every visitor that no real money
-  # moves. Getting the condition wrong is silent in both directions: too eager
-  # and it undercuts a live product, too shy and a storefront quietly asks a
-  # stranger for a card number it cannot charge.
+  describe "#fuime_status_line" do
+    it "names Ninth Street Labs, LLC as seller without calling the brand Fuime LLC" do
+      expect(helper.fuime_status_line).to eq(
+        "Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record."
+      )
+      expect(helper.fuime_status_line).not_to include("Fuime LLC")
+    end
+  end
+
+  describe "#fuime_footer_ownership" do
+    it "states seller, legal payee, and destination approval" do
+      expect(helper.fuime_footer_ownership).to include("Ninth Street Labs, LLC, doing business as Fuime")
+      expect(helper.fuime_footer_ownership).to include("legal payee")
+      expect(helper.fuime_footer_ownership).to include("approve the destination before the first payout")
+      expect(helper.fuime_footer_ownership).not_to include("Venture accounts are opened")
+    end
+  end
+
+  # The banner is leftover chrome for a deploy whose Stripe keys are not live.
+  # Getting the condition wrong is silent in both directions: too eager and it
+  # undercuts a live product, too shy and a storefront has no standing status.
   describe "#show_test_mode_banner?" do
     def in_env(name)
       allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new(name))

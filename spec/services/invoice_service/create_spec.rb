@@ -74,7 +74,7 @@ RSpec.describe InvoiceService::Create, type: :model do
               # have, framed a purchase as a donation, and named another
               # organisation's EIN on a document the PAYER receives. This spec was
               # left behind by that change.
-              description: "Payment to Scrapyard, sold through Fuime. Fuime LLC is the seller of record.",
+              description: "Payment to Scrapyard, sold through Fuime. Ninth Street Labs, LLC is the seller of record.",
               due_date: due_date_unix,
               footer: "\n\n\n\n\nNeed to pay by mailed paper check?\n\nPlease pay the amount to the order of The Hack Foundation, and include 'Scrapyard (##{event.id})' in the memo. Checks can be mailed to:\n\nScrapyard (##{event.id}) c/o The Hack Foundation\n8605 Santa Monica Blvd #86294\nWest Hollywood, CA 90069",
               metadata: { event_id: event.id },

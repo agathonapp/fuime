@@ -412,7 +412,7 @@ export function initStepRail(target, config) {
      left exactly as the stylesheet drew it. */
   if (steps.length < 2) return inert()
 
-  // The steps' shared parent owns the rail. Falling back to `root` covers
+  // The steps' shared container element owns the rail. Falling back to `root` covers
   // markup where the steps are not siblings.
   let host = steps[0].parentElement || root
   for (let i = 1; i < steps.length; i++) {
