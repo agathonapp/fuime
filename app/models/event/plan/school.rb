@@ -57,9 +57,9 @@ class Event
       end
 
       def description
-        "For ventures run inside a school programme. The school owns the account and the money; " \
-          "guides oversee student spending. No parent guardian is required — the school is the " \
-          "responsible party."
+        "For ventures run inside a school programme. The school is the institutional " \
+          "sponsor and approves the payout destination; guides oversee student activity. " \
+          "No parent guardian is required — the school is the responsible party."
       end
 
       def institutionally_sponsored?

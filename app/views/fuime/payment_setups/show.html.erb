@@ -40,8 +40,12 @@
       Event#payment_account. Fuime::PaymentSetupsController#new refuses it too. %>
   <%= render "application/callout", type: "success", title: "Payments are set up through your school" do %>
     <p class="mb-0">
-      <%= @event.name %> is paid into <strong><%= account.event.name %></strong>'s payment
-      account, which the school owns and set up.
+      <%= @event.name %> is institutionally sponsored through
+      <strong><%= account.event.name %></strong>.
+      <%= fuime_legal_seller %> (Fuime) is the seller of record.
+      This venture's books show a payable to the school. A school
+      administrator approves the payout destination — the school does
+      not own a Stripe or payment account through Fuime.
       <% if account.ready_for_payments? %>
         You can take payments now.
       <% else %>
@@ -54,9 +58,11 @@
   <%= render "application/callout", type: "warning", title: "This venture can't be paid yet" do %>
     <p>
       <% if @event.institutionally_sponsored? %>
-        Before <%= @event.name %> can accept money, the school needs to set up a
-        payment account with Stripe. The school will own that account; money
-        settles to the school's bank, not to Fuime.
+        Before <%= @event.name %> can accept money, a school administrator
+        needs to approve a payout destination.
+        <%= fuime_legal_seller %> (Fuime) is the seller of record.
+        This venture's books show a payable to the school. The school
+        does not own a Stripe or payment account through Fuime.
       <% else %>
         Before <%= @event.name %> can accept money, a parent or guardian needs to
         approve a payout destination. They are the legal payee; the young founder
@@ -139,7 +145,7 @@
         <strong><%= account.ready_for_payouts? ? "yes" : "not yet" %></strong>
       </li>
       <li class="mb-0">
-        Account owner:
+        <%= @event.institutionally_sponsored? ? "School contact:" : "Legal payee:" %>
         <strong><%= account.owner.name.presence || account.owner.email %></strong>
       </li>
     </ul>
@@ -185,8 +191,16 @@
 <% end %>
 
 <p class="muted text-sm mt-4">
+  <%= fuime_legal_seller %> (Fuime) is the seller of record.
   Fuime is a financial technology company, not a bank. Fuime does not hold
-  deposits and does not offer FDIC-insured products. Payments are processed by
-  Stripe into an account owned by
-  <%= @event.institutionally_sponsored? ? "the sponsoring school" : "a parent or legal guardian" %>.
+  deposits and does not offer FDIC-insured products. Payments are processed
+  by Stripe.
+  <% if @event.institutionally_sponsored? %>
+    A school administrator approves the payout destination; this venture's
+    books show a payable to the school. The school does not own a Stripe
+    or payment account through Fuime.
+  <% else %>
+    A parent or legal guardian is the legal payee and must approve the
+    payout destination before the first payout.
+  <% end %>
 </p>

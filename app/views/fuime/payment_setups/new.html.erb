@@ -38,14 +38,16 @@
         You'll enter your school's legal details — name, EIN and address — and
         yourself as the contact completing the form. Stripe also asks for the
         contact's name, date of birth, address and last four digits of their
-        Social Security number; that identifies you as the representative, not as
-        the account's owner. <strong>Fuime never sees or stores any of it</strong>
-        — it goes directly to Stripe.
+        Social Security number; that identifies you as the school's
+        representative, not as the seller of record. <strong>Fuime never sees
+        or stores any of it</strong> — it goes directly to Stripe.
       </li>
       <li class="mb-1">
-        <strong>Your school owns this payment account.</strong> Money students'
-        ventures collect settles to the school's bank account, not to Fuime — and
-        never to any employee personally.
+        <strong>Your school is the institutional sponsor, not the owner of a
+        Stripe or payment account.</strong>
+        <%= fuime_legal_seller %> (Fuime) is the seller of record.
+        An administrator must approve the payout destination. This venture's
+        books show a payable to the school — never to any employee personally.
       </li>
     <% else %>
       <li class="mb-1">

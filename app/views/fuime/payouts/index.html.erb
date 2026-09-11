@@ -70,11 +70,13 @@
     <p class="mb-0">
       <% if account.blank? %>
         <% if @event.institutionally_sponsored? %>
-          The school needs to set up this programme's payment account first.
+          A school administrator needs to approve this programme's payout
+          destination first.
           <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
         <% else %>
-          A parent or guardian needs to set up this venture's payment account first.
-          They will own that account, and payouts go to their bank.
+          A parent or guardian needs to approve a payout destination first.
+          They are the legal payee; they do not own a Stripe or payment
+          account through Fuime.
           <%= link_to "See payment setup", fuime_payment_setup_path(event_slug: @event.slug), class: "underline" %>.
         <% end %>
       <% else %>
@@ -307,8 +309,9 @@
 
       <p class="secondary">
         The school has to approve this, and then pays you the same way it pays
-        anyone. The money is held in the school's account, so Fuime doesn't send it
-        and never holds it.
+        anyone. <%= fuime_legal_seller %> (Fuime) is the seller of record;
+        this venture's books show a payable. The school does not own a
+        Stripe or payment account through Fuime.
       </p>
 
       <%= f.submit "Ask the school", class: "btn bg-accent" %>
@@ -454,12 +457,13 @@
     guardian's; on a school venture they are both the school's (L5). %>
 <p class="secondary mt2">
   <% if @school_settled %>
-    This venture's money is held in the school's own Stripe account, and the school
-    pays students from it. Fuime is a financial technology company, not a bank, and
-    never holds this money.
+    <%= fuime_legal_seller %> (Fuime) is the seller of record. This venture
+    is institutionally sponsored: a school administrator approves the
+    payout destination, and the school pays students. Fuime is a financial
+    technology company, not a bank.
   <% else %>
-    Payouts are sent by Stripe from the venture's own account to the bank account
-    the parent or guardian connected. Fuime is a financial technology company, not a
-    bank, and never holds this money.
+    <%= fuime_legal_seller %> (Fuime) is the seller of record. Payouts go
+    to the destination a parent or guardian approved. Fuime is a financial
+    technology company, not a bank.
   <% end %>
 </p>

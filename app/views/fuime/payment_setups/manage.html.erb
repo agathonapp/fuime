@@ -74,8 +74,16 @@
 </div>
 
 <p class="muted text-sm mt-4">
+  <%= fuime_legal_seller %> (Fuime) is the seller of record.
   Fuime is a financial technology company, not a bank. Fuime does not hold
-  deposits and does not offer FDIC-insured products. Payments are processed by
-  Stripe into an account owned by
-  <%= @event.institutionally_sponsored? ? "the sponsoring school" : "a parent or legal guardian" %>.
+  deposits and does not offer FDIC-insured products. Payments are processed
+  by Stripe.
+  <% if @event.institutionally_sponsored? %>
+    A school administrator approves the payout destination; this venture's
+    books show a payable to the school. The school does not own a Stripe
+    or payment account through Fuime.
+  <% else %>
+    A parent or legal guardian is the legal payee and must approve the
+    payout destination before the first payout.
+  <% end %>
 </p>
