@@ -5811,3 +5811,23 @@ credentials.
 | `Fuime::DemoSandbox` + `fuime:demo:*` | Idempotent seed / scoped reset / login codes / reminder / smoke | `app/services/fuime/demo_sandbox.rb`, `lib/tasks/fuime_demo.rake` |
 | `/admin/demo` + nav | Roster + mint codes; off when Stripe is live | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
 | Specs + walkthrough | Seed/reset contract; request smoke of every queue | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb`, `spec/models/admin/nav_spec.rb`, `docs/fuime/TESTING_WALKTHROUGH.md` |
+
+## 2026-09-11 — Demo sandbox: living checklist + Become
+
+Rushmore needed one command and a page he could click in 15 minutes, not a
+second markdown copy of the same path. Become uses the existing
+`UsersController#impersonate` (admin only) — no magic-code fight, no new
+production login door.
+
+`rake fuime:demo` is reset + seed + banner. `/admin/demo` is the checklist.
+Specs lock `CHECKLIST_IDS` and walk every href as the right persona.
+
+Did not touch Lightspark, the ledger engine, or live Stripe.
+
+| Change | Why | Files |
+|---|---|---|
+| `setup!`, `checklist`, `banner`, `CAST_PEOPLE` | One source for the cast and the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
+| `rake fuime:demo` | The one command | `lib/tasks/fuime_demo.rake` |
+| `/admin/demo` Reset + seed + Become | Click-through without minting codes | `app/controllers/admin/demo_controller.rb`, `app/views/admin/demo/show.html.erb`, `config/routes.rb` |
+| Checklist lock + persona walk | So the demo cannot rot | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |
+| Walkthrough slimmed to a pointer | Prefer the living page over scattered docs | `docs/fuime/TESTING_WALKTHROUGH.md` |

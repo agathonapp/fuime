@@ -42,8 +42,12 @@ RSpec.describe "demo sandbox smoke", :merchant_of_record, type: :request do
     get demo_admin_index_path
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Demo sandbox")
+    expect(response.body).to include("15-minute checklist")
     expect(response.body).to include("demo+teen.pending@fuime.test")
     expect(response.body).to include("DEMOFOUNDERS")
+    Fuime::DemoSandbox.new.checklist.each do |step|
+      expect(response.body).to include(step[:title])
+    end
 
     get admin_waitlist_index_path
     expect(response).to have_http_status(:ok)
@@ -68,6 +72,21 @@ RSpec.describe "demo sandbox smoke", :merchant_of_record, type: :request do
     get nav_admin_index_path, params: { title: "Demo sandbox (Fuime)" }
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Demo sandbox (Fuime)")
+  end
+
+  it "resets and reseeds from the admin page" do
+    admin = User.find_by!(email: "demo+admin@fuime.test")
+    login_as!(admin)
+
+    post demo_setup_admin_index_path
+    expect(response).to redirect_to(demo_admin_index_path)
+
+    admin = User.find_by!(email: "demo+admin@fuime.test")
+    login_as!(admin)
+    get demo_admin_index_path
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("15-minute checklist")
+    expect(admin).to be_superadmin
   end
 
   it "renders the storefront, the parent billing page, and the accept checkbox" do
@@ -95,6 +114,44 @@ RSpec.describe "demo sandbox smoke", :merchant_of_record, type: :request do
     get guardianship_path(pending.invite_token)
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("I confirm")
+  end
+
+  it "walks every living checklist href as the right persona" do
+    admin = User.find_by!(email: "demo+admin@fuime.test")
+    login_as!(admin)
+
+    Fuime::DemoSandbox.new.checklist.each do |step|
+      persona = step[:persona]
+      if persona && !persona[:admin]
+        post impersonate_user_path(persona[:id], return_to: step[:href])
+        expect(response).to redirect_to(step[:href]), "Become failed for checklist #{step[:id]}"
+        follow_redirect!
+      else
+        get step[:href]
+      end
+
+      expect(response).to have_http_status(:ok), "checklist #{step[:id]} #{step[:href]} => #{response.status}"
+      expect(response.body).to include(step[:expect])
+
+      next unless persona && !persona[:admin]
+
+      post unimpersonate_user_path(persona[:id], return_to: demo_admin_index_path)
+      expect(response).to redirect_to(demo_admin_index_path)
+      follow_redirect!
+    end
+  end
+
+  it "lets Ada Become Pat onto the accept checkbox via existing impersonate" do
+    admin = User.find_by!(email: "demo+admin@fuime.test")
+    login_as!(admin)
+    parent = User.find_by!(email: "demo+parent.pending@fuime.test")
+    pending = Guardianship.find_by!(minor: User.find_by!(email: "demo+teen.pending@fuime.test"))
+
+    post impersonate_user_path(parent.id, return_to: guardianship_path(pending.invite_token))
+    follow_redirect!
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("I confirm I am the parent")
   end
 
   it "hides the sandbox when Stripe is live" do

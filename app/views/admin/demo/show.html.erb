@@ -1,14 +1,24 @@
 <% title "Demo sandbox (Fuime)" %>
 
-<%# FUIME: the click-through cast. Every mailbox is demo+…@fuime.test.
-    Seed invents no Stripe money. This page is hidden when Stripe is live. %>
+<%# FUIME: the living 15-minute checklist. Become is existing admin
+    impersonate — not a new login door. Hidden when Stripe is live. %>
+
+<% impersonating = current_session&.impersonated? %>
+<% checklist = @status[:checklist] %>
 
 <h1>Demo sandbox</h1>
 
-<p class="muted">
-  A known cast so you can click every major flow without real teens or parents.
-  Walkthrough: <code>docs/fuime/TESTING_WALKTHROUGH.md</code>.
+<p>
+  One cast. Every major path we shipped.
+  <strong>Become</strong> uses the existing impersonate action (admin only).
   Test card <code>4242 4242 4242 4242</code>. Never live Stripe.
+</p>
+
+<p class="muted">
+  Stripe <strong><%= @status[:stripe_mode] %></strong>
+  · MoR <strong><%= @status[:merchant_of_record] ? "on" : "off" %></strong>
+  · Waitlist store <strong><%= @status[:waitlist_configured] ? "configured" : "unset" %></strong>
+  · <code>rake fuime:demo</code>
 </p>
 
 <% if @status[:warnings].any? %>
@@ -22,58 +32,84 @@
   </div>
 <% end %>
 
-<div class="card mb2">
-  <p class="mb0">
-    Stripe <strong><%= @status[:stripe_mode] %></strong>
-    · MoR <strong><%= @status[:merchant_of_record] ? "on" : "off" %></strong>
-    · Waitlist store <strong><%= @status[:waitlist_configured] ? "configured" : "unset" %></strong>
-  </p>
-  <div class="flex flex-wrap gap-2 mt2">
-    <%= button_to "Seed / refresh cast", demo_seed_admin_index_path, method: :post, class: "btn bg-success" %>
-    <%= button_to "Run reminder job", demo_remind_admin_index_path, method: :post, class: "btn" %>
-  </div>
-  <%= form_with url: demo_reset_admin_index_path, method: :post, class: "mt2", data: { turbo: false } do %>
-    <label class="muted">Type <code>reset</code> to remove only this cast</label>
-    <%= text_field_tag :confirm, nil, class: "input", autocomplete: "off" %>
-    <%= submit_tag "Reset demo cast", class: "btn bg-error" %>
-  <% end %>
-</div>
-
-<div class="card mb2">
-  <h2 class="mt0 text-lg">Operator</h2>
-  <% if @status[:admin] %>
-    <p>
-      <%= @status[:admin][:name] %>
-      · <%= @status[:admin][:email] %>
-      · <%= link_to "user admin", admin_user_path(@status[:admin][:id]) %>
+<% if impersonating %>
+  <div class="card mb2">
+    <p class="mb0">
+      You are impersonating
+      <strong><%= current_user(allow_unverified: true)&.name %></strong>.
+      <%= button_to "Back to Ada",
+                    unimpersonate_user_path(current_user(allow_unverified: true)&.id, return_to: demo_admin_index_path),
+                    method: :post,
+                    class: "btn bg-accent",
+                    form: { data: { turbo_frame: "_top" } } %>
     </p>
-    <%= button_to "Mint login code", demo_login_code_admin_index_path,
+  </div>
+<% end %>
+
+<div class="card mb2">
+  <div class="flex flex-wrap gap-2 items-center">
+    <%= button_to "Reset + seed",
+                  demo_setup_admin_index_path,
                   method: :post,
-                  params: { email: @status[:admin][:email] },
-                  class: "btn" %>
-  <% else %>
-    <p class="muted">No admin yet — seed the cast.</p>
-  <% end %>
+                  class: "btn bg-success",
+                  data: { turbo_confirm: "Wipe the demo+@fuime.test cast and put it back?" } %>
+    <%= button_to "Run reminder job", demo_remind_admin_index_path, method: :post, class: "btn" %>
+    <%= button_to "Re-seed (no wipe)", demo_seed_admin_index_path, method: :post, class: "btn btn--secondary" %>
+  </div>
+  <p class="muted text-sm mb0 mt1">
+    Reset + seed is the one click. It only touches <code>demo+…@fuime.test</code>,
+    the <code>demo-*</code> ventures, and <code>DEMOFOUNDERS</code>.
+  </p>
 </div>
 
 <div class="card mb2">
-  <h2 class="mt0 text-lg">Queues this cast fills</h2>
-  <ul class="mb0">
-    <li><%= link_to "Waitlist", admin_waitlist_index_path %> — Invite <code>demo+waitlist.fresh@fuime.test</code></li>
-    <li><%= link_to "Applications", applications_admin_index_path %> — Demo Solo Lawn is under review</li>
-    <li><%= link_to "Cohorts", cohorts_admin_index_path %> — code <code>DEMOFOUNDERS</code></li>
-    <li><%= link_to "Operator vetting", operator_vetting_admin_index_path %> — Demo Window Wash</li>
-    <li><%= link_to "Guardian invites", guardianships_admin_index_path %> — stale + all-pending</li>
-  </ul>
+  <h2 class="mt0">15-minute checklist</h2>
+  <p class="muted">
+    Work these in order. For a parent step, <strong>Become</strong> first —
+    Ada cannot open the accept page (only the invited parent can).
+    Exit impersonation from the top bar, then come back here.
+  </p>
+
+  <ol class="pl3 mb0">
+    <% checklist.each do |step| %>
+      <li class="mb3">
+        <strong><%= step[:title] %></strong>
+        <div class="muted text-sm"><%= step[:do] %></div>
+        <div class="muted text-sm">Expect: <%= step[:expect] %></div>
+        <div class="flex flex-wrap gap-2 mt1 items-center">
+          <% if step[:persona] && !step[:persona][:admin] && !impersonating %>
+            <%= button_to "Become #{step[:persona][:name]}",
+                          impersonate_user_path(step[:persona][:id], return_to: step[:href]),
+                          method: :post,
+                          class: "btn bg-accent btn--sm",
+                          form: { data: { turbo_frame: "_top" } } %>
+            <span class="muted text-sm"><%= step[:persona][:email] %></span>
+          <% else %>
+            <%= link_to "Open", step[:href], class: "btn btn--sm" %>
+            <% if step[:persona] %>
+              <span class="muted text-sm">as <%= step[:persona][:email] %></span>
+            <% else %>
+              <span class="muted text-sm">as guest</span>
+            <% end %>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ol>
 </div>
 
 <div class="card mb2">
-  <h2 class="mt0 text-lg">People</h2>
+  <h2 class="mt0 text-lg">Cast</h2>
+  <p class="muted">
+    Mailboxes are <code>demo+&lt;role&gt;@fuime.test</code>.
+    Become is impersonate. Mint a code only when you want to test <code>/login</code>.
+  </p>
   <table class="w-full">
     <thead>
       <tr>
+        <th>Who</th>
         <th>Mailbox</th>
-        <th>Why they exist</th>
+        <th>Why</th>
         <th></th>
       </tr>
     </thead>
@@ -81,23 +117,31 @@
       <% @status[:people].each do |row| %>
         <tr>
           <td>
+            <%= row[:name].presence || "—" %>
+            <div class="muted text-sm"><%= row[:role] %></div>
+          </td>
+          <td>
             <code><%= row[:email] %></code>
             <% unless row[:present] %><span class="muted">missing</span><% end %>
           </td>
           <td><%= row[:purpose] %></td>
-          <td>
-            <% if row[:present] %>
-              <%= button_to "Code", demo_login_code_admin_index_path,
+          <td class="text-nowrap">
+            <% if row[:id] && !impersonating && row[:id] != current_user.id %>
+              <%= button_to "Become",
+                            impersonate_user_path(row[:id]),
                             method: :post,
-                            params: { email: row[:email] },
-                            class: "btn btn--sm" %>
+                            class: "btn btn--sm",
+                            form: { data: { turbo_frame: "_top" } } %>
+            <% elsif row[:id] == current_user.id && !impersonating %>
+              <span class="muted">you</span>
+            <% elsif !row[:id] && row[:present] %>
+              <span class="muted">invite first</span>
             <% end %>
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
-  <p class="muted mb0">Mint a code, open <code>/login</code>, paste it. Or impersonate from the user admin page.</p>
 </div>
 
 <div class="card mb2">
@@ -111,7 +155,10 @@
           (<%= row[:vetted] ? "vetted" : "unvetted" %>,
           <%= row[:accepts_payments] ? "can sell" : "cannot sell" %>)
           <% if row[:key] == :storefront %>
-            · <%= link_to "storefront", "/b/#{row[:slug]}" %>
+            · <%= link_to "storefront", fuime_storefront_path(row[:slug]) %>
+          <% end %>
+          <% if row[:offer] %>
+            · <%= row[:offer] %>
           <% end %>
         <% else %>
           <code>/<%= row[:slug] %></code> <span class="muted">missing</span>
@@ -119,13 +166,59 @@
       </li>
     <% end %>
   </ul>
+  <% if @status[:cohort] %>
+    <p class="muted mb0 mt2">
+      Cohort <code><%= @status[:cohort][:code] %></code>
+      — <%= @status[:cohort][:name] %>
+      (<%= @status[:cohort][:members] %> members,
+      <%= @status[:cohort][:live] ? "admitting" : "not admitting" %>)
+    </p>
+  <% end %>
 </div>
 
-<% if @status[:cohort] %>
+<details class="card mb2">
+  <summary>Real login codes (optional — test /login, not switching personas)</summary>
   <p class="muted">
-    Cohort <code><%= @status[:cohort][:code] %></code>
-    — <%= @status[:cohort][:name] %>
-    (<%= @status[:cohort][:members] %> members,
-    <%= @status[:cohort][:live] ? "admitting" : "not admitting" %>)
+    Prefer Become. A code is only for proving the email-login path.
+    15 minutes. Demo mailboxes only.
   </p>
-<% end %>
+  <% if @status[:admin] %>
+    <%= button_to "Mint Ada's login code",
+                  demo_login_code_admin_index_path,
+                  method: :post,
+                  params: { email: @status[:admin][:email] },
+                  class: "btn btn--sm mb2" %>
+  <% end %>
+  <table class="w-full">
+    <tbody>
+      <% @status[:people].select { |row| row[:id] }.each do |row| %>
+        <tr>
+          <td><code><%= row[:email] %></code></td>
+          <td>
+            <%= button_to "Code",
+                          demo_login_code_admin_index_path,
+                          method: :post,
+                          params: { email: row[:email] },
+                          class: "btn btn--sm" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</details>
+
+<details class="card mb2">
+  <summary>Wipe only this cast</summary>
+  <%= form_with url: demo_reset_admin_index_path, method: :post, class: "mt2", data: { turbo: false } do %>
+    <label class="muted">Type <code>reset</code> to remove only this cast</label>
+    <%= text_field_tag :confirm, nil, class: "input", autocomplete: "off" %>
+    <%= submit_tag "Reset demo cast", class: "btn bg-error" %>
+  <% end %>
+</details>
+
+<p class="muted">
+  Staging: <code>FUIME_DEMO_SANDBOX=1</code> and
+  <code>FUIME_DEMO_CONFIRM=yes-seed-demo-cast</code>, Stripe still test.
+  The page and rake refuse if <code>STRIPE_MODE=live</code>.
+  First-sale listen: <code>docs/fuime/MOR_WEBHOOK_PASS.md</code>.
+</p>

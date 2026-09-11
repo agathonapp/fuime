@@ -2,14 +2,15 @@
 
 # Fuime: spin up (and tear down) the demo sandbox.
 #
-#   rake fuime:demo:seed
+#   rake fuime:demo                 reset + seed + print the 15-minute path
 #   rake fuime:demo:status
 #   rake fuime:demo:login_code[demo+admin@fuime.test]
 #   rake fuime:demo:remind
 #   rake fuime:demo:smoke
 #   rake fuime:demo:reset
 #
-# Walkthrough: docs/fuime/TESTING_WALKTHROUGH.md
+# Then open /admin/demo and Become each persona (existing impersonate).
+# Stripe test only. Hidden when Stripe is live.
 namespace :fuime do
   namespace :demo do
     def demo_sandbox
@@ -20,79 +21,30 @@ namespace :fuime do
       abort "fuime:demo: #{error.message}"
     end
 
-    desc "Seed the demo cast (teens, parents, waitlist, queues, storefront)"
+    desc "Reset + seed the demo cast and print the 15-minute checklist"
+    task setup: :environment do
+      sandbox = demo_sandbox
+      sandbox.setup!
+      puts sandbox.banner
+    rescue Fuime::DemoSandbox::Error => e
+      demo_abort(e)
+    end
+
+    desc "Seed / refresh the demo cast without wiping first"
     task seed: :environment do
       result = demo_sandbox.seed!
       puts "Seeded #{result[:users]} demo users, #{result[:events]} ventures."
       result[:warnings].each { |w| puts "  ! #{w}" }
       puts
-      puts "Next: rake fuime:demo:status"
-      puts "      rake fuime:demo:login_code[demo+admin@fuime.test]"
-      puts "      docs/fuime/TESTING_WALKTHROUGH.md"
+      puts "Prefer: rake fuime:demo   (reset + seed + banner)"
+      puts "        open /admin/demo  (checklist + Become)"
     rescue Fuime::DemoSandbox::Error => e
       demo_abort(e)
     end
 
-    desc "Print the demo roster, queue counts, and URLs"
+    desc "Print the demo roster, queue counts, and the living checklist"
     task status: :environment do
-      status = demo_sandbox.status
-      puts "enabled=#{status[:enabled]}  stripe=#{status[:stripe_mode]}  " \
-           "MoR=#{status[:merchant_of_record]}  waitlist=#{status[:waitlist_configured]}"
-      status[:warnings].each { |w| puts "  ! #{w}" }
-      puts
-
-      if (admin = status[:admin])
-        puts "Admin  #{admin[:email]}  ##{admin[:id]}  #{admin[:name]}"
-      else
-        puts "Admin  (missing — rake fuime:demo:seed)"
-      end
-      puts
-
-      puts "People"
-      status[:people].each do |row|
-        mark = row[:present] ? "✓" : "·"
-        puts "  #{mark} #{row[:email].ljust(36)}  #{row[:purpose]}"
-      end
-      puts
-
-      if status[:waitlist].any?
-        puts "Waitlist"
-        status[:waitlist].each do |signup|
-          invited = signup.invited_at ? "invited" : "uninvited"
-          puts "  #{signup.email.ljust(36)}  #{invited}"
-        end
-        puts
-      end
-
-      if (cohort = status[:cohort])
-        puts "Cohort  #{cohort[:code]}  #{cohort[:name]}  " \
-             "live=#{cohort[:live]}  members=#{cohort[:members]}"
-        puts
-      end
-
-      puts "Ventures"
-      status[:ventures].each do |row|
-        if row[:present]
-          pay = row[:accepts_payments] ? "can sell" : "cannot sell"
-          vetted = row[:vetted] ? "vetted" : "unvetted"
-          puts "  /#{row[:slug]}  #{row[:name]}  #{vetted}  #{pay}"
-          puts "    offer: #{row[:offer]}" if row[:offer]
-        else
-          puts "  /#{row[:slug]}  (missing)"
-        end
-      end
-      puts
-
-      puts "Queues (this cast only)"
-      status[:queues].each do |name, count|
-        label = count.nil? ? "n/a (no waitlist store)" : count
-        puts "  #{name.to_s.ljust(28)} #{label}"
-      end
-      puts
-      puts "Admin pages: /admin/demo  /admin/waitlist  /admin/applications"
-      puts "             /admin/cohorts  /admin/operator_vetting  /admin/guardianships"
-      puts "Storefront:  /b/demo-lawn-care   pay: /pay/demo-lawn-care/front-and-back"
-      puts "Billing:     /my/billing as demo+parent.store@fuime.test"
+      puts demo_sandbox.banner
     rescue Fuime::DemoSandbox::Error => e
       demo_abort(e)
     end
@@ -101,10 +53,10 @@ namespace :fuime do
     task :login_code, [:email] => :environment do |_t, args|
       email = args[:email].presence || Fuime::DemoSandbox.email("admin")
       code = demo_sandbox.mint_login_code!(email)
-      puts "#{email}"
+      puts email.to_s
       puts "  code   #{code.pretty}"
       puts "  expires in #{LoginCode::EXPIRATION.inspect}"
-      puts "  sign in at /login then enter that code (or letter_opener if mail is on)"
+      puts "  Prefer Become on /admin/demo. This code is for testing /login itself."
     rescue Fuime::DemoSandbox::Error => e
       demo_abort(e)
     end
@@ -138,4 +90,7 @@ namespace :fuime do
       demo_abort(e)
     end
   end
+
+  desc "Reset + seed the demo cast and print the 15-minute checklist"
+  task demo: "fuime:demo:setup"
 end

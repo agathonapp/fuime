@@ -11,11 +11,16 @@ module Admin
       @status = Fuime::DemoSandbox.new.status
     end
 
+    def setup
+      result = Fuime::DemoSandbox.new.setup!
+      redirect_to demo_admin_index_path, flash: { success: setup_flash(result, wiped: true) }
+    rescue Fuime::DemoSandbox::Error => e
+      redirect_to demo_admin_index_path, flash: { error: e.message }
+    end
+
     def seed
       result = Fuime::DemoSandbox.new.seed!
-      warning = result[:warnings].any? ? " (#{result[:warnings].size} warning(s) — see the page)" : ""
-      redirect_to demo_admin_index_path,
-                  flash: { success: "Demo cast seeded: #{result[:users]} users, #{result[:events]} ventures.#{warning}" }
+      redirect_to demo_admin_index_path, flash: { success: setup_flash(result, wiped: false) }
     rescue Fuime::DemoSandbox::Error => e
       redirect_to demo_admin_index_path, flash: { error: e.message }
     end
@@ -55,6 +60,12 @@ module Admin
       return if Fuime::DemoSandbox.enabled?
 
       redirect_to admin_tools_path, flash: { error: "Demo sandbox is off (Stripe live, or FUIME_DEMO_SANDBOX is unset)." }
+    end
+
+    def setup_flash(result, wiped:)
+      verb = wiped ? "Reset and seeded" : "Seeded"
+      warning = result[:warnings].any? ? " (#{result[:warnings].size} warning(s) — see the page)" : ""
+      "#{verb} #{result[:users]} users, #{result[:events]} ventures. Open the checklist below.#{warning}"
     end
   end
 end

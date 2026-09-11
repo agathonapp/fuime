@@ -522,6 +522,7 @@ Rails.application.routes.draw do
       # FUIME: demo sandbox roster. Hidden when Stripe is live — see
       # Fuime::DemoSandbox.enabled? and Admin::DemoController.
       get "demo", to: "admin/demo#show"
+      post "demo/setup", to: "admin/demo#setup", as: "demo_setup"
       post "demo/seed", to: "admin/demo#seed", as: "demo_seed"
       post "demo/reset", to: "admin/demo#reset", as: "demo_reset"
       post "demo/login_code", to: "admin/demo#login_code", as: "demo_login_code"

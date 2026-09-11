@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Demo sandbox: test every flow without real users.**
+**2026-09-11 (latest) — Demo sandbox raised: one command + living checklist.**
+
+`rake fuime:demo` = reset + seed + banner. Then `/admin/demo`: numbered
+15-minute checklist, **Become** via existing impersonate (no new login
+door), Reset + seed, reminder job. Cast is `demo+…@fuime.test`. Hidden
+if Stripe is live. Staging: `FUIME_DEMO_SANDBOX=1` +
+`FUIME_DEMO_CONFIRM=yes-seed-demo-cast`. Specs lock `CHECKLIST_IDS` and
+walk every href. Pointer: `docs/fuime/TESTING_WALKTHROUGH.md`. Maya /
+playground / `stripe_pass` / `mor_webhook_pass` still exist for slices.
+
+**2026-09-11 — Demo sandbox: test every flow without real users.**
 
 `rake fuime:demo:seed` (then `status`, `login_code[demo+admin@fuime.test]`).
 Roster at `/admin/demo` — hidden if Stripe is live. Cast is

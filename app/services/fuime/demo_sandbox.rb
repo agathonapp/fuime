@@ -3,13 +3,11 @@
 # Fuime: a known demo world so the founder can click every major flow
 # without real teens or parents.
 #
-#   rake fuime:demo:seed
-#   rake fuime:demo:status
-#   rake fuime:demo:login_code[demo+admin@fuime.test]
-#   rake fuime:demo:reset
+#   rake fuime:demo              reset + seed + print the 15-minute path
+#   open /admin/demo             same cast, Become via existing impersonate
 #
-# Builds on script/seed_demo_business.rb (Maya) and the G1–G10 queues.
 # Does NOT invent Stripe money and does NOT run when Stripe is live.
+# Become is UsersController#impersonate (admin-only). No extra login door.
 #
 # Emails are `demo+<role>@fuime.test`. Users carry `creation_method: :demo`.
 # Reset touches only that cast (plus the three `demo-*` venture slugs and
@@ -31,6 +29,42 @@ module Fuime
       unvetted: "demo-window-wash",
       cohort: "demo-cohort-studio"
     }.freeze
+
+    # The 15-minute click-through. Specs lock this list. The admin page and
+    # `rake fuime:demo` banner render it. Add a step here, not in a second doc.
+    CHECKLIST_IDS = %w[
+      waitlist
+      accept
+      waive
+      solo
+      cohort
+      vet
+      checkout
+      billing
+      remind
+    ].freeze
+
+    CAST_PEOPLE = [
+      { key: "admin", role: "Operator", purpose: "Work every queue; Become anyone else" },
+      { key: "waitlist.fresh", role: "Waitlist", purpose: "Invite this one first" },
+      { key: "waitlist.older", role: "Waitlist", purpose: "Older uninvited signup" },
+      { key: "waitlist.invited", role: "Waitlist", purpose: "Already invited — Willa can sign in" },
+      { key: "parent.pending", role: "Parent", purpose: "Tick the accept checkbox (Become required)" },
+      { key: "teen.pending", role: "Teen", purpose: "Waiting on Pat to accept" },
+      { key: "parent.remind", role: "Parent", purpose: "Due a day-3 reminder" },
+      { key: "teen.remind", role: "Teen", purpose: "Paired with Robin Reminder" },
+      { key: "parent.stale", role: "Parent", purpose: "Stale queue (invite expired)" },
+      { key: "teen.stale", role: "Teen", purpose: "Paired with Sky Stale" },
+      { key: "teen.unguarded", role: "Teen", purpose: "No parent — waive this one" },
+      { key: "teen.solo", role: "Teen", purpose: "Demo Solo Lawn is under review" },
+      { key: "parent.solo", role: "Parent", purpose: "Already accepted for Sonia" },
+      { key: "teen.cohort", role: "Teen", purpose: "Auto-admitted via DEMOFOUNDERS" },
+      { key: "parent.cohort", role: "Parent", purpose: "Already accepted for Cora" },
+      { key: "teen.unvetted", role: "Teen", purpose: "Demo Window Wash waits on vetting" },
+      { key: "parent.unvetted", role: "Parent", purpose: "Already accepted for Vince" },
+      { key: "teen.store", role: "Teen", purpose: "Runs Demo Lawn Care" },
+      { key: "parent.store", role: "Parent", purpose: "Upgrade to Pro on /my/billing" }
+    ].freeze
 
     # Every mailbox the cast owns. Reset keys off this prefix + domain, not
     # off this list, so a forgotten row cannot orphan a user.
@@ -68,6 +102,12 @@ module Fuime
 
     def initialize
       @warnings = []
+    end
+
+    # The one command: wipe this cast, put it back, ready to click.
+    def setup!
+      reset!
+      seed!
     end
 
     def seed!
@@ -117,8 +157,108 @@ module Fuime
         people: people_rows,
         queues: queue_counts,
         ventures: venture_rows,
-        cohort: cohort_row
+        cohort: cohort_row,
+        checklist: checklist
       }
+    end
+
+    # Living 15-minute path. Each item has a URL and a string the page must
+    # contain, so the smoke spec fails if a step rots.
+    def checklist
+      routes = Rails.application.routes.url_helpers
+      pending = pending_for("teen.pending")
+      unguarded = User.find_by(email: email("teen.unguarded"))
+      solo = Event::Application.find_by(name: "Demo Solo Lawn")
+
+      [
+        {
+          id: "waitlist", n: 1, title: "Waitlist → invite → login",
+          persona_key: "admin", href: routes.admin_waitlist_index_path,
+          expect: email("waitlist.fresh"),
+          do: "Invite demo+waitlist.fresh@fuime.test. Optional cohort DEMOFOUNDERS. Then Become Willa or open the mailed link."
+        },
+        {
+          id: "accept", n: 2, title: "Parent accept (checkbox)",
+          persona_key: "parent.pending",
+          href: pending&.invite_token ? routes.guardianship_path(pending.invite_token) : routes.guardianships_admin_index_path,
+          expect: "I confirm I am the parent",
+          do: "Become Pat Pending (Ada gets a 403 — only the invited parent can open this). Tick the 18+ box. Agree. Pia can operate."
+        },
+        {
+          id: "waive", n: 3, title: "Admin waive guardian",
+          persona_key: "admin",
+          href: unguarded ? routes.admin_user_path(unguarded) : routes.users_admin_index_path,
+          expect: "Waive guardian requirement",
+          do: "On Uma Unguarded's admin page, waive (optional reason). Restore puts the gate back."
+        },
+        {
+          id: "solo", n: 4, title: "Solo apply → admit",
+          persona_key: "admin",
+          href: solo ? routes.submission_application_path(solo) : routes.applications_admin_index_path,
+          expect: "Demo Solo Lawn",
+          do: "Approve, then activate Demo Solo Lawn. Sonia is already guardian-backed."
+        },
+        {
+          id: "cohort", n: 5, title: "Cohort auto-admit",
+          persona_key: "admin", href: routes.cohorts_admin_index_path,
+          expect: COHORT_CODE,
+          do: "DEMOFOUNDERS is live; Cora is already on the roster. A new 16-year-old who types the code is approved + vetted."
+        },
+        {
+          id: "vet", n: 6, title: "Operator vetting",
+          persona_key: "admin", href: routes.operator_vetting_admin_index_path,
+          expect: "Demo Window Wash",
+          do: "Approve Demo Window Wash with a note. Do not turn vetting off."
+        },
+        {
+          id: "checkout", n: 7, title: "MoR guest checkout → ledger",
+          persona_key: nil,
+          href: routes.fuime_storefront_path(SLUGS[:storefront]),
+          expect: "Demo Lawn Care",
+          do: "Guest Buy (or /pay/demo-lawn-care/front-and-back) with 4242. stripe listen → /fuime/webhooks/stripe. Two pending lines. SLUG=demo-lawn-care rake fuime:mor_webhook_pass:settle"
+        },
+        {
+          id: "billing", n: 8, title: "Billing / Pro upgrade",
+          persona_key: "parent.store", href: routes.my_billing_path,
+          expect: "$19.99",
+          do: "Become Denise Store. Upgrade — $19.99/mo, take-rate stays 7%. Teen sees who to ask, no button."
+        },
+        {
+          id: "remind", n: 9, title: "Guardian reminder / stale queue",
+          persona_key: "admin", href: routes.guardianships_admin_index_path,
+          expect: email("parent.stale"),
+          do: "Run reminder job (Robin is due day-3). Stale tab shows Sky. Resend mints a new token."
+        }
+      ].map { |step| step.merge(persona: step[:persona_key] && present_user(step[:persona_key])) }
+    end
+
+    def banner
+      status = self.status
+      lines = []
+      lines << "Fuime demo sandbox"
+      lines << "  rake fuime:demo          reset + seed + this banner"
+      lines << "  open /admin/demo         checklist + Become (existing impersonate)"
+      lines << "  stripe=#{status[:stripe_mode]}  MoR=#{status[:merchant_of_record]}  waitlist=#{status[:waitlist_configured]}"
+      status[:warnings].each { |w| lines << "  ! #{w}" }
+      lines << ""
+      lines << "Cast  (demo+…@fuime.test — Become them from /admin/demo; existing impersonate, no backdoor)"
+      status[:people].each do |row|
+        mark = row[:present] ? "✓" : "·"
+        lines << "  #{mark} #{row[:email].to_s.ljust(36)}  #{row[:role]}  #{row[:purpose]}"
+      end
+      lines << ""
+      lines << "15-minute checklist"
+      status[:checklist].each do |step|
+        who = step[:persona] ? step[:persona][:email] : "guest"
+        lines << "  #{step[:n]}. #{step[:title]}"
+        lines << "     as #{who}"
+        lines << "     #{step[:href]}"
+        lines << "     #{step[:do]}"
+      end
+      lines << ""
+      lines << "Test card  4242 4242 4242 4242  ·  never live Stripe"
+      lines << "Reset only this cast:  rake fuime:demo:reset"
+      lines.join("\n")
     end
 
     def mint_login_code!(email)
@@ -149,6 +289,11 @@ module Fuime
       checks << ["unvetted venture", Event.unscoped.exists?(slug: SLUGS[:unvetted], operator_vetting_status: :unvetted)]
       checks << ["storefront venture", Event.unscoped.exists?(slug: SLUGS[:storefront])]
       checks << ["storefront offer", Fuime::Offer.exists?(event: Event.unscoped.find_by(slug: SLUGS[:storefront]))]
+      checks << ["checklist ids locked", checklist.map { |step| step[:id] } == CHECKLIST_IDS]
+      checklist.each do |step|
+        checks << ["checklist #{step[:id]} has a path", step[:href].to_s.start_with?("/")]
+        checks << ["checklist #{step[:id]} names an expect", step[:expect].present?]
+      end
       checks
     end
 
@@ -563,6 +708,8 @@ module Fuime
     end
 
     def present_user(key)
+      return nil if key.blank?
+
       user = User.find_by(email: email(key))
       return nil unless user
 
@@ -570,20 +717,20 @@ module Fuime
     end
 
     def people_rows
-      [
-        ["teen.pending / parent.pending", "Fresh guardian invite — parent ticks the box"],
-        ["teen.remind / parent.remind", "Day-3 reminder due — run rake fuime:demo:remind"],
-        ["teen.stale / parent.stale", "Stale queue at /admin/guardianships"],
-        ["teen.unguarded", "No parent — admin waive on their user page"],
-        ["teen.solo / parent.solo", "Solo application under review"],
-        ["teen.cohort / parent.cohort", "Already auto-admitted via DEMOFOUNDERS"],
-        ["teen.unvetted / parent.unvetted", "Activated, waiting on operator vetting"],
-        ["teen.store / parent.store", "Vetted storefront + billing (parent upgrades)"],
-        ["waitlist.invited", "Already invited waitlist user"]
-      ].map do |key, purpose|
-        teen_key = key.split(" / ").first
-        user = User.find_by(email: email(teen_key))
-        { keys: key, purpose:, present: user.present?, email: email(teen_key) }
+      listed = waitlist_rows.map(&:email)
+      CAST_PEOPLE.map do |row|
+        address = email(row[:key])
+        user = User.find_by(email: address)
+        {
+          key: row[:key],
+          role: row[:role],
+          purpose: row[:purpose],
+          email: address,
+          present: user.present? || listed.include?(address),
+          id: user&.id,
+          name: user&.full_name,
+          admin: user&.admin? || false
+        }
       end
     end
 

@@ -70,6 +70,45 @@ RSpec.describe Fuime::DemoSandbox do
     end
   end
 
+  describe "#setup!" do
+    it "wipes extras then reseeds a clean cast" do
+      described_class.new.seed!
+      User.find_by!(email: "demo+teen.unguarded@fuime.test").update_columns(full_name: "MUTATED")
+      create(:user, email: "demo+orphan@fuime.test", verified: true)
+
+      described_class.new.setup!
+
+      expect(User.find_by(email: "demo+orphan@fuime.test")).to be_nil
+      expect(User.find_by!(email: "demo+teen.unguarded@fuime.test").full_name).to eq("Uma Unguarded")
+      expect(described_class.new.smoke_checks).to all(satisfy { |(_name, ok)| ok })
+    end
+  end
+
+  describe "#checklist" do
+    it "locks the 15-minute ids and every step has a path plus expect" do
+      steps = described_class.new.checklist
+
+      expect(steps.map { |step| step[:id] }).to eq(described_class::CHECKLIST_IDS)
+      steps.each do |step|
+        expect(step[:href].to_s).to start_with("/")
+        expect(step[:expect]).to be_present
+        expect(step[:title]).to be_present
+        expect(step[:do]).to be_present
+      end
+    end
+
+    it "points seeded steps at the live records" do
+      described_class.new.seed!
+      steps = described_class.new.checklist.index_by { |step| step[:id] }
+
+      expect(steps["accept"][:href]).to match(%r{\A/guardian/})
+      expect(steps["waive"][:href]).to match(%r{\A/users/.+/admin\z})
+      expect(steps["solo"][:href]).to match(%r{/submission\z})
+      expect(steps["checkout"][:href]).to eq("/b/demo-lawn-care")
+      expect(steps.fetch("waitlist")[:expect]).to eq("demo+waitlist.fresh@fuime.test")
+    end
+  end
+
   describe "#mint_login_code!" do
     it "issues a code for a seeded demo mailbox and refuses any other" do
       described_class.new.seed!
