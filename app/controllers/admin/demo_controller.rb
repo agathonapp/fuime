@@ -67,5 +67,6 @@ module Admin
       warning = result[:warnings].any? ? " (#{result[:warnings].size} warning(s) — see the page)" : ""
       "#{verb} #{result[:users]} users, #{result[:events]} ventures. Open the checklist below.#{warning}"
     end
+
   end
 end

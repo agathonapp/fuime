@@ -422,106 +422,106 @@ module Admin
       end
 
       items += [
-          make_item(
-            name: "Blazer",
-            path: blazer_path,
-            count: ->{ Blazer::Query.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Flipper",
-            path: flipper_path,
-            count: ->{ Flipper.features.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Common Documents",
-            path: common_documents_path,
-            count: ->{ Document.common.count },
-            count_type: :records
-          ),
-          # FUIME-DISABLED: Plaid-fed bank accounts — no bank feeds in Fuime.
-          # make_item(
-          #   name: "Bank Accounts",
-          #   path: bank_accounts_admin_index_path,
-          #   count: ->{ BankAccount.failing.count },
-          #   count_type: :records
-          # ),
-          make_item(
-            name: "Fuime Fees",
-            path: bank_fees_admin_index_path,
-            count: ->{ BankFee.in_transit_or_pending.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Fee Revenues",
-            path: fee_revenues_admin_index_path,
-            count: ->{ FeeRevenue.count },
-            count_type: :records
-          ),
-          # FUIME-DISABLED: Fuime has no Column relationship.
-          # make_item(
-          #   name: "Column Statements",
-          #   path: admin_column_statements_path,
-          #   count: ->{ Column::Statement.count },
-          #   count_type: :records
-          # ),
-          make_item(
-            name: "Users",
-            path: users_admin_index_path,
-            count: ->{ User.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Stripe Cards",
-            path: stripe_cards_admin_index_path,
-            count: ->{ StripeCard.count },
-            count_type: :records
-          ),
-          # FUIME-DISABLED: physical-card personalization designs — Fuime cards
-          # are the flagged virtual-card feature; a later phase revives this.
-          # make_item(
-          #   name: "Card Designs",
-          #   path: stripe_card_personalization_designs_admin_index_path,
-          #   count: ->{ StripeCard::PersonalizationDesign.count },
-          #   count_type: :records
-          # ),
-          make_item(
-            name: "Emails",
-            path: emails_admin_index_path,
-            count: ->{ Ahoy::Message.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Referral Programs",
-            path: referral_programs_admin_index_path,
-            count: ->{ Referral::Program.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Event Groups",
-            path: admin_event_groups_path,
-            count: ->{ Event::Group.count },
-            count_type: :records,
-          ),
-          make_item(
-            name: "Contracts",
-            path: contracts_admin_index_path,
-            count: ->{ Contract.count },
-            count_type: :records
-          ),
-          make_item(
-            name: "Active Teenagers Leaderboard",
-            path: active_teenagers_leaderboard_admin_index_path,
-            count: ->{ User.active_teenager.count },
-            count_type: :records,
-          ),
-          make_item(
-            name: "New Teenagers Leaderboard",
-            path: new_teenagers_leaderboard_admin_index_path,
-            count: ->{ 0 }, # I think this would be expensive to calculate
-            count_type: :records,
-          )
+        make_item(
+          name: "Blazer",
+          path: blazer_path,
+          count: ->{ Blazer::Query.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Flipper",
+          path: flipper_path,
+          count: ->{ Flipper.features.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Common Documents",
+          path: common_documents_path,
+          count: ->{ Document.common.count },
+          count_type: :records
+        ),
+        # FUIME-DISABLED: Plaid-fed bank accounts — no bank feeds in Fuime.
+        # make_item(
+        #   name: "Bank Accounts",
+        #   path: bank_accounts_admin_index_path,
+        #   count: ->{ BankAccount.failing.count },
+        #   count_type: :records
+        # ),
+        make_item(
+          name: "Fuime Fees",
+          path: bank_fees_admin_index_path,
+          count: ->{ BankFee.in_transit_or_pending.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Fee Revenues",
+          path: fee_revenues_admin_index_path,
+          count: ->{ FeeRevenue.count },
+          count_type: :records
+        ),
+        # FUIME-DISABLED: Fuime has no Column relationship.
+        # make_item(
+        #   name: "Column Statements",
+        #   path: admin_column_statements_path,
+        #   count: ->{ Column::Statement.count },
+        #   count_type: :records
+        # ),
+        make_item(
+          name: "Users",
+          path: users_admin_index_path,
+          count: ->{ User.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Stripe Cards",
+          path: stripe_cards_admin_index_path,
+          count: ->{ StripeCard.count },
+          count_type: :records
+        ),
+        # FUIME-DISABLED: physical-card personalization designs — Fuime cards
+        # are the flagged virtual-card feature; a later phase revives this.
+        # make_item(
+        #   name: "Card Designs",
+        #   path: stripe_card_personalization_designs_admin_index_path,
+        #   count: ->{ StripeCard::PersonalizationDesign.count },
+        #   count_type: :records
+        # ),
+        make_item(
+          name: "Emails",
+          path: emails_admin_index_path,
+          count: ->{ Ahoy::Message.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Referral Programs",
+          path: referral_programs_admin_index_path,
+          count: ->{ Referral::Program.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Event Groups",
+          path: admin_event_groups_path,
+          count: ->{ Event::Group.count },
+          count_type: :records,
+        ),
+        make_item(
+          name: "Contracts",
+          path: contracts_admin_index_path,
+          count: ->{ Contract.count },
+          count_type: :records
+        ),
+        make_item(
+          name: "Active Teenagers Leaderboard",
+          path: active_teenagers_leaderboard_admin_index_path,
+          count: ->{ User.active_teenager.count },
+          count_type: :records,
+        ),
+        make_item(
+          name: "New Teenagers Leaderboard",
+          path: new_teenagers_leaderboard_admin_index_path,
+          count: ->{ 0 }, # I think this would be expensive to calculate
+          count_type: :records,
+        )
       ]
 
       Section.new(name: "Misc", items:)

@@ -48,6 +48,7 @@ RSpec.describe Fuime::DemoSandbox do
       expect(second_ids).to eq(first_ids)
       expect(User.find_by(email: "demo+admin@fuime.test")).to be_superadmin
       expect(User.find_by(email: "demo+admin@fuime.test").creation_method).to eq("demo")
+      expect(Event.unscoped.where(slug: described_class::SLUGS.values)).to all(satisfy(&:plan))
       expect(described_class.new.smoke_checks).to all(satisfy { |(_name, ok)| ok })
     end
 

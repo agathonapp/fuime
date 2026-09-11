@@ -172,60 +172,83 @@ module Fuime
 
       [
         {
-          id: "waitlist", n: 1, title: "Waitlist → invite → login",
-          persona_key: "admin", href: routes.admin_waitlist_index_path,
+          id: "waitlist",
+          n: 1,
+          title: "Waitlist → invite → login",
+          persona_key: "admin",
+          href: routes.admin_waitlist_index_path,
           expect: email("waitlist.fresh"),
           do: "Invite demo+waitlist.fresh@fuime.test. Optional cohort DEMOFOUNDERS. Then Become Willa or open the mailed link."
         },
         {
-          id: "accept", n: 2, title: "Parent accept (checkbox)",
+          id: "accept",
+          n: 2,
+          title: "Parent accept (checkbox)",
           persona_key: "parent.pending",
           href: pending&.invite_token ? routes.guardianship_path(pending.invite_token) : routes.guardianships_admin_index_path,
           expect: "I confirm I am the parent",
           do: "Become Pat Pending (Ada gets a 403 — only the invited parent can open this). Tick the 18+ box. Agree. Pia can operate."
         },
         {
-          id: "waive", n: 3, title: "Admin waive guardian",
+          id: "waive",
+          n: 3,
+          title: "Admin waive guardian",
           persona_key: "admin",
           href: unguarded ? routes.admin_user_path(unguarded) : routes.users_admin_index_path,
           expect: "Waive guardian requirement",
           do: "On Uma Unguarded's admin page, waive (optional reason). Restore puts the gate back."
         },
         {
-          id: "solo", n: 4, title: "Solo apply → admit",
+          id: "solo",
+          n: 4,
+          title: "Solo apply → admit",
           persona_key: "admin",
           href: solo ? routes.submission_application_path(solo) : routes.applications_admin_index_path,
           expect: "Demo Solo Lawn",
           do: "Approve, then activate Demo Solo Lawn. Sonia is already guardian-backed."
         },
         {
-          id: "cohort", n: 5, title: "Cohort auto-admit",
-          persona_key: "admin", href: routes.cohorts_admin_index_path,
+          id: "cohort",
+          n: 5,
+          title: "Cohort auto-admit",
+          persona_key: "admin",
+          href: routes.cohorts_admin_index_path,
           expect: COHORT_CODE,
           do: "DEMOFOUNDERS is live; Cora is already on the roster. A new 16-year-old who types the code is approved + vetted."
         },
         {
-          id: "vet", n: 6, title: "Operator vetting",
-          persona_key: "admin", href: routes.operator_vetting_admin_index_path,
+          id: "vet",
+          n: 6,
+          title: "Operator vetting",
+          persona_key: "admin",
+          href: routes.operator_vetting_admin_index_path,
           expect: "Demo Window Wash",
           do: "Approve Demo Window Wash with a note. Do not turn vetting off."
         },
         {
-          id: "checkout", n: 7, title: "MoR guest checkout → ledger",
+          id: "checkout",
+          n: 7,
+          title: "MoR guest checkout → ledger",
           persona_key: nil,
           href: routes.fuime_storefront_path(SLUGS[:storefront]),
           expect: "Demo Lawn Care",
           do: "Guest Buy (or /pay/demo-lawn-care/front-and-back) with 4242. stripe listen → /fuime/webhooks/stripe. Two pending lines. SLUG=demo-lawn-care rake fuime:mor_webhook_pass:settle"
         },
         {
-          id: "billing", n: 8, title: "Billing / Pro upgrade",
-          persona_key: "parent.store", href: routes.my_billing_path,
+          id: "billing",
+          n: 8,
+          title: "Billing / Pro upgrade",
+          persona_key: "parent.store",
+          href: routes.my_billing_path,
           expect: "$19.99",
           do: "Become Denise Store. Upgrade — $19.99/mo, take-rate stays 7%. Teen sees who to ask, no button."
         },
         {
-          id: "remind", n: 9, title: "Guardian reminder / stale queue",
-          persona_key: "admin", href: routes.guardianships_admin_index_path,
+          id: "remind",
+          n: 9,
+          title: "Guardian reminder / stale queue",
+          persona_key: "admin",
+          href: routes.guardianships_admin_index_path,
           expect: email("parent.stale"),
           do: "Run reminder job (Robin is due day-3). Stale tab shows Sky. Resend mints a new token."
         }
@@ -289,6 +312,7 @@ module Fuime
       checks << ["unvetted venture", Event.unscoped.exists?(slug: SLUGS[:unvetted], operator_vetting_status: :unvetted)]
       checks << ["storefront venture", Event.unscoped.exists?(slug: SLUGS[:storefront])]
       checks << ["storefront offer", Fuime::Offer.exists?(event: Event.unscoped.find_by(slug: SLUGS[:storefront]))]
+      checks << ["demo ventures have a plan", demo_events.none? { |event| event.plan.nil? }]
       checks << ["checklist ids locked", checklist.map { |step| step[:id] } == CHECKLIST_IDS]
       checklist.each do |step|
         checks << ["checklist #{step[:id]} has a path", step[:href].to_s.start_with?("/")]
@@ -586,6 +610,10 @@ module Fuime
         storefront_tagline: tagline,
         fuime_cohort: cohort
       )
+      # save(validate: false) skips Event#before_validation, which is what
+      # builds the Free plan. Seating a manager then reads the ledger and
+      # raises "missing a plan".
+      event.plan ||= Event::Plan::Free.new
       save_unvalidated!(event)
 
       if vetted
@@ -651,10 +679,7 @@ module Fuime
         if defined?(PublicActivity::Activity)
           PublicActivity::Activity.where(trackable_type: "Event", trackable_id: event_ids).delete_all
         end
-        conn = ActiveRecord::Base.connection
-        if conn.table_exists?("event_tags_events")
-          conn.delete("DELETE FROM event_tags_events WHERE event_id IN (#{event_ids.join(',')})")
-        end
+        Event.unscoped.where(id: event_ids).find_each { |event| event.event_tags.clear }
       end
       if user_ids.any?
         OrganizerPositionInvite.unscoped.where(user_id: user_ids).or(
@@ -784,5 +809,6 @@ module Fuime
       end
       warnings
     end
+
   end
 end
