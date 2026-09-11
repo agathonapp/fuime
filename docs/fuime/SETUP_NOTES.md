@@ -2,10 +2,11 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Rubocop on PR #106.**
-`SERVICE_FEE_LABEL` in `generate_mock_transaction.rb` needed `.freeze`
-(Style/MutableConstant). No playground behavior change. Same branch
-`fuime/playground-demo-polish`.
+**2026-09-11 (latest) — CI on PR #106.**
+Rubocop: freeze `SERVICE_FEE_LABEL`. RSpec shard 8: Playground Mode
+checkout examples needed `include SessionSupport` (undefined
+`create_session`). Spec-only; no playground behavior change. Same
+branch `fuime/playground-demo-polish`.
 
 **2026-09-11 — Playground: one-click demo, three personas, sale on the ledger.**
 

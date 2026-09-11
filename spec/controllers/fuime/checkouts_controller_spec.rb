@@ -190,6 +190,8 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
     end
 
     context "Playground Mode" do
+      include SessionSupport
+
       let(:playground) { create(:event, :demo_mode, slug: "pitch-lawn", is_public: true) }
       let!(:offer) { create(:fuime_offer, event: playground, name: "Front lawn") }
 

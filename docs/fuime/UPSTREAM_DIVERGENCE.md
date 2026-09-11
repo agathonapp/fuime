@@ -6023,3 +6023,11 @@ Rubocop CI on PR #106: interpolated string assigned to a constant. `.freeze` onl
 | Change | Why | Files |
 |---|---|---|
 | `SERVICE_FEE_LABEL = "...".freeze` | Style/MutableConstant; CI / Rubocop | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |
+
+## 2026-09-11 — Include SessionSupport in playground checkout specs
+
+RSpec shard 8/8 on PR #106: four Playground Mode examples called `create_session` without the helper the adjacent "signed-in buyer age" context already includes. Spec-only.
+
+| Change | Why | Files |
+|---|---|---|
+| `include SessionSupport` in Playground Mode context | undefined `create_session` | `spec/controllers/fuime/checkouts_controller_spec.rb` |
