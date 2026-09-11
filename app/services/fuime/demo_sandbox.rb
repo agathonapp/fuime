@@ -695,8 +695,20 @@ module Fuime
         Ledger.where(event_id: event_ids).delete_all
         Event::Plan.where(event_id: event_ids).delete_all
         FriendlyId::Slug.where(sluggable_type: "Event", sluggable_id: event_ids).delete_all
-        Event.unscoped.where(id: event_ids).update_all(fuime_cohort_id: nil, point_of_contact_id: nil)
-        Event.unscoped.where(id: event_ids).delete_all
+        Event::Follow.where(event_id: event_ids).delete_all
+        Event.unscoped.where(id: event_ids).update_all(
+          fuime_cohort_id: nil,
+          point_of_contact_id: nil,
+          operator_vetted_by_id: nil,
+          sale_terms_acknowledged_by_id: nil
+        )
+        hard_delete(Event, "id", event_ids)
+      end
+      if user_ids.any?
+        Event.unscoped.where(point_of_contact_id: user_ids).update_all(point_of_contact_id: nil)
+        Event.unscoped.where(operator_vetted_by_id: user_ids).update_all(operator_vetted_by_id: nil)
+        Event.unscoped.where(sale_terms_acknowledged_by_id: user_ids).update_all(sale_terms_acknowledged_by_id: nil)
+        Event::Follow.where(user_id: user_ids).delete_all
       end
       Fuime::Cohort.where(id: cohort_ids).delete_all if cohort_ids.any?
       if user_ids.any?
