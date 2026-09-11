@@ -4,42 +4,35 @@
 </div>
 <br>
 
-Fuime gives teens (13-17) everything they need to run a real business: a payment account their parent owns and signs for, clean books, tax tracking, and a path to their own LLC at 18.
+Fuime gives teens (13-17) invoicing, books, and a storefront that takes payment: a parent
+co-signs as the legal payee, the founder runs the venture day to day, and
+Ninth Street Labs, LLC (Fuime) is the seller of record.
 
 ## What is Fuime?
 
 Teens under 18 can't open business accounts or sign contracts. Fuime solves this by providing:
 
-- **A real payment account** — opened and owned by a parent or guardian, who is the legal signer
-- **Clean books** — every transaction tracked and organized
-- **Tax tracking** — know when you cross the $400 IRS self-employment threshold
+- **Invoicing and a storefront that takes payment** — Ninth Street Labs, LLC is the seller of record; a parent or guardian is the legal payee
+- **Clean books** — every payment, fee, and expense on the line it belongs to
+- **Tax tracking** — income, expenses, and net, with tax-prep milestones flagged
 - **Graduation path** — export to your own LLC when you turn 18
 
 ## How the money works
 
 This is the part worth being precise about, because it constrains most of the code.
 
-Each venture gets **its own Stripe connected account, owned by the guardian** — not a
-sub-balance of a Fuime account. Customers pay that account directly; Fuime takes its cut
-as a Connect `application_fee_amount` on the charge, and payouts go to the family's own
-bank. **Fuime is never in the flow of funds and holds no customer money.** A pooled model
-where Fuime received payments and credited ventures internally would be unlicensed money
-transmission, so it exists only as a test-mode simulator
-(`Fuime::PaymentWebhookHandler`, which refuses live events outright).
-
-The guardian never opens stripe.com. Connected accounts are created with no Stripe
-Dashboard, and onboarding, account management, payouts and tax documents are all mounted
-inside Fuime as Stripe embedded components — see
-[docs/fuime/EMBEDDED_CONNECT.md](/docs/fuime/EMBEDDED_CONNECT.md).
-
-Everything runs against **Stripe test mode by default, including in production**.
+**Ninth Street Labs, LLC, doing business as Fuime, is the seller of record.** When a
+client pays, they buy from Ninth Street Labs, LLC. Fuime keeps its fee and owes the rest
+to the venture as a payable, paid out on a stated schedule after the guardian approves
+the payout destination. What the app shows is a payable, not a bank balance and not a
+parent-owned Stripe account.
 
 Fuime is a financial technology company, not a bank. Fuime does not hold deposits and does
-not offer FDIC-insured products.
+not offer FDIC-insured products. Payments are processed by Stripe.
 
 ## Built on HCB
 
-Fuime is a fork of [HCB](https://github.com/hackclub/hcb) by [Hack Club](https://hackclub.com), the open-source fiscal sponsorship platform that has processed millions of dollars for teen nonprofits since 2018. We've repurposed it from nonprofit fiscal sponsorship to teen business banking.
+Fuime is a fork of [HCB](https://github.com/hackclub/hcb) by [Hack Club](https://hackclub.com), the open-source fiscal sponsorship platform that has processed millions of dollars for teen nonprofits since 2018. We've repurposed it from nonprofit fiscal sponsorship to a financial platform for teen-run businesses.
 
 **HCB's battle-tested infrastructure powers Fuime:**
 - The same ledger engine that tracks millions in nonprofit funds
@@ -47,9 +40,9 @@ Fuime is a fork of [HCB](https://github.com/hackclub/hcb) by [Hack Club](https:/
 
 What does **not** carry over is HCB's custody model. HCB works because a 501(c)(3) legally
 owns every dollar it holds, which is what lets it pool funds and issue cards against one
-platform balance. A for-profit cannot copy that, so Fuime replaced the pooled account with
-guardian-owned Stripe connected accounts. Card issuing is off by default for the same
-reason and is gated behind a per-venture flag.
+platform balance. A for-profit cannot copy that, so production Fuime is merchant-of-record: Ninth Street
+Labs, LLC is the seller, and operators are paid as vendors. Card issuing is off by
+default and is gated behind a per-venture flag.
 
 ## Quick Start
 

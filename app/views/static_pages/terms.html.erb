@@ -1,24 +1,24 @@
 <% title "Terms of Service" %>
 
 <h1 class="heading">Terms of Service</h1>
-<p class="muted">Last updated 2 August 2026.</p>
+<p class="muted">Last updated 11 September 2026.</p>
 
-<%= render "application/callout", type: "warning", title: "These are beta terms" do %>
+<%= render "application/callout", type: "info", title: "Private beta" do %>
   <p class="m0">
-    Fuime is in a pre-launch beta. Payments and cards run against Stripe's test
-    mode, which means <strong>no real money moves through Fuime</strong>. These
-    terms describe that beta. Before Fuime handles real money they will be
-    replaced by terms reviewed by a lawyer, and you will be asked to accept the
-    new ones.
+    <%= fuime_status_line %>
+    These terms describe that arrangement. A material change will be dated at
+    the top, and where the law requires it you will be asked to accept the new
+    ones.
   </p>
 <% end %>
 
 <h2>1. Who you are agreeing with</h2>
 <p>
   Fuime is a product of
-  <strong><%= Rails.configuration.constants.legal_entity_name %></strong>. These
-  terms are an agreement between you and that company. Where this page says
-  &ldquo;Fuime&rdquo;, &ldquo;we&rdquo;, or &ldquo;us&rdquo;, it means
+  <strong><%= Rails.configuration.constants.legal_entity_name %></strong>,
+  doing business as Fuime. These terms are an agreement between you and that
+  company. Where this page says &ldquo;Fuime&rdquo;, &ldquo;we&rdquo;, or
+  &ldquo;us&rdquo;, it means
   <%= Rails.configuration.constants.legal_entity_name %>.
 </p>
 <p>
@@ -55,8 +55,9 @@
     on them.
   </li>
   <li>
-    <strong>During the beta, Fuime does not move real money.</strong> Anything
-    that looks like a payment or a card is running in test mode.
+    <strong><%= Rails.configuration.constants.legal_entity_name %> is the
+    seller of record</strong> on purchases made through Fuime. What a venture
+    sees in the app is a payable owed to it, not a bank balance.
   </li>
 </ul>
 
@@ -130,12 +131,14 @@
   they found through Fuime.
 </p>
 <p>
-  <strong>Fuime LLC is the seller.</strong> When you pay through Fuime, your
-  contract for that purchase is with Fuime LLC, not with the young person or the
-  business fulfilling it. Fuime takes your payment, Fuime appears on your card
-  statement, Fuime sends your receipt, and Fuime is responsible to you for the
-  purchase. The business you chose performs the work; we pay them afterwards as
-  our vendor.
+  <strong><%= Rails.configuration.constants.legal_entity_name %> is the
+  seller.</strong> When you pay through Fuime, your contract for that purchase
+  is with <%= Rails.configuration.constants.legal_entity_name %>, doing
+  business as Fuime — not with the young person or the business fulfilling it,
+  and not with a separate company called Fuime. We take your payment, we appear
+  on your card statement, we send your receipt, and we are responsible to you
+  for the purchase. The business you chose performs the work; we pay them
+  afterwards as our vendor.
 </p>
 <p>
   <strong>Refunds.</strong> If the service has not been performed yet, you can

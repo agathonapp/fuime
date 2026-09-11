@@ -2,7 +2,15 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Demo reset survives the advertised 15-minute path.**
+**2026-09-11 (latest) — Payment-setup school copy leftover (PR 99).**
+
+`institutionally_sponsored?` still said the school "will own that account".
+Rewrote payment_setups + matching payouts/payout_methods footers to MoR:
+Ninth Street Labs, LLC (Fuime) is seller of record; school approves the
+payout destination / payable; nobody owns a Stripe account. Plan::School
+description now says institutional sponsor, not custody.
+
+**2026-09-11 — Demo reset survives the advertised 15-minute path.**
 
 CI on `c81ce1ed` failed two required jobs — `RSpec (shard 5/8)` and
 `RSpec (shard 8/8)` — because `reset!` deleted users while `events`

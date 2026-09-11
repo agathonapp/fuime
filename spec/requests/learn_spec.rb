@@ -163,7 +163,7 @@ RSpec.describe "Learn", type: :request do
 
       body = CGI.unescapeHTML(response.body)
       expect(body).to include(number_to_currency(Event::Plan::MINIMUM_FEE_CENTS / 100.0))
-      expect(body).to match(/Fuime LLC/)
+      expect(body).to match(/Ninth Street Labs, LLC/)
     end
   end
 

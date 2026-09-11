@@ -6,7 +6,7 @@
     <title>For parents · fuime</title>
     <meta
       name="description"
-      content="What a parent or guardian is agreeing to: you are the account holder, they operate it, you get a read-only view of every invoice, and you can revoke it. fuime is in private beta in test mode — no real money moves yet."
+      content="What a parent or guardian is agreeing to: you are the legal payee and clawback obligor, they run the venture day to day, you get a read-only view of every invoice, and you must approve the payout destination before the first payout. Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record."
     />
     <link rel="canonical" href="https://fuime.com/parents" />
     <meta property="og:type" content="website" />
@@ -16,7 +16,7 @@
     <meta property="og:title" content="You sign once. You keep the controls." />
     <meta
       property="og:description"
-      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Private beta in test mode — payments are not live yet."
+      content="You are the legal payee and clawback obligor; your kid runs the venture day to day. Read-only on every invoice and payment. Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record."
     />
     <meta property="og:image" content="https://fuime.com/img/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -33,7 +33,7 @@
     />
     <meta
       name="twitter:description"
-      content="You are the account holder, your kid is the operator. Read-only on every invoice and payment. Private beta in test mode — payments are not live yet."
+      content="You are the legal payee and clawback obligor; your kid runs the venture day to day. Read-only on every invoice and payment. Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record."
     />
     <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
     <meta
@@ -127,7 +127,7 @@
                 "name": "Is fuime a bank?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No. fuime is a financial technology company, not a bank. It does not hold deposits and does not offer FDIC-insured products. Payments are processed by Stripe. And right now fuime is in private beta with payments running in Stripe test mode, so no real money moves at all."
+                  "text": "No. fuime is a financial technology company, not a bank. It does not hold deposits and does not offer FDIC-insured products. Payments are processed by Stripe. Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record."
                 }
               },
               {
@@ -135,7 +135,7 @@
                 "name": "Where does the money actually sit?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Today, nowhere. Payments run in Stripe test mode, in a Stripe account fuime controls, and nothing settles to anyone. At live launch the design is a Stripe account you own as the guardian, holding the money from the moment a client pays until Stripe pays out to the bank account you connected. We are telling you the plan, not describing something that already runs."
+                  "text": "Client payments settle to Fuime's payment processor account because Fuime is the seller. Ninth Street Labs, LLC is the seller of record. What you see in the app is an amount owed to the venture (a payable), not a bank balance. Payouts go to a destination you approve — that can be a parent, joint, or teen bank account, depending on what you set up."
                 }
               },
               {
@@ -151,7 +151,7 @@
                 "name": "Can I see everything, or just a summary?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Everything. Every invoice, every payment, every fee and every payout, in a read-only view under your own login. There is no private mode and nothing is hidden from the account holder."
+                  "text": "Everything. Every invoice, every payment, every fee and every payout, in a read-only view under your own login. There is no private mode and nothing is hidden from the legal payee."
                 }
               },
               {
@@ -159,7 +159,7 @@
                 "name": "Who is liable if something goes wrong?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "You are, as the account holder. Once live payments are on, a chargeback, a refund or a negative balance lands on the account holder, and that is you. That is the trade for a 15-year-old being able to accept a card at all, and we would rather you weigh it now than find out later. In the beta there is nothing to land, because no real money moves."
+                  "text": "You are, as the legal payee and clawback obligor. A chargeback, a refund, or a clawback lands with you. That is the trade for a 15-year-old being able to accept a card at all, and we would rather you weigh it now than find out later. Ninth Street Labs, LLC is the seller of record on the purchase."
                 }
               },
               {
@@ -167,7 +167,7 @@
                 "name": "What happens when they turn 18?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "At 18 they can open and own a Stripe account in their own name, and the point is that they move onto it and you step off. We have not shipped that handover yet. When we do we will say how it works, rather than implying it already exists."
+                  "text": "At 18 they can take the books and the customer list with them. We have not shipped a formal handover of the legal-payee role yet. When we do we will say how it works, rather than implying it already exists."
                 }
               }
             ]
@@ -302,7 +302,7 @@
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Private beta · test mode · payments are not live</p>
+            <p class="beta">Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>You sign once.<br />You keep the controls.</h1>
             <p class="lead">
               Your kid is going to keep taking money for work either way. This
@@ -318,11 +318,11 @@
             </div>
 
             <p class="disclaimer">
-              fuime is a financial technology company, not a bank. We are in
-              private beta and payments run in Stripe test mode, so no real money
-              moves yet. When we turn on live payments, the venture's account
-              will be a Stripe account you own as the guardian, so funds settle
-              to your family and fuime never holds your money.
+              fuime is a financial technology company, not a bank. Ninth Street
+              Labs, LLC, doing business as Fuime, is the seller of record. You
+              are the legal payee and clawback obligor, and you must approve the
+              payout destination before the first payout. Your kid runs the
+              venture day to day.
             </p>
           </div>
         </div>
@@ -334,39 +334,38 @@
           <div class="stack-lg">
             <div>
               <p class="eyebrow">What you're signing</p>
-              <h2 class="h2">An agreement that makes you the account holder.</h2>
+              <h2 class="h2">An agreement that makes you the legal payee.</h2>
             </div>
             <p class="lead">
               We email you the Guardian Agreement. You accept it, and from then
-              on you are the account holder for your kid's venture and they are
-              the operator. Here is exactly what that is today, and what it
-              becomes when live payments arrive.
+              on you are the legal payee and clawback obligor for your kid's
+              venture and they run it day to day.
             </p>
             <div class="lrow--boxed" style="display: grid; gap: var(--s3)">
               <div class="lrow">
-                <span>Account holder</span>
+                <span>Legal payee</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
                 <span class="lrow__val">You</span>
               </div>
               <div class="lrow">
-                <span>How you accept, today</span>
+                <span>How you accept</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
                 <span class="lrow__val">An emailed agreement</span>
               </div>
               <div class="lrow">
-                <span>Identity verification, today</span>
+                <span>Seller of record</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">None yet</span>
+                <span class="lrow__val">Ninth Street Labs, LLC</span>
               </div>
               <div class="lrow">
-                <span>Where the money lands, today</span>
+                <span>What the app shows</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">Nowhere — test mode</span>
+                <span class="lrow__val">A payable, not a bank balance</span>
               </div>
               <div class="lrow">
-                <span>Where it will land at live launch</span>
+                <span>Payouts</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">A Stripe account you own</span>
+                <span class="lrow__val">Destination you approve</span>
               </div>
             </div>
             <p>
@@ -377,11 +376,10 @@
             </p>
             <p>
               fuime is the software: the invoice, the books, the guardianship
-              record, the receipts. The plan at live launch is that the money
-              never passes through us — a Stripe account in your name receives
-              it, and our platform fee is collected as a fee on the payment. That
-              plan is not built yet, and until it is, payments here run in Stripe
-              test mode and nothing settles for anyone.
+              record, the receipts. When a client pays, they buy from Ninth
+              Street Labs, LLC as seller of record. Fuime keeps its fee and owes
+              the rest to the venture as a payable, paid out after you approve
+              the destination.
             </p>
             <p>
               <a class="tlink" href="/home#how"
@@ -495,10 +493,8 @@
           </div>
 
           <p class="small muted mt-5">
-            The fuime row is what a live account looks like. Today the books,
-            the receipts and the guardianship record are real; the payments
-            behind them run in Stripe test mode, so nothing has actually been
-            collected through us yet.
+            The fuime row is what the product looks like: a paper trail, a
+            receipt, and a named legal payee — without waiting until 18.
           </p>
 
           <details class="reasoning mt-6">
@@ -533,13 +529,12 @@
                 <path d="M11 2.5 4 5.5v5.25c0 3.6 2.8 6.9 7 8.75" />
                 <path d="M8.25 10.75 10.5 13l3.5-3.75" />
               </svg>
-              <h3 class="h4">You are the account holder</h3>
+              <h3 class="h4">You are the legal payee</h3>
               <p>
-                You accept the agreement, so the account is yours and your kid
-                operates it. That split is the only reason any of this works
-                before they turn 18. At live launch it is meant to be literal:
-                Stripe lets a guardian own an account on behalf of someone 13 or
-                older, and that is the architecture we are building toward.
+                You accept the agreement, so you are the legal payee and
+                clawback obligor, and your kid operates the venture day to day.
+                That split is the only reason any of this works before they turn
+                18. Ninth Street Labs, LLC is the seller of record on purchases.
               </p>
             </article>
 
@@ -556,9 +551,9 @@
                 There is no identity verification in fuime today. You accept the
                 Guardian Agreement by email and we record that you did — that is
                 the whole of it, and you should read it as exactly that much.
-                Verification arrives with live payments, run by Stripe as the
-                party required to do it, and we will not ask you for a document
-                before then.
+                If a later step needs identity details for a payout destination,
+                Stripe is the party that collects them, and we will not ask you
+                for a document we do not need.
               </p>
             </article>
 
@@ -567,14 +562,13 @@
                 <path d="M11 3.25 19.5 18.25H2.5L11 3.25Z" />
                 <path d="M11 8.75v4M11 15.5h.01" />
               </svg>
-              <h3 class="h4">You will carry the account holder's risk</h3>
+              <h3 class="h4">You will carry the legal payee's risk</h3>
               <p>
-                Once live payments are on: chargebacks, refunds, a negative
-                balance, a client who disputes a payment — Stripe comes to the
-                account holder, and that is you. It will work the way it would if
-                you opened a Stripe account for yourself, because that is what
-                you will be doing. In the beta there is nothing to dispute,
-                because no real money moves.
+                Chargebacks, refunds, a clawback, a client who disputes a
+                payment — you are the legal payee and clawback obligor. Ninth
+                Street Labs, LLC is the seller of record on the purchase. That
+                is the trade for a 15-year-old being able to accept a card at
+                all.
               </p>
             </article>
 
@@ -590,8 +584,8 @@
                 unlimited ventures and API keys. Founders is 0% for the launch
                 cohort. Stripe's card processing — 2.9% plus 30 cents a
                 payment — is charged on top of all of them and goes to Stripe.
-                Every fuime fee is billed to you as the account holder, never to
-                your kid, and nothing is billed during the private beta.
+                Every fuime fee is billed to you as the legal payee, never to
+                your kid.
               </p>
             </article>
           </div>
@@ -645,12 +639,12 @@
             </article>
 
             <article class="card">
-              <h3 class="h4">Where the money will land</h3>
+              <h3 class="h4">Where payouts go</h3>
               <p>
-                At live launch, payouts go from a Stripe account in your name to
-                a bank account in your name, and fuime holds no balance and takes
-                no custody. That is the plan. Today payments run in Stripe test
-                mode, so there is nothing to pay out.
+                Payouts go to a destination you approve — that can be a parent,
+                joint, or teen bank account, depending on what you set up. What
+                you see in the app is a payable owed to the venture, not a bank
+                balance.
               </p>
             </article>
 
@@ -672,7 +666,7 @@
           <div class="stack-lg">
             <div>
               <p class="eyebrow">Tax time</p>
-              <h2 class="h2">Income, expenses, net, and a flag at $400.</h2>
+              <h2 class="h2">Income, expenses, net, and tax-prep flags.</h2>
             </div>
             <p class="lead">
               Nobody should have to reconstruct a year of a teenager's payment
@@ -685,19 +679,17 @@
               <h3 class="h4">What fuime tracks</h3>
               <p>
                 Every invoice, every fee, and every expense they log, totalled
-                into income, expenses and net for the year. The IRS expects a
-                return once net self-employment income passes $400, so fuime
-                flags that line the month it is crossed instead of the following
-                spring.
+                into income, expenses and net for the year. Tax-prep milestones
+                are flagged as they come up, instead of the following spring.
               </p>
             </article>
             <article class="card">
               <h3 class="h4">Where fuime stops</h3>
               <p>
                 fuime is not a tax advisor and nothing on this page is tax
-                advice. We show you the numbers and we point at the threshold.
-                What gets filed, and by whom, is a question for someone
-                qualified to answer it.
+                advice. We show you the numbers and we flag the milestones. What
+                gets filed, and by whom, is a question for someone qualified to
+                answer it.
               </p>
             </article>
           </div>
@@ -718,21 +710,20 @@
               <p class="faq__a">
                 No. fuime is a financial technology company, not a bank. It does
                 not hold deposits and does not offer FDIC-insured products.
-                Payments are processed by Stripe. And right now fuime is in
-                private beta with payments running in Stripe test mode, so no
-                real money moves at all.
+                Payments are processed by Stripe. Private beta · live payments.
+                Ninth Street Labs, LLC (Fuime) is the seller of record.
               </p>
             </details>
 
             <details>
               <summary>Where does the money actually sit?</summary>
               <p class="faq__a">
-                Today, nowhere. Payments run in Stripe test mode, in a Stripe
-                account fuime controls, and nothing settles to anyone. At live
-                launch the design is a Stripe account you own as the guardian,
-                holding the money from the moment a client pays until Stripe pays
-                out to the bank account you connected. We are telling you the
-                plan, not describing something that already runs.
+                Client payments settle to Fuime's payment processor account
+                because Fuime is the seller. Ninth Street Labs, LLC is the seller
+                of record. What you see in the app is an amount owed to the
+                venture (a payable), not a bank balance. Payouts go to a
+                destination you approve — that can be a parent, joint, or teen
+                bank account, depending on what you set up.
               </p>
             </details>
 
@@ -756,29 +747,28 @@
               <p class="faq__a">
                 Everything. Every invoice, every payment, every fee and every
                 payout, in a read-only view under your own login. There is no
-                private mode and nothing is hidden from the account holder.
+                private mode and nothing is hidden from the legal payee.
               </p>
             </details>
 
             <details>
               <summary>Who is liable if something goes wrong?</summary>
               <p class="faq__a">
-                You are, as the account holder. Once live payments are on, a
-                chargeback, a refund or a negative balance lands on the account
-                holder, and that is you. That is the trade for a 15-year-old
-                being able to accept a card at all, and we would rather you weigh
-                it now than find out later. In the beta there is nothing to land,
-                because no real money moves.
+                You are, as the legal payee and clawback obligor. A chargeback, a
+                refund, or a clawback lands with you. That is the trade for a
+                15-year-old being able to accept a card at all, and we would
+                rather you weigh it now than find out later. Ninth Street Labs,
+                LLC is the seller of record on the purchase.
               </p>
             </details>
 
             <details>
               <summary>What happens when they turn 18?</summary>
               <p class="faq__a">
-                At 18 they can open and own a Stripe account in their own name,
-                and the point is that they move onto it and you step off. We
-                have not shipped that handover yet. When we do we will say how
-                it works, rather than implying it already exists.
+                At 18 they can take the books and the customer list with them.
+                We have not shipped a formal handover of the legal-payee role
+                yet. When we do we will say how it works, rather than implying
+                it already exists.
               </p>
             </details>
           </div>
@@ -849,13 +839,14 @@
         <p class="foot__legal">
           fuime is a financial technology company, not a bank. fuime does not
           hold deposits and does not offer FDIC-insured products. Payments are
-          processed by Stripe. Venture accounts are opened and owned by a parent
-          or legal guardian; young founders operate them with guardian
-          oversight.
+          processed by Stripe. Ninth Street Labs, LLC, doing business as Fuime,
+          is the seller of record on purchases. Guardians are the legal payee on
+          operator payouts and must approve the destination before the first
+          payout; young founders run the venture day to day.
         </p>
         <div class="foot__bot">
           <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span>Private beta in test mode — no real money moves yet.</span>
+          <span>Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record.</span>
         </div>
       </div>
     </footer>

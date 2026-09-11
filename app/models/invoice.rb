@@ -426,12 +426,12 @@ class Invoice < ApplicationRecord
   # is not. Invoices are deliberately kept alive for Fuime (money IN), so this
   # is a live customer-facing document rather than dead code.
   #
-  # What replaces it is the MoR structure stated plainly: Fuime LLC is the
-  # seller of record (MOR_MIGRATION_PLAN §1), which is also what the buyer's
-  # card statement and receipt say, so the three agree.
+  # What replaces it is the MoR structure stated plainly: Ninth Street Labs,
+  # LLC is the seller of record (MOR_MIGRATION_PLAN §1), which is also what the
+  # buyer's card statement and receipt say, so the three agree.
   def set_defaults
     event = sponsor.event.name
-    self.memo = "Payment to #{event}, sold through Fuime. Fuime LLC is the seller of record."
+    self.memo = "Payment to #{event}, sold through Fuime. Ninth Street Labs, LLC is the seller of record."
 
     self.auto_advance = true
   end
