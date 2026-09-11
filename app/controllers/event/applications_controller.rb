@@ -35,29 +35,6 @@ class Event
       skip_authorization
 
       @referral_code = params[:ref]
-
-      # Fuime: once age is known, do not re-ask "are you under 18?". Pre-answer
-      # teen_led from !known_adult? (13+ is not adulthood) and skip the intro
-      # screen. Unsigned visitors still see it; create() keeps accepting an
-      # explicit teen_led for the post-sign-in bounce and the specs.
-      return unless signed_in?
-      return unless current_user.age_attestation.present? || current_user.birthday.present?
-
-      draft = current_user.applications.not_archived.draft.last
-      if draft
-        redirect_to business_type_application_path(draft)
-        return
-      end
-
-      @application = Event::Application.new(
-        user: current_user,
-        teen_led: resolved_teen_led,
-        referral_code: @referral_code
-      )
-      authorize @application
-      apply_waitlist_cohort_stamp
-      @application.save!
-      redirect_to business_type_application_path(@application)
     end
 
     def show
