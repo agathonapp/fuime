@@ -677,19 +677,14 @@ module Fuime
       Fuime::Offer.where(event_id: event_ids).delete_all if event_ids.any?
       Event::Application.where(user_id: user_ids).or(Event::Application.where(event_id: event_ids)).delete_all
       if event_ids.any?
-        OrganizerPositionInvite.unscoped.where(event_id: event_ids).delete_all
-        OrganizerPosition.unscoped.where(event_id: event_ids).delete_all
         Event::Configuration.where(event_id: event_ids).delete_all
         if defined?(PublicActivity::Activity)
           PublicActivity::Activity.where(trackable_type: "Event", trackable_id: event_ids).delete_all
         end
         Event.unscoped.where(id: event_ids).find_each { |event| event.event_tags.clear }
       end
+      hard_delete_organizer_graph!(user_ids:, event_ids:)
       if user_ids.any?
-        OrganizerPositionInvite.unscoped.where(user_id: user_ids).or(
-          OrganizerPositionInvite.unscoped.where(sender_id: user_ids)
-        ).delete_all
-        OrganizerPosition.unscoped.where(user_id: user_ids).delete_all
         Guardianship.where(guardian_id: user_ids).or(Guardianship.where(minor_id: user_ids)).delete_all
         LoginCode.where(user_id: user_ids).delete_all
         User::Session.where(user_id: user_ids).delete_all
@@ -713,6 +708,47 @@ module Fuime
         end
       end
       User.where(id: user_ids).delete_all
+    end
+
+    # acts_as_paranoid turns delete_all into a soft-delete. Soft-deleted
+    # organizer_positions still hold user_id, so User.delete_all then
+    # violates the FK. Issue a real DELETE.
+    def hard_delete_organizer_graph!(user_ids:, event_ids:)
+      scope = OrganizerPosition.with_deleted
+      clauses = []
+      clauses << scope.where(event_id: event_ids) if event_ids.any?
+      clauses << scope.where(user_id: user_ids) if user_ids.any?
+      position_ids = clauses.empty? ? [] : clauses.reduce(:or).pluck(:id)
+
+      if position_ids.any?
+        control_ids = OrganizerPosition::Spending::Control.where(organizer_position_id: position_ids).pluck(:id)
+        OrganizerPosition::Spending::Control::Allowance.where(organizer_position_spending_control_id: control_ids).delete_all if control_ids.any?
+        OrganizerPosition::Spending::Control.where(id: control_ids).delete_all if control_ids.any?
+        OrganizerPositionDeletionRequest.where(organizer_position_id: position_ids).delete_all
+        hard_delete(OrganizerPositionInvite, "organizer_position_id", position_ids)
+        hard_delete(OrganizerPosition, "id", position_ids)
+      end
+
+      if event_ids.any?
+        hard_delete(OrganizerPositionInvite, "event_id", event_ids)
+        hard_delete(OrganizerPosition, "event_id", event_ids)
+      end
+      return unless user_ids.any?
+
+      hard_delete(OrganizerPositionInvite, "user_id", user_ids)
+      hard_delete(OrganizerPositionInvite, "sender_id", user_ids)
+      hard_delete(OrganizerPosition, "user_id", user_ids)
+    end
+
+    HARD_DELETE_COLUMNS = %w[id event_id user_id sender_id organizer_position_id].freeze
+
+    def hard_delete(klass, column, ids)
+      return if ids.blank?
+      raise ArgumentError, column unless HARD_DELETE_COLUMNS.include?(column)
+
+      klass.connection.delete(
+        klass.sanitize_sql_array(["DELETE FROM #{klass.table_name} WHERE #{column} IN (?)", ids])
+      )
     end
 
     def clear_demo_waitlist!
@@ -777,7 +813,7 @@ module Fuime
         applications_under_review: Event::Application.under_review.where(name: "Demo Solo Lawn").count,
         live_cohorts: Fuime::Cohort.live.where(code: COHORT_CODE).count,
         unvetted: Event.not_hidden.operator_vetting_unvetted.where(slug: SLUGS[:unvetted]).count,
-        stale_invites: Guardianship.stale_pending.joins(:minor).where(users: { email: email("teen.stale") }).count
+        stale_invites: Guardianship.stale_pending.where(minor_id: User.where(email: email("teen.stale")).select(:id)).count
       }
     end
 
