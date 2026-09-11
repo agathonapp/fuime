@@ -1,0 +1,37 @@
+<% title "What is it — #{@event.name}" %>
+<% content_for :progress, wizard_progress %>
+<% content_for :wizard_title, "What is it?" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">What are you selling?</h2>
+  <p class="mt-0 text-lg muted">Name it in your own words. You set the price on the next screen.</p>
+<% end %>
+
+<%= render "fuime/offers/wizard/steps", current: "what" %>
+
+<%= form_with url: fuime_offer_wizard_path(event_slug: @event.slug, step: "what"),
+              method: :post, scope: :fuime_offer, local: true,
+              id: "offer_wizard" do |form| %>
+  <div class="field">
+    <%= form.label :name, "What is it?" %>
+    <%= form.text_field :name, required: true, class: "w-full max-w-full",
+                        maxlength: Fuime::Offer::MAX_NAME_LENGTH,
+                        value: @offer.name,
+                        placeholder: "Front and back lawn mow" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :description, "Anything the customer should know? (optional)" %>
+    <%= form.text_area :description, class: "w-full max-w-full", rows: 4,
+                       maxlength: Fuime::Offer::MAX_DESCRIPTION_LENGTH,
+                       value: @offer.description,
+                       placeholder: "Includes edging. I bring my own mower." %>
+  </div>
+<% end %>
+
+<% content_for :footer do %>
+  <div class="flex flex-row-reverse justify-between items-center w-full">
+    <button type="submit" class="btn bg-blue" form="offer_wizard">Continue →</button>
+    <%= link_to "← Back", fuime_offers_path(event_slug: @event.slug), class: "btn bg-muted" %>
+  </div>
+<% end %>

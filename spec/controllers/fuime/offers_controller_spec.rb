@@ -61,14 +61,13 @@ RSpec.describe Fuime::OffersController, type: :controller do
   end
 
   describe "the page never suggests a price" do
-    before do
-      create_session(teen, verified: true)
-      get :index, params: { event_slug: event.slug }
-    end
+    before { create_session(teen, verified: true) }
 
-    # A placeholder amount in the price field is a Fuime-suggested rate for every
-    # operator who leaves it alone, which is the whole thing D2 forbids.
+    suggestion = /most people charge|typical(ly)? charge|average (price|rate)|suggested (price|rate)|we recommend charging/i
+
     it "puts no number in the price field" do
+      get :new, params: { event_slug: event.slug, step: "price" }
+
       body = CGI.unescapeHTML(response.body)
       price_field = body[/<input[^>]*fuime_offer\[price\][^>]*>/]
 
@@ -77,15 +76,60 @@ RSpec.describe Fuime::OffersController, type: :controller do
                                  "the price placeholder must not contain a number"
     end
 
-    it "says the price is the operator's" do
+    it "says the price is the operator's on the listing" do
+      get :index, params: { event_slug: event.slug }
+
       expect(CGI.unescapeHTML(response.body))
         .to match(/You set the price|never sets it/i)
     end
 
-    it "quotes no average, typical or suggested amount anywhere" do
-      body = CGI.unescapeHTML(response.body)
+    %w[what price storefront review].each do |step|
+      it "quotes no average, typical or suggested amount on the #{step} screen" do
+        get :new, params: { event_slug: event.slug, step: }
 
-      expect(body).not_to match(/most people charge|typical(ly)? charge|average (price|rate)|suggested (price|rate)|we recommend charging/i)
+        expect(CGI.unescapeHTML(response.body)).not_to match(suggestion)
+      end
+    end
+
+    it "quotes no average, typical or suggested amount on the listing" do
+      get :index, params: { event_slug: event.slug }
+
+      expect(CGI.unescapeHTML(response.body)).not_to match(suggestion)
+    end
+  end
+
+  describe "the create wizard" do
+    before { create_session(teen, verified: true) }
+
+    it "creates a draft after the price step and does not publish it" do
+      post :wizard, params: {
+        event_slug: event.slug,
+        step: "what",
+        fuime_offer: { name: "Lawn mow", description: "I bring my own mower." }
+      }
+      expect(response).to redirect_to(new_fuime_offer_step_path(event_slug: event.slug, step: "price"))
+
+      post :wizard, params: {
+        event_slug: event.slug,
+        step: "price",
+        fuime_offer: { price: "35", unit_label: "per visit" }
+      }
+
+      offer = event.fuime_offers.last
+      expect(offer).to be_present
+      expect(offer).to be_draft
+      expect(offer.price_cents).to eq(35_00)
+      expect(response).to redirect_to(new_fuime_offer_step_path(event_slug: event.slug, step: "storefront"))
+    end
+
+    it "refuses to publish from review without sale terms" do
+      offer = create(:fuime_offer, event:, name: "Lawn mow")
+      session[:offer_wizard] = { event.slug => { "offer_id" => offer.id, "name" => offer.name } }
+
+      post :wizard, params: { event_slug: event.slug, step: "review", intent: "publish" }
+
+      expect(offer.reload).to be_draft
+      expect(flash[:alert]).to match(/confirm how selling through Fuime works|can't take payments|published/i)
     end
   end
 

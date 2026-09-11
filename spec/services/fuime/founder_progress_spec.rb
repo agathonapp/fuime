@@ -121,6 +121,33 @@ RSpec.describe Fuime::FounderProgress, :merchant_of_record do
 
       expect(described_class.new(application: application.reload)).not_to be_guardian_pending
     end
+
+    it "names a failed invite instead of swallowing it" do
+      give_them_a_venture!
+      application.cosigner_email = "parent@example.com"
+      application.guardian_invite_error = "a minor cannot be their own guardian"
+      application.aasm_state = "approved"
+
+      progress = described_class.new(application:)
+      expect(progress.guardian_status).to eq(:failed)
+      expect(progress.guardian_status_sentence).to include("couldn't invite")
+      expect(progress.founder_next_action).not_to include("guardian")
+    end
+  end
+
+  describe "founder-facing copy" do
+    it "does not tell the founder to approve themselves" do
+      give_them_a_venture!(vetted: false)
+
+      expect(progress.founder_next_action).to match(/reviewing your venture/i)
+      expect(progress.founder_next_action).not_to include("Approve them")
+    end
+
+    it "tells them to add something to sell once they can" do
+      give_them_a_venture!
+
+      expect(progress.founder_next_action).to include("Add something to sell")
+    end
   end
 
 end

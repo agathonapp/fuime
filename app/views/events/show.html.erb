@@ -159,6 +159,13 @@
       Drafts are included here and nowhere else. This is the operator's own
       dashboard, where an unfinished offer is work outstanding rather than
       something to hide; the storefront reads `published` only. %>
+  <% if organizer_signed_in?(as: :member) && @event.application.present? %>
+    <% progress = Fuime::FounderProgress.new(application: @event.application) %>
+    <% unless progress.done? %>
+      <%= render "fuime/founder_progress", progress: %>
+    <% end %>
+  <% end %>
+
   <% if organizer_signed_in?(as: :member) %>
     <div class="card mb-4">
       <div class="flex items-center justify-between gap-2 flex-wrap">
@@ -173,7 +180,7 @@
           what it costs.
         </p>
         <% if policy(@event).manage_offers? %>
-          <%= link_to "List something you sell", fuime_offers_path(event_slug: @event.slug), class: "btn" %>
+          <%= link_to "Add something to sell", new_fuime_offer_path(event_slug: @event.slug), class: "btn" %>
         <% end %>
       <% else %>
         <div class="flex flex-col gap-1 mt-2">

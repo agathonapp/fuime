@@ -1,0 +1,55 @@
+<%# locals: (progress:) %>
+<%# Fuime: the six-stage checklist a founder sees on home and on their venture.
+    Same object the admin cohort roster reads — organisers get next_action,
+    founders get founder_next_action. Guardian invite state is a separate row
+    so it cannot swallow the sell funnel. %>
+<% stages = Fuime::FounderProgress::STAGES %>
+<% current_index = stages.index(progress.stage) || 0 %>
+<% labels = {
+     applied: "Applied",
+     venture_created: "Venture ready",
+     vetted: "Approved to publish",
+     can_sell: "Ready to sell",
+     listed: "Something listed",
+     sold: "First sale"
+   } %>
+
+<div class="card mb-4">
+  <div class="flex items-baseline justify-between gap-2 flex-wrap">
+    <h2 class="mt0 mb0 text-lg">Get to your first sale</h2>
+    <% unless progress.done? %>
+      <p class="muted text-sm m-0"><%= progress.founder_next_action %></p>
+    <% end %>
+  </div>
+
+  <ol class="list-none pl-0 mt-3 mb-0 flex flex-col gap-2">
+    <% stages.each_with_index do |stage, i| %>
+      <% reached = i <= current_index %>
+      <li class="flex items-center gap-2 <%= reached ? "" : "muted" %>">
+        <span aria-hidden="true"><%= reached ? "✓" : "○" %></span>
+        <span<%= " class=bold" if stage == progress.stage && !progress.done? %>><%= labels[stage] %></span>
+      </li>
+    <% end %>
+  </ol>
+
+  <% if (guardian_line = progress.guardian_status_sentence) %>
+    <p class="<%= progress.guardian_status == :failed ? "error" : "muted" %> text-sm mt-3 mb-0">
+      <%= guardian_line %>
+      <% if progress.guardian_status == :failed || progress.guardian_status == :needed %>
+        <%= link_to "Invite them", new_guardianship_path, class: "underline" %>
+      <% end %>
+    </p>
+  <% end %>
+
+  <% unless progress.done? %>
+    <% if progress.event.present? && !progress.listed? && policy(progress.event).manage_offers? %>
+      <p class="mt-3 mb-0">
+        <%= link_to "Add something to sell", new_fuime_offer_path(event_slug: progress.event.slug), class: "btn" %>
+      </p>
+    <% elsif progress.event.present? && progress.listed? %>
+      <p class="mt-3 mb-0">
+        <%= link_to "Share your pay links", fuime_offers_path(event_slug: progress.event.slug), class: "btn bg-muted" %>
+      </p>
+    <% end %>
+  <% end %>
+</div>

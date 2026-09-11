@@ -195,6 +195,13 @@ Rails.application.routes.draw do
   # storefront a store rather than a tip jar.
   get "/:event_slug/offers", to: "fuime/offers#index", as: :fuime_offers
   post "/:event_slug/offers", to: "fuime/offers#create", as: :fuime_offers_create
+  # Fuime: multi-screen product creation. Declared before `/:id` so `new` is
+  # never captured as an offer id. See Fuime::OffersController#new.
+  get "/:event_slug/offers/new", to: "fuime/offers#new", as: :new_fuime_offer
+  get "/:event_slug/offers/new/:step", to: "fuime/offers#new", as: :new_fuime_offer_step,
+                                      constraints: { step: /what|price|storefront|review|share/ }
+  post "/:event_slug/offers/wizard/:step", to: "fuime/offers#wizard", as: :fuime_offer_wizard
+  get "/:event_slug/offers/:id/share", to: "fuime/offers#share", as: :fuime_offer_share
   patch "/:event_slug/storefront", to: "fuime/offers#update_storefront", as: :fuime_storefront_settings
   patch "/:event_slug/offers/:id", to: "fuime/offers#update", as: :fuime_offer
   # FUIME: the operator affirms they were told what selling through Fuime means.

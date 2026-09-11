@@ -2,7 +2,16 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Hide Connect leftovers under MoR.**
+**2026-09-11 (latest) — Teen onboarding + offer wizard.**
+
+Marketing primary CTA is `/signup` (waitlist stays at `#join`). Signup is
+name + 13+ + terms. Application no longer asks how-did-you-hear / political
+/ previously-applied / under-18 after 13+. Submit runs
+`Fuime::FounderAdmission` (approve+activate, no vet). Home and venture
+show `Fuime::FounderProgress`. New offer: `/:slug/offers/new` (what →
+price → storefront → review → share). Parent dashboard is a follow-up.
+
+**2026-09-11 — Hide Connect leftovers under MoR.**
 
 With `FEATURE_MERCHANT_OF_RECORD=true`, Connect onboarding and Connect
 money-out are retired. `/payments` + `/payments/setup` + `/payments/verify`

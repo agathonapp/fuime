@@ -5880,3 +5880,23 @@ Ledger engine internals untouched.
 |---|---|---|
 | Demo money/subscription/waive teardown | So reset survives the 15-minute path | `app/services/fuime/demo_sandbox.rb` |
 | Reset leftover + write-guard specs | Lock the advertised path | `spec/services/fuime/demo_sandbox_spec.rb` |
+
+## 2026-09-11 — Teen onboarding + multi-screen offer wizard
+
+HCB approve+activate parked founders on "Waiting on Fuime" until an admin
+clicked. Fuime's publish gate is vetting. `Fuime::FounderAdmission` stands
+the venture up on submit without vetting. Signup/application field cuts
+and a FounderProgress checklist on the teen home. Marketing primary CTA
+is live signup; waitlist remains. Product creation is a five-screen
+wizard; nothing in it suggests a price.
+
+Did not touch Plaid, payout methods, Connect onboarding, `STRIPE_MODE`,
+or `FUIME_DEMO_SANDBOX`.
+
+| Change | Why | Files |
+|---|---|---|
+| `Fuime::FounderAdmission` | Admit on submit; do not vet | `app/services/fuime/founder_admission.rb`, `app/models/event/application.rb` |
+| Signup + application field cuts | Fields the system does not need | `app/views/users/edit.html.erb`, `app/views/event/applications/*` |
+| FounderProgress on home/venture | Founders could not see the checklist | `app/services/fuime/founder_progress.rb`, `app/views/fuime/_founder_progress.html.erb` |
+| Marketing primary CTA → `/signup` | Waitlist was the only door | `site/index.html`, `site/pricing.html`, `site/parents.html`, `site/server.js` |
+| Offer wizard | One jammed page → what/price/storefront/review/share | `app/controllers/fuime/offers_controller.rb`, `app/views/fuime/offers/wizard/` |

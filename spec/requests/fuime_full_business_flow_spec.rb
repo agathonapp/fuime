@@ -47,12 +47,16 @@ RSpec.describe "the full business flow", type: :request do
                                              "the category has to be derived, or the venture is born unable to sell"
     expect(application.service.name).to eq("Lawn & garden")
 
-    # ── 3. Activation creates the venture and seats the teen ────────────────
-    application.update!(aasm_state: :approved)
-    application.activate_event!(risk_level: 0, point_of_contact: admin)
+    # ── 3. Submit admits the founder. Approve+activate are HCB leftover
+    # gates; Fuime's publish gate is vetting. The teen already has a guardian
+    # so FounderAdmission is not blocked under Connect either.
+    application.update!(address_country: "US")
+    application.mark_submitted!
     venture = application.reload.event
 
     expect(venture).to be_present
+    expect(venture.operator_vetting_unvetted?).to be(true),
+                                                 "admission must not vet — that is a human decision"
     expect(venture.business_category).to eq("services"),
                                          "the category must survive the trip, or vetting blocks a venture nobody mispriced"
     expect(venture.organizer_positions.find_by(user: teen)&.role).to eq("manager")

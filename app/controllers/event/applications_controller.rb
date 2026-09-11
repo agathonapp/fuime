@@ -35,6 +35,29 @@ class Event
       skip_authorization
 
       @referral_code = params[:ref]
+
+      # Fuime: once age is known, do not re-ask "are you under 18?". Pre-answer
+      # teen_led from !known_adult? (13+ is not adulthood) and skip the intro
+      # screen. Unsigned visitors still see it; create() keeps accepting an
+      # explicit teen_led for the post-sign-in bounce and the specs.
+      return unless signed_in?
+      return unless current_user.age_attestation.present? || current_user.birthday.present?
+
+      draft = current_user.applications.not_archived.draft.last
+      if draft
+        redirect_to business_type_application_path(draft)
+        return
+      end
+
+      @application = Event::Application.new(
+        user: current_user,
+        teen_led: resolved_teen_led,
+        referral_code: @referral_code
+      )
+      authorize @application
+      apply_waitlist_cohort_stamp
+      @application.save!
+      redirect_to business_type_application_path(@application)
     end
 
     def show
@@ -192,7 +215,7 @@ class Event
         redirect_to auth_users_path(return_to: start_applications_path(teen_led: teen_led_param), require_reload: true, purpose: "application") and return
       end
 
-      authorize(@application = Event::Application.new(user: current_user, teen_led: teen_led_param == "true", referral_code: params[:referral_code] || params.dig(:event_application, :referral_code)))
+      authorize(@application = Event::Application.new(user: current_user, teen_led: resolved_teen_led, referral_code: params[:referral_code] || params.dig(:event_application, :referral_code)))
       apply_waitlist_cohort_stamp
       @application.save!
 
@@ -342,7 +365,19 @@ class Event
       begin
         @application.mark_submitted!
         confetti!
-        redirect_to application_path(@application)
+        invite_error = @application.guardian_invite_error
+        @application.reload
+
+        if invite_error.present?
+          flash[:error] = "Your business is ready — we couldn't invite #{@application.cosigner_email}: #{invite_error}. Invite them again from your account."
+        end
+
+        if @application.event.present?
+          flash[:success] = "You're in. Draft something to sell — publishing waits on a review."
+          redirect_to event_path(@application.event)
+        else
+          redirect_to application_path(@application)
+        end
       rescue AASM::InvalidTransition
         flash[:error] = "This application is not ready to submit. See the summary for what's missing."
         redirect_to review_application_path(@application)
@@ -398,6 +433,15 @@ class Event
     # anonymous applicant through sign-in and back to `start`.
     def teen_led_param
       params.dig(:event_application, :teen_led).presence || params[:teen_led].presence
+    end
+
+    # Explicit form/query wins. Otherwise a 13+ founder is teen-led; only a
+    # known adult (guardian-accept 18+) is not. Never treat "unknown" as adult.
+    def resolved_teen_led
+      raw = teen_led_param
+      return raw == "true" if raw.present?
+
+      signed_in? && !current_user.known_adult?
     end
 
     # A waitlist admit may have stamped a cohort. Apply it the same way a typed

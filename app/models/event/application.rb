@@ -95,6 +95,13 @@ class Event
     include PublicIdentifiable
     set_public_id_prefix :apl
 
+    # In-memory only: set when the post-submit guardian invite bounces.
+    # FounderProgress and the submit flash read it so a failed invite is never
+    # a silent log line. Not persisted — a retry from /guardian/new is the
+    # recovery path, and inferring "email present + no pending invite" covers
+    # later page loads.
+    attr_accessor :guardian_invite_error
+
     belongs_to :user
     belongs_to :event, optional: true
     # Fuime: the group somebody vouched for this founder as part of, if any.
@@ -209,6 +216,11 @@ class Event
             begin
               Fuime::GuardianInviteService.new(minor: user, guardian_email: cosigner_email).run!
             rescue Fuime::GuardianInviteService::InvalidInvite => e
+              # Surface it. FounderProgress and the submit flash read
+              # `guardian_invite_error` so a bounced invite is never a silent
+              # log line. Submission itself still succeeds — the teen can retry
+              # from /guardian/new.
+              self.guardian_invite_error = e.message
               Rails.logger.warn("[Fuime] auto guardian invite skipped for application #{hashid}: #{e.message}")
             end
           end
@@ -231,6 +243,12 @@ class Event
           # the ordinary queue rather than an exception in front of a teenager
           # who has just pressed Submit. See Fuime::CohortAdmission#call.
           ::Fuime::CohortAdmission.new(application: self).call if fuime_cohort_id.present?
+
+          # Fuime: stand the venture up the moment they submit. Approve+activate
+          # are HCB fiscal-sponsorship gates; Fuime's publish gate is vetting.
+          # FounderAdmission does not vet. It no-ops if CohortAdmission (or a
+          # previous run) already created the Event. See ONBOARDING_PLAN.md §5.
+          ::Fuime::FounderAdmission.new(application: self).call
         end
       end
 
@@ -394,13 +412,18 @@ class Event
       return "Add your information" if address_country.blank?
       return "Review and submit" if draft?
       return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
-      return "We're reviewing your application" if submitted? || under_review?
       return "Start selling!" if event.present?
       return "" if rejected?
-      # Approved but not yet activated. Without this the method returns nil and
-      # the application card falls back to its "We're reviewing your
-      # application" default, contradicting the Approved badge next to it.
-      return "Waiting on Fuime to finish setting up your account" if approved?
+      # Submitted / under review / approved, but no Event yet. Under Fuime this
+      # is an activation blocker (Connect + no guardian, free-plan slot, …),
+      # not a waiting room. Never say "Waiting on Fuime" — that was the HCB
+      # fiscal-sponsorship parking lot. Name the blocker or tell them to finish.
+      if submitted? || under_review? || approved?
+        blockers = activation_blockers
+        return blockers.first if blockers.any?
+
+        return "Finish setting up your venture"
+      end
     end
 
     # Fuime: keyed on the same conditions #next_step uses, not on the sentences
@@ -836,7 +859,11 @@ class Event
       # The columns stay on the table and stay writable: applications submitted
       # before this keep their address, and the payout flow writes into the same
       # place rather than inventing a second one.
-      fields = ["name", "business_category", "description", "address_country", "referrer", "previously_applied"]
+      # Fuime (2026-09-11): `referrer` and `previously_applied` are HCB leftovers.
+      # Neither decides admission, selling, or vetting. Keeping them required
+      # parked founders on a how-did-you-hear / political-adjacent wall.
+      # Columns stay writable; they are no longer demanded to submit.
+      fields = ["name", "business_category", "description", "address_country"]
 
       # A parent's email is required only while the guardian question is OPEN.
       # A second application from the same teen has nothing to ask — their

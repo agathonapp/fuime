@@ -1,0 +1,41 @@
+<% title "Your price — #{@event.name}" %>
+<% content_for :progress, wizard_progress %>
+<% content_for :wizard_title, "Your price" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">You set the price</h2>
+  <p class="mt-0 text-lg muted">
+    Fuime never sets it or suggests one. Type the amount you charge.
+  </p>
+<% end %>
+
+<%= render "fuime/offers/wizard/steps", current: "price" %>
+
+<%= form_with url: fuime_offer_wizard_path(event_slug: @event.slug, step: "price"),
+              method: :post, scope: :fuime_offer, local: true,
+              id: "offer_wizard" do |form| %>
+  <div class="flex gap-2 flex-wrap">
+    <div class="field flex-1">
+      <%= form.label :price, "Your price" %>
+      <%# No placeholder amount. A number here would be a Fuime-suggested
+          rate for every operator who left it alone. %>
+      <%= form.text_field :price, required: true, inputmode: "decimal",
+                          placeholder: "$", class: "w-full",
+                          value: @offer.price_cents.present? ? format("%.2f", @offer.price_cents / 100.0) : nil %>
+    </div>
+    <div class="field flex-1">
+      <%= form.label :unit_label, "Per what? (optional)" %>
+      <%= form.text_field :unit_label, class: "w-full",
+                          maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
+                          value: @offer.unit_label,
+                          placeholder: "per lawn" %>
+    </div>
+  </div>
+<% end %>
+
+<% content_for :footer do %>
+  <div class="flex flex-row-reverse justify-between items-center w-full">
+    <button type="submit" class="btn bg-blue" form="offer_wizard">Continue →</button>
+    <%= link_to "← Back", new_fuime_offer_step_path(event_slug: @event.slug, step: "what"), class: "btn bg-muted" %>
+  </div>
+<% end %>

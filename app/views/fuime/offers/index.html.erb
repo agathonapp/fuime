@@ -1,138 +1,61 @@
 <% title "What you sell — #{@event.name}" %>
 
-<%# FUIME: where a teenager decides what they sell and what it costs.
+<%# FUIME: listing and management. Creating a new offer is a multi-screen
+    wizard (see /offers/new). The one rule that still holds on this page:
+    **nothing here suggests a price.** spec/controllers/fuime/offers_controller_spec.rb
+    asserts it. %>
 
-    The one rule this page exists to hold: **nothing here suggests a price.** No
-    placeholder amount, no "most people charge", no average, no range. §8.3 D2's
-    mitigation for worker misclassification is that operators control their own
-    pricing and Fuime never sets rates, and a suggested rate is a set rate with a
-    softer verb. spec/controllers/fuime/offers_controller_spec.rb asserts it so
-    the constraint survives a redesign. %>
-
-<h1>What you sell</h1>
-
-<p class="muted">
-  Each thing you list shows up on your storefront with a Buy button. You set the
-  price — Fuime never sets it or suggests one.
-</p>
-
-<%# Placed here, before anything can be published: the obligations below attach at
-    the moment an offer goes live, so this is the last point at which telling
-    somebody is still telling them rather than explaining afterwards. %>
-<%= render "fuime/operator_sale_terms", event: @event, confirmable: @can_manage %>
+<div class="flex items-baseline justify-between gap-2 flex-wrap mb-4">
+  <div>
+    <h1 class="mt0 mb0">What you sell</h1>
+    <p class="muted mb0">
+      Each thing you list shows up on your storefront with a Buy button. You set the
+      price — Fuime never sets it or suggests one.
+    </p>
+  </div>
+  <% if @can_manage %>
+    <%= link_to "Add something to sell", new_fuime_offer_path(event_slug: @event.slug),
+                class: "btn bg-blue", id: "add" %>
+  <% end %>
+</div>
 
 <% if @selling_blockers.any? %>
-  <%# Authenticated page only. These strings name operators and state their
-      ages — see app/views/fuime/_selling_blockers.html.erb and the privacy spec
-      that keeps them off the storefront. %>
   <%= render "fuime/selling_blockers", event: @event,
                                        title: "You can't publish offers yet" %>
 <% end %>
 
-<%# ── Your storefront ──────────────────────────────────────────────────── %>
-
-<%# FUIME: the public page, editable from the same screen as the things on it.
-
-    Deliberately not its own settings page. A founder setting up thinks "my
-    shop", not "my offers" and separately "my storefront settings" — and the
-    tagline has existed as a column since the storefront shipped with no UI to
-    edit it, which is how a field ends up permanently blank in production. %>
 <div class="card mb2">
   <div class="flex items-center justify-between gap-2 flex-wrap">
     <h2 class="mt0 mb0 text-lg">Your storefront</h2>
     <%= link_to "View it", fuime_storefront_path(slug: @event.slug), class: "muted", target: "_blank", rel: "noopener" %>
   </div>
-
-  <p class="muted text-sm mt-1">
+  <p class="muted text-sm mt-1 mb-0">
     <%= fuime_storefront_url(slug: @event.slug) %>
   </p>
-
   <% if @can_manage %>
-    <%= form_with url: fuime_storefront_settings_path(event_slug: @event.slug),
-                  method: :patch, scope: :event, local: true do |form| %>
-      <div class="field">
-        <%= form.label :storefront_tagline, "One line about your business" %>
-        <%= form.text_field :storefront_tagline, value: @event.storefront_tagline,
-                            class: "w-full max-w-full", maxlength: 140,
-                            placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
-      </div>
-
-      <div class="field">
-        <%= form.label :logo, "Logo (optional)" %>
-        <%= form.file_field :logo, accept: "image/png,image/jpeg,image/webp" %>
-      </div>
-
-      <div class="field">
-        <%= form.check_box :is_public, checked: @event.is_public %>
-        <%= form.label :is_public, "Show my storefront publicly" %>
-        <%# Turning this off does not only hide the storefront — it stops every
-            payment link working too, because a payment page is a public page.
-            Said here rather than discovered later by a founder wondering why
-            their Replit button 404s. %>
-        <p class="muted text-sm mt-1 mb-0">
-          Turning this off hides your storefront <strong>and</strong> stops your
-          payment links working.
-        </p>
-      </div>
-
-      <%= form.submit "Save storefront" %>
-    <% end %>
+    <details class="mt-2">
+      <summary class="muted text-sm">Edit storefront</summary>
+      <%= form_with url: fuime_storefront_settings_path(event_slug: @event.slug),
+                    method: :patch, scope: :event, local: true, class: "mt-2" do |form| %>
+        <div class="field">
+          <%= form.label :storefront_tagline, "One line about your business" %>
+          <%= form.text_field :storefront_tagline, value: @event.storefront_tagline,
+                              class: "w-full max-w-full", maxlength: 140,
+                              placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
+        </div>
+        <div class="field">
+          <%= form.label :logo, "Logo (optional)" %>
+          <%= form.file_field :logo, accept: "image/png,image/jpeg,image/webp" %>
+        </div>
+        <div class="field">
+          <%= form.check_box :is_public, checked: @event.is_public %>
+          <%= form.label :is_public, "Show my storefront publicly" %>
+        </div>
+        <%= form.submit "Save storefront" %>
+      <% end %>
+    </details>
   <% end %>
 </div>
-
-<%# ── Add one ──────────────────────────────────────────────────────────── %>
-
-<%# `id="add"` is the anchor /learn starter templates link to — see
-    Fuime::OffersController::PREFILLABLE. A template can fill the words in; the
-    price box below is always empty. %>
-<% if @can_manage %>
-  <div class="card mb2" id="add">
-    <h2 class="mt0 text-lg">Add something you sell</h2>
-
-    <% if @offer.name.present? %>
-      <p class="muted text-sm mt-0">
-        Filled in from a starter template. Change any of it. The price is blank
-        because that part is yours.
-      </p>
-    <% end %>
-    <%= form_with model: @offer, url: fuime_offers_create_path(event_slug: @event.slug),
-                  method: :post, scope: :fuime_offer, local: true do |form| %>
-      <div class="field">
-        <%= form.label :name, "What is it?" %>
-        <%= form.text_field :name, required: true, class: "w-full max-w-full",
-                            maxlength: Fuime::Offer::MAX_NAME_LENGTH,
-                            placeholder: "Front and back lawn mow" %>
-      </div>
-
-      <div class="flex gap-2 flex-wrap">
-        <div class="field">
-          <%= form.label :price, "Your price" %>
-          <%# No placeholder amount. A number here would be a Fuime-suggested
-              rate for every operator who left it alone. %>
-          <%= form.text_field :price, required: true, inputmode: "decimal",
-                              placeholder: "$", class: "w-full" %>
-        </div>
-        <div class="field">
-          <%= form.label :unit_label, "Per what? (optional)" %>
-          <%= form.text_field :unit_label, class: "w-full",
-                                           maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
-                                           placeholder: "per lawn" %>
-        </div>
-      </div>
-
-      <div class="field">
-        <%= form.label :description, "Anything the customer should know? (optional)" %>
-        <%= form.text_area :description, class: "w-full max-w-full", rows: 2,
-                           maxlength: Fuime::Offer::MAX_DESCRIPTION_LENGTH,
-                           placeholder: "Includes edging. I bring my own mower." %>
-      </div>
-
-      <%= form.submit "Save as draft" %>
-    <% end %>
-  </div>
-<% end %>
-
-<%# ── What you have ────────────────────────────────────────────────────── %>
 
 <% if @offers.empty? %>
   <p class="muted">
@@ -161,54 +84,26 @@
           <td><%= offer.price_sentence %></td>
           <td>
             <%= offer.published? ? "On your storefront" : "Draft" %>
-
-            <%# FUIME: the shareable payment link.
-
-                The whole point of the object for a founder who has built
-                something on Replit or has an Instagram bio: one URL for one
-                thing, send it, get paid. Shown only when published, because a
-                link to a draft is a link that 404s the moment somebody clicks
-                it — and the operator would have sent it already.
-
-                Rendered as a readonly input rather than text so it can be
-                selected and copied on a phone, which is where most of these get
-                sent from. %>
             <% if offer.published? %>
-              <div class="mt1">
-                <input type="text" readonly class="w-full text-sm"
-                       onclick="this.select()"
-                       value="<%= fuime_payment_page_url(event_slug: @event.slug, offer: offer.to_param) %>">
-                <div class="muted text-sm mt-1">
-                  Paste this anywhere — a website, a bio, a message.
-                </div>
-
-                <%# The operator edits the last part of their own link.
-
-                    The old link keeps working after a rename: Fuime::Offer's
-                    permanent token resolves to the same page, so a flyer already
-                    printed or a Replit button already shipped does not break
-                    because somebody tidied a name. Said here, because "will this
-                    break the link I already sent?" is the question that stops a
-                    16-year-old from ever changing it. %>
-                <% if @can_manage %>
-                  <details class="mt-1">
-                    <summary class="muted text-sm">Change this link</summary>
-                    <%= form_with url: fuime_offer_path(event_slug: @event.slug, id: offer.id),
-                                  method: :patch, scope: :fuime_offer, local: true,
-                                  class: "flex items-center gap-1 mt-1 flex-wrap" do |form| %>
-                      <span class="muted text-sm">/pay/<%= @event.slug %>/</span>
-                      <%= form.text_field :slug, value: offer.slug,
-                                          maxlength: Fuime::Offer::MAX_SLUG_LENGTH,
-                                          placeholder: "lawn-mow", class: "text-sm" %>
-                      <%= form.submit "Save link", class: "btn btn--sm" %>
-                    <% end %>
-                    <p class="muted text-sm mt-1 mb-0">
-                      Lowercase letters, numbers and hyphens. Links you've already
-                      shared keep working.
-                    </p>
-                  </details>
-                <% end %>
-              </div>
+              <%= render "fuime/offers/share_link", offer:, event: @event, show_qr: true %>
+              <% if @can_manage %>
+                <details class="mt-1">
+                  <summary class="muted text-sm">Change this link</summary>
+                  <%= form_with url: fuime_offer_path(event_slug: @event.slug, id: offer.id),
+                                method: :patch, scope: :fuime_offer, local: true,
+                                class: "flex items-center gap-1 mt-1 flex-wrap" do |form| %>
+                    <span class="muted text-sm">/pay/<%= @event.slug %>/</span>
+                    <%= form.text_field :slug, value: offer.slug,
+                                        maxlength: Fuime::Offer::MAX_SLUG_LENGTH,
+                                        placeholder: "lawn-mow", class: "text-sm" %>
+                    <%= form.submit "Save link", class: "btn btn--sm" %>
+                  <% end %>
+                  <p class="muted text-sm mt-1 mb-0">
+                    Lowercase letters, numbers and hyphens. Links you've already
+                    shared keep working.
+                  </p>
+                </details>
+              <% end %>
             <% end %>
           </td>
           <% if @can_manage %>
@@ -220,6 +115,8 @@
                 <% else %>
                   <%= button_to "Take down", fuime_offer_unpublish_path(event_slug: @event.slug, id: offer.id),
                                 method: :post, class: "btn bg-muted" %>
+                  <%= link_to "Share", fuime_offer_share_path(event_slug: @event.slug, id: offer.id),
+                              class: "btn bg-muted" %>
                 <% end %>
                 <%= button_to "Archive", fuime_offer_archive_path(event_slug: @event.slug, id: offer.id),
                               method: :post, class: "btn bg-muted",
@@ -236,9 +133,6 @@
 <% if @archived.any? %>
   <details class="mt2">
     <summary class="muted">Archived (<%= @archived.count %>)</summary>
-    <%# Kept rather than deleted: a sold offer is referenced by a ledger memo and
-        a buyer's receipt, so removing it would leave a payment nobody can
-        explain. %>
     <table class="min-w-0 mt1">
       <tbody>
         <% @archived.each do |offer| %>
@@ -257,6 +151,10 @@
     </table>
   </details>
 <% end %>
+
+<%# Terms stay on the listing so a founder publishing from the table still
+    sees them — not as a wall in front of drafting. %>
+<%= render "fuime/operator_sale_terms", event: @event, confirmable: @can_manage %>
 
 <% unless @can_manage %>
   <p class="muted mt2">

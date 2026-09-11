@@ -76,7 +76,7 @@ function securityHeaders(res) {
 // somebody's browser cache.
 const REDIRECTS = new Map([
   ['/login', `${APP_ORIGIN}/users/auth`],
-  ['/signup', `${APP_ORIGIN}/users/auth`],
+  ['/signup', `${APP_ORIGIN}/users/auth?signup=true`],
 ])
 
 // The dive moved to /, so start.html no longer sits where the generic .html

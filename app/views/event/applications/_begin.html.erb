@@ -53,30 +53,48 @@
       <%= form_with model: @application || false, url: "#", method: @application.present? ? :patch : :post, id: @application.present? ? "edit_application_#{@application.id}" : "create_application", class: "mt-7" do |form| %>
         <%= form.hidden_field(:referral_code, value: @referral_code) if @referral_code.present? %>
 
-        <div class="card card--outline mb-6" x-data="{ teenager: '<%= @application&.teen_led? ? "true" : @application&.teen_led? == false ? "false" : "" %>' }">
-          <%= form.label :teen_led do %>
-            Are you under 18? <span class="text-primary">*</span>
-          <% end %>
-
-          <p class="text-sm muted mt-1 mb-2">Fuime is designed for teen entrepreneurs (13-17). Adults can use Fuime too!</p>
-
-          <div class="field field--options max-w-none mb-0 relative">
-            <%= form.radio_button :teen_led, "true", { "x-model": "teenager", checked: @application&.teen_led?, required: true, class: "absolute !block opacity-0" } %>
-            <%= form.label :teen_led, value: "true" do %>
-              <strong>Yes, I'm under 18</strong>
-              <small>13-17 years old</small>
-            <% end %>
-            <%= form.radio_button :teen_led, "false", { "x-model": "teenager", checked: @application&.teen_led? == false, required: true, class: "absolute !block opacity-0" } %>
-            <%= form.label :teen_led, value: "false" do %>
-              <strong>No, I'm 18+</strong>
-              <small>Adult entrepreneur</small>
-            <% end %>
+        <%# Fuime: after the write-once 13+ checkbox, do not re-ask "are you
+            under 18?". 13+ is not adulthood — only guardian-accept sets
+            known_adult? — so teen_led defaults to true for everyone who is
+            not a known adult. Unsigned visitors still pick. %>
+        <% age_known = current_user.present? && (current_user.age_attestation.present? || current_user.birthday.present?) %>
+        <% if age_known %>
+          <%= form.hidden_field :teen_led, value: current_user.known_adult? ? "false" : "true" %>
+          <div class="card card--outline mb-6">
+            <p class="mt-0 mb-0">
+              <% if current_user.known_adult? %>
+                You're signed in as 18 or older. You can run this venture without a guardian.
+              <% else %>
+                You've confirmed you're 13 or older. Your parent or guardian is
+                the legal signer — they approve payouts, not selling.
+              <% end %>
+            </p>
           </div>
+        <% else %>
+          <div class="card card--outline mb-6" x-data="{ teenager: '<%= @application&.teen_led? ? "true" : @application&.teen_led? == false ? "false" : "" %>' }">
+            <%= form.label :teen_led do %>
+              Are you under 18? <span class="text-primary">*</span>
+            <% end %>
 
-          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'true'">Great! Your parent or guardian will be the legal signer on your account. They can see all your transactions and help with taxes.</p>
-          <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'false'">You can run your own venture on Fuime without a guardian.</p>
+            <p class="text-sm muted mt-1 mb-2">Fuime is built for teen founders (13–17).</p>
 
-        </div>
+            <div class="field field--options max-w-none mb-0 relative">
+              <%= form.radio_button :teen_led, "true", { "x-model": "teenager", checked: @application&.teen_led?, required: true, class: "absolute !block opacity-0" } %>
+              <%= form.label :teen_led, value: "true" do %>
+                <strong>Yes, I'm under 18</strong>
+                <small>13–17 years old</small>
+              <% end %>
+              <%= form.radio_button :teen_led, "false", { "x-model": "teenager", checked: @application&.teen_led? == false, required: true, class: "absolute !block opacity-0" } %>
+              <%= form.label :teen_led, value: "false" do %>
+                <strong>No, I'm 18+</strong>
+                <small>Adult founder</small>
+              <% end %>
+            </div>
+
+            <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'true'">Your parent or guardian will be the legal signer. They approve payouts; you run the business.</p>
+            <p class="text-sm muted mt-3 mb-0" x-show="teenager == 'false'">You can run your own venture on Fuime without a guardian.</p>
+          </div>
+        <% end %>
       <% end %>
     </div>
 
