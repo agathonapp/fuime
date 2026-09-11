@@ -36,7 +36,7 @@ module Fuime
     # Best-effort, same reason as CohortAdmission: Submit must never 500
     # because an automatic convenience failed. The application IS submitted.
     def call
-      return Result.new(status: :already_has_venture, event: @application.event) if @application.event.present?
+      return Result.new(status: :already_has_venture, event: @application.event) if @application.event_id.present?
 
       admit!
     rescue => e

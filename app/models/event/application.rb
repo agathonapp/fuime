@@ -412,7 +412,7 @@ class Event
       return "Add your information" if address_country.blank?
       return "Review and submit" if draft?
       return "Sign the Fuime agreement" if contract.present? && ((submitted? && teen_led?) || (approved? && !teen_led?))
-      return "Start selling!" if event.present?
+      return "Start selling!" if event_id.present?
       return "" if rejected?
 
       # Submitted / under review / approved, but no Event yet. Under Fuime this
@@ -573,7 +573,11 @@ class Event
     def activation_blockers
       blockers = []
 
-      blockers << "this application already has a business" if event.present?
+      # `event_id`, not `event.present?`. Event.create!(application: self) can
+      # leave an unsaved Event on the association when create raises; that
+      # ghost is present? but is not a business. Admin activate then refused
+      # first-venture applications that had none.
+      blockers << "this application already has a business" if event_id.present?
 
       if contract.present? && !contract.signed?
         blockers << "the contract must be signed before activation"
@@ -684,7 +688,7 @@ class Event
       end
 
       self.with_lock do
-        raise ArgumentError.new("Event was already created") if event.present?
+        raise ArgumentError.new("Event was already created") if event_id.present?
 
         # With no contract there is no `hcb` party to fall back to, so an
         # activation without an explicit point of contact would raise on nil.

@@ -2,7 +2,15 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Draft without vetting; publish still reviewed.**
+**2026-09-11 (latest) — Submit-only auto-admit; rebase onto #101.**
+
+FounderAdmission runs only after `mark_submitted` (a flag, not every
+`aasm_state` write). Factory/admin `update!(aasm_state: :approved)` no
+longer steals the Event. `activation_blockers` keys on `event_id` so an
+unsaved ghost Event is not "already has a business". Publish still
+needs human review. Rebased onto main (#101 Connect hide).
+
+**2026-09-11 — Draft without vetting; publish still reviewed.**
 
 FounderAdmission still stands the venture up on submit (no "Waiting on
 Fuime"). Unvetted founders can draft the full offer wizard. Publish and
