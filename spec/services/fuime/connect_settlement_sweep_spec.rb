@@ -6,6 +6,8 @@ require "rails_helper"
 # The gap it closes was found empirically: a real $25 test charge produced a
 # pending line and a venture balance of $0.00, forever (docs/fuime/STRIPE_PASS.md).
 RSpec.describe Fuime::ConnectSettlementSweep do
+  include HcbShortCodeIsolation
+
   let(:guardian) { create(:user, birthday: 40.years.ago.to_date) }
   let(:venture) { create(:event, name: "Sweep Venture") }
 
@@ -22,17 +24,11 @@ RSpec.describe Fuime::ConnectSettlementSweep do
   # spec is proving. Stub it so a leftover Ledger::Item cannot fail a settle.
   before { allow(Rails.error).to receive(:unexpected) }
 
-  # Same isolation as payables_ledger_spec: a unique HCB-xxxxx in the memo
-  # gives the settled CanonicalTransaction its own short_code. Without one,
-  # assign_ledger_item can collide with a seed or leftover Ledger::Item
-  # (CI shard flake: "calculated a different ledger item from its local_hcb_code").
+  # Same isolation as payables_ledger_spec. The token must already own an
+  # HcbCode + Ledger::Item — a bare unused string falls through to HCB-000
+  # and UniqueViolation-collides (see spec/support/hcb_short_code_isolation.rb).
   def unique_hcb_short_code
-    loop do
-      token = SecureRandom.alphanumeric(5).upcase
-      unless Ledger::Item.exists?(short_code: token) || HcbCode.exists?(short_code: token)
-        break token
-      end
-    end
+    isolated_hcb_short_code
   end
 
   def isolated_memo(text)

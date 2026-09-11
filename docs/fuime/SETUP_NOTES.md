@@ -2,7 +2,15 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — No-code submit is FounderAdmission, not a queue.**
+**2026-09-11 (latest) — Isolate sweep/payables HCB short_codes for real.**
+
+Shards 7/8 flaked on `assign_ledger_item` (UniqueViolation / unexpected
+mismatch). A memo `HCB-xxxxx` that no HcbCode owns falls through to
+`HCB-000` and a random short_code. Specs now pre-create the HcbCode and
+Ledger::Item (`spec/support/hcb_short_code_isolation.rb`). Spec-only;
+ledger engine untouched. Did not touch Plaid / Connect / Stripe mode.
+
+**2026-09-11 — No-code submit is FounderAdmission, not a queue.**
 
 `cohort_admission_spec` still expected `event` nil when no invite code.
 That was the old "Waiting on Fuime" queue, and it only stayed green
