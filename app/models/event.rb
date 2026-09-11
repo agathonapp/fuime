@@ -881,6 +881,27 @@ class Event < ApplicationRecord
     selling_blockers.empty?
   end
 
+  # Playground Mode (`demo_mode`) is a product demo, not a payment-ready
+  # venture. `accepts_payments?` stays false so live Stripe is never used.
+  # Listings and the share/storefront click-through are still allowed unless
+  # an admin has frozen, hidden, or suspended the venture.
+  def playground_listing_allowed?
+    demo_mode? && !financially_frozen? && !hidden? &&
+      !operator_vetting_suspended? && !operator_vetting_rejected?
+  end
+
+  # Storefront / payment-page Buy button. Real charges still require
+  # `accepts_payments?`; playground shows the button and Checkout mocks.
+  def show_public_pay_button?
+    accepts_payments? || playground_listing_allowed?
+  end
+
+  # Operator-facing "why you can't publish" list. Playground may list; the
+  # demo-venture administrative blocker must not look like a broken shop.
+  def offer_publish_blockers
+    playground_listing_allowed? ? [] : selling_blockers
+  end
+
   # Fuime: why this venture may not sell right now, if it may not.
   #
   # Always includes vetting — a human approving each operator is the compensating

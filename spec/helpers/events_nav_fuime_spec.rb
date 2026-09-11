@@ -114,6 +114,58 @@ RSpec.describe EventsHelper, type: :helper do
     end
   end
 
+  describe "#events_nav on a MoR family venture", :merchant_of_record do
+    let(:teen) { create(:user, birthday: 16.years.ago.to_date, verified: true) }
+    let(:event) { create(:event, plan_type: Event::Plan::Standard, is_public: true) }
+
+    before do
+      create(:organizer_position, event:, user: teen, role: :manager)
+      allow(::StripeService).to receive(:live?).and_return(true)
+      allow(::Fuime::PlaidLinkService).to receive(:collectable?).and_return(false)
+    end
+
+    def nav_labels_for(user)
+      viewer = user
+      venture = event
+      view = helper
+      view.instance_variable_set(:@event, venture)
+      view.define_singleton_method(:organizer_signed_in?) { |_event = nil, as: :reader| true }
+      view.define_singleton_method(:current_user) { viewer }
+      view.define_singleton_method(:policy) { |record| Pundit.policy!(viewer, record) }
+
+      view.events_nav(venture).map { |item| item[:name] || item[:section] || item[:dropdown] }
+    end
+
+    it "keeps What you sell and hides dead Receive / Spend leftovers" do
+      labels = nav_labels_for(teen)
+
+      expect(labels).to include("What you sell")
+      expect(labels).to include("Home")
+
+      expect(labels).not_to include("Receive")
+      expect(labels).not_to include("Donations")
+      expect(labels).not_to include("Invoices")
+      expect(labels).not_to include("Check deposits")
+      expect(labels).not_to include("Spend")
+      expect(labels).not_to include("Reimbursements")
+      expect(labels).not_to include("Add funds")
+      expect(labels).not_to include("Account numbers")
+      expect(labels).not_to include("Perks")
+      expect(labels).not_to include("Google Workspace")
+      expect(labels).not_to include("Grants")
+      expect(labels).not_to include("Transfers")
+      expect(labels).not_to include("Contractors")
+    end
+
+    it "hides Add funds even when an admin is looking at a family venture" do
+      admin = create(:user, :make_admin)
+
+      labels = nav_labels_for(admin)
+      expect(labels).not_to include("Add funds")
+      expect(Pundit.policy!(admin, event).fund_school?).to be(true)
+    end
+  end
+
   describe "the tagged nav items" do
     # A typo'd `module_prefix` would silently never match, leaving a dead link in
     # place while looking like it had been handled.

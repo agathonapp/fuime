@@ -52,7 +52,7 @@ module Fuime
       # Whether a payer can actually be charged. `is_public` alone is not enough:
       # it defaults to true, so every activated venture looked payment-ready
       # before any guardian had set payments up.
-      @accepts_payments = @event.accepts_payments?
+      @accepts_payments = @event.show_public_pay_button?
 
       # What this business sells, in the operator's own order.
       #

@@ -386,7 +386,9 @@ module Fuime
     end
 
     def only_a_selling_venture_may_publish
-      return if event.blank? || event.accepts_payments?
+      return if event.blank?
+      return if event.playground_listing_allowed?
+      return if event.accepts_payments?
 
       errors.add(:base, "This business can't take payments yet, so its offers can't go live.")
     end

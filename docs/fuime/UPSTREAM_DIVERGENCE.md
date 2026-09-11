@@ -5917,3 +5917,23 @@ to sell, then says we'll do a quick review before they go live.
 | Pre-create HcbCode+Ledger::Item for spec memos | Bare `HCB-xxxxx` tokens fall through to HCB-000 and flake assign_ledger_item | `spec/support/hcb_short_code_isolation.rb`, `spec/services/fuime/connect_settlement_sweep_spec.rb`, `spec/services/fuime/payables_ledger_spec.rb` |
 | FounderProgress founder copy | Draft first, then review — not "waiting on Fuime" | `app/services/fuime/founder_progress.rb` |
 | Selling-blockers / review copy | Same posture in the operator UI | `app/views/fuime/_selling_blockers.html.erb`, `app/views/fuime/offers/wizard/review.html.erb` |
+
+## 2026-09-11 — Nav honesty + Playground Mode product demo
+
+Family MoR sidebar showed an empty RECEIVE header (section proc ORed
+`invoices?` / check-deposit index while `module_prefix` items were
+stripped) and SPEND with only Reimbursements. Reimbursements are not
+in DisabledModules on purpose, but they pay out through Column book
+transfers + ACH from the HCB clearinghouse — not a live family MoR
+flow. Playground was ledger-only; pitch demos need offers / wizard /
+storefront / share on the same production app without flipping Stripe
+to test or standing up a second Render.
+
+| Change | Why | Files |
+|---|---|---|
+| Drop empty nav sections after DisabledModules filter | Empty RECEIVE/SPEND headers | `app/helpers/events_helper.rb` |
+| Hide reimbursements / contractor payments unless sponsor banking | Cannot move money on MoR | `app/helpers/events_helper.rb`, `app/views/events/show.html.erb` |
+| Hide Add funds unless school + connected account | Admin short-circuit showed it on Fuime HQ | `app/helpers/events_helper.rb` |
+| `EventPolicy#invoices?` false | Close the overview the way donations were closed | `app/policies/event_policy.rb` |
+| Playground may publish listings; checkout mocks | Product click-through, never live Stripe | `app/models/fuime/offer.rb`, `app/models/event.rb`, `app/controllers/fuime/checkouts_controller.rb` |
+| `Fuime::Playground` + `/admin/playground` | Seed + Become while Stripe is live | `app/services/fuime/playground.rb`, `app/controllers/admin/playground_controller.rb` |

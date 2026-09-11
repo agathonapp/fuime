@@ -64,6 +64,12 @@ module Fuime
       return "Set up the business (automatic admission didn't run)." if event.nil?
       return "Approve them to sell — vetting is #{event.operator_vetting_status}." unless vetted?
 
+      if event.demo_mode?
+        return "Publish something to sell — nothing is listed yet." unless listed?
+
+        return "Share the pay link — Playground Mode, no real charges."
+      end
+
       blockers = event.selling_blockers
       return blockers.first if blockers.any?
 
@@ -86,6 +92,12 @@ module Fuime
 
       return "Add something to sell." unless has_offer?
       return "We'll do a quick review before you go live." unless vetted?
+
+      if event.demo_mode?
+        return "Publish something so people can buy it." unless listed?
+
+        return "Share your pay link — Playground Mode, no real charges."
+      end
 
       blockers = event.selling_blockers
       return blockers.first if blockers.any?

@@ -10,7 +10,7 @@
 
     Usage: <%%= render "fuime/selling_blockers", event: @event %> %>
 
-<% blockers = event.selling_blockers %>
+<% blockers = local_assigns.fetch(:blockers) { event.offer_publish_blockers } %>
 
 <% if blockers.any? %>
   <%= render "application/callout", type: "warning", title: "This business can't take payments yet" do %>

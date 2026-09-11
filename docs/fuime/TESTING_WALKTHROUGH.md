@@ -7,6 +7,7 @@ do not treat this file as a second copy.
 | If you want… | Open |
 |---|---|
 | The click-through | **`rake fuime:demo`** then **`/admin/demo`** |
+| A billionaire pitch on **live** Stripe (same Render) | **`rake fuime:playground`** then **`/admin/playground`** — Become Maya → What you sell → share / storefront Buy (no real charge) |
 | MoR sale → ledger (`stripe listen`) | `MOR_WEBHOOK_PASS.md` |
 | Connect / cards / payouts against Stripe | `STRIPE_PASS.md` |
 | Automated lock on the seed + checklist | `spec/services/fuime/demo_sandbox_spec.rb`, `spec/requests/fuime_demo_sandbox_smoke_spec.rb` |

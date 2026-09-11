@@ -200,6 +200,16 @@ RSpec.describe Fuime::OffersController, type: :controller do
       expect(offer.reload).to be_published
       expect(flash[:notice]).to match(/live on your storefront/)
     end
+
+    it "publishes on a Playground venture and sends the operator to share" do
+      event.update!(demo_mode: true, is_public: true)
+      offer = create(:fuime_offer, event:, name: "Weekend mow")
+
+      post :publish, params: { event_slug: event.slug, id: offer.id }
+
+      expect(offer.reload).to be_published
+      expect(response).to redirect_to(fuime_offer_share_path(event_slug: event.slug, id: offer.id))
+    end
   end
 
   describe "scoping" do

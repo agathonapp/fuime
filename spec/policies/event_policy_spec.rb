@@ -36,6 +36,11 @@ RSpec.describe EventPolicy, type: :policy do
       expect(policy.donation_overview?).to eq(false)
     end
 
+    it "denies the Invoices overview even though the plan enables invoices" do
+      expect(event.plan.invoices_enabled?).to eq(true)
+      expect(policy.invoices?).to eq(false)
+    end
+
     it "denies the Google Workspace overview even though the plan enables it" do
       expect(event.plan.google_workspace_enabled?).to eq(true)
       expect(policy.g_suite_overview?).to eq(false)
