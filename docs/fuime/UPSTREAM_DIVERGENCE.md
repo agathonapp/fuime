@@ -5778,6 +5778,7 @@ Guardian agreement §5 is a new versioned partial (`2026-09-11-v3`).
 | Marketing + app legal/footer copy | Site described Connect + test mode; production is MoR + live Checkout | `site/*.html`, `app/views/static_pages/*`, `app/views/application/_footer.html.erb`, `app/views/fuime/*` |
 | Guardian agreement v3 | Do not rewrite signed v2; §5 now states seller / legal payee / payable | `app/views/guardianships/agreements/_2026_09_11_v3.html.erb`, `app/models/guardianship.rb` |
 | Shared status/ownership helpers | One seam for the seller sentence | `app/helpers/fuime_helper.rb` |
+| Checkout + sold-by merchant name | Receipts/Checkout said "sold by Fuime"; storefront said Fuime LLC | `app/services/fuime/payment_link_service.rb`, `app/views/fuime/_seller_of_record.html.erb`, `app/views/layouts/fuime_payment_page.html.erb` |
 
 ## 2026-09-10 — G10: MoR Checkout webhook posts the first sale
 
