@@ -21,6 +21,7 @@
 
 <% if @selling_blockers.any? %>
   <%= render "fuime/selling_blockers", event: @event,
+                                       blockers: @selling_blockers,
                                        title: "You can't publish offers yet" %>
 <% end %>
 

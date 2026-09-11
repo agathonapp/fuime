@@ -188,6 +188,31 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
         expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_123")
       end
     end
+
+    context "Playground Mode" do
+      let(:playground) { create(:event, :demo_mode, slug: "pitch-lawn", is_public: true) }
+      let!(:offer) { create(:fuime_offer, event: playground, name: "Front lawn") }
+
+      before do
+        expect(offer.publish!).to be(true)
+        allow(Fuime::PaymentLinkService).to receive(:new)
+      end
+
+      it "never starts live Stripe Checkout" do
+        post :create, params: { slug: playground.slug, offer_token: offer.to_param }
+
+        expect(Fuime::PaymentLinkService).not_to have_received(:new)
+        expect(response).to redirect_to(fuime_payment_page_path(event_slug: playground.slug, offer: offer.to_param, paid: 1))
+        expect(flash[:notice]).to match(/Playground Mode/i)
+      end
+
+      it "still refuses a missing offer without calling Stripe" do
+        post :create, params: { slug: playground.slug, offer_token: "no-such-offer" }
+
+        expect(Fuime::PaymentLinkService).not_to have_received(:new)
+        expect(flash[:alert]).to match(/isn't for sale/i)
+      end
+    end
   end
 
 end

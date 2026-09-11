@@ -215,8 +215,15 @@ module EventsHelper
       tooltip: "Put money into your school's account so you can award it",
       icon: "bank-account",
       symbol: :funding,
+      # School treasury via a connected-account top-up. Admins used to see this
+      # on family ventures because EventPolicy#fund_school? shorts out true for
+      # staff — which is how Fuime HQ grew a dead "Add funds" link. Require the
+      # structural facts (a school that owns a Stripe account), not just the
+      # policy, so a family MoR venture never advertises it.
       available_proc: lambda { |event|
-        policy(event).fund_school? && organizer_signed_in?
+        event.institutionally_sponsored? &&
+          event.stripe_connected_account.present? &&
+          policy(event).fund_school? && organizer_signed_in?
       }
     },
     # Fuime: business cards.
@@ -371,7 +378,10 @@ module EventsHelper
       tooltip: "Send & transfer money",
       icon: "payment-transfer",
       symbol: :payments,
-      available_proc: ->(event) { policy(event).payments? }
+      # Flipper can show this while ACH/wires stay in DisabledModules — a
+      # contractor payment that cannot originate is a trap page. Same rail as
+      # Transfers; restore with FEATURE_SPONSOR_BANKING.
+      available_proc: ->(event) { policy(event).payments? && ::Fuime::Features.sponsor_banking? }
     },
     {
       name: "Contractors",
@@ -380,7 +390,7 @@ module EventsHelper
       icon: "person-badge",
       symbol: :contractors,
       beta: true,
-      available_proc: ->(event) { policy(event).contractors? }
+      available_proc: ->(event) { policy(event).contractors? && ::Fuime::Features.sponsor_banking? }
     },
     {
       name: "Reimbursements",
@@ -389,7 +399,11 @@ module EventsHelper
       tooltip: "Reimburse team members & volunteers",
       icon: "reimbursement",
       symbol: :reimbursements,
-      available_proc: ->(event) { policy(event).reimbursements? }
+      # Hide-nav, not DisabledModules (FUIME_HACKATHON_SPEC). Reports can be
+      # written, but payout is Column book transfers + ACH/check/wire from the
+      # HCB reimbursements clearinghouse — none of which Fuime has without a
+      # sponsor bank. A family MoR venture cannot fund or send one.
+      available_proc: ->(event) { policy(event).reimbursements? && ::Fuime::Features.sponsor_banking? }
     },
     {
       section: "",
@@ -502,7 +516,9 @@ module EventsHelper
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "reimbursements") },
           tooltip: "Edit reimbursement page and review requirements",
           symbol: :settings_reimbursements,
-          available_proc: ->(event) { event.approved? && event.plan.reimbursements_enabled? }
+          available_proc: ->(event) {
+            event.approved? && event.plan.reimbursements_enabled? && ::Fuime::Features.sponsor_banking?
+          }
         },
         {
           name: "Card grants",
@@ -583,8 +599,8 @@ module EventsHelper
   end
 
   def events_nav(event = @event, selected: nil)
-    NAV_ITEMS.reject { |i| fuime_module_hidden?(i[:module_prefix]) }
-             .select { |i| instance_exec(event, &i[:available_proc]) }.map do |item|
+    items = NAV_ITEMS.reject { |i| fuime_module_hidden?(i[:module_prefix]) }
+                     .select { |i| instance_exec(event, &i[:available_proc]) }.map do |item|
       item.dup.tap do |h|
         if h[:dropdown].present?
           h[:dropdown_items] = h[:dropdown_items].reject { |i| fuime_module_hidden?(i[:module_prefix]) }
@@ -603,6 +619,25 @@ module EventsHelper
         h[:async_badge] = instance_exec(event, &h[:async_badge_proc]) if h[:async_badge_proc].present?
         h[:tooltip] = instance_exec(event, &h[:dynamic_tooltip]) if h[:dynamic_tooltip].present?
       end
+    end
+
+    # Section headers decide visibility independently of their items. Receive
+    # ORs invoices?/check_deposits while DisabledModules strips those items —
+    # which is how an empty RECEIVE header appeared on every family venture.
+    # Drop a section that has no following link or dropdown before the next
+    # section (or the end). Same for SPEND once reimbursements are hidden.
+    reject_empty_nav_sections(items)
+  end
+
+  def reject_empty_nav_sections(items)
+    items.reject.with_index do |item, index|
+      next false unless item.key?(:section)
+
+      following = items[(index + 1)..] || []
+      # `section: ""` is still a section (the divider before Team). A blank
+      # string is `.blank?`, so we key off Hash#key? rather than the value.
+      children = following.take_while { |child| !child.key?(:section) }
+      children.none? { |child| child[:name].present? || child[:dropdown].present? }
     end
   end
 

@@ -21,14 +21,15 @@
     <% if @event&.demo_mode? && !@no_app_shell && !@no_transparency_header %>
       <div class="w-full dev-banner dev-banner--info rounded-b no-underline">
         <div class="flex flex-col md:flex-row gap-y-2 gap-x-6 py-6 items-center justify-center">
-          <%= link_to "#playground-callout", class: "no-underline text-[inherit] hover:text-[inherit]" do %>
+          <%= link_to fuime_offers_path(event_slug: @event.slug), class: "no-underline text-[inherit] hover:text-[inherit]" do %>
             <p class="font-semibold text-xl m0">Playground Mode</p>
+            <p class="m0 text-sm opacity-80">Nothing here moves real money. List something, share it, click Buy.</p>
           <% end %>
-          <%# Always the transactions page, not the current one. Upstream linked
-              to `{ show_mock_data: ... }` — the page you are already on — and the
-              mock ledger only renders on transactions, so clicking this from the
-              org home (where everyone starts) set the flag and visibly did
-              nothing at all. %>
+          <%# Product path first. Mock ledger remains available on Transactions. %>
+          <%= link_to fuime_offers_path(event_slug: @event.slug),
+                      class: "btn btn-small w-fit shrink-none nowrap" do %>
+            What you sell
+          <% end %>
           <%= link_to(event_transactions_path(event_id: @event.slug, show_mock_data: !show_mock_data?),
                       class: "btn btn-small w-fit shrink-none nowrap") do %>
             <%= inline_icon "view" %>

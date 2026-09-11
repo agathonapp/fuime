@@ -1,0 +1,80 @@
+<% title "Pitch playground (Fuime)" %>
+
+<%# FUIME: product demo on the same production app. Become is existing
+    admin impersonate. Safe while Stripe is live. %>
+
+<% impersonating = current_session&.impersonated? %>
+<% event = @status[:event] %>
+<% teen = @status[:teen] %>
+
+<h1>Pitch playground</h1>
+
+<p>
+  Same production app. <code>Event#demo_mode</code> — not a second Render,
+  not <code>FUIME_DEMO_SANDBOX</code>, not test-mode Stripe.
+  <strong>Become</strong> uses impersonate. Checkout never charges.
+</p>
+
+<p class="muted">
+  Stripe <strong><%= @status[:stripe_live] ? "live" : "test" %></strong>
+  · slug <code><%= @status[:slug] %></code>
+  · <%= event ? "ready" : "not seeded" %>
+</p>
+
+<% if impersonating %>
+  <div class="card mb2">
+    <p class="mb0">
+      You are impersonating
+      <strong><%= current_user(allow_unverified: true)&.name %></strong>.
+      <%= button_to "Back to admin",
+                    unimpersonate_user_path(current_user(allow_unverified: true)&.id, return_to: playground_admin_index_path),
+                    method: :post,
+                    class: "btn bg-accent",
+                    form: { data: { turbo_frame: "_top" } } %>
+    </p>
+  </div>
+<% end %>
+
+<div class="card mb2">
+  <%= button_to event ? "Refresh sample products" : "Seed pitch venture",
+                playground_seed_admin_index_path,
+                method: :post,
+                class: "btn bg-success" %>
+  <p class="muted text-sm mb0 mt1">
+    Idempotent. Creates <code><%= @status[:slug] %></code>, Maya + parent,
+    a published offer and a draft. No Stripe calls.
+  </p>
+</div>
+
+<% if event && teen %>
+  <div class="card mb2">
+    <h2 class="mt0 text-lg">Become Maya and click</h2>
+    <ol>
+      <li>
+        <%= button_to "Become Maya",
+                      impersonate_user_path(teen.id, return_to: event_path(event)),
+                      method: :post,
+                      class: "btn bg-accent",
+                      form: { data: { turbo_confirm: "Impersonate Maya on the playground venture?", turbo_frame: "_top" } } %>
+      </li>
+      <li><%= link_to "Home", event_path(event) %></li>
+      <li><%= link_to "What you sell", fuime_offers_path(event_slug: event.slug) %> — list, wizard, share</li>
+      <li><%= link_to "Add something to sell", new_fuime_offer_path(event_slug: event.slug) %></li>
+      <li><%= link_to "Storefront", fuime_storefront_path(slug: event.slug) %> — Buy is a mock success</li>
+    </ol>
+    <p class="muted text-sm mb0">
+      <%= @status[:published] %> published /
+      <%= @status[:offers].size %> live offers.
+      Discover excludes <code>demo_mode</code>.
+    </p>
+  </div>
+<% end %>
+
+<div class="card mb2">
+  <h2 class="mt0 text-lg">Any existing venture</h2>
+  <p class="mb0">
+    Settings → Admin → <strong>Is in Playground Mode?</strong> then seed
+    products here, or list offers yourself. Publish works; live Checkout
+    does not.
+  </p>
+</div>

@@ -302,8 +302,12 @@ class EventPolicy < ApplicationPolicy
     record.approved? && record.plan.donations_enabled? && record.donation_page_enabled?
   end
 
+  # FUIME-DISABLED: invoices. Same money-correctness reason as
+  # Fuime::DisabledModules — an invoice payment never becomes an operator
+  # payable under MoR. Writes were already blocked; this closes the overview
+  # page the way donation_overview? does, so a typed URL is not a jank page.
   def invoices?
-    show? && record.approved? && (record.plan.invoices_enabled? || record.invoices.any?)
+    false
   end
 
   def account_number?

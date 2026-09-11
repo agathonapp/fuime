@@ -534,6 +534,10 @@ Rails.application.routes.draw do
       post "demo/reset", to: "admin/demo#reset", as: "demo_reset"
       post "demo/login_code", to: "admin/demo#login_code", as: "demo_login_code"
       post "demo/remind", to: "admin/demo#remind", as: "demo_remind"
+      # FUIME: Playground Mode pitch venture. Safe while Stripe is live —
+      # does not call DemoSandbox.guard_enabled!.
+      get "playground", to: "admin/playground#show"
+      post "playground/seed", to: "admin/playground#seed", as: "playground_seed"
       # FUIME: cohorts — one person vouching for a group in advance, so an event
       # does not need 150 clicks while it is running. See Fuime::Cohort.
       # `cohort` doubles as the live roster board: where every founder is stuck.

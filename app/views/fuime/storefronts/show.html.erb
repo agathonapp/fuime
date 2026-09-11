@@ -14,6 +14,13 @@
 <% end %>
 
 <div class="max-w-3xl mx-auto py-8 px-4">
+  <% if @event.demo_mode? %>
+    <div class="card border b--info mb-6 text-center">
+      <p class="mt-0 mb-0 font-semibold">Playground Mode</p>
+      <p class="muted mb-0 text-sm">Sample shop — Buy does not charge a real card.</p>
+    </div>
+  <% end %>
+
   <%# Header %>
   <div class="text-center mb-8">
     <% if @event.logo.attached? %>

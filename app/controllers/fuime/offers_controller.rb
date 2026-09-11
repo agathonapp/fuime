@@ -44,7 +44,7 @@ module Fuime
       # only on this authenticated page — `Event#selling_blockers` names operators
       # and states their ages, and must never reach a public page (see
       # spec/controllers/fuime/storefront_blocker_privacy_spec.rb).
-      @selling_blockers = @event.selling_blockers
+      @selling_blockers = @event.offer_publish_blockers
 
       # /learn templates still link here with words in the query string. The
       # create form no longer lives on this page — send them into the wizard
@@ -65,7 +65,7 @@ module Fuime
 
       @step = wizard_step
       @offer = wizard_offer
-      @selling_blockers = @event.selling_blockers
+      @selling_blockers = @event.offer_publish_blockers
       @can_manage = true
       render "fuime/offers/wizard/#{@step}"
     end
@@ -75,7 +75,7 @@ module Fuime
 
       @step = wizard_step
       @offer = wizard_offer
-      @selling_blockers = @event.selling_blockers
+      @selling_blockers = @event.offer_publish_blockers
       @can_manage = true
 
       case @step

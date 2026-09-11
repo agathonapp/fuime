@@ -2,7 +2,19 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Isolate sweep/payables HCB short_codes for real.**
+**2026-09-11 (latest) — Nav honesty + Playground product demo.**
+
+Empty RECEIVE was invoices?/check_deposits staying true after
+DisabledModules stripped the items. `events_nav` now drops empty
+sections. Reimbursements hidden (Column/ACH clearinghouse — not a
+family MoR money flow). Add funds hidden unless the venture is a
+school that owns a connected account. Playground is per-venture
+`demo_mode` on this deploy: `rake fuime:playground` or
+`/admin/playground` (safe on live Stripe). Pitch path: Become Maya →
+Home → What you sell → wizard/share → storefront Buy (mock, no
+Checkout). Did not flip STRIPE_MODE or FEATURE_MERCHANT_OF_RECORD.
+
+**2026-09-11 — Isolate sweep/payables HCB short_codes for real.**
 
 Shards 7/8 flaked on `assign_ledger_item` (UniqueViolation / unexpected
 mismatch). A memo `HCB-xxxxx` that no HcbCode owns falls through to
