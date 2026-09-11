@@ -1,0 +1,13 @@
+Hello,
+
+Fuime has reviewed <%= @event.name %> and approved it to sell. <% if @can_publish %>You can publish your first offer now.<% else %>Your "What you sell" page lists anything that still needs sorting before you can publish.<% end %>
+
+Publish your first offer:
+<%= @offers_url %>
+
+Your pay link appears on that page as soon as an offer is published. Paste it in a bio, a group chat or a flyer.
+
+Questions? Reply to this email or write to <%= @support_email %>.
+
+Thanks,
+The Fuime team

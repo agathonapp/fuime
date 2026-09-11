@@ -59,6 +59,34 @@ RSpec.describe "billing page", type: :request do
     expect(Fuime::Subscription.count).to eq(0)
   end
 
+  # An invited parent who has not signed yet is not a known adult —
+  # `known_adult?` is set in exactly one place, the guardian accept — so this
+  # page read them as a minor and told them to "ask a parent". The ordering is
+  # right; it was never explained (ONBOARDING_PLAN §2 #11).
+  #
+  # Tagged because this is only reachable under merchant-of-record, which is the
+  # production posture: with the flag off, Fuime::GuardianshipEnforcement bounces
+  # an unknown-age user to /guardian/new before this controller runs at all.
+  it "tells an invited-but-unsigned guardian to accept first, and refuses to bill them yet", :merchant_of_record do
+    invited_parent = create(:user, :unknown_age, verified: true)
+    another_teen = create(:user, birthday: 14.years.ago.to_date, verified: true)
+    Guardianship.create!(guardian: invited_parent, minor: another_teen) # pending
+
+    login_as!(invited_parent)
+
+    get my_billing_path
+    expect(response.body).to include("once you've accepted a guardian invitation")
+    expect(response.body).to include("confirms you're the adult on the account")
+    expect(response.body).to include(guardianships_path)
+    expect(response.body).not_to include("Upgrade —")
+    expect(response.body).not_to include("ask them to upgrade")
+
+    post my_billing_subscribe_path
+    expect(response).to redirect_to(my_billing_path)
+    expect(flash[:alert]).to eq("You can upgrade once you've accepted a guardian invitation — that's what confirms you're the adult on the account.")
+    expect(Fuime::Subscription.count).to eq(0)
+  end
+
   # Staff have no birthday on file, and the age check is fail-closed, so before
   # User#staff? every Fuime admin was shown "ask your parent" on their own
   # subscription page and could not buy the plan they sell.

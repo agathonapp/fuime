@@ -28,12 +28,23 @@
   and owes the rest to the venture as a payable.
 </p>
 
+<%# Fuime: what the guardian gates differs by money model (L8). Under
+    merchant-of-record a teen can set up and, once Fuime approves the business,
+    sell before a parent has accepted; the parent gates payouts
+    (Event#payout_setup_blockers). Under Connect the parent must accept before
+    the venture activates (Event::Application#activation_blockers). %>
+<% merchant_of_record = ::Fuime::Features.merchant_of_record? %>
 <h2>Who can use Fuime?</h2>
 <p>
   Anyone 13 or older. If you are under 18 you need a parent or legal guardian
-  on your account before you can run a business. We do not accept anyone under
-  13, and we ask you to confirm you are 13 or older when you sign up. We do not
-  ask for your date of birth.
+  on your account
+  <% if merchant_of_record %>
+    before any money is paid out to your business.
+  <% else %>
+    before you can run a business.
+  <% end %>
+  We do not accept anyone under 13, and we ask you to confirm you are 13 or
+  older when you sign up. We do not ask for your date of birth.
 </p>
 
 <h2>Why do I need a parent on the account?</h2>
@@ -41,8 +52,14 @@
   Because a minor cannot legally sign the agreements a business needs. Your
   parent or guardian is the adult who takes legal responsibility, which is what
   makes the whole thing work. They accept the
-  <%= link_to "Guardian Agreement", guardian_agreement_path %>, and until they
-  do, you cannot create a business.
+  <%= link_to "Guardian Agreement", guardian_agreement_path %>.
+  <% if merchant_of_record %>
+    You can set up your business and, once Fuime approves it, start selling
+    while you wait for them — but nothing is paid out until they have accepted
+    and set up where the money goes.
+  <% else %>
+    Until they do, you cannot create a business.
+  <% end %>
 </p>
 
 <h2>What can my parent see?</h2>
@@ -54,8 +71,16 @@
 
 <h2>Can my parent change their mind?</h2>
 <p>
-  Yes, at any time. If they withdraw consent you can no longer operate a
-  business on Fuime. Your records are not deleted automatically — see the
+  Yes, at any time.
+  <% if merchant_of_record %>
+    If they withdraw consent, no money is paid out of your business until a
+    parent or legal guardian is on the account again, and Fuime may limit what
+    you can do. A payout that was already scheduled or released when they
+    withdrew may still be sent.
+  <% else %>
+    If they withdraw consent you can no longer operate a business on Fuime.
+  <% end %>
+  Your records are not deleted automatically — see the
   <%= link_to "Privacy Policy", privacy_path %>.
 </p>
 
@@ -69,18 +94,25 @@
 </p>
 
 <h2>What does Fuime cost?</h2>
+<%# Fuime: the rate is the Free plan's, read from the plan so this page cannot
+    drift from /billing and the pricing site (PR #94); FUIME_PLATFORM_FEE_PERCENT
+    is the 5% fallback, not what a Free venture pays. The family plan is the only
+    monthly fee and it unlocks ventures and API keys, not a cheaper rate. %>
 <p>
-  Fuime keeps <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of
-  each payment processed for your business, shown as its own line on your
-  ledger so you can always see it. There is no monthly fee on Free. Every Fuime
-  fee is billed to the guardian, who is the legal payee.
+  On the Free plan Fuime keeps
+  <%= (Event::Plan::Free::REVENUE_FEE * 100).round %>% of each sale, shown as
+  its own line on your ledger so you can always see it.
+  There is no monthly fee on Free. Every Fuime fee is billed to the guardian, who
+  is the legal payee. A parent or guardian can add the family plan for
+  <%= render_money(Event::Plan::Pro.new.monthly_fee_cents) %> a month, which
+  unlocks unlimited ventures and developer API keys — it is not a cheaper rate.
 </p>
 
 <h2>Is Fuime a bank?</h2>
 <p>
-  No. Fuime is software for keeping records. It is not a bank, it does not hold
-  deposits, and money tracked in Fuime is not FDIC-insured. See our
-  <%= link_to "Terms of Service", terms_path %>.
+  No. Fuime is a financial technology company, not a bank. Fuime does not hold
+  deposits and does not offer FDIC-insured products. Payments are processed by
+  Stripe. See our <%= link_to "Terms of Service", terms_path %>.
 </p>
 
 <h2>What happens when I turn 18?</h2>

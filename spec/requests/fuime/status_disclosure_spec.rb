@@ -53,6 +53,74 @@ RSpec.describe "Status disclosure", type: :request do
     end
   end
 
+  # The accept page is the one screen a new adult reads before signing, and the
+  # layout's own comment names them as the reader the disclosure exists for.
+  # GuardianshipsController used to `hide_footer` on exactly this page.
+  describe "on the guardian invite page" do
+    # The real login dance — the SessionSupport shortcut trips over 2FA state
+    # in request specs (see spec/requests/fuime_billing_spec.rb).
+    def login_as!(user)
+      post logins_path, params: { email: user.email, login: { purpose: "" } }
+      login = Login.order(:id).last
+      post email_login_path(login)
+      code = LoginCode.active.where(user:).order(:id).last
+      post complete_login_path(login), params: { method: "email", login_code: code.code }
+      expect(User::Session.where(user:)).to exist, "login failed for #{user.email}"
+    end
+
+    let(:teen) { create(:user, :minor) }
+    let(:guardian) { create(:user, birthday: 40.years.ago.to_date, verified: true) }
+    let(:guardianship) { create(:guardianship, minor: teen, guardian:) }
+
+    it "discloses Fuime's status to the invited, signed-in guardian" do
+      login_as!(guardian)
+
+      get guardianship_path(guardianship.invite_token)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('id="guardian-accept-form"')
+      expect(response.body).to include(NOT_A_BANK)
+      expect(response.body).to include(NO_FDIC)
+      expect(response.body).to match(LEGAL_PAYEE)
+    end
+
+    # Signed out, a live link sends the parent to sign in; the page they land
+    # on carries the disclosure too, so there is no screen in the path without it.
+    it "sends a signed-out visitor to sign in, on a page that discloses Fuime's status" do
+      get guardianship_path(guardianship.invite_token)
+
+      expect(response).to redirect_to(auth_users_path(return_to: guardianship_path(guardianship.invite_token)))
+      follow_redirect!
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(NOT_A_BANK)
+      expect(response.body).to include(NO_FDIC)
+    end
+
+    # An expired link renders without a session at all — this is a signed-out
+    # page in the guardian flow proper.
+    it "discloses Fuime's status on the expired-link page to a signed-out visitor" do
+      expired = create(:guardianship, :expired_invite, minor: teen, guardian:)
+
+      get guardianship_path(expired.invite_token)
+
+      expect(response).to have_http_status(:gone)
+      expect(response.body).to include("This link has expired")
+      expect(response.body).to include(NOT_A_BANK)
+      expect(response.body).to include(NO_FDIC)
+    end
+
+    it "discloses Fuime's status on the teen's invite form" do
+      login_as!(create(:user, :attested_teen, verified: true))
+
+      get new_guardianship_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(NOT_A_BANK)
+      expect(response.body).to include(NO_FDIC)
+    end
+  end
+
   describe "on a public storefront" do
     # A payer here is being asked for a card number by a stranger's business,
     # with no account and no prior relationship with Fuime.

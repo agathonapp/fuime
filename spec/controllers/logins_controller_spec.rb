@@ -24,6 +24,40 @@ RSpec.describe LoginsController do
       get(:new)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Sign in to Fuime")
+      expect(response.body).not_to include("Start your business on Fuime")
+    end
+
+    # Fuime: the marketing site's primary CTA lands here with ?signup=true, so
+    # the page has to read like signing up, and its one promise about parents
+    # has to be true for the money model that is on
+    # (docs/fuime/ONBOARDING_PLAN.md §4.1 screen 2).
+    context "when arriving to sign up" do
+      it "reads like sign-up and, under merchant-of-record, says a teen sells once Fuime approves, before a guardian signs" do
+        allow(Fuime::Features).to receive(:merchant_of_record?).and_return(true)
+
+        get(:new, params: { signup: "true" })
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Start your business on Fuime")
+        expect(response.body).not_to include("Sign up for Fuime")
+        # Vetting is human and comes before any sale (Fuime::OperatorEligibility),
+        # so the page may not say "start selling now".
+        expect(response.body).not_to include("start selling now")
+        expect(response.body).to include("sell as soon as Fuime approves your business")
+        expect(response.body).to include("a parent or guardian signs off before you get paid")
+        # The sign-in variant is still one click away.
+        expect(response.body).to include(">Sign in<")
+      end
+
+      it "does not promise selling before the venture is live when merchant-of-record is off" do
+        allow(Fuime::Features).to receive(:merchant_of_record?).and_return(false)
+
+        get(:new, params: { signup: "true" })
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Start your business on Fuime")
+        expect(response.body).not_to include("start selling now")
+        expect(response.body).not_to include("sell as soon as Fuime approves your business")
+        expect(response.body).to include("a parent or guardian signs off before your venture goes live")
+      end
     end
   end
 
@@ -409,7 +443,7 @@ RSpec.describe LoginsController do
       end
     end
 
-    it "redirects to the user's settings page if they don't have a name or phone number" do
+    it "redirects to the profile form if they don't have a name" do
       user = create(:user, full_name: nil, phone_number: nil)
       login = create(:login, user:)
       login_code = create(:login_code, user:)
@@ -424,6 +458,27 @@ RSpec.describe LoginsController do
       )
 
       expect(response).to redirect_to(edit_user_path(user.slug))
+    end
+
+    # Fuime A2: signup asks for a name and the 13+ confirmation only, so a name
+    # is the whole test for "finished onboarding". Upstream also required a phone
+    # number here, which would have bounced every phoneless user back to the
+    # profile form on every login.
+    it "sends a user with a name and no phone number to the product" do
+      user = create(:user, full_name: "Maya Founder", phone_number: nil)
+      login = create(:login, user:)
+      login_code = create(:login_code, user:)
+
+      post(
+        :complete,
+        params: {
+          id: login.hashid,
+          method: "email",
+          login_code: login_code.code
+        }
+      )
+
+      expect(response).to redirect_to(root_path)
     end
 
     it "redirects to the auth page with a flash message if the user's account is locked" do

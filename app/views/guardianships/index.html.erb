@@ -55,15 +55,17 @@
             <%= button_to "Resend invite", resend_invite_guardianship_path(guardianship), method: :post, class: "btn bg-muted" %>
           <% end %>
 
-          <%# Withdrawing consent immediately stops the minor operating any
-              venture (User#permitted_to_operate_business? reads status live), so
-              it is confirmed rather than one click from a summary page. %>
+          <%# Withdrawing consent stops payouts under merchant-of-record
+              (Event#payout_setup_blockers reads status live) and stops the minor
+              operating any venture under Connect (User#permitted_to_operate_business?),
+              so it is confirmed rather than one click from a summary page. The
+              dialog says which. %>
           <% if policy(guardianship).revoke? %>
             <%= button_to "Withdraw consent",
                           revoke_guardianship_path(guardianship),
                           method: :post,
                           class: "btn btn--destroy",
-                          form: { data: { turbo_confirm: "Withdraw consent for #{minor.name.presence || minor.email}? They will immediately lose the ability to operate a venture on Fuime." } } %>
+                          form: { data: { turbo_confirm: (::Fuime::Features.merchant_of_record? ? "Withdraw consent for #{minor.name.presence || minor.email}? No money will be paid out of their business until a parent or guardian is on the account again." : "Withdraw consent for #{minor.name.presence || minor.email}? They will immediately lose the ability to operate a venture on Fuime.") } } %>
           <% end %>
         </div>
       </div>

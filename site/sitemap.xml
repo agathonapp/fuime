@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- URLs match the canonicals in each page's head, which means no trailing
      slash and no .html — server.js strips both. A sitemap that disagrees with
-     the canonical tag is worse than no sitemap. /start is deliberately absent:
-     it 308s to / now, and listing a redirect is the disagreement this comment
-     warns about.
+     the canonical tag is worse than no sitemap. /get-started, /start and
+     /signup are deliberately absent: each 307s to the app's sign-up, and
+     listing a redirect is the disagreement this comment warns about.
 
      Which is also why /home, /pricing and /parents left. The marketing site is
      not open yet — server.js bounces all three to / (see CLOSED) — and a

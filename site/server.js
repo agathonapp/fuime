@@ -21,8 +21,9 @@ import waitlist from './api/waitlist.js'
 const ROOT = fileURLToPath(new URL('.', import.meta.url)).replace(/[/\\]+$/, '')
 const PORT = Number(process.env.PORT) || 3000
 
-// The Rails app. /login has to leave this origin, and where it goes differs
-// between production and a PR preview, so it is config rather than a constant.
+// The Rails app. /login and /get-started have to leave this origin, and where
+// they go differs between production and a PR preview, so it is config rather
+// than a constant.
 const APP_ORIGIN = process.env.APP_ORIGIN || 'https://app.fuime.com'
 
 const TYPES = {
@@ -74,16 +75,31 @@ function securityHeaders(res) {
 // Was the "redirects" block. 307 and not 308 for the same reason as before: a
 // permanent redirect to a host we may still move is a permanent mistake in
 // somebody's browser cache.
+//
+// /get-started is the marketing pages' primary call to action. The app is open
+// — anyone can create an account at /users/auth — and ?signup=true is what
+// makes that page read like signing up rather than signing in
+// (app/views/logins/new.html.erb).
+//
+// Why a new path and not /start: for weeks /start answered "308 → /" with no
+// Cache-Control, and a 308 is exactly the redirect a browser is allowed to
+// keep forever. Any visitor who saw it may still have it, and would land on
+// the dive instead of the sign-up no matter what this file says now. A path
+// with no redirect history has no such cache to fight. /start and /signup
+// stay as 307s to the same door so every old link still works.
 const REDIRECTS = new Map([
   ['/login', `${APP_ORIGIN}/users/auth`],
+  ['/get-started', `${APP_ORIGIN}/users/auth?signup=true`],
+  ['/start', `${APP_ORIGIN}/users/auth?signup=true`],
   ['/signup', `${APP_ORIGIN}/users/auth?signup=true`],
 ])
 
 // The dive moved to /, so start.html no longer sits where the generic .html
-// rule below would put it. The old URLs still work; they just land on the one
-// canonical address.
+// rule below would put it. The old file URL still works; it just lands on the
+// one canonical address. (/start itself is no longer the dive's address: it is
+// the sign-up door in REDIRECTS above, which the handler checks before this
+// map, so an entry for it here would never be reached.)
 const INTERNAL_REDIRECTS = new Map([
-  ['/start', '/'],
   ['/start.html', '/'],
 ])
 

@@ -21,6 +21,10 @@ module Fuime
       @is_staff = current_user.staff?
       # A teen's upgrade path is their guardian; name them.
       @guardians = current_user.guardians.to_a
+      # An invited parent who has not signed yet is not known to be an adult —
+      # `known_adult?` is only ever set by GuardianshipsController#accept — so
+      # the page tells them the ordering instead of calling them a minor.
+      @pending_guardian_invite = pending_guardian_invite?
     end
 
     def subscribe
@@ -86,9 +90,23 @@ module Fuime
       current_user.known_adult? || current_user.staff?
     end
 
+    # Fuime: a parent who has been invited but has not accepted yet reads as a
+    # minor here — `known_adult?` is set in exactly one place, the guardian
+    # accept (GuardianshipsController#accept) — and was told to "ask a parent".
+    # The ordering (accept, then upgrade) is correct; it just was never said
+    # (ONBOARDING_PLAN §2 #11).
+    def pending_guardian_invite?
+      current_user.guardianships_as_guardian.pending.exists?
+    end
+
     def refuse_minor
-      redirect_to my_billing_path,
-                  alert: "The family plan is billed to a parent or guardian — ask them to upgrade from their account."
+      if pending_guardian_invite?
+        redirect_to my_billing_path,
+                    alert: "You can upgrade once you've accepted a guardian invitation — that's what confirms you're the adult on the account."
+      else
+        redirect_to my_billing_path,
+                    alert: "The family plan is billed to a parent or guardian — ask them to upgrade from their account."
+      end
     end
 
   end

@@ -10,7 +10,9 @@ import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const PORT = 8791
+// Overridable so two checkouts (or two agents) can run this at once without
+// one of them failing on EADDRINUSE and blaming the server.
+const PORT = Number(process.env.TEST_PORT) || 8791
 const BASE = `http://127.0.0.1:${PORT}`
 const SERVER = fileURLToPath(new URL('../server.js', import.meta.url))
 
@@ -90,9 +92,11 @@ try {
     }
   })
 
-  await run('nothing on the front door leads off it', async () => {
+  await run('nothing on the front door leads off it except into the app', async () => {
     // The whole point of the closure is undone by one stale href, and a link to
-    // a page that 307s back is a worse experience than no link at all.
+    // a page that 307s back is a worse experience than no link at all. The two
+    // exits that ARE allowed are the ones the page exists to offer: the sign-up
+    // door (/get-started) and /login, both of which leave for the app.
     const body = await (await get('/')).text()
     // <a> only. The head is full of hrefs that are not navigation — the
     // canonical, the preconnects, the icons — and none of them are a way out.
@@ -101,6 +105,8 @@ try {
       h => /^\/(home|pricing|parents|index)\b/.test(h) || /^https?:/.test(h)
     )
     assert.deepEqual(out, [], `front door links out: ${out.join(', ')}`)
+    assert.ok(hrefs.includes('/get-started'), 'front door has no sign-up door')
+    assert.ok(hrefs.includes('/login'), 'front door has no Log in')
   })
 
   await run('the sitemap lists only what is served', async () => {
@@ -110,10 +116,10 @@ try {
   })
 
   await run('moved pages redirect in a single hop', async () => {
-    for (const [from, to] of [
-      ['/start', '/'],
-      ['/start.html', '/'],
-    ]) {
+    // /start is no longer the dive's old address — it is the sign-up door,
+    // asserted alongside /login below — so only the file spelling is a moved
+    // page now.
+    for (const [from, to] of [['/start.html', '/']]) {
       const r = await get(from)
       assert.equal(r.status, 308, `${from} status`)
       assert.equal(r.headers.get('location'), to, `${from} -> ${to}`)
@@ -135,17 +141,32 @@ try {
     }
   })
 
-  await run('/login and /signup 307 to the app origin', async () => {
-    const login = await get('/login')
-    assert.equal(login.status, 307, '/login')
-    assert.equal(login.headers.get('location'), 'https://app.example.test/users/auth')
+  await run('/login 307s to the app origin', async () => {
+    const r = await get('/login')
+    assert.equal(r.status, 307)
+    assert.equal(r.headers.get('location'), 'https://app.example.test/users/auth')
+  })
 
-    const signup = await get('/signup')
-    assert.equal(signup.status, 307, '/signup')
-    assert.equal(
-      signup.headers.get('location'),
-      'https://app.example.test/users/auth?signup=true'
-    )
+  await run('/get-started, /start and /signup 307 to the app sign-up, not the sign-in', async () => {
+    // Same posture as /login — a 307 to the configured app origin, never a
+    // cached permanent redirect — but carrying ?signup=true, which is what
+    // turns the app's /users/auth page from "Sign in" into "Start your
+    // business" (app/views/logins/new.html.erb). Without it every visitor the
+    // marketing pages send over lands on a sign-in form.
+    //
+    // /get-started is the canonical one and the one every CTA points at: it
+    // has never answered anything but this 307, so no browser holds a stale
+    // permanent redirect for it. /start did — it was "308 → /" for weeks with
+    // no Cache-Control — which is why it is kept working but no longer linked.
+    for (const p of ['/get-started', '/start', '/signup']) {
+      const r = await get(p)
+      assert.equal(r.status, 307, p)
+      assert.equal(
+        r.headers.get('location'),
+        'https://app.example.test/users/auth?signup=true',
+        p
+      )
+    }
   })
 
   await run('canonicalises .html and trailing slashes', async () => {
@@ -170,10 +191,11 @@ try {
     // Only / is served while the marketing site is closed, and the other three
     // are read off disk rather than dropped: they are coming back, and a
     // closure that quietly halves this file's coverage is how they come back
-    // broken. Swap these for fetches when CLOSED empties.
+    // broken. Swap these for fetches when CLOSED empties. start-scroll is
+    // public (PUBLIC_FILES) but not the front door, so it is read the same way.
     const pages = [
       ['/', await (await get('/')).text()],
-      ...['index', 'pricing', 'parents'].map(n => [
+      ...['index', 'pricing', 'parents', 'start-scroll'].map(n => [
         `${n}.html`,
         readFileSync(fileURLToPath(new URL(`../${n}.html`, import.meta.url)), 'utf8'),
       ]),
@@ -183,6 +205,55 @@ try {
       const planes = (body.match(/class="capture__plane"/g) || []).length
       assert.ok(dones > 0, `${p} has no confirmation block`)
       assert.equal(planes, dones, `${p}: ${planes} planes for ${dones} forms`)
+    }
+  })
+
+  await run('the marketing pages send a visitor into the app, not a queue', async () => {
+    // The app is open: anyone can create an account. For a while the only thing
+    // these pages offered was a waitlist form, which parked every warm visitor
+    // in Redis (docs/fuime/ONBOARDING_PLAN.md §1 #1). The primary button now
+    // goes to /get-started, "Log in" is on every page, and the waitlist remains
+    // only as the form for schools, teachers and closed cohorts — so no page
+    // may imply a queue, and no capture form may still be tagged as a
+    // founder sign-up (a teacher and a legacy teen signup would be
+    // indistinguishable in the admin roster).
+    //
+    // Read off disk, like the paper-plane check above, because CLOSED still
+    // bounces three of these to /. The dive at / (start.html) is the front
+    // door and is held to exactly the same bar.
+    for (const n of ['start', 'start-scroll', 'index', 'pricing', 'parents']) {
+      const body = readFileSync(
+        fileURLToPath(new URL(`../${n}.html`, import.meta.url)),
+        'utf8'
+      )
+      assert.match(
+        body,
+        /<a\s[^>]*href="\/get-started"[^>]*>\s*(Start your business|Have your teen start)\s*</,
+        `${n}.html has no primary CTA → /get-started`
+      )
+      assert.match(
+        body,
+        /<a\s[^>]*href="\/login"[^>]*>\s*Log in\s*</,
+        `${n}.html lost its Log in link`
+      )
+      // /start is kept as a redirect for old links, never as a target: it has
+      // a cached-308 history that /get-started does not.
+      assert.doesNotMatch(body, /href="\/start"/, `${n}.html still links to /start`)
+      assert.doesNotMatch(body, /early access/i, `${n}.html still says "early access"`)
+      assert.doesNotMatch(body, /your turn/i, `${n}.html still implies a queue`)
+      assert.doesNotMatch(
+        body,
+        /onboarding the first businesses/i,
+        `${n}.html still implies a queue`
+      )
+      assert.doesNotMatch(
+        body,
+        /href="#join"[^>]*>\s*Get early access/,
+        `${n}.html primary CTA still points at the waitlist`
+      )
+      for (const m of body.matchAll(/<form\s[^>]*class="capture[^"]*"[^>]*data-source="([^"]+)"/g)) {
+        assert.match(m[1], /-cohort$/, `${n}.html form "${m[1]}" is not tagged as a cohort form`)
+      }
     }
   })
 

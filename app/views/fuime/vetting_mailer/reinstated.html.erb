@@ -1,0 +1,39 @@
+<%# FUIME: no personal greeting — this goes to every manager on the venture,
+    which for two co-founders is two people. Sibling of approved.html.erb for
+    a venture coming back from a suspension; see Fuime::VettingMailer for why
+    the two are separate. %>
+<p>
+  Hello,
+</p>
+
+<p>
+  <%# Plain name, not <strong>: the sentence is asserted verbatim across both
+      parts, and the text part cannot bold anything. %>
+  Fuime has lifted the suspension on <%= @event.name %>. It's approved to sell again.
+  <% if @can_publish && @published_offers %>
+    Your published offers are back on sale.
+  <% elsif @can_publish %>
+    You can publish an offer now.
+  <% else %>
+    Your <em>What you sell</em> page lists anything that still needs sorting before you can sell.
+  <% end %>
+</p>
+
+<p>
+  <%= link_to "Go to what you sell", @offers_url,
+              style: "display:inline-block;background:#2242FF;color:#ffffff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600;" %>
+</p>
+
+<p style="word-break: break-all;">
+  Or paste this link into your browser:<br>
+  <%= link_to @offers_url, @offers_url %>
+</p>
+
+<p>
+  Questions? Reply to this email or write to <%= @support_email %>.
+</p>
+
+<p>
+  Thanks,<br>
+  The Fuime team
+</p>

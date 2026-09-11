@@ -1,14 +1,85 @@
-<p>Hey <%= @application.user.name %>,</p>
+<% event = @application.event %>
+<% founder = @application.user %>
+
+<%# FUIME: the guardian line is about the FOUNDER's own parent or guardian. Under
+    merchant-of-record a teen can sell before a parent has done anything and the
+    parent gates payouts (Event#payout_setup_blockers), so this is the one place
+    to say so plainly. Guarded on `needs_guardian?` — the same predicate that
+    blocks the payout — rather than on a pending invite: a founder with no
+    guardianship row, or only a revoked one, is exactly as unpaid as one whose
+    parent has not clicked yet, and the funnel does not always produce a row
+    (spec/models/fuime/selling_without_a_guardian_spec.rb). Which row exists only
+    decides whether the fix is "resend" or "invite".
+
+    Under Connect a minor's application cannot activate without an active
+    guardian (Event::Application#activation_blockers) unless the school or staff
+    exemption applied, so this rarely renders there; when it does, the sentence
+    it produces is still true. School ventures are excluded because the school
+    stands in for the parent at the payout seam too, and telling a student their
+    payout waits on a parent would be false. %>
+<% guardian_needed = founder.needs_guardian? && !event.institutionally_sponsored? %>
+<% guardian_pending = guardian_needed && founder.guardianships_as_minor.pending.exists? %>
+
+<p>Hey <%= founder.name %>,</p>
 
 <p>
-  Welcome to Fuime! You're now able to log into Fuime and access your new organization, <%= link_to @application.name, @application.event %>!
-  Here are some next steps for you:
+  Welcome to Fuime! You can now log in and open your new business, <%= link_to @application.name, event %>.
+  Here's what to do next:
 </p>
 
+<%# FUIME: ordered by what gets a founder to a first sale (ONBOARDING_PLAN.md
+    §4.1). Upstream led with team invites and account details, neither of which
+    is "list something to sell"; those now sit at the bottom. %>
 <ul>
-  <li><%= link_to "Invite other members of your team", event_team_url(@application.event) %>: You can invite them as managers, members, or readers. <%= link_to "Read more about roles on Fuime here.", roles_url %></li>
-  <li><%= link_to "Review your business details", edit_event_url(@application.event) %>: Set how your business appears and keep your information up to date.</li>
+  <li>
+    <%= link_to "Add what you sell", fuime_offers_url(event_slug: event.slug) %>:
+    Name it and price it. Your pay link appears once it's published.
+  </li>
+  <li>
+    <%= link_to "Share your storefront", fuime_storefront_url(slug: event.slug) %>:
+    Your storefront is <%= fuime_storefront_url(slug: event.slug) %> — that's where customers see what you sell.
+    Paste it in a bio, a group chat or a flyer.
+  </li>
+  <% if guardian_needed %>
+    <li>
+      <% if guardian_pending %>
+        <strong>Your parent or guardian hasn't signed yet.</strong>
+      <% else %>
+        <strong>No parent or guardian on your account yet.</strong>
+      <% end %>
+      <%# "You can sell now" only when it is true. Vetting is a separate admin
+          step after activation (Event#operator_vetting_status stays unvetted
+          through Event::Application#activate_event!), and the launch scope can
+          refuse too, so this reads Event#accepts_payments? rather than the flag.
+          Under merchant-of-record the guardian is not among the selling gates
+          (Fuime::OperatorEligibility#umbrella_scope_blockers), which is what the
+          "don't need" sentence claims and all it claims. %>
+      <% if ::Fuime::Features.merchant_of_record? && event.accepts_payments? %>
+        You can sell now under Fuime, but nothing is paid out until a guardian accepts.
+      <% elsif ::Fuime::Features.merchant_of_record? %>
+        You don't need a guardian to start selling, but nothing is paid out until one accepts.
+      <% else %>
+        Nothing is paid out until a guardian accepts.
+      <% end %>
+      <% if guardian_pending %>
+        <%= link_to "Resend the invite from your Guardian page", guardianships_url %>.
+      <% else %>
+        <%= link_to "Invite a parent or guardian", new_guardianship_url %>.
+      <% end %>
+    </li>
+  <% end %>
 </ul>
+
+<%# FUIME: vetting is the human gate that actually stands between activation and
+    a sale (Event#accepts_payments?). Fuime::VettingMailer#approved is the email
+    this promises. Shown for `unvetted` only — a rejected or suspended venture is
+    not "waiting on us" and should not be told to expect an approval. %>
+<% if event.operator_vetting_unvetted? %>
+  <p>
+    Fuime is reviewing <%= event.name %> by hand — you can set everything up now
+    and publish the moment we approve. We'll email you.
+  </p>
+<% end %>
 
 <%# FUIME-DIVERGENCE: upstream promoted Hack Club's hackathon guide, Discord bot,
     and club toolbox here. Those are Hack Club resources for a nonprofit program
@@ -18,6 +89,13 @@
 <% if @application.contract&.document.present? %>
   <p>The signed Fuime agreement is available for you to <%= link_to "download here", document_download_url(@application.contract.document) %>.</p>
 <% end %>
+
+<%# FUIME: roles in the words the linked page and every role selector use
+    (RolesHelper — Owner / Team member / Parent), not the enum's. %>
+<p>
+  Working with others? <%= link_to "Invite your team", event_team_url(event) %> as <%= role_label("manager").downcase.pluralize %>, <%= role_label("member").downcase.pluralize %>, or a <%= role_label("reader").downcase %> seat — <%= link_to "here's what each role can do", roles_url %>.
+  You can also <%= link_to "review your business details", edit_event_url(event) %> any time.
+</p>
 
 <p>
   If you would like, you can <%= link_to "schedule an onboarding call", @application.event.onboarding_scheduling_link.presence || event_url(@application.event, request_call: "true") %> with a member of our team,

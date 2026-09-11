@@ -42,6 +42,9 @@ RSpec.describe "a family signs up and activates", type: :request do
   it "walks teen signup -> guardian invite -> parent accept -> operating rights" do
     # ── The teen ──────────────────────────────────────────────────────────
     teen = login_as!("maya-family@example.com")
+    # A brand-new user has no name yet, so completing the login lands on the
+    # profile form.
+    expect(response).to redirect_to(edit_user_path(teen.slug))
 
     # Deferred onboarding: confirming they're old enough no longer walls them
     # behind the guardian invite — they land in the product with a heads-up, and
@@ -57,6 +60,17 @@ RSpec.describe "a family signs up and activates", type: :request do
     }
     expect(response).to redirect_to(root_path)
     expect(flash[:info]).to include("invite a parent or guardian when your business is ready")
+
+    # A2: the profile form asks for a name and the 13+ confirmation, nothing
+    # else. A user who has given exactly that is done — signing in again lands
+    # on the product, not back on the form, with no phone number on file.
+    # `logins#complete` used to require a phone too, which would have bounced
+    # every real signup here forever.
+    expect(teen.reload.phone_number).to be_blank
+    logout!
+    teen = login_as!("maya-family@example.com")
+    expect(response).to redirect_to(root_path),
+                        "a named user with no phone number was sent to #{response.location}"
 
     # The invite form, as the UI submits it.
     post guardianships_path, params: { guardianship: { guardian_email: "pat-family@example.com" } }
@@ -106,7 +120,9 @@ RSpec.describe "a family signs up and activates", type: :request do
     expect(response.body).to include('id="agree"')
     expect(response.body).to include('name="agree"')
     expect(response.body).to include('type="checkbox"')
-    expect(response.body).to include("Agree &amp; activate their account")
+    # "I agree" — under merchant-of-record accepting unblocks payouts, not
+    # activation, so the button no longer claims to activate anything.
+    expect(response.body).to include('value="I agree"')
 
     # The agreement checkbox is required server-side — skipping it is refused
     # with a flash, which an earlier run of this spec proved by omitting it. It now

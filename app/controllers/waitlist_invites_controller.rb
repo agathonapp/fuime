@@ -78,7 +78,9 @@ class WaitlistInvitesController < ApplicationController
   end
 
   def after_waitlist_login_path(user)
-    if user.full_name.blank? || user.phone_number.blank?
+    # Name only — the same test as LoginsController#complete and
+    # User#onboarding?. Signup does not ask for a phone number (A2).
+    if user.full_name.blank?
       edit_user_path(user.slug)
     else
       root_path

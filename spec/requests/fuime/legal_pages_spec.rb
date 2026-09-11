@@ -49,6 +49,24 @@ RSpec.describe "Legal pages", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("help.hcb.hackclub.com")
     end
+
+    # The FAQ repeated three claims that stopped being true when production went
+    # merchant-of-record: that a parent must accept before a teen can create a
+    # business, that withdrawing consent ends the business, and that there is no
+    # monthly fee. It also quoted a fee constant that is not the Free plan's rate.
+    it "describes the guardian, fee and withdrawal rules the way the code enforces them", :merchant_of_record do
+      get "/faq"
+
+      expect(response.body).not_to include("no longer operate")
+      expect(response.body).not_to include("you cannot create a business")
+      expect(response.body).to include("There is no monthly fee on Free")
+      expect(response.body).to include("family plan")
+      expect(response.body).not_to include("During the beta")
+      expect(response.body).not_to include("balances")
+      expect(response.body).to include("before any money is paid out")
+      expect(response.body).to include("#{(Event::Plan::Free::REVENUE_FEE * 100).round}% of each sale")
+      expect(response.body).to include("financial technology company, not a bank")
+    end
   end
 
   describe "the guardian agreement" do
@@ -68,6 +86,25 @@ RSpec.describe "Legal pages", type: :request do
       get "/guardian-agreement"
 
       expect(response.body).to include("your child")
+    end
+
+    # The page wraps the versioned partial in its own prose, and that prose can
+    # drift from the terms it wraps. It did: the v2-era wrapper said withdrawing
+    # consent meant "the teen can no longer operate a business on Fuime", which
+    # v3 dropped because under merchant-of-record consent gates payouts, not
+    # selling. The wrapper has to say what the agreement says — including that
+    # the guardian gate runs when the weekly run is generated, not when it is
+    # paid (Fuime::PayoutBatchService#approve!/#mark_paid! never re-check), so a
+    # payout already in a run when consent is withdrawn may still be sent.
+    it "describes withdrawal the way the agreement's own section 4 does" do
+      get "/guardian-agreement"
+
+      expect(response.body).not_to include("no longer operate")
+      expect(response.body).not_to include("takes effect immediately")
+      expect(response.body).to match(/Fuime will not schedule any new payout of the teen's business until a\s+parent or legal guardian is on the account again/)
+      expect(response.body).to match(/A payout that was already scheduled or released when you withdrew may still be\s+sent\./)
+      expect(response.body).to match(/the exceptions are in section\s+5 of the agreement above/)
+      expect(response.body).to include("You do not have to give a")
     end
   end
 

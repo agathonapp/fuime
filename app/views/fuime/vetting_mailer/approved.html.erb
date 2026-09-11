@@ -1,0 +1,39 @@
+<%# FUIME: no personal greeting — this goes to every manager on the venture,
+    which for two co-founders is two people. %>
+<p>
+  Hello,
+</p>
+
+<p>
+  Fuime has reviewed <strong><%= @event.name %></strong> and approved it to sell.
+  <% if @can_publish %>
+    You can publish your first offer now.
+  <% else %>
+    Your <em>What you sell</em> page lists anything that still needs sorting
+    before you can publish.
+  <% end %>
+</p>
+
+<p>
+  <%= link_to "Publish your first offer", @offers_url,
+              style: "display:inline-block;background:#2242FF;color:#ffffff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600;" %>
+</p>
+
+<p style="word-break: break-all;">
+  Or paste this link into your browser:<br>
+  <%= link_to @offers_url, @offers_url %>
+</p>
+
+<p>
+  Your pay link appears on that page as soon as an offer is published. Paste it
+  in a bio, a group chat or a flyer.
+</p>
+
+<p>
+  Questions? Reply to this email or write to <%= @support_email %>.
+</p>
+
+<p>
+  Thanks,<br>
+  The Fuime team
+</p>

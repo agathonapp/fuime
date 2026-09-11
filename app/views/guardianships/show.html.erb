@@ -1,25 +1,77 @@
 <% title "Guardian Invitation" %>
 <% page_full %>
 
-<main class="center max-w-2xl card mt4 md-p3 mx-auto">
-  <h1 class="mt0 border-0 mb-2">You've been invited</h1>
+<% if @wrong_account %>
+<%# Fuime: the link was opened while signed in as somebody other than the invited
+    guardian (GuardianshipsController#show). Before this was a flash and a bounce to
+    the dashboard with no way out (ONBOARDING_PLAN §2 #10). The redacted address is
+    all this page reveals about the invite — no teen's name, no venture. %>
+<main class="center max-w-xl card mt4 md-p3 mx-auto">
+  <h1 class="mt0 border-0 mb-2">This invitation is for a different account</h1>
 
   <p class="text-lg mb-3">
-    <strong><%= @guardianship.minor.name || @guardianship.minor.email %></strong>
-    has asked you to be their parent or guardian on Fuime.
+    This invitation was sent to <strong><%= @invited_email %></strong>, but you're
+    signed in as <strong><%= current_user.email %></strong>.
+  </p>
+
+  <p class="mb-4">
+    Sign out, then open the link from the email again and sign in with the address
+    it was sent to.
+  </p>
+
+  <%# Plain form post to the same route the user menu uses (users#logout). %>
+  <%= button_to "Sign out and open the link again", logout_users_path,
+                method: :delete,
+                class: "btn bg-accent",
+                form: { data: { turbo: false } } %>
+
+  <p class="text-sm muted mt-4 text-center">
+    Questions? Contact us at <%= mail_to "support@fuime.com" %>
+  </p>
+</main>
+<% else %>
+<%# Fuime: the accept page. Its body is left at the indentation it had before
+    the wrong-account branch above was added, so the checkbox label and the
+    agreement rendering below are byte-for-byte what past signers saw. %>
+<% merchant_of_record = ::Fuime::Features.merchant_of_record? %>
+<% teen_name = @guardianship.minor.name || @guardianship.minor.email %>
+<main class="center max-w-2xl card mt4 md-p3 mx-auto">
+  <h1 class="mt0 border-0 mb-2">
+    <%= teen_name %> needs a parent to sign off<%= " on #{@venture_name}" if @venture_name.present? %>
+  </h1>
+
+  <p class="text-lg mb-3">
+    <strong><%= teen_name %></strong> named you as their parent or guardian on
+    Fuime, a financial platform for young founders. Here's what you're agreeing to.
   </p>
 
   <div class="bg-smoke rounded-lg p-4 mb-4">
-    <h3 class="mt-0 mb-2">What this means:</h3>
     <ul class="list-disc pl-5 mb-0">
       <%# Ownership direction matters and is easy to invert. The guardian is the legal
           signer and responsible adult; the minor operates the venture. Copy that reads
-          "their account, with you on it" misdescribes who holds the obligations. %>
-      <li class="mb-1">You'll be the legal signer and responsible adult for their venture; they run it day to day</li>
-      <li class="mb-1">You can view all their transactions and business activity</li>
-      <li class="mb-1">You'll receive important notifications about their account</li>
-      <li class="mb-1">At tax time, you'll get a summary to share with your accountant</li>
-      <li class="mb-1">You can withdraw your consent at any time</li>
+          "their account, with you on it" misdescribes who holds the obligations.
+
+          Only promises the product keeps (L8): the earlier "important notifications"
+          and "tax time summary" bullets described mailers that do not exist. The third
+          bullet names what the signature actually gates — payouts under
+          merchant-of-record (Event#payout_setup_blockers), activation under Connect
+          (Event::Application#activation_blockers).
+
+          Under MoR it must NOT say "you approve every payout": payouts run as a weekly
+          Fuime::PayoutBatch a Fuime admin approves, and a scheduled batch line has no
+          teen request for the guardian to decide (EventPolicy#decide_payout? covers
+          only the PayoutRequests a teen files). What the guardian does control is
+          the destination — EventPolicy#setup_payments? and #connect_payout_method?
+          are guardian-only on a family venture — and whether a payout can happen at
+          all, since Event#payout_setup_blockers refuses while any operator has no
+          guardian or no usable destination exists. %>
+      <li class="mb-1">You'll be the legal signer and responsible adult for <%= @venture_name.presence || "their business" %>. <%= teen_name %> runs it day to day.</li>
+      <li class="mb-1">You can see every transaction, always. <%= teen_name %> can't turn that off.</li>
+      <% if merchant_of_record %>
+        <li class="mb-1">Nothing is paid out until you've accepted and set up where the money goes. Money only ever goes to a destination a parent or guardian set up.</li>
+      <% else %>
+        <li class="mb-1">Nothing goes live until you accept.</li>
+      <% end %>
     </ul>
   </div>
 
@@ -75,7 +127,10 @@
       </div>
 
       <div class="flex justify-center items-center flex-wrap gap-3">
-        <%= f.submit "Agree & activate their account",
+        <%# "I agree", not "Agree & activate their account": under merchant-of-record
+            accepting unblocks payouts, not activation, so the old label promised
+            the wrong thing on the one button a parent presses. %>
+        <%= f.submit "I agree",
                      class: "btn bg-success text-lg px-6 py-3",
                      id: "guardian-accept-submit" %>
       </div>
@@ -83,7 +138,8 @@
 
     <p class="text-sm muted mt-3 text-center">
       We'll record the date, your IP address, and the version of the agreement
-      you signed.
+      you signed. This is not an identity check. You can withdraw your consent
+      at any time.
     </p>
   <% end %>
 
@@ -91,3 +147,4 @@
     Questions? Contact us at <%= mail_to "support@fuime.com" %>
   </p>
 </main>
+<% end %>

@@ -27,9 +27,9 @@
           <%= inline_icon "door-leave", size: home_action_size %>
         <% end %>
       </div>
-      <h1 class="border-0 mt-10 mb-2">Create your account</h1>
+      <h1 class="border-0 mt-10 mb-2">What should we call you?</h1>
       <turbo-frame id="settings" autoscroll data-autoscroll-behavior="smooth">
-        <p class="muted">Let's get your profile set up in less than two minutes.</p>
+        <p class="muted">Your name and one checkbox. Less than two minutes.</p>
         <%= form_with(model: @user, local: true, data: { turbo_frame: "_top" }) do |form| %>
           <%= form_errors @user, "profile", "We couldn't update your" %>
           <div class="field">
@@ -62,8 +62,8 @@
                   <%= label_tag "user_age_attestation_confirmed", "I'm 13 or older" %>
                 </div>
                 <p class="h5 muted mt0 mb0">
-                  Fuime is for founders aged 13 and up. If you're under 18 we'll ask you
-                  to add a parent or guardian to your account.
+                  Fuime is for founders 13 and up. Under 18, a parent or guardian joins
+                  your account later.
                 </p>
               <% end %>
           </div>
@@ -78,12 +78,21 @@
             <%= link_to "Privacy Policy", privacy_path, target: "_blank" %>.
             If you're under 18, a parent or guardian also accepts the
             <%= link_to "Guardian Agreement", guardian_agreement_path, target: "_blank" %>
-            before you can run a business.
+            <%# Fuime: what the guardian gates differs by money model (L8). Under
+                merchant-of-record a vetted teen sells before a guardian signs and
+                the guardian is required before any payout
+                (Event#payout_setup_blockers); under Connect the guardian must
+                accept before the venture activates. %>
+            <% if ::Fuime::Features.merchant_of_record? %>
+              before you can get paid.
+            <% else %>
+              before you can run a business.
+            <% end %>
           </p>
 
           <div class="actions flex">
             <button type="submit" class="btn bg-info w-full gap-2">
-              Start using Fuime
+              Let's go
               <%= inline_icon "enter", size: 40 %>
             </button>
           </div>
@@ -139,8 +148,11 @@
               Changing your number will turn off SMS login codes.
             </p>
           <% end %>
-          <%= form.hidden_field :phone_number, required: true, placeholder: "555-555-5555", id: "phone_number" %>
-          <input type="tel" id="phone_raw" value="<%= @user.phone_number.presence %>" required="required" <%= "disabled" if disabled %>>
+          <%# Fuime: not browser-required — signup no longer collects a phone, and a
+              required attribute here blocked every phoneless user from saving any
+              setting. User validates phone_number with allow_blank. %>
+          <%= form.hidden_field :phone_number, placeholder: "555-555-5555", id: "phone_number" %>
+          <input type="tel" id="phone_raw" value="<%= @user.phone_number.presence %>" <%= "disabled" if disabled %>>
           <% if @user.phone_number_in_database.present? && !@user.phone_number_verified? %>
             <p class="h5 mt1 m0 warning flex items-center">
               <%= inline_icon "important-fill", class: "warning mr1", size: 20 %>

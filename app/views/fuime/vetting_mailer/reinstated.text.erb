@@ -1,0 +1,11 @@
+Hello,
+
+Fuime has lifted the suspension on <%= @event.name %>. It's approved to sell again. <% if @can_publish && @published_offers %>Your published offers are back on sale.<% elsif @can_publish %>You can publish an offer now.<% else %>Your "What you sell" page lists anything that still needs sorting before you can sell.<% end %>
+
+Go to what you sell:
+<%= @offers_url %>
+
+Questions? Reply to this email or write to <%= @support_email %>.
+
+Thanks,
+The Fuime team

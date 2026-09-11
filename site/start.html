@@ -189,9 +189,14 @@
            Scroll flies into the laptop on that desk and lands on the sign-up.
 
            The panel below is not a picture of a screen — it is the sign-up
-           itself, a real form that happens to be registered onto the laptop's
-           glass. That is the whole idea of the page: you do not arrive
-           somewhere and then find a form, you fly into the form.
+           door itself, registered onto the laptop's glass. That is the whole
+           idea of the page: you do not arrive somewhere and then find the way
+           in, you fly into it. The door is two links — into the app's sign-up
+           and into its sign-in — because the app is open: anyone can create
+           an account, so a form that parked the address in a queue was the
+           wrong thing to fly into (docs/fuime/ONBOARDING_PLAN.md §1 #1). The
+           waitlist form still exists, at the bottom of the page, for schools
+           and closed cohorts.
 
            It is in the markup from first paint and it is styled by
            style.css's resting rules, so it exists whether or not the dive ever
@@ -201,9 +206,8 @@
            are simply two blocks stacked in a page.
 
            The panel carries real controls, so fx/dive.js holds `inert` on it
-           for the whole flight and drops it when the panel comes to rest — an
-           email field at opacity 0 is one a Tab key finds long before an eye
-           does. -->
+           for the whole flight and drops it when the panel comes to rest — a
+           link at opacity 0 is one a Tab key finds long before an eye does. -->
       <section class="dive" data-fx-dive>
         <div class="dive__track">
           <div class="dive__stage">
@@ -227,7 +231,7 @@
                 >
                   <use href="#arch" />
                 </svg>
-                <p class="dv-join__eyebrow">Early access</p>
+                <p class="dv-join__eyebrow">Free to start</p>
                 <h1 class="dv-join__h">
                   You're already working.<br />Start billing.
                 </h1>
@@ -238,32 +242,23 @@
                   the legal payee; after that, day to day the business is yours
                   to run.
                 </p>
-                <form class="capture" data-source="start-dive" novalidate>
-                  <div class="capture__row">
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="you@school.edu"
-                      autocomplete="email"
-                      aria-label="Email address"
-                      required
-                    />
-                    <button type="submit" class="btn btn--accent">
-                      Get early access
-                    </button>
-                  </div>
-                  <p class="capture__msg" role="status" aria-live="polite"></p>
-                  <p class="capture__done">
-                    <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-                    <span>You're on the list. We'll send a login link when it's your turn.</span>
-                  </p>
-                </form>
+                <!-- A div wearing the form's class, on purpose. `.dv-join
+                     .capture .btn` is the one rule that sizes a button for a
+                     panel drawn at 1600px and scaled onto the glass (66px, and
+                     50px stacked on a phone), and style.css is not this
+                     change's to edit. Nothing binds to it: site.js and
+                     fx/field.js both select `form.capture`, and this is not a
+                     form. /get-started rather than /start: /start spent weeks
+                     answering a cacheable 308 to this very page. -->
+                <div class="capture">
+                  <a class="btn btn--accent" href="/get-started">Start your business</a>
+                  <a class="btn btn--light" href="/login">Log in</a>
+                </div>
                 <p class="dv-join__fine">
-                  One email when it's your turn — a login link, nothing after that. fuime is a
-                  financial technology company, not a bank. Private beta · live
-                  payments. Ninth Street Labs, LLC (Fuime) is the seller of
-                  record. Guardians are the legal payee; young founders run the
-                  venture day to day.
+                  Free to start. fuime is a financial technology company, not a bank.
+                  Private beta · live payments. Ninth Street Labs, LLC (Fuime) is
+                  the seller of record. Guardians are the legal payee; young
+                  founders run the venture day to day.
                 </p>
               </div>
             </div>
@@ -461,8 +456,8 @@
               <h3 class="h4">Where it is today</h3>
               <p>
                 Private beta · live payments. Ninth Street Labs, LLC (Fuime) is
-                the seller of record. Early access goes out in order, and we
-                will tell you which stage you are in.
+                the seller of record. Set your venture up now; fuime reviews
+                every new business by hand before it can sell.
               </p>
             </article>
             <article class="card">
@@ -499,15 +494,22 @@
       </section>
 
       <!-- ── the second exit ──────────────────────────────────────────────
-           The panel's form is four screens back by the time anyone reaches the
+           The panel's door is four screens back by the time anyone reaches the
            bottom of this page. Asking them to scroll back up to it is asking
-           them to leave. -->
+           them to leave.
+
+           This is also where the waitlist form lives now, relabelled: the app
+           is open, so a queue is the wrong thing to offer a founder, but a
+           teacher bringing a class or a programme bringing a cohort still needs
+           a way to reach a person before anyone signs up. The data-source is
+           what tells the admin roster (/admin/waitlist) that this address is a
+           cohort enquiry and not a legacy teen sign-up. -->
       <section class="band band--night" id="join" style="padding-top: 0">
         <div class="wrap st-join rise">
-          <p class="eyebrow">Early access</p>
-          <h2 class="h2">We're onboarding the first businesses now.</h2>
-          <p class="lead mt-5">One email when it's your turn — a login link, nothing after that.</p>
-          <form class="capture mt-7" data-source="start-foot" novalidate>
+          <p class="eyebrow">Schools, teachers and cohorts</p>
+          <h2 class="h2">Bringing a class or a closed group?</h2>
+          <p class="lead mt-5">Leave your address. We read every one and follow up by email.</p>
+          <form class="capture mt-7" data-source="start-cohort" novalidate>
             <div class="capture__row">
               <input
                 type="email"
@@ -518,15 +520,19 @@
                 required
               />
               <button type="submit" class="btn btn--accent">
-                Get early access
+                Get in touch
               </button>
             </div>
             <p class="capture__msg" role="status" aria-live="polite"></p>
             <p class="capture__done">
               <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
-              <span>You're on the list. We'll send a login link when it's your turn.</span>
+              <span>Got it. We'll follow up by email.</span>
             </p>
           </form>
+          <p class="small muted mt-5">
+            On your own? You don't need this —
+            <a class="tlink" href="/get-started">start your business</a>.
+          </p>
         </div>
       </section>
     </main>
@@ -540,11 +546,12 @@
          three pages already use for exactly this paragraph.
 
          No nav. The other three pages are the marketing site and it is not open
-         yet, so the only navigable thing on the front door is the form —
-         everything a reader needs to decide is on this page, by construction.
-         The mark links to `/`, which is this page; it is the wordmark doing
-         what a wordmark does, not a way out. The address is the one exit, and
-         it goes to a person rather than to a page. -->
+         yet, so the only ways off the front door are into the app — the
+         sign-up door and Log in on the glass above — and the address here,
+         which goes to a person rather than to a page. Everything a reader
+         needs to decide is on this page, by construction. The mark links to
+         `/`, which is this page; it is the wordmark doing what a wordmark does,
+         not a way out. -->
     <footer class="foot">
       <div class="wrap">
         <div class="foot__top">

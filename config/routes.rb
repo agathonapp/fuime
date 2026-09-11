@@ -68,6 +68,9 @@ Rails.application.routes.draw do
   resources :guardianships, only: [:index, :new, :create, :show], path: "guardian" do
     member do
       post :accept
+      # Fuime: token-addressed like :accept — the parent's own resend of an
+      # expired link, from the page that told them it expired. No session.
+      post :renew
       post :revoke
       post :resend_invite
       get :record
