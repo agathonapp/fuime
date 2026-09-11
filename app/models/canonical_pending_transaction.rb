@@ -157,6 +157,12 @@ class CanonicalPendingTransaction < ApplicationRecord
   scope :declined, -> { joins(:canonical_pending_declined_mapping) }
   scope :not_declined, -> { includes(:canonical_pending_declined_mapping).where(canonical_pending_declined_mapping: { canonical_pending_transaction_id: nil }) }
   scope :not_waived, -> { where(fee_waived: false) }
+  # Fuime: Playground Mode money is sample money. A venture in `demo_mode`
+  # (Fuime::Playground, or any org an admin flips) carries a seeded ledger and
+  # the sales a demo driver clicks, and none of it may reach a platform figure
+  # — "$X moved through Fuime" on the admin panel and the funders page both
+  # read this scope. Reporting only; the ingestion and mapping pipeline is
+  # untouched (CLAUDE.md Rule 3).
   scope :included_in_stats, -> {
     includes(
       canonical_pending_event_mapping: { event: :plan }
@@ -164,7 +170,7 @@ class CanonicalPendingTransaction < ApplicationRecord
       event_plans: {
         type: Event::Plan.that(:omit_stats).collect(&:name)
       }
-    )
+    ).where(events: { demo_mode: false })
   }
   scope :with_custom_memo, -> { where("custom_memo is not null") }
 

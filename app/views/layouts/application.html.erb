@@ -15,28 +15,10 @@
 
     <%= render "layouts/seasonal" %>
 
-    <%# Playground Mode banner, restored from upstream (removed in 73d010de6).
-        Without it, toggling an organization into Playground Mode changes nothing
-        an organizer can see, which is how the mode came to look broken. %>
+    <%# Playground Mode strip — the presenter's script on every page of a
+        demo venture. See application/_playground_strip.html.erb. %>
     <% if @event&.demo_mode? && !@no_app_shell && !@no_transparency_header %>
-      <div class="w-full dev-banner dev-banner--info rounded-b no-underline">
-        <div class="flex flex-col md:flex-row gap-y-2 gap-x-6 py-6 items-center justify-center">
-          <%= link_to fuime_offers_path(event_slug: @event.slug), class: "no-underline text-[inherit] hover:text-[inherit]" do %>
-            <p class="font-semibold text-xl m0">Playground Mode</p>
-            <p class="m0 text-sm opacity-80">Nothing here moves real money. List something, share it, click Buy.</p>
-          <% end %>
-          <%# Product path first. Mock ledger remains available on Transactions. %>
-          <%= link_to fuime_offers_path(event_slug: @event.slug),
-                      class: "btn btn-small w-fit shrink-none nowrap" do %>
-            What you sell
-          <% end %>
-          <%= link_to(event_transactions_path(event_id: @event.slug, show_mock_data: !show_mock_data?),
-                      class: "btn btn-small w-fit shrink-none nowrap") do %>
-            <%= inline_icon "view" %>
-            <%= show_mock_data? ? "Hide" : "Show" %> mock data
-          <% end %>
-        </div>
-      </div>
+      <%= render "application/playground_strip", event: @event %>
     <% end %>
 
     <% if content_for?(:nav) %>

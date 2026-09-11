@@ -27,18 +27,20 @@
 
 <%= render "events/nav", selected: :transactions %>
 
-<%# The anchor the Playground Mode banner links to. Restored from upstream
-    (73d010de6) with Fuime's wording — the original invited teams to explore a
-    fiscal-sponsorship dashboard. %>
+<%# Restored from upstream (73d010de6) with Fuime's wording — the original
+    invited teams to explore a fiscal-sponsorship dashboard. The tour anchor
+    (`data-tour-step="playground_mode"`) now lives on the Playground strip in
+    the layout, so the demo tour can start from any page of the venture. %>
 <% if organizer_signed_in? && @event.demo_mode? %>
-  <div class="card border b--info pb0 mb-4" style="text-wrap: pretty;" id="playground-callout" data-tour-step="playground_mode">
+  <div class="card border b--info pb0 mb-4" style="text-wrap: pretty;" id="playground-callout">
     <p class="mt0">
-      <strong>Welcome to Playground Mode</strong>
+      <strong>Playground ledger</strong>
       <br>
-      Nothing here moves real money. The pitch path is
-      <%= link_to "What you sell", fuime_offers_path(event_slug: @event.slug) %>
-      → create or publish an offer → storefront / share. Mock data on this
-      page is the ledger demo only.
+      Every line here is sample money. A <strong>Buy</strong> you press on the
+      <%= link_to "storefront", fuime_storefront_path(slug: @event.slug) %>
+      while running the demo shows up here as a new line, with the Fuime
+      service fee pending beside it. "Show mock data" on the strip swaps this
+      page for a randomly generated ledger instead.
     </p>
   </div>
 <% end %>

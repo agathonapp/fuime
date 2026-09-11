@@ -2,7 +2,37 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Playground ledger is income + Fuime service fee.**
+**2026-09-11 (latest) — Playground: one-click demo, three personas, sale on the ledger.**
+
+Branch `fuime/playground-demo-polish` (off main + PR #105). `/admin/playground`
+is now a control room: *Reset & start as Maya* (seed + impersonate in one
+POST), *Start fresh as Sam* (a founder with no name/age/venture — lands on
+onboarding step 1; reset wipes whatever the signup demo created), *Become
+Denise* (→ `/guardian`), a server-rendered QR of the published pay link, and
+the three-minute script. The layout's Playground banner is a strip
+(`application/_playground_strip`) with the four stops of the pitch, the
+current one lit, and *Exit demo*. The demo tour has five narrated bubbles.
+A storefront **Buy** by the demo driver (staff, or an impersonated persona)
+posts one income line through the CSV import path (`Playground#record_mock_sale!`);
+a guest gets the thank-you page and nothing is written. A signed-in minor is
+no longer refused at Buy on a demo venture (it was — the demo's own Buy
+bounced). Seed backdates the venture 10 weeks on first create, re-arms
+Maya's welcome tour, archives extra offers. Playground money no longer counts
+toward "$X moved through Fuime" (`included_in_stats` excludes `demo_mode`
+ventures). Divergence entry "2026-09-11 — Playground demo polish". Verify: `/admin/playground` → Reset &
+start as Maya → Home (welcome → Show me around) → What you sell → Storefront
+Buy → Transactions (new line) → Exit demo → Become Denise.
+
+**Running specs from a worktree:** the compose `web` service bind-mounts the
+main checkout, so a worktree needs its own project:
+`docker compose -f <scratch>/compose.wt.yml -p fuime43 run --rm -T web43 bundle exec rspec …`
+with the worktree mounted at `/usr/src/app`, `env_file` pointing at its
+`.env.development` (compose strips the quotes; `docker run --env-file` does
+not and breaks the webauthn initializer), `DATABASE_URL=…/bank_test_43`, and
+`networks: fuime_default: external: true`. Copy `app/assets/builds/*` from the
+main checkout first — it is gitignored.
+
+**2026-09-11 — Playground ledger is income + Fuime service fee.**
 
 Invented card spend (business cards, booth fee, leaf bags, trimmer
 string) is gone. `rake fuime:playground` / `/admin/playground` Seed
