@@ -14,8 +14,8 @@ module Admin
       result = Fuime::Playground.new.seed!
       warning = result[:warnings].any? ? " (#{result[:warnings].size} warning(s))" : ""
       redirect_to playground_admin_index_path,
-                  flash: { success: "Playground ready: /#{result[:event].slug}. Become Maya and click What you sell.#{warning}" }
-    rescue => e
+                  flash: { success: "Playground ready: /#{result[:event].slug}. Become Maya → Transactions (income + Fuime service fee), then What you sell.#{warning}" }
+    rescue StandardError => e
       redirect_to playground_admin_index_path, flash: { error: e.message }
     end
 

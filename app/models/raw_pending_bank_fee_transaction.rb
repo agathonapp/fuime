@@ -20,7 +20,7 @@ class RawPendingBankFeeTransaction < ApplicationRecord
   end
 
   def memo
-    "Fiscal sponsorship"
+    "Fuime service fee"
   end
 
   def likely_event_id

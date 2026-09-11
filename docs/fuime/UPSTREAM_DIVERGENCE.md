@@ -5975,3 +5975,20 @@ site cannot branch and are written to be true under both.
 | `/guardian-agreement` wrapper and `/faq` no longer say withdrawal means "can no longer operate a business"; FAQ: guardian gates payouts under MoR, fee read from `Event::Plan::Free::REVENUE_FEE` (was a 5% fallback constant), family plan fee from `Event::Plan::Pro`, "balances" dropped, standing disclosure verbatim, "During the beta" removed | L8 on public pages | `app/views/static_pages/guardian_agreement.html.erb`, `app/views/static_pages/faq.html.erb`, `spec/requests/fuime/legal_pages_spec.rb` |
 
 Not touched, still false under MoR, needs the founder/counsel (G19): `app/views/static_pages/terms.html.erb` beta banner ("no real money moves through Fuime"), §3 bullet, §10 ("can no longer operate"), and §8's seller name vs `legal_entity_name`. v3 links to the Terms only for refunds and disputes so as not to vouch for the rest.
+
+## 2026-09-11 — Playground ledger honesty + Fuime service fee copy
+
+Prod pitch showed invented card spend (Maya cannot spend — Issuing off,
+reimbursements hidden) and a pending −$31.73 labeled **Fiscal
+sponsorship**. That line is HCB FeeEngine accruing Standard's 5% on
+seeded income, not a second product. Refresh now wipes the mock ledger
+and posts lawn-job money-in only on Free (7%). Operator-facing BankFee /
+pending-fee / memo copy says **Fuime service fee**. Mock-data banner
+path is income + that fee only. Legal contract models untouched.
+
+| Change | Why | Files |
+|---|---|---|
+| Playground LEDGER_LINES income-only; wipe+rewrite on seed | Invented spend is a lie in a pitch; prod was stuck with the old rows | `app/services/fuime/playground.rb` |
+| Playground plan Standard → Free | Pending fee was 5% of collections; Free/Pro take-rate is 7% | `app/services/fuime/playground.rb` |
+| Fiscal sponsorship → Fuime service fee on ledger surfaces | HCB leftover on operator-facing memos | `app/models/hcb_code/memo.rb`, `app/models/ledger/item.rb`, `app/models/raw_pending_bank_fee_transaction.rb`, `app/views/events/_pending_fee_transaction.html.erb`, `app/views/ledgers/_pending_fee_transaction.html.erb`, `app/views/hcb_codes/_icon.html.erb`, `app/services/transaction_engine/friendly_memo_service/generate.rb` |
+| Mock ledger: income + 7% Fuime service fee only | Banner path implied a debit card | `app/services/mock_transaction_engine_service/generate_mock_transaction.rb` |

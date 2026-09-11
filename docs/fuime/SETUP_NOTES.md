@@ -2,7 +2,17 @@
 
 ## Handoff (most recent first)
 
-**2026-09-11 (latest) — Onboarding Phase A: copy and routing.**
+**2026-09-11 (latest) — Playground ledger is income + Fuime service fee.**
+
+Invented card spend (business cards, booth fee, leaf bags, trimmer
+string) is gone. `rake fuime:playground` / `/admin/playground` Seed
+wipes this venture's mock ledger and rewrites lawn-job money-in only.
+Plan is Free (7%), so FeeEngine's pending row is the take-rate — now
+labeled **Fuime service fee**, not Fiscal sponsorship. Click: Become
+Maya → `/fuime-playground` → Transactions. Show mock data is the same
+shape. Did not flip Stripe or stand up a second Render.
+
+**2026-09-11 — Onboarding Phase A: copy and routing.**
 
 Branch `fuime/onboarding-a-copy-routing`. Plan: `docs/fuime/ONBOARDING_PLAN.md`
 (§1–§2 the traced flows, §5 the phases). Phase A shipped: site CTA →

@@ -254,11 +254,11 @@ class Ledger
         linked_object.stripe_description
       when "BankFee"
         if linked_object.amount_cents.negative? && linked_object.fee_revenue.present?
-          return "Fiscal sponsorship fee for #{linked_object.fee_revenue.start.strftime("%-m/%-d")} to #{linked_object.fee_revenue.end.strftime("%-m/%-d")}"
+          return "Fuime service fee for #{linked_object.fee_revenue.start.strftime("%-m/%-d")} to #{linked_object.fee_revenue.end.strftime("%-m/%-d")}"
         elsif linked_object.amount_cents.negative?
-          return "Fiscal sponsorship"
+          return "Fuime service fee"
         else
-          return "Fiscal sponsorship fee credit"
+          return "Fuime service fee credit"
         end
       when "FeeRevenue"
         "Fee revenue for #{linked_object.start.strftime("%-m/%-d")} to #{linked_object.end.strftime("%-m/%-d")}"
@@ -378,7 +378,7 @@ class Ledger
       when "StripeServiceFee"
         "Stripe service fee"
       when "BankFee"
-        "Fiscal sponsorship fee"
+        "Fuime service fee"
       when "FeeRevenue"
         "Fee revenue"
       when "Reimbursement::PayoutHolding"
