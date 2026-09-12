@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_12_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1567,7 +1567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_090000) do
     t.datetime "updated_at", null: false
     t.datetime "invite_day3_reminded_at"
     t.datetime "invite_day6_reminded_at"
-    t.index ["guardian_id", "minor_id"], name: "index_guardianships_on_guardian_id_and_minor_id", unique: true
+    t.index ["guardian_id", "minor_id"], name: "index_guardianships_on_live_guardian_and_minor", unique: true, where: "(status <> 2)"
     t.index ["guardian_id"], name: "index_guardianships_on_guardian_id"
     t.index ["invite_token"], name: "index_guardianships_on_invite_token", unique: true
     t.index ["minor_id"], name: "index_guardianships_on_minor_id"

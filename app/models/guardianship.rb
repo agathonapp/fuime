@@ -24,8 +24,8 @@
 # Indexes
 #
 #  index_guardianships_on_guardian_id                (guardian_id)
-#  index_guardianships_on_guardian_id_and_minor_id   (guardian_id,minor_id) UNIQUE
 #  index_guardianships_on_invite_token               (invite_token) UNIQUE
+#  index_guardianships_on_live_guardian_and_minor    (guardian_id,minor_id) UNIQUE WHERE (status <> 2)
 #  index_guardianships_on_minor_id                   (minor_id)
 #  index_guardianships_on_revoked_by_id              (revoked_by_id)
 #  index_guardianships_on_status_and_invite_sent_at  (status,invite_sent_at)
@@ -109,7 +109,17 @@ class Guardianship < ApplicationRecord
 
   enum :status, { pending: 0, active: 1, revoked: 2 }, default: :pending
 
-  validates :guardian_id, uniqueness: { scope: :minor_id, message: "already has a guardianship with this minor" }
+  # Scoped to LIVE rows, matching the partial index added in 20260912120000.
+  # A revoked guardianship is history, not an occupied slot: without this a
+  # parent who withdrew consent could never be invited again, and the teen was
+  # told the invite "didn't go through".
+  validates :guardian_id,
+            uniqueness: {
+              scope: :minor_id,
+              conditions: -> { where.not(status: :revoked) },
+              message: "already has a guardianship with this minor"
+            },
+            unless: :revoked?
   validates :invite_token, uniqueness: true, allow_nil: true
 
   validate :guardian_must_be_adult

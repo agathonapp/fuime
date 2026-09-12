@@ -182,4 +182,42 @@ RSpec.describe "billing page", type: :request do
     post my_billing_subscribe_path
     expect(flash[:alert]).to include("comped by Fuime")
   end
+
+  # ── The window between paying and the webhook ─────────────────────────────
+  #
+  # Stripe redirects the payer back to ?subscribed=1 immediately;
+  # `customer.subscription.created` writes the record a beat later. In that gap
+  # the page fell through to the Free-plan branch and rendered the green
+  # "Welcome to the family plan" callout directly above a live
+  # "Upgrade — $19.99/mo" button. The callout is exactly what invites a second
+  # press, and a second press opens a second Checkout: the parent pays twice.
+  #
+  # Every other double-subscription route was already guarded — #subscribe sends
+  # an existing stripe_backed record to the portal — but no record exists yet in
+  # this window, so nothing caught it.
+  describe "returning from Stripe Checkout before the webhook lands" do
+    before { login_as!(guardian) }
+
+    it "does not offer Upgrade again" do
+      get my_billing_path(subscribed: 1)
+
+      expect(response.body).to include("Confirming your payment")
+      expect(response.body).not_to match(/Upgrade —/)
+    end
+
+    it "says plainly not to pay twice" do
+      get my_billing_path(subscribed: 1)
+
+      expect(response.body).to include("charge you twice")
+    end
+
+    # And the escape hatch: a webhook that never arrives must not lock a family
+    # out of buying. Without the flag, the ordinary page comes back.
+    it "offers Upgrade again on an ordinary visit" do
+      get my_billing_path
+
+      expect(response.body).to match(/Upgrade —/)
+      expect(response.body).not_to include("Confirming your payment")
+    end
+  end
 end

@@ -17,6 +17,10 @@ module Fuime
       @user = current_user
       @pro_plan = Event::Plan::Pro.new
       @subscription = service.record
+      # Back from Stripe Checkout, but the webhook that writes the record may not
+      # have landed yet. See the branch this drives in the view: without it the
+      # page offered Upgrade again and a second press charged the parent twice.
+      @just_paid = params[:subscribed].present? && !@subscription&.active?
       @is_adult = adult?
       @is_staff = current_user.staff?
       # A teen's upgrade path is their guardian; name them.

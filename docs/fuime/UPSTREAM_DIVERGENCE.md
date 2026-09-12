@@ -6244,3 +6244,29 @@ link behind it either. Removing it is Rushil's call, not a review's.
     succeed. Now the price is only set when the form carried one; absent and blank stay
     different, so a cleared price box still gets the model's message.
     Spec: `spec/requests/fuime_offer_link_rename_spec.rb`.
+
+18. **`app/views/fuime/billing/show.html.erb`, `app/controllers/fuime/billing_controller.rb`** —
+    Stripe returns a payer to `?subscribed=1` immediately, while
+    `customer.subscription.created` writes the record a beat later. In that window the page
+    fell through to the Free-plan branch and rendered the green "Welcome to the family plan"
+    callout **directly above a live "Upgrade — $19.99/mo" button** — and the callout is
+    exactly what invites a second press. A second press opens a second Checkout: the parent
+    pays twice. Every other double-subscription route was already guarded (`#subscribe`
+    sends an existing `stripe_backed` record to the portal); this was the one window with no
+    record to find. Now a "Confirming your payment" state with no Upgrade button, and the
+    ordinary page returns on any later visit so a webhook that never arrives does not lock a
+    family out of buying.
+
+19. **`db/migrate/20260912120000_*`, `app/models/guardianship.rb`,
+    `app/services/fuime/guardian_invite_service.rb`** — the unique index on
+    `(guardian_id, minor_id)` had no status scope, and the pair is the natural key for "this
+    parent, this teen". So once a guardianship was revoked — which the accept page
+    explicitly invites ("You can withdraw your consent at any time"), and which an ops
+    mis-click also produces — **that parent could never be invited again.** The teen was
+    told the invite "didn't go through", the one thing it had not done, and the only way
+    back was a different email address for the same human being.
+    `GuardianInviteService` compounded it by returning the revoked row as "already exists",
+    so a re-invite silently sent nothing. Now a partial unique index over live rows only:
+    two live guardianships for one pair are still refused, and the revoked row is **kept**
+    rather than reused, because L4 requires the consent record and a withdrawal is part of
+    it. Overwriting it to make room would destroy the evidence a dispute would turn on.

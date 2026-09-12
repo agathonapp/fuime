@@ -47,6 +47,27 @@
       <%= button_to "Manage billing", my_billing_portal_path, class: "btn btn--secondary", form: { data: { turbo: false } } %>
       <p class="muted text-sm mt-1 mb-0">Card changes and invoices happen in Stripe's secure portal — Fuime never sees your card.</p>
     <% end %>
+  <% elsif @just_paid %>
+    <%# Fuime: back from Stripe Checkout, before the webhook has landed.
+        `@subscription` is written by `customer.subscription.created`, which
+        arrives a beat after Stripe redirects the payer back here. In that gap
+        the page fell through to the Free-plan branch and rendered the green
+        "Welcome to the family plan" callout directly above a live
+        "Upgrade — $19.99/mo" button. A parent who pressed it — and the callout
+        is exactly what invites a second press, since nothing else on the page
+        says the plan is on — opened a second Checkout and was charged twice.
+        Every other double-subscription path was already guarded
+        (Fuime::BillingController#subscribe sends an existing stripe_backed
+        record to the portal); this was the one window where no record exists yet.
+        No Upgrade button here. On any later visit, without ?subscribed=1, the
+        page reads the real record again — so a webhook that genuinely never
+        arrives still leaves a way to buy. %>
+    <h3 class="mt0">Confirming your payment</h3>
+    <p class="mb-0">
+      Stripe has your payment and we're waiting for it to confirm — usually a few
+      seconds. Refresh this page in a moment. Don't pay again: starting another
+      subscription would charge you twice.
+    </p>
   <% else %>
     <h3 class="mt0">Free plan</h3>
     <p>

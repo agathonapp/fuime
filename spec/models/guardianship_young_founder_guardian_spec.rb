@@ -95,3 +95,55 @@ RSpec.describe Guardianship, "a young founder as guardian" do
     expect(described_class.new(minor: teen, guardian: adult)).to be_valid
   end
 end
+
+# Fuime: a parent who withdrew consent can be asked again.
+#
+# `index_guardianships_on_guardian_id_and_minor_id` was UNIQUE over the pair with
+# no status scope, and the pair is the natural key for "this parent, this teen".
+# So the moment a guardianship was revoked — which the accept page explicitly
+# invites ("You can withdraw your consent at any time"), and which an ops
+# mis-click also produces — that parent could never be invited again. The teen
+# was told the invite "didn't go through", the one thing it had not done, and the
+# only way back was a different email address for the same human being.
+#
+# The revoked row is kept rather than reused: L4 requires the consent record, and
+# a withdrawal is part of that record. Overwriting it to make room would destroy
+# the evidence a later dispute would turn on.
+RSpec.describe Guardianship, "re-inviting a parent who revoked" do
+  let(:teen) { create(:user, :minor) }
+  let(:parent) { create(:user, birthday: 40.years.ago.to_date) }
+
+  let!(:revoked) do
+    create(:guardianship, :active, guardian: parent, minor: teen).tap(&:revoke!)
+  end
+
+  it "allows a fresh guardianship for the same pair" do
+    fresh = described_class.new(minor: teen, guardian: parent)
+
+    expect(fresh).to be_valid
+    expect { fresh.save! }.to change { described_class.where(minor: teen, guardian: parent).count }.by(1)
+  end
+
+  it "keeps the revoked row, because it is the consent record" do
+    described_class.create!(minor: teen, guardian: parent)
+
+    expect(revoked.reload).to be_revoked
+    expect(revoked.revoked_at).to be_present
+  end
+
+  it "sends a real invite instead of silently returning the revoked row" do
+    result = Fuime::GuardianInviteService.new(minor: teen, guardian_email: parent.email).run!
+
+    expect(result.id).not_to eq(revoked.id)
+    expect(result).to be_pending
+    expect(result.invite_token).to be_present
+  end
+
+  # The constraint that still has to hold: never two live guardianships for one
+  # pair. That is what the index was protecting and it is worth keeping.
+  it "still refuses a second LIVE guardianship for the same pair" do
+    described_class.create!(minor: teen, guardian: parent)
+
+    expect(described_class.new(minor: teen, guardian: parent)).not_to be_valid
+  end
+end
