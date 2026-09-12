@@ -6298,3 +6298,25 @@ link behind it either. Removing it is Rushil's call, not a review's.
     the money. The nav now trusts the policy alone, which already grants the guardian and
     still refuses a stranger, and the guardian's own overview carries both links.
     Spec: `spec/requests/fuime_guardian_can_reach_payouts_spec.rb`.
+
+22. **`app/services/flavor_text_service.rb`** — the rotating tagline beside the signed-in
+    home page heading. **About twenty live entries used L5's forbidden vocabulary**: "The
+    bank that smiles back!", "*technically not a bank*", "🐨 Koalaty banking", "no hack, only
+    bank", "all your bank are belong to us", "The only bank brave enough to say…", "U want
+    sum bank?", "bank is such a weird word… bank bank bank", "I was gonna tell a Bank joke",
+    "If money talks, why do we need bank tellers?", plus a `%w[… finance banking].sample`.
+    Rendered to every signed-in user — teenagers, and the parents who are the legal account
+    holders — on the most-visited page in the product. The existing L5 sweep covers mailers
+    and helpers; this service is neither, so nothing caught it. Found independently by three
+    UI reviewers.
+    **Three further entries leaked a minor's PII to Hack Club**: links to
+    `hack.af/hcb-stickers` with the signed-in user's name, email and venture name prefilled
+    in the query string (Prime Directive 4 and L7). The file's own header says Hack Club
+    links were stripped for exactly that reason — these survived because they sit inside
+    conditional splats rather than being plain strings. Also removed: "aka Hack Bank",
+    "The Hack Foundation dba The Dolla Store", a promo-code comment pointing at
+    hack.af, and "hack on hcb" as the label on Fuime's own repository link.
+    25 entries removed in total. `spec/services/flavor_text_service_spec.rb` sweeps every
+    list across 40 seeds for forbidden vocabulary, Hack Club references, user data in
+    outbound links, and any host not on a reviewed allowlist — so the lists stay editable
+    without this recurring.
