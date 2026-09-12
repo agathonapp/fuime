@@ -6233,3 +6233,14 @@ the founder "a member of our team will reach out to schedule a call soon". At a 
 event that is a promise nobody can staff, and it occupies the slot above the founder's
 actual next step. `Event#onboarding_scheduling_link` returns nil, so there is no self-serve
 link behind it either. Removing it is Rushil's call, not a review's.
+
+17. **`app/controllers/fuime/offers_controller.rb`** — `offer_params` merged
+    `price_cents: price_cents_param` unconditionally, and `price_cents_param` returns nil
+    when the form carried no price. The "Change this link" form on the offers page submits
+    the slug and nothing else, so every save wrote nil over a real price and was refused
+    with "Price cents has to be an amount you've decided on" — a complaint about a field the
+    operator was not editing and could not see on that form. Renaming a payment link, the
+    one affordance for tidying the URL a founder pastes into an Instagram bio, could never
+    succeed. Now the price is only set when the form carried one; absent and blank stay
+    different, so a cleared price box still gets the model's message.
+    Spec: `spec/requests/fuime_offer_link_rename_spec.rb`.

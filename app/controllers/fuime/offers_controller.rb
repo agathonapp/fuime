@@ -442,10 +442,26 @@ module Fuime
       @offer = @event.fuime_offers.find(params[:id])
     end
 
+    # Only set the price when the form actually carried one.
+    #
+    # This merged `price_cents:` unconditionally, so any form that does not
+    # include a price field wrote nil over a real price and failed validation
+    # with "has to be an amount you've decided on" — a message about a field the
+    # operator was not editing and could not see. The "Change this link" form on
+    # the offers page is exactly that shape (slug only), so renaming a payment
+    # link could never succeed: the one affordance offered for tidying up the URL
+    # a founder pastes into an Instagram bio.
+    #
+    # Absent and blank are different. A submitted-but-empty price is still an
+    # attempt to set one, and must reach the model so the operator gets the
+    # numericality message on the field they are looking at.
     def offer_params
-      params.require(:fuime_offer)
-            .permit(:name, :description, :unit_label, :position, :slug)
-            .merge(price_cents: price_cents_param)
+      permitted = params.require(:fuime_offer)
+                        .permit(:name, :description, :unit_label, :position, :slug)
+
+      return permitted unless params[:fuime_offer].key?(:price)
+
+      permitted.merge(price_cents: price_cents_param)
     end
 
     # Accepts what a person types — "35", "35.00", "$35", "1,250.50".
