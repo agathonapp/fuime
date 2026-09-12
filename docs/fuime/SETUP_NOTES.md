@@ -49,6 +49,19 @@ Maya → `/fuime-playground` → Transactions. Show mock data is the same
 shape. Did not flip Stripe or stand up a second Render.
 
 **2026-09-11 — Onboarding Phase A: copy and routing.**
+**2026-09-12 — Onboarding wizard: designed, not built.**
+
+Branch `fuime/onboarding-wizard` (off main #104). The design panel's synthesis is
+`docs/fuime/ONBOARDING_WIZARD_SPEC.md`; its adversarial audit did not run (usage
+limit) — run it first, then build. Standing instruction from the founder: the
+parent invite is an onboarding step but the teen keeps going and can sell while
+it is pending; the guardian is only for payouts. Sibling branch
+`fuime/playground-demo-polish` (PR pending) is the demo control room whose *Start
+fresh as Sam* lands on `/` → `redirect_to_onboarding`, which the spec re-points at
+`/setup`. Worktree specs: see the "Running specs from a worktree" note below;
+databases `bank_test_43/44/45` exist on the local Postgres.
+
+**2026-09-11 (latest) — Onboarding Phase A: copy and routing.**
 
 Branch `fuime/onboarding-a-copy-routing`. Plan: `docs/fuime/ONBOARDING_PLAN.md`
 (§1–§2 the traced flows, §5 the phases). Phase A shipped: site CTA →
