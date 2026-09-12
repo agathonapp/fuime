@@ -244,39 +244,52 @@ module Fuime
         return existing
       end
 
-      ActiveRecord::Base.transaction do
-        raw = ::RawPendingDonationTransaction.create!(
-          donation_transaction_id: transaction_key,
-          amount_cents: amount_cents.to_i,
-          date_posted: Time.at(object.created).to_date
-        )
+      # The check above is the fast path, not the guarantee. Stripe sends
+      # `checkout.session.completed` and `payment_intent.succeeded` for the same
+      # sale milliseconds apart and both are keyed to the PaymentIntent, so two
+      # Puma threads can both find nothing and both insert. The unique index
+      # added in 20260912090000 is what actually decides; `already_recorded`
+      # turns the loser's violation back into the winner's row.
+      already_recorded(transaction_key) do
+        # `requires_new`, so this is a real transaction when nothing wraps it and
+        # a SAVEPOINT when something does. A constraint violation inside a plain
+        # nested block poisons the enclosing transaction instead of rolling back
+        # to a point the rescue can recover from — which would turn one duplicate
+        # webhook into a failure of whatever else that outer transaction was doing.
+        ActiveRecord::Base.transaction(requires_new: true) do
+          raw = ::RawPendingDonationTransaction.create!(
+            donation_transaction_id: transaction_key,
+            amount_cents: amount_cents.to_i,
+            date_posted: Time.at(object.created).to_date
+          )
 
-        cpt = ::CanonicalPendingTransaction.create!(
-          date: raw.date,
-          memo: memo_for(object, event),
-          amount_cents: raw.amount_cents,
-          raw_pending_donation_transaction_id: raw.id,
-          # NOT fronted. In HCB, `fronted` means the platform advances the org
-          # spendable credit against money that hasn't settled — a balance-sheet
-          # decision backed by Hack Club's reserves. Fuime has no reserves, and
-          # Stripe settlement is T+2 with refund and chargeback risk after that,
-          # so fronting here would let a teen spend money Fuime does not hold.
-          fronted: false
-        )
+          cpt = ::CanonicalPendingTransaction.create!(
+            date: raw.date,
+            memo: memo_for(object, event),
+            amount_cents: raw.amount_cents,
+            raw_pending_donation_transaction_id: raw.id,
+            # NOT fronted. In HCB, `fronted` means the platform advances the org
+            # spendable credit against money that hasn't settled — a balance-sheet
+            # decision backed by Hack Club's reserves. Fuime has no reserves, and
+            # Stripe settlement is T+2 with refund and chargeback risk after that,
+            # so fronting here would let a teen spend money Fuime does not hold.
+            fronted: false
+          )
 
-        ::CanonicalPendingEventMapping.create!(
-          canonical_pending_transaction_id: cpt.id,
-          event_id: event.id
-        )
+          ::CanonicalPendingEventMapping.create!(
+            canonical_pending_transaction_id: cpt.id,
+            event_id: event.id
+          )
 
-        Rails.logger.info(
-          "[Fuime] Recorded payment #{object.id} for #{event.name}: " \
-          "$#{amount_cents.to_i / 100.0} (cpt=#{cpt.id})"
-        )
+          Rails.logger.info(
+            "[Fuime] Recorded payment #{object.id} for #{event.name}: " \
+            "$#{amount_cents.to_i / 100.0} (cpt=#{cpt.id})"
+          )
 
-        record_platform_fee(object:, event:, gross_cents: raw.amount_cents)
+          record_platform_fee(object:, event:, gross_cents: raw.amount_cents)
 
-        raw
+          raw
+        end
       end
     end
 
@@ -417,48 +430,62 @@ module Fuime
         return existing
       end
 
-      # Reverse only what hasn't already been reversed, so a refund following a
-      # partial refund doesn't claw back more than the original payment.
+      # What this event adds, not what it reports.
+      #
+      # `charge.amount_refunded` is CUMULATIVE — the running total refunded on
+      # that charge, not the size of this refund. Booking it whole meant a second
+      # $10 refund on a $35 sale arrived as 20, was reduced only by the
+      # outstanding cap, and posted -$20 on top of the first -$10: $30 taken off
+      # a teenager's earnings for $20 actually refunded. So subtract what this
+      # KIND has already booked, and let the outstanding balance cap the result.
+      #
+      # Per kind, because a dispute amount is not cumulative with refunds: a $25
+      # chargeback after a $10 refund is a further $25 of exposure, not $15.
+      # The outstanding cap still stops the two together exceeding the sale.
+      already_of_kind = reversed_cents_for(intent_id, kind:)
       already_reversed = reversed_cents_for(intent_id)
       outstanding = original.amount_cents - already_reversed
-      reversal_cents = [amount_cents, outstanding].min
+      reversal_cents = [amount_cents - already_of_kind, outstanding].min
 
       if reversal_cents <= 0
         Rails.logger.info("[Fuime] #{kind} #{object.id}: payment #{intent_id} already fully reversed")
         return nil
       end
 
-      ActiveRecord::Base.transaction do
-        raw = ::RawPendingDonationTransaction.create!(
-          donation_transaction_id: reversal_key,
-          amount_cents: -reversal_cents,
-          date_posted: Time.at(object.created).to_date
-        )
+      already_recorded(reversal_key) do
+        # Savepoint when nested — see #record_payment.
+        ActiveRecord::Base.transaction(requires_new: true) do
+          raw = ::RawPendingDonationTransaction.create!(
+            donation_transaction_id: reversal_key,
+            amount_cents: -reversal_cents,
+            date_posted: Time.at(object.created).to_date
+          )
 
-        cpt = ::CanonicalPendingTransaction.create!(
-          date: raw.date,
-          memo: kind == :dispute ? "Disputed payment (chargeback)" : "Refunded payment",
-          amount_cents: raw.amount_cents,
-          raw_pending_donation_transaction_id: raw.id,
-          fronted: false
-        )
+          cpt = ::CanonicalPendingTransaction.create!(
+            date: raw.date,
+            memo: kind == :dispute ? "Disputed payment (chargeback)" : "Refunded payment",
+            amount_cents: raw.amount_cents,
+            raw_pending_donation_transaction_id: raw.id,
+            fronted: false
+          )
 
-        ::CanonicalPendingEventMapping.create!(
-          canonical_pending_transaction_id: cpt.id,
-          event_id: event.id
-        )
+          ::CanonicalPendingEventMapping.create!(
+            canonical_pending_transaction_id: cpt.id,
+            event_id: event.id
+          )
 
-        Rails.logger.info(
-          "[Fuime] Recorded #{kind} #{object.id} for #{event.name}: " \
-          "-$#{reversal_cents / 100.0} (cpt=#{cpt.id})"
-        )
+          Rails.logger.info(
+            "[Fuime] Recorded #{kind} #{object.id} for #{event.name}: " \
+            "-$#{reversal_cents / 100.0} (cpt=#{cpt.id})"
+          )
 
-        refund_platform_fee(
-          object:, event:, intent_id:,
-          reversal_cents:, gross_cents: original.amount_cents
-        )
+          refund_platform_fee(
+            object:, event:, intent_id:,
+            reversal_cents:, gross_cents: original.amount_cents
+          )
 
-        raw
+          raw
+        end
       end
     end
 
@@ -543,9 +570,32 @@ module Fuime
       ::Fuime::VentureLedger.reversal_key_prefix(intent_id)
     end
 
+    # Run a posting block, and if the database says that ledger key already
+    # exists, return the row that won instead of raising.
+    #
+    # Every caller already checks `find_row` first; this is what happens when two
+    # deliveries of the same sale clear that check together. The unique index
+    # (migration 20260912090000) makes exactly one of them commit, and the loser
+    # arrives here. Postgres blocks the loser on the index until the winner
+    # commits, so by the time the violation is raised the winner's row is
+    # visible and `find_row` returns it — the duplicate delivery ends as the
+    # no-op the handler always claimed it was, and Stripe still gets its 200.
+    #
+    # The rescue is deliberately OUTSIDE the transaction the block opens: a
+    # constraint violation poisons its own transaction, so it can only be
+    # answered after that transaction has rolled back.
+    def already_recorded(key)
+      yield
+    rescue ActiveRecord::RecordNotUnique
+      row = ::Fuime::VentureLedger.find_row(key)
+      Rails.logger.info("[Fuime] Ledger key #{key} was posted concurrently; keeping the first row")
+      row
+    end
+
     # Total already reversed against a payment intent, as a positive number.
-    def reversed_cents_for(intent_id)
-      ::Fuime::VentureLedger.reversed_cents_for(intent_id)
+    # With `kind:`, only refunds or only disputes.
+    def reversed_cents_for(intent_id, kind: nil)
+      ::Fuime::VentureLedger.reversed_cents_for(intent_id, kind:)
     end
 
     def event_for_raw(raw)

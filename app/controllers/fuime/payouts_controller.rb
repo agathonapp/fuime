@@ -78,7 +78,18 @@ module Fuime
         else
           service.available_balance_cents
         end
-      @pending_request = @event.payout_requests.awaiting_approval.first
+      # `person_initiated`, not the bare scope, and the difference is a 500.
+      #
+      # A weekly batch line is also a PayoutRequest in state `pending`, created
+      # with `requested_by: nil` (PayoutBatchService#create_line!) because
+      # nobody asked for it — the schedule did. Without this scope the first
+      # draft batch becomes "the pending request", and the callout below renders
+      # `@pending_request.requested_by.name` on nil. That is Wednesday's job
+      # breaking the one page a teen opens to ask where their money is, until an
+      # admin approves the run. PayoutRequest's own scope comment says a batch
+      # line must never wander into a guardian's decision queue; this is the
+      # call site that had not adopted it.
+      @pending_request = @event.payout_requests.awaiting_approval.person_initiated.first
       # Approved school transfers the business office still has to pay. Shown
       # separately from history because they are work outstanding, not a record.
       @unsettled_requests = @event.payout_requests.awaiting_settlement.recent_first

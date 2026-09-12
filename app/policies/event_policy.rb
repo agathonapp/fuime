@@ -470,7 +470,11 @@ class EventPolicy < ApplicationPolicy
     # office), exactly as in #setup_payments? and #decide_payout?. Without this
     # branch a school venture could never connect a destination and every one of
     # its students would be skipped from every payout run.
-    return manager? if record.institutionally_sponsored?
+    #
+    # `school_manager?`, not `manager?`: a student is a manager of their own
+    # venture, so the wider check handed them the destination of their own
+    # payouts. See #school_manager?.
+    return school_manager? if record.institutionally_sponsored?
 
     guardian_reader?
   end
@@ -538,7 +542,11 @@ class EventPolicy < ApplicationPolicy
     # Segregation of duties still holds: a manager is >= member and so could both
     # request and decide, which PayoutRequest#approver_must_not_be_the_requester
     # refuses at the record level.
-    return manager? if record.institutionally_sponsored?
+    # `school_manager?`, not `manager?`, and this is the branch where it matters
+    # most: `manager?` resolves through the venture itself, so the student who
+    # filed the request was also allowed to approve it — the exact thing the
+    # sentence below says must never happen, reintroduced by the school branch.
+    return school_manager? if record.institutionally_sponsored?
 
     # Deliberately NOT `member? || guardian_reader?`. A teen approving their own
     # payout would defeat the entire ownership structure, and PayoutRequest
@@ -558,7 +566,8 @@ class EventPolicy < ApplicationPolicy
     return true if user.admin?
     return false unless record.institutionally_sponsored?
 
-    manager?
+    # `school_manager?`, not `manager?` — see #school_manager?.
+    school_manager?
   end
 
   # Fuime: a school putting its own money into a student's venture ("$100 per A").
@@ -577,7 +586,8 @@ class EventPolicy < ApplicationPolicy
     return true if user.admin?
     return false unless record.institutionally_sponsored?
 
-    manager?
+    # `school_manager?`, not `manager?` — see #school_manager?.
+    school_manager?
   end
 
   # Seeing the awards a venture has received. The student needs this — it is their
@@ -604,7 +614,9 @@ class EventPolicy < ApplicationPolicy
     return false unless record.institutionally_sponsored?
     return false if record.stripe_connected_account.blank?
 
-    manager?
+    # `school_manager?` — putting money INTO the school's account is the school's
+    # act, and `manager?` would have counted a student on their own venture.
+    school_manager?
   end
 
   # The payouts screen itself: the team needs to see the balance and the state of
@@ -679,7 +691,11 @@ class EventPolicy < ApplicationPolicy
     # it is the one who may create the liability. Without this branch "reinvest the
     # money rather than cash it out" was not actually available to a school
     # student — the balance was reachable only through a card nobody could issue.
-    return manager? if record.institutionally_sponsored?
+    #
+    # `school_manager?`, because a student is a manager of their own venture and
+    # `manager?` therefore let them issue themselves the card whose liability the
+    # school carries — the opposite of the sentence above this method.
+    return school_manager? if record.institutionally_sponsored?
 
     guardian_reader?
   end
@@ -691,7 +707,8 @@ class EventPolicy < ApplicationPolicy
     return false if user.blank?
     return true if user.admin?
 
-    return manager? if record.institutionally_sponsored?
+    # `school_manager?` — see #issue_cards?.
+    return school_manager? if record.institutionally_sponsored?
 
     guardian_reader?
   end
@@ -775,6 +792,58 @@ class EventPolicy < ApplicationPolicy
     return false unless permitted_to_operate_business?
 
     OrganizerPosition.role_at_least?(user, record, :manager)
+  end
+
+  # Fuime: a manager of the SCHOOL, never a manager of the student's own venture.
+  #
+  # Four school branches below read "the responsible party here is a manager —
+  # the guide or the business office". `manager?` cannot say that. It resolves
+  # through `Event#ancestor_ids`, which begins `[id]`, so a manager position on
+  # the venture itself qualifies — and every student gets exactly that:
+  # `Event::Application#activate_event!` invites the founder with
+  # `role: :manager`, and the column defaults to manager anyway.
+  #
+  # So on a School-plan venture the student passed every check meant for the
+  # school. They could point Fuime's payouts at a bank account they control,
+  # approve and settle that payout, and grant themselves the school's award
+  # balance — with no adult anywhere in it. The guardian requirement does not
+  # catch it either: `Event#payout_setup_blockers` deliberately skips the
+  # guardian on an institutionally sponsored venture, because the school is
+  # supposed to be the adult. That is the whole reason this distinction has to
+  # hold: the school branch REPLACES the L2 guardian gate, so if it resolves to
+  # the student there is no gate left.
+  #
+  # The rule is "a manager of the INSTITUTION", and the institution is the node
+  # carrying the School plan — which `Event#institutionally_sponsored?` finds by
+  # walking `ancestor_ids`, the same list beginning `[id]`.
+  #
+  # So the test cannot simply be "not the record": on the school's own pages the
+  # record IS the institution, and its manager holds their position right there.
+  # Dropping the record would lock a guide out of their own treasury page. What
+  # must be excluded is a position on a record that merely SITS UNDER the
+  # institution — the student's venture.
+  #
+  # Hence: authority is read from the school node and everything above it. A
+  # teacher is a manager of the school and so qualifies everywhere beneath it; a
+  # student is a manager only of their own venture, which is never the school.
+  def school_manager?
+    return false if user.blank?
+    return false unless record.institutionally_sponsored?
+
+    OrganizerPosition.where(event_id: institution_and_above_ids, user:).manager_access.exists?
+  end
+
+  # The school node and its ancestors. Everything below it — the cohort, the
+  # student's venture — is dropped, because a position there says nothing about
+  # authority over the institution's money.
+  def institution_and_above_ids
+    ids = record.ancestor_ids
+    institution_index = Event.where(id: ids).includes(:plan).index_by(&:id).then do |by_id|
+      ids.index { |id| by_id[id]&.plan&.institutionally_sponsored? }
+    end
+    return [] if institution_index.nil?
+
+    ids.drop(institution_index)
   end
 
   # Admins are staff, not teen business owners, and are not subject to the

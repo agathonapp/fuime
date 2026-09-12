@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_12_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2406,6 +2406,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.string "donation_transaction_id"
     t.string "state"
     t.datetime "updated_at", null: false
+    t.index ["donation_transaction_id"], name: "index_rpdt_on_donation_transaction_id_pattern", opclass: :varchar_pattern_ops
+    t.index ["donation_transaction_id"], name: "index_rpdt_on_fuime_donation_transaction_id", unique: true, where: "((donation_transaction_id)::text ~~ 'fuime\\_%'::text)"
   end
 
   create_table "raw_pending_fee_reimbursement_transactions", force: :cascade do |t|

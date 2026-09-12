@@ -35,10 +35,19 @@ module SchoolTree
     user
   end
 
-  # The student, holding member on their own venture and nothing else.
-  def create_student(venture, birthday: 15.years.ago.to_date)
+  # The student, holding MANAGER on their own venture and nothing else.
+  #
+  # `:member` was the wrong shape and it hid a hole for months. Every real path
+  # makes a founder a manager of their own venture —
+  # `Event::Application#activate_event!` invites with `role: :manager`, and the
+  # column defaults to manager — so a fixture with `:member` tested a student who
+  # does not exist. The school policy branches resolved through `manager?`, which
+  # counts a position on the venture itself, and the specs could not see it.
+  #
+  # Pass `role:` to build the other shapes deliberately.
+  def create_student(venture, birthday: 15.years.ago.to_date, role: :manager)
     user = create(:user, birthday:)
-    create(:organizer_position, event: venture, user:, role: :member)
+    create(:organizer_position, event: venture, user:, role:)
     user
   end
 end

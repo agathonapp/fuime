@@ -6031,3 +6031,71 @@ RSpec shard 8/8 on PR #106: four Playground Mode examples called `create_session
 | Change | Why | Files |
 |---|---|---|
 | `include SessionSupport` in Playground Mode context | undefined `create_session` | `spec/controllers/fuime/checkouts_controller_spec.rb` |
+
+## 2026-09-12 — Platform review: five P0s in money, authorization and the payouts page
+
+Found by a multi-agent read of the whole platform (money pipeline, authorization, legal
+copy, UI/flow) against `main` at `67f4d90a6`. Each was confirmed against the code and is
+pinned by a spec that fails without the fix.
+
+1. **`app/controllers/fuime/payouts_controller.rb`** — `@pending_request` used the bare
+   `awaiting_approval` scope, so a weekly batch line (state `pending`, `requested_by: nil`
+   by design) became "the pending request" and the view dereferenced `requested_by.name`.
+   Every Wednesday from batch generation until admin approval, `/:slug/payouts` 500'd for
+   the operator **and** their guardian — the one page the payables framing points at. Now
+   `.person_initiated`, the scope `PayoutRequest` already documented for exactly this.
+   Spec: `spec/requests/fuime_payouts_page_during_batch_spec.rb`.
+
+2. **`db/migrate/20260912090000_add_unique_index_on_fuime_ledger_keys.rb`** — the ledger key
+   `raw_pending_donation_transactions.donation_transaction_id` had **no index at all**, and
+   idempotency was a `find_row` check standing outside the transaction that inserts. Stripe
+   sends `checkout.session.completed` and `payment_intent.succeeded` for one sale
+   milliseconds apart, both keyed to the PaymentIntent, and production Puma serves them on
+   different threads — so one sale (and its 7% fee) could post twice, overstating what Fuime
+   owes and paying the operator for a sale that happened once. Adds a partial unique index
+   over Fuime's own `fuime_%` key space only (upstream HCB donation rows keep their existing
+   behaviour, Rule 3), plus a `varchar_pattern_ops` index for the `LIKE 'fuime_…%'` prefix
+   scans behind `PayablesLedger` and `ConnectSettlementSweep`.
+   `Fuime::PaymentWebhookHandler#already_recorded` turns the loser's violation back into the
+   winner's row, and both posting transactions are now `requires_new: true` so the rescue
+   works when something wraps them.
+
+3. **`app/services/fuime/payment_webhook_handler.rb`** — `charge.amount_refunded` is Stripe's
+   **cumulative** total, and it was booked as if it were this refund. A second $30 refund on a
+   $100 sale arrived as 70 and posted -$60 on top of the first -$40: **$100 taken off a
+   teenager's earnings for $70 actually refunded.** The existing specs could not see it
+   because both ended on a *full* refund, which the outstanding cap rescues either way. Now
+   subtracts what this kind has already booked (`VentureLedger.reversed_cents_for(id, kind:)`),
+   with the outstanding balance still capping the result, and without netting a chargeback
+   against an earlier refund.
+
+4. **`app/models/guardianship.rb`** — every guardian age check asked `guardian.is_minor?`,
+   which reads a birthday; signup stopped collecting birthdays on 2026-08-20, so the check
+   was true only of a population that no longer exists. Teen A could name classmate B as
+   guardian, B ticks the 18+ box, `attest_adult_18_plus!` overwrites B's own minor
+   attestation — B's venture then needs no guardian either, and A has cleared the L2 payout
+   gate. Two founders at one cohort event, about a minute. Now refused by
+   `Guardianship.signed_up_as_a_young_founder?` (13+ attested **and** has a venture or is
+   somebody's ward) in both the validation and `structural_activation_blockers`, so the
+   invite, the create and the accept form are all closed. The ordinary parent path — an
+   account that only ever ticked 13+ at signup — still works, and is specced.
+
+5. **`app/policies/event_policy.rb`** — five school branches read "the responsible party is a
+   manager (the guide or business office)" and called `manager?`, which resolves through
+   `Event#ancestor_ids` — a list that begins `[id]`. Every founder is a manager of their own
+   venture (`activate_event!` invites with `role: :manager`; the column defaults to manager),
+   so on a School-plan venture **the student passed every check written for the school**:
+   connect the payout destination, decide the payout, settle it, grant themselves award
+   money, and issue a card whose liability the school carries. The guardian requirement
+   cannot catch it — `payout_setup_blockers` deliberately skips the guardian on an
+   institutionally sponsored venture, because the school branch *replaces* the L2 gate.
+   New `EventPolicy#school_manager?` reads authority from the institution node and above,
+   never from what hangs below it (the school's own pages still work, which a first attempt
+   broke). `spec/support/school_tree.rb#create_student` was `:member` — a shape no real path
+   produces — which is why the suite could not see any of this; it is now `:manager`, and
+   that change alone surfaced the cards instance.
+
+Files: `app/controllers/fuime/payouts_controller.rb`, `app/services/fuime/payment_webhook_handler.rb`,
+`app/services/fuime/venture_ledger.rb`, `app/models/guardianship.rb`, `app/policies/event_policy.rb`,
+`db/migrate/20260912090000_*`, `db/schema.rb`, `spec/support/school_tree.rb`, and four specs.
+Nothing in the ledger engine was touched (Rule 3); no migration was edited (Rule 5).

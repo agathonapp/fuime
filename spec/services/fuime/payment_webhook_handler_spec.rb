@@ -239,6 +239,61 @@ RSpec.describe Fuime::PaymentWebhookHandler do
     end
   end
 
+  # ── Two deliveries of one sale, arriving together ─────────────────────────
+  #
+  # Stripe fires `checkout.session.completed` and `payment_intent.succeeded` for
+  # the same card payment, milliseconds apart, and both are deliberately keyed to
+  # the PaymentIntent so the second is a no-op. That "no-op" was a `find_row`
+  # check standing outside the transaction that inserts, on a column with no
+  # index — a read-then-write with nothing underneath it. Production Puma serves
+  # the two deliveries on different threads, so both could find nothing and both
+  # insert: one $100 sale on a teenager's ledger twice, the fee twice, and the
+  # Friday run paying for a sale that happened once.
+  #
+  # Real threads are not the way to pin this: the race is in the database, and
+  # asserting it through Rails' connection pool would buy flakiness rather than
+  # confidence. Instead the check is made to miss — exactly what it does when it
+  # loses the race — so the assertion is about what the DATABASE guarantees.
+  describe "when the same sale is delivered twice at once" do
+    it "posts one gross line and one fee line, not two of each" do
+      handle("payment_intent.succeeded", payment_intent)
+
+      # The loser's view of the world: the row is not there yet.
+      allow(Fuime::VentureLedger).to receive(:find_row).and_wrap_original do |original, key|
+        key.to_s.start_with?("fuime_pi_", "fuime_fee_pi_") ? nil : original.call(key)
+      end
+
+      expect { handle("checkout.session.completed", checkout_session) }
+        .not_to(change { ledger_lines.size })
+
+      expect(net_cents).to eq(10_000 - fee_on(10_000))
+    end
+
+    it "does not raise, so Stripe still gets its 200 and stops retrying" do
+      handle("payment_intent.succeeded", payment_intent)
+
+      allow(Fuime::VentureLedger).to receive(:find_row).and_wrap_original do |original, key|
+        key.to_s.start_with?("fuime_pi_") ? nil : original.call(key)
+      end
+
+      expect { handle("payment_intent.succeeded", payment_intent) }.not_to raise_error
+    end
+
+    # The guarantee itself, stated against the database rather than the handler,
+    # because this is the thing the handler is now allowed to rely on.
+    it "refuses a duplicate Fuime ledger key at the database level" do
+      handle("payment_intent.succeeded", payment_intent)
+
+      expect {
+        RawPendingDonationTransaction.create!(
+          donation_transaction_id: Fuime::VentureLedger.payment_key("pi_test_1"),
+          amount_cents: 10_000,
+          date_posted: Date.current
+        )
+      }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
+
   describe "refunds" do
     before { handle("payment_intent.succeeded", payment_intent) }
 
@@ -292,6 +347,45 @@ RSpec.describe Fuime::PaymentWebhookHandler do
 
       rebated = ledger_lines.select { |l| l.memo.to_s.match?(/fee refunded/i) }.sum(&:amount_cents)
       expect(rebated).to eq(fee_on(10_000))
+    end
+
+    # ── The bug the two examples above could not see ──────────────────────────
+    #
+    # Both of them end on a FULL refund, and a full refund is saved by the
+    # outstanding cap no matter how the arithmetic is done. The error only shows
+    # when the increments stop short of the whole sale.
+    #
+    # `amount_refunded` is Stripe's running total, not the size of this refund.
+    # Booking it whole meant the second $30 arrived as 70, was capped only by
+    # what was left, and posted -$60 on top of the first -$40: $100 taken off a
+    # teenager's earnings for $70 actually refunded, and the ledger silently
+    # reconciling because the residual absorbs it.
+    it "books only what each increment adds, not Stripe's running total" do
+      handle("charge.refunded", charge(amount_refunded: 4_000))
+      handle("charge.refunded", charge(amount_refunded: 7_000))
+
+      reversed = ledger_lines.select { |l| l.memo.to_s.match?(/refunded payment/i) }.sum(&:amount_cents)
+      expect(reversed).to eq(-7_000)
+      expect(net_cents).to eq(10_000 - fee_on(10_000) - 7_000 + fee_on(7_000))
+    end
+
+    # The same correction must not start netting a chargeback against an earlier
+    # refund: a dispute amount is its own number, not a cumulative one. $40
+    # refunded and then a $60 chargeback is $100 of exposure, which is also
+    # exactly what the outstanding cap allows — no more.
+    it "does not net a chargeback against an earlier refund" do
+      handle("charge.refunded", charge(amount_refunded: 4_000))
+      handle("charge.dispute.created", {
+               id: "dp_test_1",
+               object: "dispute",
+               payment_intent: "pi_test_1",
+               amount: 6_000,
+               created: Time.current.to_i,
+             })
+
+      disputed = ledger_lines.select { |l| l.memo.to_s.match?(/chargeback/i) }.sum(&:amount_cents)
+      expect(disputed).to eq(-6_000)
+      expect(net_cents).to eq(0)
     end
 
     it "ignores a refund for a payment it never recorded" do
