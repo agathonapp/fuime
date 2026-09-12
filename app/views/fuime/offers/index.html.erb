@@ -111,8 +111,21 @@
             <td>
               <div class="flex gap-1 flex-wrap">
                 <% if offer.draft? %>
-                  <%= button_to "Publish", fuime_offer_publish_path(event_slug: @event.slug, id: offer.id),
-                                method: :post, class: "btn" %>
+                  <%# Same rule as the wizard's review step: while the venture has
+                      publish blockers this button can only fail, and the callout
+                      at the top of the page already explains why. A disabled
+                      control that states its own reason beats a live one that
+                      bounces — and beats hiding it, since a founder coming back
+                      after the review needs to see where Publish will appear. %>
+                  <% if @selling_blockers.any? %>
+                    <button type="button" class="btn bg-muted" disabled
+                            title="<%= @selling_blockers.first %>">
+                      Publish
+                    </button>
+                  <% else %>
+                    <%= button_to "Publish", fuime_offer_publish_path(event_slug: @event.slug, id: offer.id),
+                                  method: :post, class: "btn" %>
+                  <% end %>
                 <% else %>
                   <%= button_to "Take down", fuime_offer_unpublish_path(event_slug: @event.slug, id: offer.id),
                                 method: :post, class: "btn bg-muted" %>

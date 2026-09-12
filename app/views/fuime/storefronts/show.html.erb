@@ -226,20 +226,33 @@
     </div>
   <% end %>
 
-  <%# Public ledger teaser %>
-  <div class="card mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="m-0">Public Ledger</h3>
-      <%= link_to event_path(@event), class: "flex items-center shrink-0 no-underline text-sm" do %>
-        View full ledger
-        <%= inline_icon "view-forward", size: 16 %>
-      <% end %>
+  <%# Public ledger teaser — only when the venture actually publishes one.
+
+      This card was rendered unconditionally while `publishes_ledger` defaults to
+      FALSE, so every storefront told the public "This business's finances are
+      transparent. You can view their complete transaction history" about a
+      teenager who had published nothing. The link went to `event_path`, whose
+      policy is `publishes_ledger? || auditor_or_reader?` — so a customer who
+      followed it was bounced to a login page.
+
+      A dead link on the one public page a customer ever sees, under a false
+      statement about a child's finances. `publishes_ledger?` is the venture's own
+      decision (AddPublishesLedgerToEvents), and this now honours it. %>
+  <% if @event.publishes_ledger? %>
+    <div class="card mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="m-0">Public Ledger</h3>
+        <%= link_to event_path(@event), class: "flex items-center shrink-0 no-underline text-sm" do %>
+          View full ledger
+          <%= inline_icon "view-forward", size: 16 %>
+        <% end %>
+      </div>
+      <p class="muted m-0">
+        This business's finances are transparent. You can view their complete transaction history
+        and see exactly how funds are being used.
+      </p>
     </div>
-    <p class="muted m-0">
-      This business's finances are transparent. You can view their complete transaction history
-      and see exactly how funds are being used.
-    </p>
-  </div>
+  <% end %>
 
   <%# Footer %>
   <div class="text-center pt-8 border-t">

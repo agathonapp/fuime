@@ -6188,3 +6188,24 @@ placeholder is hard-coded "per lawn"; the venture page still offers HCB's "Sched
 onboarding call"; the HelpScout Beacon loads (and 404s) on every signed-in page, which is a
 third-party call from a minors' product worth an L7 decision; and the venture home runs
 78–84 SQL queries in 2–4.7s.
+
+13. **`app/views/fuime/storefronts/show.html.erb`** — the "Public Ledger" card was rendered
+    unconditionally while `publishes_ledger` defaults to **false**. So every teen storefront
+    told the public "This business's finances are transparent. You can view their complete
+    transaction history", about a child who had published nothing, and the "View full
+    ledger" link went to a page whose policy then bounced the customer to a login screen —
+    a dead link on the one public page Fuime ever shows a buyer. Now gated on
+    `publishes_ledger?`. Spec: `spec/requests/fuime_storefront_public_ledger_spec.rb`.
+
+14. **`app/views/fuime/offers/wizard/review.html.erb`, `app/views/fuime/offers/index.html.erb`** —
+    Publish was the big blue primary button sitting directly under a callout explaining that
+    publishing was impossible, and pressing it re-rendered the page with a red error. For a
+    new founder that is always the case, because the review has not run. On the wizard,
+    "Save draft" (the action that works) is now the primary and Publish is not offered while
+    blocked; on the offers list the Publish button is disabled and carries the blocker as its
+    tooltip, rather than hidden — a founder coming back after the review needs to see where
+    it will appear.
+
+Checked and NOT a bug, recorded so nobody "fixes" it: the arch mark on the storefront and
+the first-run screens is Fuime's own logo (`fuime-logo.png`), not Hack Club's. Hack Club's
+mark is a red wordmark and appears nowhere in the product.
