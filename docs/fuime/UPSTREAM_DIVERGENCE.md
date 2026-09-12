@@ -6279,3 +6279,22 @@ link behind it either. Removing it is Rushil's call, not a review's.
     was coming. Both states now say what happened and point at a person.
     `operator_vetting_notes` is deliberately not quoted: it is written for admins and can
     say things no teenager should read without a human in between.
+
+21. **`app/helpers/events_helper.rb`, `app/views/guardianships/index.html.erb`** — **the
+    guardian's one required job had no route to it.** `EventPolicy#connect_payout_method?`
+    resolves to `guardian_reader?` on a family venture: the guardian is the only person who
+    may connect a bank account, which is correct under L2. But both money nav entries were
+    gated on `policy(...) && organizer_signed_in?`, and `organizer_signed_in?` needs an
+    OrganizerPosition — which accepting a guardianship deliberately never creates. So the
+    venture nav hid both items from them, `/guardian` listed Ledger and Transactions and
+    nothing else, the teen's payouts page says "your parent can connect the bank account"
+    with no URL to forward, and the acceptance email links only to the dashboard.
+    The consequence is not a missing link: every venture sits on the payout batch skip list,
+    "No payout destination set up yet", indefinitely, and nobody is ever paid. Found
+    independently by the payouts reviewer and the guardian reviewer.
+    Masked today only because `PlaidLinkService.collectable?` is false while Plaid is in
+    sandbox alongside live Stripe, so the item is hidden from everyone — the day Plaid flips
+    to production (a no-code-change step per `render.yaml`) this becomes the thing that stops
+    the money. The nav now trusts the policy alone, which already grants the guardian and
+    still refuses a stranger, and the guardian's own overview carries both links.
+    Spec: `spec/requests/fuime_guardian_can_reach_payouts_spec.rb`.
