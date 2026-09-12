@@ -6099,3 +6099,48 @@ Files: `app/controllers/fuime/payouts_controller.rb`, `app/services/fuime/paymen
 `app/services/fuime/venture_ledger.rb`, `app/models/guardianship.rb`, `app/policies/event_policy.rb`,
 `db/migrate/20260912090000_*`, `db/schema.rb`, `spec/support/school_tree.rb`, and four specs.
 Nothing in the ledger engine was touched (Rule 3); no migration was edited (Rule 5).
+
+## 2026-09-12 — Platform review: login-code brute force, a dead rate limit, and a contract that understated the fee
+
+Same review as the entry above; this is the security and legal-copy half.
+
+6. **`app/services/login_code_service/request.rb` + `config/initializers/rack_attack.rb`** —
+   login is a six-digit emailed code, and two things made it weak at once.
+   `LoginCode.active` is every unused code from the last fifteen minutes, so each request
+   **added** a working key rather than replacing one (initiation is throttled at 5/20s per
+   IP, so ~225 codes could be live against one account); and nothing throttled
+   `POST /logins/:id/complete`, which re-renders the form on a wrong code — the only limiter
+   was the generic 1000-per-5-minutes anti-scraper ceiling. Inherited from upstream, but
+   these accounts now hold a venture's ledger and, for a guardian, the payout destination.
+   Now: minting a code supersedes the account's live ones (one key, not 225), and two new
+   throttles cover the verify path — 10 per 15 minutes per Login, 30 per 15 minutes per IP.
+   No migration. Specs in `spec/services/login_code_service/request_spec.rb` and
+   `spec/initializers/rack_attack_spec.rb`.
+
+7. **`config/initializers/rack_attack.rb`** — the guardian-invite throttle matched
+   `"/guardianships"`. The route is `/guardian` (`resources :guardianships, path: "guardian"`),
+   so the matcher never returned a key and the rule **never counted a single request** since
+   it was written. Each unthrottled POST creates a `User` for any typed address and sends
+   invite mail that names a real minor and their venture, plus day-3 and day-6 reminders.
+   Same class of bug PR #85 fixed for the checkout throttle; now matched the same way,
+   suffix and trailing slash included, and pinned by a spec so a future `path:` change
+   cannot silently disarm it again.
+
+8. **`app/views/static_pages/terms.html.erb`, `app/views/learn/lessons/_what_fuime_takes.html.erb`** —
+   both rendered `Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`, which derives from
+   `Event::Plan::FALLBACK_REVENUE_FEE` = **5%** — a fallback for a venture with no plan
+   resolved, and a rate no real venture is charged. Every venture is created on
+   `Event::Plan::Free` at **7%**. So Fuime's binding Terms of Service, and the one lesson
+   page that is about Fuime, understated Fuime's own fee by two points while live money
+   moved. The FAQ was corrected for exactly this in PR #94 and these two were missed.
+   Both now read the Free rate (the lesson prefers the venture's own rate when it has one),
+   and `spec/fuime_marketing_pricing_spec.rb` pins all three surfaces together, including a
+   check that no customer-facing page renders the fallback constant.
+
+Still open from this half, not fixed here: the Privacy Policy has not had the
+merchant-of-record pass (it describes a date-of-birth age screen that no longer exists and
+omits Plaid and Help Scout from the processor list); `site/pricing.html` says nothing is
+billed during the private beta while the 7% is being deducted, and claims there is no floor
+under the fee when there is a 50c per-sale minimum; and the Terms carry no auto-renewal or
+cancellation clause for the $19.99/mo family plan. Those are copy decisions for counsel and
+the founder rather than code.

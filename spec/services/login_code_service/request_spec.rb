@@ -6,6 +6,49 @@ describe LoginCodeService::Request do
   let(:ip_address) { "127.0.0.1" }
   let(:user_agent) { "fake firefox" }
 
+  # ── Fuime: the newest code is the only code ──────────────────────────────
+  #
+  # `LoginCode.active` was every unused code from the last fifteen minutes, so
+  # each request ADDED a working key instead of replacing one. Login initiation
+  # is throttled at 5 per 20s per IP, which makes roughly 225 codes live at once
+  # against one account — and until this branch nothing throttled GUESSING at
+  # `POST /logins/:id/complete` either. Six digits against 225 live keys and a
+  # few thousand attempts is not a lock, and these accounts hold a venture's
+  # ledger and, for a guardian, the payout destination.
+  describe "superseding older codes" do
+    let(:user) { create(:user) }
+
+    before { allow(LoginCodeMailer).to receive_message_chain(:send_code, :deliver_now) }
+
+    def request!
+      described_class.new(email: user.email, ip_address:, user_agent:).run
+    end
+
+    it "leaves exactly one code usable, however many were requested" do
+      3.times { request! }
+
+      expect(user.login_codes.active.count).to eq(1)
+      expect(user.login_codes.count).to eq(3)
+    end
+
+    it "keeps the newest one, which is the email the person is reading" do
+      request!
+      newest = nil
+      expect { newest = request! }.to change { user.login_codes.active.first&.id }
+
+      expect(user.login_codes.active.sole.id).to eq(user.login_codes.order(:id).last.id)
+    end
+
+    it "does not disturb another user's live code" do
+      other = create(:user)
+      described_class.new(email: other.email, ip_address:, user_agent:).run
+
+      request!
+
+      expect(other.login_codes.active.count).to eq(1)
+    end
+  end
+
   context "when a user with a given email does not exist" do
     it "creates that user with login code and emails" do
       new_email = "test@example.com"

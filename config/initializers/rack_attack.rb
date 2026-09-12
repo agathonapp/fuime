@@ -201,6 +201,34 @@ class Rack::Attack
     end
   end
 
+  # Fuime: the code-VERIFY endpoint, which had no limit of its own.
+  #
+  # Everything above throttles asking for a code. Nothing throttled guessing one.
+  # `POST /logins/:id/complete` re-rendered the form on a wrong code and left the
+  # Login usable, so the same URL took another guess immediately, bounded only by
+  # the generic 1000-per-five-minutes ceiling written as an anti-scraper measure.
+  # A six-digit code guessed a few thousand times against a pool of live codes is
+  # a real account takeover — and these accounts hold a venture's ledger and, for
+  # a guardian, the payout destination.
+  #
+  # Paired with `LoginCodeService::Request` superseding older codes: one live code
+  # and ten guesses per quarter hour is the whole fix. Keyed per Login hashid
+  # (sustained attack on one victim) and per IP (spraying across victims), the
+  # same split the factor-trigger rules above use.
+  LOGIN_VERIFY_PATH = /\A\/logins\/(?<hashid>[^\/]+)\/complete(?:\.[^\/]*)?\/?\z/
+
+  throttle("logins/verify/login", limit: 10, period: 15.minutes) do |req|
+    if req.post? && (m = LOGIN_VERIFY_PATH.match(req.path))
+      m[:hashid]
+    end
+  end
+
+  throttle("logins/verify/ip", limit: 30, period: 15.minutes) do |req|
+    if req.post? && LOGIN_VERIFY_PATH.match?(req.path)
+      Rack::Attack.client_ip(req)
+    end
+  end
+
   # Throttle POST requests to SMS verification by IP address
   throttle("sms_verify/ip", limit: 5, period: 8.hours) do |req|
     if req.path == "/users/start_sms_auth_verification" && req.post?
@@ -324,8 +352,16 @@ class Rack::Attack
   #
   # 10 a day is generous for a real family — two guardians, a couple of typos, a
   # resend — and ends the bombing channel.
+  #
+  # The path is `/guardian`, not `/guardianships`: config/routes.rb declares
+  # `resources :guardianships, ..., path: "guardian"`. Written against the
+  # controller name, this matcher never returned a key and the rule never counted
+  # a single request — so the only limiter on invite mail was the 1000-per-five-
+  # minutes anti-scraper ceiling. Same class of bug PR #85 fixed for the checkout
+  # throttle above; matched the same way here, suffix and trailing slash included,
+  # and pinned by a spec so the next `path:` change cannot silently disarm it.
   throttle("fuime/guardian_invite/user", limit: 10, period: 1.day) do |req|
-    if req.post? && req.path == "/guardianships"
+    if req.post? && req.path.match?(/\A\/guardian(\.[^\/]*)?\/?\z/)
       req.cookies["session_token"]
     end
   end

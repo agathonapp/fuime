@@ -42,6 +42,25 @@ module LoginCodeService
         return { error: user.errors, method: :email }
       end
 
+      # Fuime: the newest code is the only code.
+      #
+      # `LoginCode.active` was every unused code from the last fifteen minutes,
+      # so each request ADDED a working key rather than replacing one. Login
+      # initiation is throttled at 5 per 20s per IP, which means roughly 225
+      # codes could be made live at once against one account, and the verify
+      # endpoint (`POST /logins/:id/complete`) had no attempt limit of its own —
+      # only the 1000-per-five-minutes anti-scraper ceiling. 225 live keys out of
+      # a million against thousands of guesses is not a lock.
+      #
+      # Superseding costs nothing a user would notice: every OTP system behaves
+      # this way, and the person who clicks "resend" is reading the newest email.
+      # It is the larger half of the fix — one live code instead of 225 — and the
+      # throttle added in config/initializers/rack_attack.rb is the other.
+      #
+      # `used_at` is the only "no longer active" marker on the model and nothing
+      # reads it as evidence of a successful login, so it carries this too.
+      user.login_codes.active.update_all(used_at: Time.current)
+
       login_code = user.login_codes.create(
         ip_address: @ip_address,
         user_agent: @user_agent
