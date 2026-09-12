@@ -6270,3 +6270,12 @@ link behind it either. Removing it is Rushil's call, not a review's.
     two live guardianships for one pair are still refused, and the revoked row is **kept**
     rather than reused, because L4 requires the consent record and a withdrawal is part of
     it. Overwriting it to make room would destroy the evidence a dispute would turn on.
+
+20. **`app/services/fuime/founder_progress.rb`** — `vetted?` is
+    `operator_vetting_approved?`, so of the four vetting states, **rejected and suspended
+    both fell through to "We'll do a quick review before you go live."** A founder whose
+    venture had been reviewed and refused, or frozen after approval, was told to wait for
+    something that had already happened and gone against them — so they waited, and nobody
+    was coming. Both states now say what happened and point at a person.
+    `operator_vetting_notes` is deliberately not quoted: it is written for admins and can
+    say things no teenager should read without a human in between.

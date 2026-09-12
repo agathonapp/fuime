@@ -159,4 +159,50 @@ RSpec.describe Fuime::FounderProgress, :merchant_of_record do
     end
   end
 
+  # Fuime: a decision that has been made must read as a decision, not a wait.
+  #
+  # `vetted?` asks only whether the status is `approved`, so rejected and
+  # suspended both fell through to "We'll do a quick review before you go live".
+  # A founder whose venture had been refused, or frozen after approval, was told
+  # to wait for something that had already happened — so they waited, and nobody
+  # was coming.
+  describe "a venture that was reviewed and refused, or frozen" do
+    let(:teen) { create(:user, :minor) }
+
+    def progress_for(status)
+      event = create(:event).tap do |e|
+        e.update!(operator_vetting_status: status)
+        create(:organizer_position, event: e, user: teen)
+        create(:fuime_offer, event: e)
+      end
+      application = create(:event_application, user: teen)
+      application.update_column(:event_id, event.id)
+      described_class.new(application: application.reload)
+    end
+
+    it "tells a rejected founder the review happened, not that it is coming" do
+      message = progress_for(:rejected).founder_next_action
+
+      expect(message).to eq(described_class::REJECTED_MESSAGE)
+      expect(message).not_to match(/quick review before you go live/)
+    end
+
+    it "tells a suspended founder selling is paused" do
+      message = progress_for(:suspended).founder_next_action
+
+      expect(message).to eq(described_class::SUSPENDED_MESSAGE)
+      expect(message).not_to match(/quick review before you go live/)
+    end
+
+    it "still tells an unvetted founder a review is coming, because it is" do
+      expect(progress_for(:unvetted).founder_next_action)
+        .to match(/quick review before you go live/)
+    end
+
+    it "points both of them at a person" do
+      [described_class::REJECTED_MESSAGE, described_class::SUSPENDED_MESSAGE].each do |m|
+        expect(m).to include(ApplicationMailer::OPERATIONS_EMAIL)
+      end
+    end
+  end
 end

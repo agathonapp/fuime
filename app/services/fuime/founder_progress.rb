@@ -23,6 +23,21 @@ module Fuime
     # In funnel order. The first one NOT satisfied is where the founder is.
     STAGES = %i[applied venture_created vetted can_sell listed sold].freeze
 
+    # A decision that has been made must read as a decision, not as a wait.
+    # Both of these used to render as "We'll do a quick review before you go
+    # live", because `vetted?` only asks whether the status is `approved` and
+    # every other state fell through the same branch. A founder whose venture was
+    # refused, or frozen after approval, was told to wait for something that had
+    # already happened — so they waited, and nobody was coming.
+    #
+    # Neither names a reason: `operator_vetting_notes` is written for admins and
+    # can say things that should not be quoted at a teenager without a human
+    # reading it first. The right move is to get them to a person.
+    REJECTED_MESSAGE = "We reviewed this venture and can't approve it for selling. " \
+                       "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll explain."
+    SUSPENDED_MESSAGE = "Selling is paused on this venture. " \
+                        "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll sort it out."
+
     def initialize(application:)
       @application = application
       @event = application.event
@@ -91,6 +106,14 @@ module Fuime
       end
 
       return "Add something to sell." unless has_offer?
+
+      # Four vetting states, not two. `vetted?` is `operator_vetting_approved?`,
+      # so rejected and suspended both fell through to "We'll do a quick review
+      # before you go live" — telling a founder to wait for a review that has
+      # already happened and gone against them. They then wait, and nobody is
+      # coming. A decision that has been made has to read as a decision.
+      return REJECTED_MESSAGE if event.operator_vetting_rejected?
+      return SUSPENDED_MESSAGE if event.operator_vetting_suspended?
       return "We'll do a quick review before you go live." unless vetted?
 
       if event.demo_mode?
