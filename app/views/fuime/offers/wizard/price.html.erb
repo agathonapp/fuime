@@ -25,9 +25,24 @@
     </div>
     <div class="field flex-1">
       <%= form.label :unit_label, "Per what? (optional)" %>
-      <%= form.text_field :unit_label, class: "w-full", maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH, value: @offer.unit_label, placeholder: "per lawn" %>
+      <%# "per lawn" was hard-coded, so a dog walker, a tutor and an illustrator
+          were all shown a lawn-care example. Unlike the price box — where a
+          number would read as a Fuime-suggested rate — a unit is a grammar hint
+          and costs nothing to make fit the business. %>
+      <%= form.text_field :unit_label, class: "w-full", maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH, value: @offer.unit_label, placeholder: unit_label_placeholder_for(@event) %>
     </div>
   </div>
+
+  <%# What Fuime keeps, said on the screen where the number is chosen.
+      It was only stated two steps later, in the sale terms on the review page,
+      after the price was set. A founder deciding what to charge is entitled to
+      know the take-rate at the moment they decide — and being told it here,
+      before they commit, is the difference between a fee and a surprise.
+      Read from the venture's own plan, never from the 5% fallback constant. %>
+  <p class="muted text-sm mt-2 mb-0">
+    Fuime keeps <%= number_to_percentage(@event.revenue_fee * 100, precision: 0) %> of each sale,
+    plus what the card network charges. You'll see both on every sale in your ledger.
+  </p>
 <% end %>
 
 <% content_for :footer do %>

@@ -68,4 +68,25 @@ module FuimeHelper
     @payables_by_event[event.id] ||= Fuime::PayablesLedger.new(event:)
   end
   # rubocop:enable Rails/HelperInstanceVariable
+
+  # A "per what?" example that suits the business, for the offer wizard.
+  #
+  # The field's placeholder was hard-coded "per lawn", so a dog walker, a tutor
+  # and an illustrator were each shown a lawn-care example on the screen where
+  # they name their own unit. Unlike the price box next to it — where any number
+  # would read as a rate Fuime suggested — a unit is a grammar hint, and one that
+  # matches the trade is strictly more useful than one that does not.
+  #
+  # Falls back to "per hour", which fits more teen work than any other single
+  # answer and suggests nothing about price.
+  UNIT_LABEL_PLACEHOLDERS = {
+    "crafts"   => "per piece",
+    "services" => "per visit",
+    "digital"  => "per download",
+    "food"     => "per order"
+  }.freeze
+
+  def unit_label_placeholder_for(event)
+    UNIT_LABEL_PLACEHOLDERS.fetch(event&.business_category, "per hour")
+  end
 end

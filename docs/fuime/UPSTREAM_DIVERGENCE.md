@@ -6209,3 +6209,27 @@ third-party call from a minors' product worth an L7 decision; and the venture ho
 Checked and NOT a bug, recorded so nobody "fixes" it: the arch mark on the storefront and
 the first-run screens is Fuime's own logo (`fuime-logo.png`), not Hack Club's. Hack Club's
 mark is a red wordmark and appears nowhere in the product.
+
+15. **`app/views/fuime/offers/wizard/price.html.erb`, `app/helpers/fuime_helper.rb`** — the
+    screen where a founder chooses their price never mentioned what Fuime keeps; the
+    take-rate was first stated two steps later, in the sale terms on the review page, after
+    the number was set. It now says it here, read from the venture's own plan. The "Per
+    what?" placeholder was also hard-coded "per lawn", so a dog walker, a tutor and an
+    illustrator were each shown a lawn-care example; `unit_label_placeholder_for` matches
+    the business category instead. The price box itself still has no example number — that
+    rule is unchanged, because a number there would read as a rate Fuime suggested.
+
+16. **`app/views/events/show.html.erb`** — the empty-state gate that already covered the
+    Insights charts missed the `balance_transactions` frame above them: two cards reserving
+    422px of placeholder each, so a brand-new venture's home on a phone was two enormous
+    spinner boxes for a ledger with nothing in it, sitting above the one sentence that
+    matters. `empty:hidden` only helps after a lazy frame has loaded, which does not happen
+    until the founder scrolls to it. Now behind the same `@has_ledger_history` EXISTS pair,
+    so it costs no extra query.
+
+Flagged for a product decision rather than changed: the venture home shows HCB's "Schedule
+an onboarding call" card to every venture by default, and the button emails ops and tells
+the founder "a member of our team will reach out to schedule a call soon". At a fifty-teen
+event that is a promise nobody can staff, and it occupies the slot above the founder's
+actual next step. `Event#onboarding_scheduling_link` returns nil, so there is no self-serve
+link behind it either. Removing it is Rushil's call, not a review's.
