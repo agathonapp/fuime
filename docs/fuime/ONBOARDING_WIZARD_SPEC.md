@@ -793,6 +793,23 @@ these were fixed; fold them into the wizard build.
 11. Playground Buy refused for the impersonated teen — **fixed** in
     `fuime/playground-demo-polish` (`refuse_minor_buyer` skips demo ventures).
 
+### Model changes on `fuime/platform-review-p0` the wizard must build against
+
+Committed by the review session on 2026-09-12; rebase onto main once that branch merges.
+
+- `Guardianship.signed_up_as_a_young_founder?` refuses naming or accepting a guardian
+  who signed up as a young founder (13+ attestation). The old `guardian.is_minor?`
+  check read a birthday nobody supplies any more, so a teen could name a classmate,
+  who then ticked 18+ and cleared the payout gate. A plain parent who only ticked 13+
+  at signup still passes — that is the ordinary path the parent-first wizard drives.
+- Migration `20260912120000_scope_guardianship_uniqueness_to_live_rows`: the unique
+  index on (guardian_id, minor_id) becomes partial over non-revoked rows, and
+  `Fuime::GuardianInviteService` no longer returns a revoked row as "already exists".
+  Re-inviting a parent who withdrew consent works; run `rails db:migrate` in the
+  worktree before testing that path.
+- Login codes: minting a code supersedes the account's other live codes;
+  `POST /logins/:id/complete` is rate limited (10 per 15 min per Login, 30 per IP).
+
 Also fixed on the reviewer's branch, so do not redo: the review page's out-of-office
 callout is gone; a blocked submit now flashes why; `_selling_blockers` no longer
 prints a literal `%>` and honours `title:`.
