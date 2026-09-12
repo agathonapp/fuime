@@ -6144,3 +6144,47 @@ billed during the private beta while the 7% is being deducted, and claims there 
 under the fee when there is a 50c per-sale minimum; and the Terms carry no auto-renewal or
 cancellation clause for the $19.99/mo family plan. Those are copy decisions for counsel and
 the founder rather than code.
+
+## 2026-09-12 — Platform review: what a brand-new founder actually sees
+
+From walking the real signup as a new teen (screenshots and a step log, 14 screens from
+"start signup" to "a draft offer saved"). Four things the flow said that were not true.
+
+9.  **`app/views/fuime/_selling_blockers.html.erb`** — the partial's usage comment was
+    written as `Usage: <%%= render … %> %>`. An ERB comment ends at the FIRST `%>`, so the
+    block closed early and the trailing `%>` was **printed to the page as literal text** —
+    on the offer wizard's review step, the last screen a teenager reads before publishing.
+    The same partial also ignored the `title:` local every call site passed, so a wizard
+    asking "Ready to publish?" was answered "This business can't take payments yet" — a
+    much bigger statement than the caller meant, on a venture whose only problem was that
+    the review had not run yet. Both fixed; the usage line is no longer ERB.
+
+10. **`app/views/event/applications/review.html.erb`** — HCB's out-of-office callout told a
+    founder who opened the last page before Submit on a Saturday: "Fuime is closed…
+    Applications will be reviewed within 2 business days." Submit then runs
+    `Fuime::FounderAdmission`, which approves and activates on the spot, and the next screen
+    says "You're in." Nobody reviews an application any more — the human review Fuime has is
+    operator vetting before an offer can be **published**. It also discouraged exactly the
+    founder we want: a teenager at a weekend event, which is when Founders Weekend runs.
+    Removed from this page (kept wherever a human really is the next step).
+
+11. **`app/controllers/event/applications_controller.rb`** — when admission is refused
+    (`activation_blockers`, most often a second venture on Free) the redirect carried **no
+    flash at all**. The founder landed on an inherited "under review" status page, waiting
+    on a review that will never run, for a reason nobody had told them. Now says which
+    blocker stopped it, or names support when the service failed.
+
+12. **`app/javascript/components/command_bar/actions.js`** — the first row of the ⌘K palette
+    read "Search HCB" for every signed-in user. Now "Search Fuime". The remaining `HCB`
+    names in that file are admin-only and refer to `HcbCode`, a model name Rule 6 keeps.
+
+Specs: `spec/requests/fuime_application_submit_truth_spec.rb` (the review page carries no
+closed-for-the-weekend promise on any day, and a blocked submit explains itself).
+
+Seen in the same walk and NOT fixed here, for whoever picks this up next: the code-entry
+screen is headed "Sign in to Fuime" during a brand-new signup; `POST /applications` takes
+~9.5s with the button disabled; the offer price step never mentions the 7%; its "Per what?"
+placeholder is hard-coded "per lawn"; the venture page still offers HCB's "Schedule an
+onboarding call"; the HelpScout Beacon loads (and 404s) on every signed-in page, which is a
+third-party call from a minors' product worth an L7 decision; and the venture home runs
+78–84 SQL queries in 2–4.7s.

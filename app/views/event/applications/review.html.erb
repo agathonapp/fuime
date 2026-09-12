@@ -24,7 +24,23 @@
 
 <div class="flex flex-col items-center flex-grow">
   <div class="md:max-w-[600px] w-full mt-7 space-y-8 pb-5">
-    <%= render "application/ooo_callout", resource: "application", financial: false, business_days: @application.response_business_days %>
+    <%# FUIME-DIVERGENCE: the out-of-office callout is gone from this page.
+        It is HCB's, and under Fuime it was contradicted by the very next screen.
+
+        It told a founder who opened this on a Saturday "Fuime is closed — it is
+        currently the weekend and Fuime is closed. Applications will be reviewed
+        within 2 business days." Then Submit runs Fuime::FounderAdmission, which
+        approves and activates immediately, and the next page says "You're in."
+        Nobody reviews an application any more; the human review Fuime does have
+        is operator vetting before an offer can be PUBLISHED, and the venture
+        page says so in its own words once the venture exists.
+
+        It also cost us the thing we most want: a teenager at a weekend event —
+        which is when Founders Weekend runs — reading "Fuime is closed" on the
+        screen before the Submit button, and deciding to come back Monday.
+
+        Kept on the pages where a human really is the next step; removed here.
+        Pinned by spec/requests/fuime_application_submit_truth_spec.rb. %>
     <%= render "event/applications/summary", application: @application, allow_edits: true %>
   </div>
 </div>

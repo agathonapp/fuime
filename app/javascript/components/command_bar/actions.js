@@ -168,7 +168,12 @@ export const generateEventActions = data => {
 export const initalActions = [
   {
     id: 'search-main',
-    name: 'Search HCB',
+    // FUIME-DIVERGENCE: "Search HCB" → "Search Fuime". This is the FIRST row of
+    // the ⌘K palette and every signed-in user sees it, including teenagers who
+    // have never heard of Hack Club. The remaining "HCB" names in this file are
+    // in adminActions and refer to HcbCode, a real model name that CLAUDE.md
+    // Rule 6 keeps — those stay.
+    name: 'Search Fuime',
     keywords: 'search',
     icon: <Icon glyph="search" size={16} />,
     priority: Priority.HIGH,
