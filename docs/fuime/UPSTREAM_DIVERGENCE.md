@@ -6412,3 +6412,61 @@ removes. Drained with `perform_enqueued_jobs(at:)` instead.
 agreement, but it only fires when a contract exists, so it is correct whenever
 it sends. Whether an abandoned-draft nudge to a minor is transactional at all is
 a counsel question; two is the most that can be defended, and zero may be right.
+
+## 2026-09-12 — An apostrophe in a business name, and a Buy button that said nothing
+
+Two defects on the buyer's side of the product, found together because they
+compound: the first makes checkout fail, and the second makes the failure
+invisible.
+
+**`Fuime::PaymentLinkService#statement_descriptor`** was
+`"FUIME #{short_name || name}"[0..21].strip`, passed as
+`statement_descriptor_suffix`. Two bugs in one line. It filtered no characters,
+and Stripe rejects `' " < > \ *` in a suffix — so a venture called
+*Maya's Bakes* raised `Stripe::InvalidRequestError` on **every** checkout, which
+`Fuime::CheckoutsController` rescues into "We couldn't start that payment.
+Please try again." That venture could never take a payment and was told to retry
+forever. And it hardcoded "FUIME " into a *suffix*, which Stripe prefixes with
+the account's own `Fuime* ` — the buyer read "Fuime\* FUIME Maya Bake", the brand
+twice, six of the venture's fifteen characters spent before its name began.
+
+`StripeService::StatementDescriptor` already solved all of this — transliterate,
+strip what Stripe forbids, budget against `PREFIX`, fall back to "Fuime" when a
+name reduces to nothing. It was written for the donation path and never reached
+here. The fix is to call it.
+
+**`layouts/fuime_payment_page.html.erb` rendered no flash**, so three paths that
+redirect back to the pay page carrying an explanation all arrived silent:
+`#refuse_minor_buyer` ("Checkout is billed to an adult" — and since signup
+collects no date of birth, `known_adult?` is false for the whole teen user base,
+so the first person to meet it is the operator testing their own link), the
+Stripe rescue above, and a closed offer. What a buyer saw was the page reloading
+unchanged; what the operator heard was a sale that did not happen.
+
+| Change | Why | Files |
+|---|---|---|
+| `#statement_descriptor` delegates to `StripeService::StatementDescriptor.format(…, as: :suffix)` | One sanitizer, already correct, already knows the prefix budget | `app/services/fuime/payment_link_service.rb` |
+| The pay-page layout renders `application/_flash` above `yield` | Every refusal on the page had an explanation attached and no way to show it | `app/views/layouts/fuime_payment_page.html.erb` |
+
+`spec/services/fuime/payment_link_service_spec.rb` is new and closes
+`PLATFORM_REVIEW_2026_09.md` row 69: **nothing** previously exercised
+`create_mor_checkout_session`. It pins the descriptor and, more importantly, the
+three ABSENCES that make the session merchant-of-record rather than a platform
+charge — no `stripe_account:`, no `application_fee_amount`, the fee stamped in
+metadata at exactly `Event#fuime_fee_cents_on`. Absences are what a refactor
+removes without anything failing, which is why they needed a test and the fee
+computation did not.
+
+Both fixes were checked against their own bug: the five descriptor examples fail
+on the old one-liner, and both buyer examples fail with the flash render removed.
+
+**Worth knowing for the next session:** `Fuime::Offer#publish!` refuses while the
+venture cannot take payments, so under Connect (the suite default) a
+`:published` offer silently stays a draft and any pay-page request 404s for an
+unrelated reason. Tag the group `:merchant_of_record`. And the pay form posts
+`offer_token`, while the GET route segment is `offer` — posting the wrong one
+redirects to the storefront and quietly tests a different layout.
+
+**Not fixed:** the Stripe rescue still advises "Please try again" for
+`Stripe::InvalidRequestError`, which is never transient. It reports to
+`Rails.error`, so this is a copy problem rather than a silent one.
