@@ -9,10 +9,10 @@
 #  agreement_signed_at     :datetime
 #  agreement_user_agent    :string
 #  agreement_version       :string
+#  initiated_by            :integer          default(0), not null
 #  invite_day3_reminded_at :datetime
 #  invite_day6_reminded_at :datetime
 #  invite_sent_at          :datetime
-#  initiated_by            :integer          default(0), not null
 #  invite_token            :string
 #  revoked_at              :datetime
 #  status                  :integer          default(0), not null
