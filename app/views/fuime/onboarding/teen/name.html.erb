@@ -1,0 +1,60 @@
+<% title "Name it" %>
+<% content_for :wizard_title, "Name it" %>
+<% content_for :wizard_subtitle, "Start your business" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">Your own words.</h2>
+  <p class="mt-0 text-lg muted">
+    Customers read this on your storefront, so say what you do and who it's for.
+  </p>
+
+  <%# A template's outline is offered as a prompt, never written into the
+      record. A description Fuime wrote is a description Fuime authored, and
+      under merchant-of-record Fuime is already the seller of record for
+      whatever it describes. Verbatim from event/applications/project_info. %>
+  <% if @template %>
+    <div class="card mt-6">
+      <p class="text-sm mb-1"><strong>Your <%= @template.name.downcase %> outline</strong></p>
+      <p class="text-sm muted mb-2">
+        Things worth settling before your first customer. Nothing here is set by
+        Fuime — including what you charge, which is always yours to decide.
+      </p>
+      <ul class="text-sm muted mb-0 pl-4">
+        <% Array(@template.checklist).each do |item| %>
+          <li><%= item %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+<% end %>
+
+<%= form_with url: teen_setup_save_path(step: "name"), method: :post, scope: :setup,
+              id: "setup_form",
+              data: { action: "turbo:submit-start->wizard#leave" } do |form| %>
+  <div class="field">
+    <%= form.label :name, "Business name" %>
+    <%= form.text_field :name,
+                        value: @application.name,
+                        required: true, maxlength: 255, autofocus: true,
+                        placeholder: "Maya's Lawn Care",
+                        class: "w-full max-w-full" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :description, "What do you do?" %>
+    <p class="text-sm muted mt-1 mb-2">One or two sentences. You can change it later.</p>
+    <%= form.text_area :description,
+                       value: @application.description,
+                       required: true, rows: 4,
+                       placeholder: @template&.description_prompt ||
+                                    "I mow lawns and trim hedges on weekends in Oakland.",
+                       class: "w-full max-w-full" %>
+  </div>
+<% end %>
+
+<% content_for :footer do %>
+  <button type="submit" class="btn btn--fuime" form="setup_form">Continue</button>
+  <%= link_to "← Back", teen_setup_step_path(step: "business"),
+              class: "btn bg-muted",
+              data: { action: "click->wizard#leaveBack" } %>
+<% end %>

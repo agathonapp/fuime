@@ -249,6 +249,25 @@ class Rack::Attack
     end
   end
 
+  # Fuime: the family setup wizard's parent path creates User rows.
+  #
+  # `POST /setup/parent/sign` calls `User.create!` for the teen an adult names,
+  # so one signed-in account could otherwise seed unlimited stub users.
+  # `POST /setup/parent/teen` is the cheaper half of the same problem: it
+  # answers "is there an account at this address" on every submit, and while
+  # every rejection there now returns the same sentence, an unbounded oracle is
+  # still an oracle.
+  #
+  # Keyed on the session cookie like its neighbour above — a family behind one
+  # NAT must not throttle each other, and what is worth bounding is what a
+  # single session can do. Ten an hour is far above a real parent (one, maybe
+  # two for a second child) and far below anything worth automating.
+  throttle("fuime/setup_parent/user", limit: 10, period: 1.hour) do |req|
+    if req.post? && req.path.start_with?("/setup/parent")
+      req.cookies["session_token"]
+    end
+  end
+
   ### Custom Throttle Response ###
 
   # By default, Rack::Attack returns an HTTP 429 for throttled responses,

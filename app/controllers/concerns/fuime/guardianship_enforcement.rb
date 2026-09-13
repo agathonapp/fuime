@@ -52,6 +52,15 @@ module Fuime
       # `activate_event!` requires the signed agreement, and EventPolicy guards
       # the business itself, so a teen can fill in an application but cannot
       # operate a business until a guardian has actually signed.
+      # The family setup wizard and the teen's join link. Under
+      # merchant-of-record this filter returns early on
+      # #permitted_to_operate_business? and never reaches the allowlist at all;
+      # these entries are what keeps a parked teen able to finish signing up
+      # under Connect, and they are the same reasoning as
+      # "event/applications" below — a teen cannot get a guardian attached
+      # without the screen that collects their parent's address.
+      "fuime/onboarding",
+      "fuime/family_invites",
       "event/applications",
       "event/affiliations",   # the affiliations sub-form on the application
       "contracts",            # signing the agreement that creates the guardianship

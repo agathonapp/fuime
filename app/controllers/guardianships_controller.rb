@@ -4,7 +4,13 @@ class GuardianshipsController < ApplicationController
   # :show, :accept and :renew are token-addressed and reachable without a
   # session — a parent follows them from an email before they have an account.
   skip_before_action :signed_in_user, only: [:show, :accept, :renew]
-  skip_before_action :redirect_to_onboarding, only: [:new, :create, :renew]
+  # Fuime: `show` and `accept` are added because the onboarding redirect now
+  # points at the family setup wizard. A parent who follows a teen's emailed
+  # invite has no name on file, so without this they would be bounced from the
+  # agreement they came to sign into a wizard that would ask them to confirm
+  # they are 13 — the wrong question, put to the adult signing as the
+  # responsible party. The accept page collects the name itself instead.
+  skip_before_action :redirect_to_onboarding, only: [:new, :create, :renew, :show, :accept]
   before_action :set_guardianship, only: [:show, :accept]
 
   # Fuime: the footer is deliberately NOT hidden on :show or :new any more. It
@@ -146,6 +152,7 @@ class GuardianshipsController < ApplicationController
       redirect_to root_path, flash: { error: "This guardianship invitation has been revoked." }
     else
       @venture_name = venture_name_for(@guardianship.minor)
+      @needs_name = current_user.full_name.blank?
     end
   rescue Pundit::NotAuthorizedError
     if @guardianship.guardian != current_user
@@ -204,30 +211,41 @@ class GuardianshipsController < ApplicationController
     # the other instance would leave the object #activation_blockers is about to read
     # holding a stale value — and the blocker would fire on the request that just
     # cleared it.
-    @guardianship.guardian.attest_adult_18_plus!(
-      ip: request.remote_ip, user_agent: request.user_agent
-    )
-
-    # Remaining preconditions for signing as the responsible adult. The 18+ one is
-    # satisfied by the tick above; what is left is the structural check that a
-    # guardian exists and is not the minor themselves.
-    blockers = @guardianship.activation_blockers
-    if blockers.any?
-      flash[:error] = blockers.to_sentence
-      # Return them to the invite page, not back here: `accept` is POST-only, so
-      # a GET return_to would 404 the moment they finish filling in their DOB.
-      redirect_to edit_user_path(current_user, return_to: guardianship_path(@guardianship.invite_token))
+    # Fuime: a parent arriving from the email may have no name on file — the
+    # onboarding redirect no longer walks them through a profile form first.
+    # A plain save, deliberately NOT `context: :onboarding`, which would demand
+    # a 13+ attestation from the adult signing as the responsible party.
+    supplied_name = params.dig(:guardianship, :full_name).to_s.strip
+    name_wanted = supplied_name.present? && current_user.full_name_in_database.blank?
+    if name_wanted && !@guardianship.guardian.update(full_name: supplied_name)
+      flash[:error] = @guardianship.guardian.errors.full_messages.to_sentence
+      redirect_to guardianship_path(@guardianship.invite_token)
       return
     end
 
-    accepted = @guardianship.accept!(
-      consent_ip: request.remote_ip,
-      consent_user_agent: request.user_agent
-    )
+    # The 18+ attestation, the remaining structural blockers and the acceptance
+    # itself, in the one order that works — see Fuime::GuardianConsentService,
+    # which the family setup wizard's sign step also calls, so there is still
+    # exactly one path to `adult_18_plus`.
+    result = ::Fuime::GuardianConsentService.new(
+      guardianship: @guardianship,
+      ip: request.remote_ip,
+      user_agent: request.user_agent
+    ).call
 
-    if accepted
+    unless result.ok?
+      flash[:error] = result.error
+      # Return them to the invite page, not back here: `accept` is POST-only, so
+      # a GET return_to would 404.
+      redirect_to guardianship_path(@guardianship.invite_token)
+      return
+    end
+
+    if result.ok?
+      # Fuime: their own page, not a dashboard built for teens. A parent who
+      # has just signed wants to see what they signed for.
       flash[:success] = "You are now #{@guardianship.minor.name}'s guardian on Fuime!"
-      redirect_to root_path
+      redirect_to guardianships_path
     else
       flash[:error] = "Failed to accept guardianship."
       redirect_to guardianship_path(@guardianship.invite_token)
@@ -279,6 +297,31 @@ class GuardianshipsController < ApplicationController
     end
 
     redirect_back_or_to post_action_path_for(@guardianship)
+  end
+
+  # Re-mail the family-setup join link to a ward who has not finished signing
+  # up. The link signs its holder in AS THE MINOR, so only the adult who
+  # already signed for them may ask for another (GuardianshipPolicy#resend_join?)
+  # — a teen holding a dead link asks their parent, which is the same shape as
+  # every other recovery in this flow.
+  def resend_join
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship, :resend_join?
+
+    sent = (session[:family_join_sent] || {})[@guardianship.id.to_s]
+    if sent.present? && Time.zone.parse(sent.to_s).to_time > ::Fuime::OnboardingController::JOIN_RESEND_COOLDOWN.ago
+      flash[:info] = "We sent a new link a few minutes ago — check their inbox."
+      return redirect_back_or_to guardianships_path
+    end
+
+    ::Fuime::FamilyMailer.teen_join(guardianship: @guardianship)
+                         .deliver_later(wait_until: ::Fuime::MinorMailWindow.earliest_send_time)
+    session[:family_join_sent] = (session[:family_join_sent] || {}).merge(
+      @guardianship.id.to_s => Time.current.iso8601
+    )
+
+    flash[:success] = "Sent again to #{@guardianship.minor.redacted_email}."
+    redirect_back_or_to guardianships_path
   end
 
   # The parent's own way out of a dead link: POST /guardian/:token/renew from

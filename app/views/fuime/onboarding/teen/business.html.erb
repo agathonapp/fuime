@@ -1,0 +1,80 @@
+<% title "What do you do?" %>
+<% content_for :wizard_title, "What do you do?" %>
+<% content_for :wizard_subtitle, "Start your business" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">What do you do?</h2>
+  <p class="mt-0 text-lg muted">
+    Two quick questions. You describe it in your own words on the next screen.
+  </p>
+
+  <%# The launch scope, said plainly rather than discovered at vetting. A
+      picker that offers categories the app then blocks is L8's failure mode in
+      miniature. Verbatim from event/applications/business_type. %>
+  <div class="card mt-6">
+    <h3 class="text-base mt-0 mb-1">What you can sell today</h3>
+    <p class="text-sm muted mb-0">
+      Services — work you do for someone — and digital things you make, like a
+      design, an edit, or a small piece of software. Physical products and food
+      are coming later.
+    </p>
+  </div>
+
+  <p class="text-sm muted mt-4 mb-0">
+    Not sure yet?
+    <%= link_to "Browse the starter templates", learn_path(anchor: "templates"),
+                target: "_blank", rel: "noopener", class: "underline" %> —
+    each one covers what to offer, where the first customers come from, and
+    what tends to go wrong.
+  </p>
+<% end %>
+
+<%= form_with url: teen_setup_save_path(step: "business"), method: :post, scope: :setup,
+              id: "setup_form",
+              data: { action: "turbo:submit-start->wizard#leave" } do |form| %>
+  <div class="field">
+    <%= form.label :starting_point, "Where are you starting from?" %>
+    <p class="text-sm muted mt-1 mb-2">
+      There's no wrong answer — it just changes what we show you next.
+    </p>
+    <div class="wizard-segment">
+      <% @starting_points.each do |point| %>
+        <%= form.radio_button :starting_point, point.key,
+                              checked: @selected_point == point.key,
+                              required: true,
+                              id: "starting_point_#{point.key}" %>
+        <%= form.label :starting_point, point.name, value: point.key,
+                                                    for: "starting_point_#{point.key}",
+                                                    title: point.blurb %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="field">
+    <%= form.label :service_type, "Pick the closest one" %>
+    <p class="text-sm muted mt-1 mb-2">
+      You'll describe it in your own words on the next screen.
+    </p>
+    <div class="wizard-option-grid">
+      <% @services.each do |service| %>
+        <%= form.radio_button :service_type, service.key,
+                              checked: @selected_service == service.key,
+                              required: true,
+                              id: "service_type_#{service.key}" %>
+        <%= form.label :service_type, value: service.key,
+                                      for: "service_type_#{service.key}",
+                                      class: "wizard-option" do %>
+          <strong><%= service.name %></strong>
+          <small><%= service.blurb %></small>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<% content_for :footer do %>
+  <button type="submit" class="btn btn--fuime" form="setup_form">Continue</button>
+  <%= link_to "← Back", teen_setup_step_path(step: "you"),
+              class: "btn bg-muted",
+              data: { action: "click->wizard#leaveBack" } %>
+<% end %>

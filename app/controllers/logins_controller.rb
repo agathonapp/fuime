@@ -25,6 +25,11 @@ class LoginsController < ApplicationController
 
     @prefill_email = params[:email].presence || current_user(allow_unverified: true)&.email.presence
     @signup = params[:signup] == "true"
+    # Fuime: a parent arriving from "Set up your family" is signing up to sign
+    # for somebody else, so the page has to say so before they type an address.
+    # Read from `return_to` rather than a second parameter — the same value
+    # already has to survive to the other side of the login code.
+    @parent_signup = @signup && url_from(params[:return_to]).to_s.start_with?("/setup/parent")
   end
 
   # when you submit your email
@@ -182,7 +187,10 @@ class LoginsController < ApplicationController
       # one here would send every phoneless user back to the profile form on
       # every login.
       elsif @user.full_name.blank? && !@login.for_application?
-        redirect_to edit_user_path(@user.slug, return_to: @login.return_to)
+        # Fuime: the family setup wizard, not the settings form. `return_to`
+        # rides on the Login row, so the parent path (`/setup/parent`) survives
+        # the round trip through the emailed code — the session does not.
+        redirect_to setup_path(return_to: @login.return_to)
       elsif @login.authenticated_with_backup_code && @user.backup_codes.active.empty?
         redirect_to security_user_path(@user), flash: { warning: "You've just used your last backup code, and we recommend generating more." }
       else

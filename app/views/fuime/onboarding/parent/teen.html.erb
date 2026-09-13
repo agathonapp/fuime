@@ -1,0 +1,96 @@
+<% title "Who's the founder?" %>
+<% content_for :wizard_title, "Who's the founder?" %>
+<% content_for :wizard_subtitle, "Set up your family on Fuime" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">What you're setting up</h2>
+
+  <%# Fuime: the three things a parent is actually agreeing to, in the same
+      words as the guardian agreement and the accept page. Under
+      merchant-of-record the signature gates whether payouts can happen and
+      where the money goes — never each individual payout (those run as a
+      weekly admin-approved batch), and never whether the teen may sell. %>
+  <ul class="list-disc pl-5 mt-3">
+    <li class="mb-2">
+      <strong>You're the legal signer.</strong> Your teen runs the business day
+      to day; you're the responsible adult on its account.
+    </li>
+    <li class="mb-2">
+      <strong>You can see every sale and every dollar, always.</strong> Your
+      teen can't turn that off.
+    </li>
+    <li class="mb-2">
+      <strong>You approve the money leaving.</strong> When your teen asks to be
+      paid, you decide — and nothing is paid out until you've set up where the
+      money goes.
+    </li>
+    <li class="mb-2">
+      A person at Fuime reviews every new business before it can sell.
+    </li>
+  </ul>
+
+  <div class="card mt-4">
+    <p class="text-sm mb-1"><strong>What happens next</strong> — about three minutes</p>
+    <ol class="text-sm muted mb-0 pl-4">
+      <li>Their first name and email.</li>
+      <li>Read and sign the guardian agreement.</li>
+      <li>We email them a link; they add their name, confirm they're 13 or older, and describe their business.</li>
+    </ol>
+  </div>
+
+  <p class="text-sm muted mt-4 mb-0">
+    We won't ask for a Social Security number, an ID, or a payment. When
+    there's money to send, we'll ask where it should go.
+  </p>
+<% end %>
+
+<%= form_with url: parent_setup_save_path(step: "teen"), method: :post, scope: :setup,
+              id: "setup_form",
+              data: { action: "turbo:submit-start->wizard#leave" } do |form| %>
+  <div class="field">
+    <%= form.label :teen_first_name, "Their first name" %>
+    <p class="text-sm muted mt-1 mb-2">
+      This is how we'll refer to them in the agreement. They add their full
+      name themselves.
+    </p>
+    <%= form.text_field :teen_first_name,
+                        value: @teen["first_name"],
+                        required: true, maxlength: 30, autofocus: true,
+                        placeholder: "Maya", class: "w-full max-w-full" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :teen_email, "Their email" %>
+    <p class="text-sm muted mt-1 mb-2">
+      The address they'll sign in with. One email goes there.
+    </p>
+    <%= form.email_field :teen_email,
+                         value: @teen["email"],
+                         required: true, autocomplete: "off",
+                         placeholder: "maya@example.com", class: "w-full max-w-full",
+                         "x-on:input": "$el.value.trim().toLowerCase() == '#{current_user.email}' ? $el.setCustomValidity(\"Use your teen's email, not your own\") : $el.setCustomValidity('')" %>
+  </div>
+
+  <%# L6: the under-13 refusal, on the parent's side, before anything is signed
+      or created. Nothing about a refusal is persisted — no date of birth, no
+      record of a refused child, and no promise of a younger tier. %>
+  <div class="field">
+    <div class="field field--checkbox">
+      <%= check_box_tag "setup[teen_13_plus]", "1", false,
+                        id: "setup_teen_13_plus", required: true %>
+      <%= label_tag "setup_teen_13_plus",
+                    "#{@teen["first_name"].presence || "They"} is 13 or older" %>
+    </div>
+    <p class="h5 muted mt0 mb0">Fuime is for founders 13 and up.</p>
+  </div>
+<% end %>
+
+<p class="text-sm muted mt-4">
+  Not a parent or guardian?
+  <%= link_to "Start as a founder", setup_path, class: "underline" %>.
+</p>
+
+<% content_for :footer do %>
+  <button type="submit" class="btn btn--fuime" form="setup_form">Continue</button>
+  <span></span>
+<% end %>

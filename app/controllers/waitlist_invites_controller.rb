@@ -7,6 +7,8 @@
 # real Login and finish through the same session rules LoginsController uses
 # (including 2FA). We do not mint a User::Session any other way.
 class WaitlistInvitesController < ApplicationController
+  include SignedLinkSignIn
+
   skip_before_action :signed_in_user
   skip_before_action :redirect_to_onboarding
   skip_after_action :verify_authorized
@@ -37,26 +39,9 @@ class WaitlistInvitesController < ApplicationController
       return
     end
 
-    login = Login.create!(user:, state: { purpose: "waitlist_invite" })
-    cookies.signed["browser_token_#{login.hashid}"] = {
-      value: login.browser_token,
-      expires: Login::EXPIRATION.from_now
-    }
-
-    ProcessLoginService.new(login:).process_signed_email_link
-    login.reload
-
-    login.with_lock do
-      if login.complete? && login.user_session.nil?
-        login.user.update(verified: true) unless login.user.verified?
-        sign_out
-        login.update(user_session: create_session(
-          user: login.user,
-          verified: true,
-          fingerprint_info: { ip: request.remote_ip }
-        ))
-      end
-    end
+    # Moved verbatim into SignedLinkSignIn so the family join link does the
+    # same thing rather than a similar thing. Behaviour is unchanged.
+    login = sign_in_from_signed_link!(user:, purpose: "waitlist_invite")
 
     if login.complete? && login.user_session.present?
       redirect_to after_waitlist_login_path(login.user)
@@ -80,8 +65,10 @@ class WaitlistInvitesController < ApplicationController
   def after_waitlist_login_path(user)
     # Name only — the same test as LoginsController#complete and
     # User#onboarding?. Signup does not ask for a phone number (A2).
+    # A name-less invitee goes to the family setup wizard, the one front door
+    # for anybody who has not finished signing up.
     if user.full_name.blank?
-      edit_user_path(user.slug)
+      setup_path
     else
       root_path
     end

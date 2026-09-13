@@ -1,0 +1,365 @@
+@import '../variables';
+
+// Fuime: the family setup wizard (app/views/layouts/fuime_setup.html.erb).
+//
+// Everything here derives from `_variables.scss`. That is not a style
+// preference — Tailwind's `primary` in tailwind.config.js is HCB red
+// (#ec3750) while the SCSS palette's `primary` is $fuime-blue (#2242ff), so
+// `bg-primary` and `$wiz` are different colours. Use the SCSS token for every
+// fill on these screens; fuime_product's `bg-primary h-1` progress bar is the
+// trap this note exists to stop somebody falling into twice.
+
+$wiz: map-get($palette, primary);
+
+.btn--fuime {
+  background-color: $wiz;
+  color: $white;
+  border-radius: var(--radius-lg);
+  height: 44px;
+  min-height: 44px;
+  box-shadow: none;
+  font-weight: 600;
+
+  html[data-dark='true'] & {
+    background-color: $wiz;
+    color: $white;
+  }
+
+  &:hover,
+  &:focus {
+    background-color: darken($wiz, 6%);
+    color: $white;
+
+    html[data-dark='true'] & {
+      background-color: lighten($wiz, 6%);
+      color: $white;
+    }
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($wiz, 0.3) !important;
+  }
+
+  &[disabled],
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+// ── Progress ────────────────────────────────────────────────────────────────
+
+.wizard-bar {
+  height: 3px;
+  width: 100%;
+  background: map-get($palette, smoke);
+
+  html[data-dark='true'] & {
+    background: map-get($palette, slate);
+  }
+}
+
+.wizard-fill {
+  height: 100%;
+  background: $wiz;
+  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+// ── Step rail ───────────────────────────────────────────────────────────────
+
+.wizard-rail {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem 0;
+  font-size: 0.875rem;
+}
+
+.wizard-rail__step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: map-get($palette, muted);
+
+  &.is-current {
+    font-weight: 600;
+    color: $black;
+
+    html[data-dark='true'] & {
+      color: map-get($palette, snow);
+    }
+  }
+}
+
+.wizard-rail__dot {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid map-get($palette, 'smoke-dark');
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  .is-current & {
+    border-color: $wiz;
+    background: rgba($wiz, 0.12);
+    animation: wizard-pulse 0.6s ease-out 1;
+  }
+
+  .is-done & {
+    background: $wiz;
+    border-color: $wiz;
+  }
+}
+
+.wizard-rail__check {
+  stroke: $white;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 0;
+
+  .is-drawing & {
+    stroke-dashoffset: 24;
+    animation: wizard-check 0.28s ease-out 0.1s forwards;
+  }
+}
+
+// Below `sm` the rail is dots plus the one label you need. Five labels do not
+// fit a phone, and a rail that wraps reads as navigation rather than progress.
+@media (max-width: 639px) {
+  .wizard-rail__step:not(.is-current) .wizard-rail__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+
+// A pill group for a small either/or. Not `.field--options`, which centres and
+// stacks.
+.wizard-segment {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border: 1px solid map-get($palette, smoke);
+  border-radius: 999px;
+  padding: 3px;
+  max-width: 100%;
+
+  html[data-dark='true'] & {
+    border-color: map-get($palette, slate);
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  label {
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    transition:
+      background-color 0.12s ease-in-out,
+      color 0.12s ease-in-out;
+  }
+
+  input:checked + label {
+    background: $wiz;
+    color: $white;
+  }
+
+  input:focus-visible + label {
+    box-shadow: 0 0 0 3px rgba($wiz, 0.3);
+  }
+
+  @media (max-width: 520px) {
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+
+    label {
+      border-radius: var(--radius-md);
+      text-align: center;
+    }
+  }
+}
+
+// Fourteen options on a phone. `.field--options` caps at 24rem and centres,
+// which turns this into a single tall column of centred text.
+.wizard-option-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.wizard-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 56px;
+  padding: 0.875rem 1rem;
+  border: 1px solid map-get($palette, smoke);
+  border-radius: var(--radius-lg);
+  background: $white;
+  cursor: pointer;
+  transition:
+    box-shadow 0.12s ease-in-out,
+    background-color 0.12s ease-in-out;
+
+  html[data-dark='true'] & {
+    background: $darkless;
+    border-color: map-get($palette, slate);
+  }
+
+  small {
+    color: map-get($palette, muted);
+    line-height: 1.35;
+  }
+
+  input:checked + & {
+    box-shadow: 0 0 0 2px $wiz;
+    background: rgba($wiz, 0.06);
+  }
+
+  input:focus-visible + & {
+    box-shadow: 0 0 0 3px rgba($wiz, 0.3);
+  }
+}
+
+// ── The agreement scroll box ────────────────────────────────────────────────
+
+.wizard-agreement {
+  scroll-behavior: smooth;
+}
+
+// ── Panel transitions ───────────────────────────────────────────────────────
+//
+// Forward motion enters from the right, Back from the left, so the direction
+// of travel is legible without reading the rail. No element ever rests at
+// `opacity: 0` — every animation is `both`/`forwards` from a visible state, so
+// a failed animation leaves a readable page rather than a blank one.
+
+.wizard-panel--enter {
+  animation: wizard-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.wizard-panel--enter-back {
+  animation: wizard-in-back 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.wizard-panel--exit {
+  animation: wizard-out 0.14s ease-in forwards;
+}
+
+.wizard-panel--exit-back {
+  animation: wizard-out-back 0.14s ease-in forwards;
+}
+
+.wizard-stagger > * {
+  animation: wizard-in 0.3s both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.wizard-footer {
+  @media (max-width: 639px) {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes wizard-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wizard-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wizard-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+@keyframes wizard-out-back {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@keyframes wizard-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wizard-pulse {
+  from {
+    box-shadow: 0 0 0 0 rgba($wiz, 0.35);
+  }
+  to {
+    box-shadow: 0 0 0 8px rgba($wiz, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-panel,
+  .wizard-panel--enter,
+  .wizard-panel--enter-back,
+  .wizard-panel--exit,
+  .wizard-panel--exit-back,
+  .wizard-stagger > *,
+  .wizard-rail__dot,
+  .wizard-rail__check {
+    animation: none !important;
+  }
+
+  .wizard-fill {
+    transition: none;
+  }
+}

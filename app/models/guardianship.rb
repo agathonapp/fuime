@@ -12,6 +12,7 @@
 #  invite_day3_reminded_at :datetime
 #  invite_day6_reminded_at :datetime
 #  invite_sent_at          :datetime
+#  initiated_by            :integer          default(0), not null
 #  invite_token            :string
 #  revoked_at              :datetime
 #  status                  :integer          default(0), not null
@@ -108,6 +109,15 @@ class Guardianship < ApplicationRecord
   belongs_to :revoked_by, class_name: "User", optional: true
 
   enum :status, { pending: 0, active: 1, revoked: 2 }, default: :pending
+
+  # Who started this guardianship. See AddInitiatedByToGuardianships.
+  #
+  # `minor` is the historical shape: a teen names their parent and the parent
+  # follows an emailed link. `guardian` is the family setup wizard, where a
+  # parent creates the row and signs it in the same request — which changes what
+  # two downstream behaviours should do (the `accepted` mail, and the
+  # fast-acceptance fraud signal), and nothing else.
+  enum :initiated_by, { minor: 0, guardian: 1 }, prefix: :initiated_by, default: :minor
 
   # Scoped to LIVE rows, matching the partial index added in 20260912120000.
   # A revoked guardianship is history, not an occupied slot: without this a
@@ -318,7 +328,13 @@ class Guardianship < ApplicationRecord
     signals << "Consent came from the same browser the minor uses." if shared_user_agent?
     signals << "The guardian's email looks like an alias of the minor's." if aliased_email?
     signals << "The guardian has never signed in except to accept this." if no_independent_guardian_activity?
-    signals << "Accepted #{ActiveSupport::Duration.build(accepted_within.to_i).inspect} after the invite was sent." if accepted_suspiciously_fast?
+    # Not for a guardian-initiated row: the wizard creates and accepts it in one
+    # request, so "accepted in under two minutes" describes every parent who set
+    # their own family up. The other four signals still apply to them — a parent
+    # signing from the teen's browser, on the teen's IP, from an alias of the
+    # teen's address, with no independent activity, is exactly as interesting
+    # whichever way round the row was created.
+    signals << "Accepted #{ActiveSupport::Duration.build(accepted_within.to_i).inspect} after the invite was sent." if accepted_suspiciously_fast? && !initiated_by_guardian?
     signals << "Consent came from the same IP address the minor uses." if shared_ip?
     signals
   end
@@ -334,7 +350,13 @@ class Guardianship < ApplicationRecord
   # verification is NOT yet implemented (docs/fuime/PRODUCTION_READINESS.md
   # §1.2) — until it is, an accepted guardianship proves control of an email
   # address and a self-asserted birthday, not a verified parental relationship.
-  def accept!(consent_ip: nil, consent_user_agent: nil)
+  # `notify_minor:` exists for the parent-first path. The mail it gates
+  # (`GuardianshipMailer#accepted`) says "your parent accepted your invitation",
+  # which is true of a teen who sent one and false of a teen whose parent set
+  # the account up before they had heard of Fuime — they get
+  # `Fuime::FamilyMailer#teen_join` instead, which is their only mail. Defaults
+  # to true, so every existing caller is unchanged.
+  def accept!(consent_ip: nil, consent_user_agent: nil, notify_minor: true)
     return false unless activatable?
 
     result = update(
@@ -347,7 +369,7 @@ class Guardianship < ApplicationRecord
     )
 
     if result
-      GuardianshipMailer.accepted(guardianship: self).deliver_later
+      GuardianshipMailer.accepted(guardianship: self).deliver_later if notify_minor
 
       # Activation is the moment a venture of this minor's finally has an adult who
       # can legally own its payment account, so it is the earliest honest moment to
