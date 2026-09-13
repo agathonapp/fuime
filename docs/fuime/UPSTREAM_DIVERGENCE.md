@@ -6320,3 +6320,15 @@ link behind it either. Removing it is Rushil's call, not a review's.
     list across 40 seeds for forbidden vocabulary, Hack Club references, user data in
     outbound links, and any host not on a reviewed allowlist — so the lists stay editable
     without this recurring.
+
+23. **`db/migrate/20260912090000_*`** — the unique ledger index now refuses to run if Fuime
+    keys are already duplicated, instead of letting `add_index … concurrently` fail and
+    leave an INVALID index behind. A duplicate is exactly the bug the index prevents, and
+    the double-post window has been open since the merchant-of-record cutover, so
+    production may well contain one — that would otherwise have turned a known data problem
+    into a broken deploy plus a second thing to clean up. The error names the affected keys
+    and says what reconciliation is needed (which row is the real sale, whether a payout
+    batch already paid the inflated amount) rather than deleting anything: that is a
+    judgement call about real money. Verified both ways — clean data passes, a planted
+    duplicate refuses and names the key.
+
