@@ -701,6 +701,12 @@ Nine failures pointed straight at it.
 
 So the real baseline on this tree is **4**, all environmental, exactly as before.
 
+**Confirmed by a second run against a cleaned database** (`2fde424cf`):
+**4075 examples, 4 failures, 17 pending** — the four `receipt_bin_mailbox` ones and
+nothing else. Worth doing rather than reasoning about: the first run's number was
+unusable as a record, and a baseline nobody can trust is the thing this file exists to
+prevent.
+
 ### The five that were not real, because the shape recurs
 
 They failed on `PublicActivity::Activity.sole` → `SoleRecordExceeded`. The cause was two
