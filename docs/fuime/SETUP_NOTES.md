@@ -2,6 +2,41 @@
 
 ## Handoff (most recent first)
 
+**2026-09-12 (latest) — The family setup wizard, both entry orders.**
+
+Branch `fuime/onboarding-wizard` off main (#108). `/setup` is a teen's five
+screens and `/setup/parent` a parent's three, one controller, converging on the
+same venture. The design is `docs/fuime/ONBOARDING_WIZARD_SPEC.md`; its
+constraint audit ran this session and found three real bugs, all fixed and all
+worth knowing about:
+
+1. **An escalation the wizard introduced.** A teen who finished their own
+   signup could go to `/setup/parent`, invent an email, tick the agreement and
+   come out `known_adult?`. The parent door now refuses any account that
+   attested 13+ during a founder signup.
+2. **Two paths to `adult_18_plus`.** Extracted `Fuime::GuardianConsentService`;
+   the accept page and the wizard both call it. ONBOARDING_PLAN §3 names it now.
+3. **A regression of #108.** I had refused a previously revoked pair at `sign`,
+   which is exactly the wall migration `20260912120000` removed. Gone.
+
+It also caught that the parent copy UNDERSTATED the parent: they really do
+approve each `PayoutRequest`. Said on every parent surface now.
+
+Verify: `/admin/playground` → *Start fresh as Priya* (parent path, teen mail
+suppressed) and *Start fresh as Sam* (teen path, now lands on `/setup/you`).
+
+**Gotchas that cost time here:**
+- `ActionMailer::Base.delivery_interceptors` does not exist in Rails 8.1 —
+  register with `ActiveSupport.on_load(:action_mailer) { register_interceptor(...) }`,
+  not a `to_prepare` block with an idempotency check.
+- ERB escapes an apostrophe to `&#39;`, so `expect(body).to include("You're in")`
+  is a false negative. `spec/support/setup_wizard_helpers.rb` has `page_text`.
+- The suite CLEARS `FEATURE_MERCHANT_OF_RECORD` per example. The teen path only
+  reaches a venture under MoR (under Connect the guardian gates activation), so
+  those examples carry `:merchant_of_record`. There is an example for each.
+- Do not pipe `rails db:migrate` into `head -N` — SIGPIPE kills the migration
+  halfway.
+
 **2026-09-11 (latest) — CI on PR #106.**
 Rubocop: freeze `SERVICE_FEE_LABEL`. RSpec shard 8: Playground Mode
 checkout examples needed `include SessionSupport` (undefined
@@ -49,6 +84,19 @@ Maya → `/fuime-playground` → Transactions. Show mock data is the same
 shape. Did not flip Stripe or stand up a second Render.
 
 **2026-09-11 — Onboarding Phase A: copy and routing.**
+**2026-09-12 — Onboarding wizard: designed** (superseded by the entry above, which built it).
+
+Branch `fuime/onboarding-wizard` (off main #104). The design panel's synthesis is
+`docs/fuime/ONBOARDING_WIZARD_SPEC.md`; its adversarial audit did not run (usage
+limit) — run it first, then build. Standing instruction from the founder: the
+parent invite is an onboarding step but the teen keeps going and can sell while
+it is pending; the guardian is only for payouts. Sibling branch
+`fuime/playground-demo-polish` (PR pending) is the demo control room whose *Start
+fresh as Sam* lands on `/` → `redirect_to_onboarding`, which the spec re-points at
+`/setup`. Worktree specs: see the "Running specs from a worktree" note below;
+databases `bank_test_43/44/45` exist on the local Postgres.
+
+**2026-09-11 (latest) — Onboarding Phase A: copy and routing.**
 
 Branch `fuime/onboarding-a-copy-routing`. Plan: `docs/fuime/ONBOARDING_PLAN.md`
 (§1–§2 the traced flows, §5 the phases). Phase A shipped: site CTA →

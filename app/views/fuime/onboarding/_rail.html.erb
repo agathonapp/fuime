@@ -1,0 +1,30 @@
+<%# Fuime: the step rail. Which screens there are, which one you are on, and
+    how many are left — the question every multi-screen form gets asked.
+
+    Below `sm` only the current label is shown; the rest are dots with an
+    accessible name, because five labels do not fit a 375px phone and a rail
+    that wraps to two lines reads as a navigation bar rather than progress.
+
+    The check is drawn (stroke-dashoffset) rather than faded in, and only on
+    the step that was just completed — see wizard_controller.js. Everything
+    here still renders correctly with no JavaScript and under
+    prefers-reduced-motion. %>
+<ol class="wizard-rail" aria-label="Setup steps">
+  <% index = wizard_step_index %>
+  <% wizard_steps.each_with_index do |step, i| %>
+    <% state = i < index ? "is-done" : (i == index ? "is-current" : "is-todo") %>
+    <li class="wizard-rail__step <%= state %>"
+        data-wizard-target="step"
+        <%= "aria-current=step".html_safe if i == index %>>
+      <span class="wizard-rail__dot" aria-hidden="true">
+        <% if i < index %>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+            <path class="wizard-rail__check" d="M4 12.5l5.2 5.2L20 7" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        <% end %>
+      </span>
+      <span class="wizard-rail__label"><%= wizard_labels[step] %></span>
+    </li>
+  <% end %>
+</ol>

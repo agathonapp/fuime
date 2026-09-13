@@ -50,6 +50,19 @@ module Admin
       redirect_to playground_admin_index_path, flash: { error: e.message }
     end
 
+    # Put Priya back to "never used Fuime", then Become Priya — the parent
+    # path's first screen is where they land.
+    def fresh_parent
+      authorize current_user, :impersonate?
+
+      user = Fuime::Playground.new.reset_new_parent!
+      impersonate_user(user)
+      redirect_to parent_setup_path,
+                  flash: { info: "You're Priya now — a parent who has never used Fuime. Use playground+kid@fuime.test for the teen; their mail is suppressed." }
+    rescue => e
+      redirect_to playground_admin_index_path, flash: { error: e.message }
+    end
+
     private
 
     def warning_suffix(result)

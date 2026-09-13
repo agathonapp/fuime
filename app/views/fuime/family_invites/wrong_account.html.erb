@@ -1,0 +1,31 @@
+<% title "Join Fuime" %>
+<% page_full %>
+
+<%# Fuime: the join link was opened while signed in as somebody else — most
+    often the parent who sent it, on the laptop they share.
+
+    This page reveals the redacted address the link was sent to and nothing
+    else: not the teen's name, not the parent's, not the venture. The link
+    signs its holder in AS THE TEEN, so the one thing this screen must not do
+    is offer a way to proceed. %>
+<main class="center max-w-xl card mt4 md-p3 mx-auto">
+  <h1 class="mt0 border-0 mb-2">This link is for a different account</h1>
+
+  <p class="text-lg mb-3">
+    It was sent to <strong><%= @invited_email %></strong>, but you're signed in
+    as <strong><%= current_user.email %></strong>.
+  </p>
+
+  <p class="mb-4">
+    Sign out, then open the link again and sign in with the address it was sent to.
+  </p>
+
+  <%= button_to "Sign out and open the link again", logout_users_path,
+                method: :delete,
+                class: "btn bg-accent",
+                form: { data: { turbo: false } } %>
+
+  <p class="text-sm muted mt-4 text-center">
+    Questions? Contact us at <%= mail_to "support@fuime.com" %>
+  </p>
+</main>

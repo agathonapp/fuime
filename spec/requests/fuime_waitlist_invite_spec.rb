@@ -49,7 +49,7 @@ RSpec.describe "waitlist invite accept", type: :request do
     user = result.user.reload
     expect(user).to be_verified
     expect(User::Session.where(user:)).to exist
-    expect(response).to redirect_to(edit_user_path(user.slug))
+    expect(response).to redirect_to(setup_path)
   end
 
   # Fuime A2: onboarding is finished once a user has a name. Signup does not

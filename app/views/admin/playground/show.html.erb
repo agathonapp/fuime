@@ -9,6 +9,7 @@
 <% teen = @status[:teen] %>
 <% guardian = @status[:guardian] %>
 <% new_founder = @status[:new_founder] %>
+<% new_parent = @status[:new_parent] %>
 <% offer = @status[:published_offer] %>
 <% seeded = event.present? && teen.present? %>
 <% storefront_url = event ? fuime_storefront_url(slug: event.slug) : nil %>
@@ -119,6 +120,32 @@
 
   <div class="card flex flex-col gap-2">
     <div>
+      <span class="badge bg-muted m0">1b · A parent signing up</span>
+      <h3 class="mt1 mb0">Priya</h3>
+      <p class="muted text-sm mb0">A parent who has never used Fuime. Lands on the family setup wizard.</p>
+    </div>
+    <p class="text-sm mb0">
+      The other entry order: name a teen, sign the guardian agreement, land on
+      the guardian page. Use <code>playground+kid@fuime.test</code> for the
+      teen — persona mail never leaves the building.
+    </p>
+    <p class="muted text-xs mb0">
+      <code><%= Fuime::Playground::NEW_PARENT_EMAIL %></code>
+      <% if new_parent %>
+        · <%= @status[:new_parent_fresh] ? "fresh" : "mid-demo — reset puts them back" %>
+      <% end %>
+    </p>
+    <div class="mt-auto pt2">
+      <%= button_to "Start fresh as Priya",
+                    playground_fresh_parent_admin_index_path,
+                    method: :post,
+                    class: "btn bg-accent",
+                    form: { data: { turbo_frame: "_top" } } %>
+    </div>
+  </div>
+
+  <div class="card flex flex-col gap-2">
+    <div>
       <span class="badge bg-muted m0">2 · Running it</span>
       <h3 class="mt1 mb0">Maya</h3>
       <p class="muted text-sm mb0">16. Runs Maya's Lawn Care — vetted, listing, getting paid.</p>
@@ -208,6 +235,12 @@
         <strong>Start fresh as Sam.</strong> Sign up as a teenager would: name,
         13+, the business, a parent's email. Submit — a venture exists immediately.
         <span class="muted">Exit demo from the strip when you're done.</span>
+      </li>
+      <li>
+        <strong>Start fresh as Priya.</strong> The parent's side: name a teen
+        (<code>playground+kid@fuime.test</code>), sign the agreement, land on
+        the guardian page. The teen's join mail is suppressed — open
+        <code>/join/…</code> from the log if you want to play them.
       </li>
       <li>
         <strong>Reset &amp; start as Maya.</strong> The welcome screen and a five-bubble

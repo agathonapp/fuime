@@ -1,0 +1,25 @@
+<%# Standing status disclosure. Fuime shows balances, ledgers and cards, which is
+    exactly the presentation that invites a reader to assume a bank and deposit
+    insurance sit behind it. 12 CFR 328.102(b)(3)(ii) treats omitting the
+    information needed to prevent that assumption as the violation, so this is
+    stated unconditionally rather than only on money-related pages, and it is in
+    the always-visible block for the same reason the legal links are.
+    When a partner bank exists, this becomes the "banking services provided by
+    [Bank], Member FDIC" form — until then, naming a bank here would itself be
+    the false claim. %>
+<%# The entity is named here and not only in the terms because this is the
+    disclosure a reader sees without clicking anything, and "Fuime is a
+    financial technology company" invited the reading that Fuime IS the
+    company. It is a product; the company is the one that would answer for it. %>
+<%# Extracted from application/_footer so layouts that set `no_app_shell` — which
+    never render that footer — can carry the same sentence. The family setup
+    wizard is one: eight pages where somebody signs a legal agreement, and the
+    footer this text used to live in does not render on any of them. The bytes
+    are unchanged; spec/requests/fuime/status_disclosure_spec.rb matches on
+    them. %>
+<p class="text-xs text-center mx-auto" style="max-width: 44rem;">
+  Fuime is a product of <%= Rails.configuration.constants.legal_entity_name %>,
+  a financial technology company, not a bank. Fuime does not hold
+  deposits and does not offer FDIC-insured products. Payments are processed by
+  Stripe. <%= fuime_footer_ownership %>
+</p>

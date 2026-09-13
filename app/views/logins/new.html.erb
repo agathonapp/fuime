@@ -1,5 +1,5 @@
 <% turbo_page_requires_reload if params[:require_reload].present? %>
-<% title_text = @login.for_application? ? "Verify your email" : @signup ? "Start your business on Fuime" : "Sign in to Fuime" %>
+<% title_text = @login.for_application? ? "Verify your email" : @parent_signup ? "Set up your family on Fuime" : @signup ? "Start your business on Fuime" : "Sign in to Fuime" %>
 <% title title_text %>
 <%# The sign-up sub-line has to be true for the money model that is actually
     running. Under merchant-of-record a teen can set up before a guardian has
@@ -13,6 +13,12 @@
 <% mor_subline = "Free to start. About two minutes. Under 18? You can set up now and sell as soon as Fuime approves your business — a parent or guardian signs off before you get paid." %>
 <% connect_subline = "Free to start. About two minutes. Under 18? You can set up now — a parent or guardian signs off before your venture goes live." %>
 <% signup_subline = ::Fuime::Features.merchant_of_record? ? mor_subline : connect_subline %>
+<%# Fuime: the parent's version. They are not starting a business; they are
+    signing for one, and the three-minute shape of what follows is the thing
+    that gets them to type an address. No SSN / ID / payment is stated here
+    because it is the question every parent has and the answer is true under
+    merchant-of-record — the payout destination is collected later. %>
+<% parent_subline = "One email code, then about three minutes. You'll name your teen and sign as their parent or guardian; they finish their own part from a link we email them. We won't ask for a Social Security number, an ID, or a payment." %>
 
 <% content_for :info_pane do %>
   <%= render partial: "logins/apply_info_pane" %>
@@ -25,7 +31,7 @@
     <% end %>
 
     <% if @signup && !@login.for_application? %>
-      <p class="mt-2 mb-0 muted"><%= signup_subline %></p>
+      <p class="mt-2 mb-0 muted"><%= @parent_signup ? parent_subline : signup_subline %></p>
     <% end %>
 
     <%= form_for @login, class: "mt-1", id: "login", 'data-action': "webauthn-auth#submit", 'data-webauthn-auth-target': "authForm" do |form| %>

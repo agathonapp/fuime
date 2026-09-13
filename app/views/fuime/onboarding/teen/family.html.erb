@@ -1,0 +1,130 @@
+<% title @needs_parent ? "Your parent or guardian" : "Almost done" %>
+<% content_for :wizard_title, @needs_parent ? "Your parent or guardian" : "Almost done" %>
+<% content_for :wizard_subtitle, "Start your business" %>
+
+<% content_for :info_pane do %>
+  <div class="card mb-4">
+    <p class="muted text-sm mt-0 mb-2">Your business so far</p>
+    <div class="flex items-baseline justify-between gap-2 mb-1">
+      <span><strong><%= @application.name %></strong></span>
+      <%= link_to "Edit", teen_setup_step_path(step: "name"), class: "text-sm muted" %>
+    </div>
+    <p class="text-sm mb-2"><%= @application.description %></p>
+    <div class="flex items-baseline justify-between gap-2">
+      <span class="muted text-sm">
+        <%= @service&.name %><%= " · #{::Fuime::ServiceCatalog.starting_point(@application.starting_point)&.name}" if @application.starting_point.present? %>
+      </span>
+      <%= link_to "Edit", teen_setup_step_path(step: "business"), class: "text-sm muted" %>
+    </div>
+  </div>
+
+  <%# Fuime: exactly one of these is true, and which one it is decides what the
+      form below asks for. Under merchant-of-record the parent gates PAYOUTS —
+      not signing up, not setting up, not selling — so none of these sentences
+      may suggest the teen is waiting on anybody. What they ARE waiting on is
+      Fuime's own human review, which is said plainly. %>
+  <% if @guardian %>
+    <p class="mb-0">
+      <strong><%= @guardian.name %> already signed</strong> as your parent or
+      guardian. Nothing else to add.
+    </p>
+  <% elsif @pending %>
+    <p class="mb-0">
+      <strong>We've already emailed <%= @pending.guardian.redacted_email %>.</strong>
+      You can change the address here.
+    </p>
+  <% elsif @needs_parent %>
+    <p class="mb-0">
+      <strong>They don't have to do anything today.</strong>
+      We email them one page to sign. You can keep setting up, and sell as soon
+      as Fuime approves your business. When you want to be paid, they approve
+      it — so nothing is paid out until they've signed.
+    </p>
+  <% end %>
+<% end %>
+
+<% if @blockers.present? && @blockers.any? %>
+  <%= render "application/callout", type: "warning", title: "Still needed" do %>
+    <ul class="list-disc pl-5 mb-0">
+      <% @blockers.each do |blocker| %>
+        <li><%= blocker %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>
+
+<%= form_with url: teen_setup_save_path(step: "family"), method: :post, scope: :setup,
+              id: "setup_form",
+              data: { action: "turbo:submit-start->wizard#leave" } do |form| %>
+  <%# Fuime: country is not an address question — it is the sanctions /
+      unsupported-country gate, checked here, in #submission_blockers and again
+      in #application_ready_to_submit?. Street, city, state and zip are asked at
+      the payout seam, where a payee and a 1099 actually exist. %>
+  <div class="field"
+       x-data="{ country: '<%= @application.address_country.presence %>', disallowed_countries: '<%= ::Event::Application::DISALLOWED_COUNTRIES.join(",") %>'.split(',') }">
+    <%= form.label :address_country, "Country" %>
+    <% validate = "$el.setCustomValidity(disallowed_countries.includes(country) ? 'Fuime is not supported in this country' : '')" %>
+    <%= form.country_select :address_country,
+                            { priority_countries: ["US"], priority_countries_divider: "",
+                              include_blank: "Select a country", selected: @application.address_country
+},
+                            { required: true, class: "!min-h-[36px] w-full max-w-full",
+                              "x-model": "country", "x-on:change": validate, "x-init": validate
+} %>
+    <template x-if="disallowed_countries.includes(country)">
+      <p class="primary text-sm mt-2 mb-0">
+        Fuime is not supported in that country. This is because of regulatory
+        restrictions, incompatible financial systems, or a combination of the two.
+      </p>
+    </template>
+  </div>
+
+  <% if @needs_parent %>
+    <div class="field">
+      <%= form.label :cosigner_email, "Parent or guardian's email" %>
+      <p class="text-sm muted mt-1 mb-2">
+        We'll send them one email with a one-page agreement to sign — no Social
+        Security number, no ID, no payment.
+      </p>
+      <%= form.email_field :cosigner_email,
+                           value: @application.cosigner_email.presence || @pending&.guardian&.email,
+                           required: true, autocomplete: "off",
+                           placeholder: "parent@example.com",
+                           class: "w-full max-w-full",
+                           "x-on:input": "$el.value.trim().toLowerCase() == '#{current_user.email}' ? $el.setCustomValidity('You cannot use your own email') : $el.setCustomValidity('')" %>
+    </div>
+  <% end %>
+
+  <%# An event code, entered last and optional. Deliberately not carried from a
+      URL: a code arrives on a slide or a wristband and gets typed by fifty
+      people at once, and the route through sign-in loses a query parameter. %>
+  <details class="mt-4" <%= "open" if @cohort.present? || flash[:cohort_code_unknown] %>>
+    <summary class="muted text-sm cursor-pointer">Have an event code?</summary>
+    <div class="field mt-2">
+      <p class="muted text-sm mt-0 mb-2">
+        If you're at an event that gave you a code, enter it here and your
+        business gets set up right away.
+      </p>
+      <%= form.text_field :cohort_code,
+                          value: @cohort&.code,
+                          maxlength: ::Fuime::Cohort::MAX_CODE_LENGTH,
+                          autocapitalize: "characters", autocomplete: "off",
+                          placeholder: "FOUNDERS26" %>
+      <% if @cohort.present? %>
+        <p class="success text-sm mt-1 mb-0">✓ You're in <%= @cohort.name %>.</p>
+      <% elsif flash[:cohort_code_unknown] %>
+        <p class="error text-sm mt-1 mb-0">
+          We didn't recognise that code. Check it with whoever gave it to you —
+          you can still submit without one.
+        </p>
+      <% end %>
+    </div>
+  </details>
+<% end %>
+
+<% content_for :footer do %>
+  <button type="submit" class="btn btn--fuime" form="setup_form">Finish setup</button>
+  <%= link_to "← Back", teen_setup_step_path(step: "name"),
+              class: "btn bg-muted",
+              data: { action: "click->wizard#leaveBack" } %>
+<% end %>

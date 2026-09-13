@@ -1,0 +1,62 @@
+<% title "You're #{@teen.name}'s guardian on Fuime" %>
+<% content_for :wizard_title, "You're all set" %>
+<% content_for :wizard_subtitle, "Set up your family on Fuime" %>
+
+<div class="wizard-stagger">
+  <div style="--i: 0">
+    <h1 class="border-0 mt-0 mb-2">
+      You're <%= @teen.name %>'s guardian on Fuime.
+    </h1>
+    <p class="text-lg muted mt-0">
+      <% if @teen_joined %>
+        <%= @teen.name %> already has a Fuime account — you're now on it as
+        their parent or guardian.
+      <% else %>
+        We emailed <strong><%= @teen.redacted_email %></strong> a link to join.
+        It works for 7 days and signs them in on their own device. When they
+        open it, they add their name, confirm they're 13 or older, and describe
+        their business. You'll be able to see all of it.
+      <% end %>
+    </p>
+  </div>
+
+  <%# Fuime: only what the product actually does. No "we'll email you when they
+      sell" — that mailer does not exist yet (ONBOARDING_PLAN D1), and the
+      agreement's "important notifications" promise is already one overclaim
+      too many. %>
+  <div class="card mb-4" style="--i: 1">
+    <h2 class="mt0 mb-2 text-lg">What happens next</h2>
+    <ul class="list-disc pl-5 mb-0">
+      <li class="mb-1">
+        A person at Fuime reviews every new business before anything can be sold.
+      </li>
+      <li class="mb-1">
+        You can see every sale on your guardian page, whenever you want.
+      </li>
+      <li class="mb-1">
+        When <%= @teen.name %> asks to be paid, the request comes to you to
+        approve.
+      </li>
+      <li class="mb-1">
+        Before any money is paid out, you'll set up where it goes. We'll ask
+        then — not now.
+      </li>
+    </ul>
+  </div>
+</div>
+
+<% content_for :footer do %>
+  <%= link_to "Go to your guardian page", guardianships_path, class: "btn btn--fuime" %>
+  <div class="flex gap-2 flex-wrap">
+    <% unless @teen_joined %>
+      <%= button_to "Send the link again",
+                    resend_join_guardianship_path(@guardianship),
+                    method: :post,
+                    class: "btn bg-muted #{"tooltipped tooltipped--n" if @resend_cooldown}",
+                    disabled: @resend_cooldown,
+                    "aria-label": ("Sent a few minutes ago" if @resend_cooldown),
+                    form: { class: "inline", data: { turbo: false } } %>
+    <% end %>
+    <%= link_to "Add another teen", parent_setup_step_path(step: "teen"), class: "btn bg-muted" %>
+  </div>
+<% end %>

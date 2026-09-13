@@ -115,7 +115,13 @@ class User < ApplicationRecord
     waitlist: 7,
     # Fuime: the demo sandbox cast (`demo+…@fuime.test`). Additive integer —
     # no migration. See Fuime::DemoSandbox.
-    demo: 8
+    demo: 8,
+    # Fuime: a stub created by a parent in the family setup wizard, before the
+    # teen has ever opened Fuime. They have an email address and a first name
+    # and nothing else — `full_name` is deliberately blank so `onboarding?`
+    # stays true and their own first screen still asks for it. See
+    # Fuime::OnboardingController#save_sign.
+    family_invite: 9
   }
 
   has_many :logins

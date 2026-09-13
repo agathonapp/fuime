@@ -1,0 +1,86 @@
+<% title "#{@teen_name} needs a parent to sign off" %>
+<% content_for :wizard_title, "#{@teen_name} needs a parent to sign off" %>
+<% content_for :wizard_subtitle, "Set up your family on Fuime" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">Here's what you're agreeing to</h2>
+
+  <%# Verbatim from guardianships/show — the same three bullets a parent sees
+      when they arrive from a teen's invite, with "their business" standing in
+      for a venture that does not exist yet. The two entry points must not
+      describe the same signature differently. %>
+  <div class="bg-smoke rounded-lg p-4 mb-4 mt-4">
+    <ul class="list-disc pl-5 mb-0">
+      <li class="mb-1">
+        You'll be the legal signer and responsible adult for their business.
+        <%= @teen_name %> runs it day to day.
+      </li>
+      <li class="mb-1">
+        You can see every transaction, always. <%= @teen_name %> can't turn that off.
+      </li>
+      <li class="mb-1">
+        When <%= @teen_name %> asks to be paid, you approve it. Nothing is paid
+        out until you've accepted and set up where the money goes, and money
+        only ever goes to a destination a parent or guardian set up.
+      </li>
+    </ul>
+  </div>
+
+  <p class="text-sm muted mb-0">
+    Signing for <strong><%= @teen_email %></strong>.
+    <%= link_to "Change", parent_setup_step_path(step: "teen"), class: "underline" %>
+  </p>
+<% end %>
+
+<% if @structural_blockers.any? %>
+  <%= render "application/callout", type: "warning", title: "Before you can sign" do %>
+    <ul class="list-disc pl-5 mb-0">
+      <% @structural_blockers.each do |blocker| %>
+        <li><%= blocker %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% else %>
+  <%# `data: { turbo: false }` — the same as the accept form. This POST can
+      render a 422 with a flash and Turbo drops a 200 HTML answer to a form
+      submit. %>
+  <%= form_with url: parent_setup_save_path(step: "sign"), method: :post,
+                data: { turbo: false },
+                html: { id: "setup_form" } do |form| %>
+    <% if @needs_name %>
+      <div class="field">
+        <%= label_tag "setup[parent_full_name]", "Your full name" %>
+        <p class="h5 muted mt0 mb1">As it should appear on the agreement.</p>
+        <%= text_field_tag "setup[parent_full_name]", nil,
+                           required: true, pattern: '^\S+.+',
+                           autocomplete: "name", autofocus: true,
+                           placeholder: "Alex Okafor",
+                           class: "w-full max-w-full" %>
+      </div>
+    <% end %>
+
+    <%= render "guardianships/agreement_box",
+               agreement_partial: @agreement_partial,
+               minor: @minor_preview,
+               guardian: current_user,
+               minor_label: @teen_name %>
+
+    <div class="flex justify-center items-center flex-wrap gap-3">
+      <%= submit_tag "I agree", class: "btn bg-success text-lg px-6 py-3",
+                                id: "guardian-accept-submit" %>
+    </div>
+  <% end %>
+
+  <p class="text-sm muted mt-3 text-center">
+    We'll record the date, your IP address, and the version of the agreement
+    you signed. This is not an identity check. You can withdraw your consent
+    at any time.
+  </p>
+<% end %>
+
+<% content_for :footer do %>
+  <span></span>
+  <%= link_to "← Back", parent_setup_step_path(step: "teen"),
+              class: "btn bg-muted",
+              data: { action: "click->wizard#leaveBack" } %>
+<% end %>

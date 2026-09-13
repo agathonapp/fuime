@@ -38,6 +38,14 @@
             <% case guardianship.status %>
             <% when "active" %>
               Active since <%= guardianship.agreement_signed_at&.strftime("%B %-d, %Y") || "—" %>
+              <%# Fuime: a parent-first family. The guardianship is genuinely
+                  active — an adult read and signed agreement v4 — but the teen
+                  has never opened their join link, so there is nothing to
+                  oversee yet and the parent needs to know that rather than
+                  wondering why the page is empty. %>
+              <% if guardianship.minor.onboarding? %>
+                · <%= minor.name.presence || "They" %> hasn't joined yet
+              <% end %>
             <% when "pending" %>
               Invitation pending<%= " — link expired" if guardianship.invite_expired? %>
             <% when "revoked" %>
@@ -53,6 +61,10 @@
 
           <% if policy(guardianship).resend_invite? %>
             <%= button_to "Resend invite", resend_invite_guardianship_path(guardianship), method: :post, class: "btn bg-muted" %>
+          <% end %>
+
+          <% if policy(guardianship).resend_join? %>
+            <%= button_to "Send the link again", resend_join_guardianship_path(guardianship), method: :post, class: "btn bg-muted" %>
           <% end %>
 
           <%# Withdrawing consent stops payouts under merchant-of-record

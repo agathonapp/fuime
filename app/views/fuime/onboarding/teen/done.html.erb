@@ -1,0 +1,81 @@
+<% title "You're in" %>
+<% content_for :wizard_title, "You're in" %>
+<% content_for :wizard_subtitle, "Start your business" %>
+
+<div class="wizard-stagger">
+  <div style="--i: 0">
+    <h1 class="border-0 mt-0 mb-2">You're in.</h1>
+    <%# Fuime: what is actually true at this moment. The venture exists and the
+        founder can set all of it up; what they cannot do yet is publish, and
+        the thing standing in the way is Fuime's own review — not their parent.
+        Never "start selling now" (Fuime::OperatorEligibility refuses until a
+        human approves) and never an ETA (nobody has committed to one). %>
+    <p class="text-lg muted mt-0">
+      <strong><%= @event.name %></strong> is set up. A person at Fuime checks
+      every new business before anything goes on sale — we'll email you when
+      it's approved. Set everything up now and publish the moment we say yes.
+    </p>
+  </div>
+
+  <div class="card mb-4" style="--i: 1">
+    <h2 class="mt0 mb-2 text-lg">What's next</h2>
+    <ul class="list-none pl-0 m-0 flex flex-col gap-2">
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">✓</span><span>Your account</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">✓</span><span><strong><%= @event.name %></strong> created</span>
+      </li>
+      <li class="flex items-start gap-2 muted">
+        <span aria-hidden="true">○</span>
+        <span>
+          <strong>Fuime reviews your business</strong>
+          <span class="block text-sm">By a person, before anything can be sold. We'll email you.</span>
+        </span>
+      </li>
+      <li class="flex items-start gap-2 muted">
+        <span aria-hidden="true">○</span>
+        <span>
+          <strong>Add something to sell</strong>
+          <span class="block text-sm">Name it and set your own price. Fuime never picks the number.</span>
+        </span>
+      </li>
+      <li class="flex items-start gap-2 muted">
+        <span aria-hidden="true">○</span><span><strong>Share your link</strong></span>
+      </li>
+    </ul>
+  </div>
+
+  <%# Exactly one family line. Which one depends on what actually happened when
+      the application was submitted — including the case where the invite
+      bounced, which used to disappear into a log line. %>
+  <div style="--i: 2">
+    <% if @guardian %>
+      <p class="mb-4">✓ <%= @guardian.name %> signed as your parent or guardian.</p>
+    <% elsif @invite_error.present? %>
+      <p class="error mb-4">
+        We couldn't invite <%= @application.cosigner_email %>: <%= @invite_error %>.
+        <%= link_to "Invite them from your account", new_guardianship_path, class: "underline" %>.
+      </p>
+    <% elsif @application.cosigner_email.present? %>
+      <p class="mb-4">
+        We emailed <strong><%= @application.cosigner_email %></strong> a one-page
+        agreement to sign. Nothing is paid out until they have.
+      </p>
+    <% end %>
+
+    <% if @cohort_vetted %>
+      <p class="success mb-4">
+        ✓ You're in <%= @application.fuime_cohort.name %>: your business is
+        approved to sell.
+      </p>
+    <% end %>
+  </div>
+</div>
+
+<% content_for :footer do %>
+  <%= link_to "Add something to sell",
+              new_fuime_offer_path(event_slug: @event.slug),
+              class: "btn btn--fuime" %>
+  <%= link_to "Go to #{@event.name}", event_path(@event), class: "btn bg-muted" %>
+<% end %>

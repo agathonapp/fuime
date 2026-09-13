@@ -73,6 +73,11 @@ Rails.application.routes.draw do
       post :renew
       post :revoke
       post :resend_invite
+      # Fuime: re-mail the family-setup join link to a ward who has not finished
+      # signing up. Id-addressed and guardian-only (GuardianshipPolicy#resend_join?)
+      # — the link signs its holder in AS THE MINOR, so only the adult who already
+      # signed may ask for another one.
+      post :resend_join
       get :record
     end
   end
@@ -80,6 +85,36 @@ Rails.application.routes.draw do
   # Fuime G1: signed waitlist admit link from WaitlistMailer. Token-addressed
   # like /guardian/:id — the recipient may not have a session yet.
   get "waitlist_invites/:token", to: "waitlist_invites#show", as: :waitlist_invite
+
+  # Fuime: the family setup wizard (docs/fuime/ONBOARDING_WIZARD_SPEC.md).
+  #
+  # Both entry orders, one controller: a teen who starts alone and invites a
+  # parent, and a parent who sets the family up and invites the teen. Under
+  # merchant-of-record the parent's signature gates PAYOUTS, never selling, so
+  # neither path ever blocks the other.
+  #
+  # ── Why these are declared here ──────────────────────────────────────────
+  #
+  # Everything venture-scoped below is `/:event_slug/<word>` and the catch-all
+  # `resources :events, path: "/"` sits at the bottom of this file, so a route
+  # declared after them would be read as a venture slug. `setup` and `join` are
+  # also added to config/initializers/friendly_id.rb's reserved words, so no
+  # venture can ever claim either.
+  #
+  # The teen's steps are constrained to a literal list and the parent's path is
+  # declared FIRST, so `/setup/parent` can never be swallowed by the teen's
+  # `:step` segment — the teen's last form step is `family`, not `parent`.
+  get  "setup",              to: "fuime/onboarding#start",       as: :setup
+  get  "setup/parent",       to: "fuime/onboarding#start",       as: :parent_setup, defaults: { path: "parent" }
+  get  "setup/parent/:step", to: "fuime/onboarding#parent",      as: :parent_setup_step, constraints: { step: /teen|sign|done/ }
+  post "setup/parent/:step", to: "fuime/onboarding#parent_save", as: :parent_setup_save, constraints: { step: /teen|sign/ }
+  get  "setup/:step",        to: "fuime/onboarding#teen",        as: :teen_setup_step,   constraints: { step: /you|business|name|family|done/ }
+  post "setup/:step",        to: "fuime/onboarding#teen_save",   as: :teen_setup_save,   constraints: { step: /you|business|name|family/ }
+
+  # Fuime: the parent-first teen's emailed sign-in link. Token-addressed and
+  # session-free, the same shape as the waitlist admit above — the token is a
+  # signed id (Fuime::FamilyInviteService), not a record id.
+  get "join/:token", to: "fuime/family_invites#show", as: :family_invite
 
   # Fuime: Stripe webhooks.
   #
@@ -545,6 +580,7 @@ Rails.application.routes.draw do
       # users#impersonate action uses. See Admin::PlaygroundController.
       post "playground/start", to: "admin/playground#start", as: "playground_start"
       post "playground/fresh_founder", to: "admin/playground#fresh_founder", as: "playground_fresh_founder"
+      post "playground/fresh_parent", to: "admin/playground#fresh_parent", as: "playground_fresh_parent"
       # FUIME: cohorts — one person vouching for a group in advance, so an event
       # does not need 150 clicks while it is running. See Fuime::Cohort.
       # `cohort` doubles as the live roster board: where every founder is stuck.

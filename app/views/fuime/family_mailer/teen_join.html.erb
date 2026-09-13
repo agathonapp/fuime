@@ -1,0 +1,54 @@
+<%# Fuime: the parent-first teen's one email. See Fuime::FamilyMailer.
+
+    Every claim here is true under merchant-of-record today: the parent's
+    signature is done and it gates PAYOUTS; selling waits on Fuime's own human
+    review, which is said plainly rather than implied away. No L5 vocabulary,
+    no amount, no ETA. %>
+<p>
+  Hi <%= @greeting_name.presence || "there" %> —
+</p>
+
+<p>
+  <strong><%= @guardian_name %></strong> signed as your parent or guardian on
+  Fuime, a financial platform for young founders. That means you can set up a
+  business and, once a person at Fuime approves it, sell what you make or do.
+  <%= @guardian_first_name %> approves the money when you ask to be paid, and
+  signing off was the part that had to happen first — that's already done.
+</p>
+
+<% if @existing_account %>
+  <p>
+    You already have a Fuime account — this just adds
+    <%= @guardian_first_name %> to it as your parent or guardian.
+  </p>
+<% else %>
+  <p>
+    Your part: your name, one checkbox, and what your business does. About
+    three minutes.
+  </p>
+<% end %>
+
+<p>
+  <%= link_to (@existing_account ? "Open Fuime" : "Set up my business"), @join_url,
+              style: "display:inline-block;background:#2242FF;color:#ffffff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:600;" %>
+</p>
+
+<p style="word-break: break-all;">
+  Or paste this link into your browser:<br>
+  <%= @join_url %>
+</p>
+
+<p>
+  The link works for <%= ::Fuime::FamilyInviteService::JOIN_EXPIRES_IN.inspect %>
+  and signs you in on this browser with the same email this message was sent
+  to. After that, go to <%= link_to auth_users_url, auth_users_url %> and we'll
+  email you a login code.
+</p>
+
+<p>
+  Not expecting this? Ignore it — nothing happens unless you open it.
+</p>
+
+<p>
+  — the Fuime team
+</p>

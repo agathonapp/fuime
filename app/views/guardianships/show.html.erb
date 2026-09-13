@@ -95,36 +95,32 @@
     <% end %>
   <% end %>
 
-  <h2 class="mb-2 mt-4">Guardian agreement</h2>
-  <div class="border rounded-lg p-4 mb-4 overflow-y-auto" style="max-height: 24rem">
-    <% if (partial = @guardianship.agreement_partial) %>
-      <%= render partial, minor: @guardianship.minor, guardian: @guardianship.guardian %>
-    <% else %>
-      <p class="error mb-0">
-        The agreement text could not be loaded. Please contact
-        <%= mail_to "support@fuime.com" %> before signing.
-      </p>
-    <% end %>
-  </div>
-
   <% if @guardianship.can_present_accept_form? %>
     <%= form_with url: accept_guardianship_path(@guardianship.invite_token),
                   method: :post,
                   data: { turbo: false },
                   html: { id: "guardian-accept-form" } do |f| %>
-      <div class="field field--checkbox mb-3" style="align-items: flex-start;">
-        <%= check_box_tag :agree, "1", false,
-                          required: true,
-                          id: "agree",
-                          class: "mt1",
-                          style: "width: 1.25rem; height: 1.25rem; flex-shrink: 0;",
-                          aria: { required: true } %>
-        <%= label_tag :agree do %>
-          I confirm I am the parent or legal guardian of
-          <strong><%= @guardianship.minor.name || "this minor" %></strong>,
-          that I am 18 or older, and I agree to the guardian agreement above.
-        <% end %>
-      </div>
+      <%# Fuime: a parent who arrived here from the email has never given us a
+          name — the wizard's front door now sends a name-less user to /setup,
+          and this page is reached before that. Asking here is the alternative
+          to bouncing them through a settings form mid-signature. Plain save,
+          not the onboarding context, which would demand a 13+ tick from an
+          adult. %>
+      <% if @needs_name %>
+        <div class="field">
+          <%= label_tag "guardianship[full_name]", "Your full name" %>
+          <p class="h5 muted mt0 mb1">As it should appear on the agreement.</p>
+          <%= text_field_tag "guardianship[full_name]", nil,
+                             required: true, pattern: '^\S+.+',
+                             autocomplete: "name", placeholder: "Alex Okafor",
+                             class: "w-full max-w-full" %>
+        </div>
+      <% end %>
+
+      <%= render "guardianships/agreement_box",
+                 agreement_partial: @guardianship.agreement_partial,
+                 minor: @guardianship.minor,
+                 guardian: @guardianship.guardian %>
 
       <div class="flex justify-center items-center flex-wrap gap-3">
         <%# "I agree", not "Agree & activate their account": under merchant-of-record

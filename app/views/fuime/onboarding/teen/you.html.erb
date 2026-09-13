@@ -1,0 +1,125 @@
+<% title "What should we call you?" %>
+<% content_for :wizard_title, "What should we call you?" %>
+<% content_for :wizard_subtitle, "Start your business" %>
+
+<% content_for :info_pane do %>
+  <h2 class="text-4xl mt-0">Fuime is a financial platform for young founders.</h2>
+  <p class="mt-0 text-lg muted">
+    List what you sell, get paid, and keep track of it all in one place.
+    Your name and one checkbox — under a minute.
+  </p>
+<% end %>
+
+<%# Fuime: a teen whose parent set the family up first arrives here from their
+    join link. They have a guardian already, so the age question is answered
+    and the only honest thing to say is who signed for them — and to offer a
+    way out if the link reached the wrong person. %>
+<% if @guardian %>
+  <div class="card mb-4">
+    <p class="mt-0 mb-1">
+      <strong><%= @guardian.name %> already signed as your parent or guardian.</strong>
+    </p>
+    <p class="muted mb-0 text-sm">
+      They set this up for you — finish your part and you're in.
+      Not you?
+      <%= button_to "Sign out", logout_users_path,
+                    method: :delete,
+                    class: "btn btn-small bg-muted ml-1",
+                    form: { class: "inline", data: { turbo: false } } %>
+    </p>
+  </div>
+<% end %>
+
+<h1 class="border-0 mt-0 mb-2">
+  <% if @user.preferred_name.present? %>
+    Hi <%= @user.preferred_name %> — what's your full name?
+  <% else %>
+    What should we call you?
+  <% end %>
+</h1>
+
+<%= form_with url: teen_setup_save_path(step: "you"), method: :post, scope: :user,
+              id: "setup_form",
+              data: { action: "turbo:submit-start->wizard#leave" } do |form| %>
+  <div class="field">
+    <%= form.label :full_name, "Full name" %>
+    <%= form.text_field :full_name,
+                        value: @user.full_name,
+                        required: true,
+                        pattern: '^\S+.+',
+                        autocomplete: "name",
+                        autofocus: true,
+                        placeholder: "Maya Okafor",
+                        class: "w-full max-w-full" %>
+    <% @user.errors.full_messages_for(:full_name).each do |message| %>
+      <div class="primary text-sm mt-1"><%= message %></div>
+    <% end %>
+  </div>
+
+  <%# Fuime: a checkbox, not a date of birth. Decided 2026-08-20
+      (AddAgeAttestationToUsers, TEEN_GROWTH_GAPS G7) — an exact age is only
+      needed where a floor above 13 applies, and a date Fuime has no present
+      use for is breach liability for nothing. Write-once: the model refuses a
+      second answer, and no form a user controls can produce `adult_18_plus`. %>
+  <div class="field">
+    <% if @attested %>
+      <%= label_tag nil, "Your age" %>
+      <p class="h5 muted mt0 mb0">
+        <% if @guardian %>
+          You're set up as a founder under 18 — <%= @guardian.name %> is your
+          parent or guardian on Fuime.
+        <% else %>
+          You've confirmed you're 13 or older.
+        <% end %>
+      </p>
+    <% else %>
+      <div class="field field--checkbox">
+        <%= check_box_tag "user[age_attestation_confirmed]", "1", false,
+                          id: "user_age_attestation_confirmed", required: true %>
+        <%= label_tag "user_age_attestation_confirmed", "I'm 13 or older" %>
+      </div>
+      <p class="h5 muted mt0 mb0">
+        Fuime is for founders 13 and up. Under 18, a parent or guardian signs
+        off before you get paid — not before you start.
+      </p>
+      <% @user.errors.full_messages_for(:age_attestation).each do |message| %>
+        <div class="primary text-sm mt-1"><%= message %></div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+  <%# Fuime: the terms have to appear where somebody actually agrees to them.
+      Same sentence as the settings onboarding branch (users/edit), including
+      the merchant-of-record clause — under MoR the guardian gates payouts, so
+      "before you can run a business" would be false here. %>
+  <p class="muted text-sm mt-3 mb-2">
+    By continuing you agree to Fuime's
+    <%= link_to "Terms of Service", terms_path, target: "_blank" %> and
+    <%= link_to "Privacy Policy", privacy_path, target: "_blank" %>.
+    If you're under 18, a parent or guardian also accepts the
+    <%= link_to "Guardian Agreement", guardian_agreement_path, target: "_blank" %>
+    <% if ::Fuime::Features.merchant_of_record? %>
+      before you can get paid.
+    <% else %>
+      before you can run a business.
+    <% end %>
+  </p>
+<% end %>
+
+<div class="mt-4 flex flex-col gap-1">
+  <p class="text-sm muted m-0">
+    18 or older and running this yourself?
+    <%= link_to "Use the standard application", new_application_path, class: "underline" %>.
+  </p>
+  <p class="text-sm muted m-0">
+    Parent or guardian?
+    <%= link_to "Set up your family instead", parent_setup_path, class: "underline" %>.
+  </p>
+</div>
+
+<% content_for :footer do %>
+  <button type="submit" class="btn btn--fuime" form="setup_form">Let's go</button>
+  <span></span>
+<% end %>

@@ -43,8 +43,8 @@ RSpec.describe "a family signs up and activates", type: :request do
     # ── The teen ──────────────────────────────────────────────────────────
     teen = login_as!("maya-family@example.com")
     # A brand-new user has no name yet, so completing the login lands on the
-    # profile form.
-    expect(response).to redirect_to(edit_user_path(teen.slug))
+    # family setup wizard — one front door for anybody still signing up.
+    expect(response).to redirect_to(setup_path(return_to: nil))
 
     # Deferred onboarding: confirming they're old enough no longer walls them
     # behind the guardian invite — they land in the product with a heads-up, and
