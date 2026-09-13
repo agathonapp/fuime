@@ -62,7 +62,7 @@
 
 <% if @g_suite.creating? %>
   <p>Is this a valid/reasonable domain name? If so, let's approve it!<br>Check out the URL to see if it seems like they own the domain.<br>This will generate a verification key for this domain and
-  email the organizer to let them know they can start setting up their domain's DNS records.</p>
+  email the founder to let them know they can start setting up their domain's DNS records.</p>
   <% if false %>
     <%# these are the manual instructions %>
     <ol>
@@ -133,7 +133,7 @@
     <li>Click "Generate new record". Use default settings</li>
     <li>Copy and paste the <strong>TXT record value</strong> into the box below and hit the button!</li>
     <li>The DKIM key will now show up in the event's <%= link_to "Google Workspace setup instructions", event_g_suite_overview_path(event_id: @g_suite.event.slug) %></li>
-    <li>Once the DKIM key has been added to the domain's DNS by the organizer, go back to the Google Admin page above, select the domain, and click "Start Authentication"</li>
+    <li>Once the DKIM key has been added to the domain's DNS by the founder, go back to the Google Admin page above, select the domain, and click "Start Authentication"</li>
   </ul>
 </div>
 <%= form_with(model: false, local: true, url: google_workspace_update_admin_path(@g_suite), method: :post) do |dkim_key_form| %>
@@ -160,11 +160,11 @@
   <p>This Google Workspace has been revoked and is ready for deletion. The users have already been notified of the revocation. The following button will destroy the Google Workspace record and <b>permanently</b> delete the domain from GW along with all associated accounts and groups.</p>
   <%= link_to "Delete", g_suite_path(@g_suite, event_id: @g_suite.event.slug), data: { turbo_method: :delete, turbo_confirm: "Are you sure?", turbo_confirm_danger: true }, class: "admin-bg-warning p1 rounded link-reset" %>
   <h3>Cancel Revocation</h3>
-  <p>This Google Workspace has <b>already been revoked</b>. If, for some reason, you need to cancel the revocation, the below button will do so and send an email notifying the users on the organization of the same. Note: If the revocation was initiated for inactivity or invalid DNS records, a new revocation will be automatically opened within the next day if the issues are not fixed.</p>
+  <p>This Google Workspace has <b>already been revoked</b>. If, for some reason, you need to cancel the revocation, the below button will do so and send an email notifying the users on the business of the same. Note: If the revocation was initiated for inactivity or invalid DNS records, a new revocation will be automatically opened within the next day if the issues are not fixed.</p>
   <%= link_to "Cancel Revocation", g_suite_revocation_path(@g_suite), data: { turbo_method: :delete, turbo_confirm: "Are you sure?" }, class: "admin-bg-warning p1 rounded link-reset" %>
 <% elsif @g_suite.revocation.present? && @g_suite.revocation.pending? %>
   <h3>Cancel Revocation</h3>
-  <p>This Google Workspace has a <b>pending revocation</b>. If you need to cancel the revocation, the below button will do so and send an email notifying the users on the organization of the same. Note: If the revocation was initiated for inactivity or invalid DNS records, a new revocation will be automatically opened in the next day if the issues are not fixed.</p>
+  <p>This Google Workspace has a <b>pending revocation</b>. If you need to cancel the revocation, the below button will do so and send an email notifying the users on the business of the same. Note: If the revocation was initiated for inactivity or invalid DNS records, a new revocation will be automatically opened in the next day if the issues are not fixed.</p>
   <%= link_to "Cancel Revocation", g_suite_revocation_path(@g_suite), data: { turbo_method: :delete, turbo_confirm: "Are you sure?" }, class: "admin-bg-warning p1 rounded link-reset" %>
   <h3>Delete</h3>
   <p>This Google Workspace has a <b>pending revocation</b> and <b>should NOT be deleted yet</b>. If, for some reason, you need to delete this record immediately, the following button will destroy the Google Workspace record and <b>permanently</b> delete the domain from GW along with all associated accounts and groups.</p>
@@ -174,7 +174,7 @@
   <p>Toggle their immunity above before opening a revocation.</p>
 <% else %>
   <h3>Begin Revocation</h3>
-  <p>This will begin the revocation of the organization's Google Workspace access and send an email to the users on the organization notifying them of the upcoming revocation. The users will have 2 weeks to wrap up their activities before access is revoked.</p>
+  <p>This will begin the revocation of the business's Google Workspace access and send an email to the users on the business notifying them of the upcoming revocation. The users will have 2 weeks to wrap up their activities before access is revoked.</p>
   <%= form_with(model: [@g_suite, GSuite::Revocation.new], url: g_suite_revocations_path(@g_suite), method: :post, local: true) do |form| %>
     <%= form.label :other_reason, "This Google Workspace is being revoked because..." %><br><br>
     <%= form.text_field :other_reason, placeholder: "you have broken the Google Workspace terms of service", style: "width: 50%; min-width:200px" %><br><br>

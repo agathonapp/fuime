@@ -23,9 +23,43 @@
 #
 class MailboxAddress < ApplicationRecord
   DISCRIMINATOR_LENGTH = 4 # currently, 4 is enough to avoid most collisions, however this can be increased later
-  EMAIL_DOMAIN = "hcb.gg"
 
-  VALIDATION_REGEX = /\A[a-z]+\.\d{#{DISCRIMINATOR_LENGTH}}@#{Regexp.escape(EMAIL_DOMAIN)}\z/
+  # Fuime: this was hardcoded to "hcb.gg" — Hack Club's domain.
+  #
+  # Every receipt-forwarding address Fuime generated therefore ended in someone
+  # else's domain, which is not a branding slip: mail a founder sends to it
+  # reaches Hack Club's ingress, not Fuime's, so the receipts either vanish or
+  # land in a third party's inbox. Prime Directive 4.
+  #
+  # Fuime has no inbound mail domain yet (no MX, and `config.action_mailbox`
+  # points at a SendGrid ingress nobody has pointed at us), so the default is
+  # nil and `.configured?` is false — the UI hides the feature rather than
+  # advertising an address that silently drops mail. Set FUIME_MAILBOX_DOMAIN
+  # once inbound mail actually resolves here and it comes back on its own.
+  LEGACY_EMAIL_DOMAIN = "hcb.gg"
+
+  # Generation and validation keep working exactly as upstream when the env var
+  # is unset. That split matters: `EMAIL_DOMAIN` feeds `VALIDATION_REGEX`, which
+  # `ApplicationMailbox.routing` interpolates at class-definition time, so making
+  # it nil would change inbound routing and refuse to mint any address at all —
+  # which is what an earlier version of this change did, breaking two mailbox
+  # specs. Whether Fuime *has* an inbound domain is a UI question, not a storage
+  # one, so only `.configured?` answers it and only the views consult it.
+  EMAIL_DOMAIN = ENV.fetch("FUIME_MAILBOX_DOMAIN", LEGACY_EMAIL_DOMAIN)
+
+  # True only when Fuime has been given a domain it actually receives mail on.
+  # The views hide the whole feature when this is false, so no founder is ever
+  # handed an address that silently drops their receipts.
+  def self.configured?
+    ENV["FUIME_MAILBOX_DOMAIN"].present?
+  end
+
+  # Existing rows were minted under the legacy domain and must keep validating,
+  # or any later save of an inherited address fails on a format check for a
+  # domain it predates. New addresses are generated under EMAIL_DOMAIN only.
+  ACCEPTED_EMAIL_DOMAINS = [EMAIL_DOMAIN, LEGACY_EMAIL_DOMAIN].compact.freeze
+
+  VALIDATION_REGEX = /\A[a-z]+\.\d{#{DISCRIMINATOR_LENGTH}}@(?:#{ACCEPTED_EMAIL_DOMAINS.map { |d| Regexp.escape(d) }.join("|")})\z/
 
   belongs_to :user
   validates :user, uniqueness: { scope: [:aasm_state, :user_id, :discarded_at], message: "can only have one mailbox address previewed/active at a time" }

@@ -9,10 +9,15 @@
 </head>
 
 <div>
-  <img src="https://assets.hackclub.com/hcb-light.png" height="100px" />
+  <%# Fuime: was HCB's logo fetched from assets.hackclub.com, above the heading
+      "The Hack Foundation". On a pay stub that is both a live request to another
+      company's CDN when the PDF renders (Prime Directive 4) and their letterhead
+      on a document Fuime issues. Served locally, and the heading names the
+      entity that actually pays. %>
+  <%= image_tag "logo-512.png", height: "100px" %>
   <div>
     <h1 style="margin-block: 0">
-      The Hack Foundation
+      <%= Rails.configuration.constants.legal_entity_name %>
     </h1>
     <h4 style="margin-block: 0">
       8605 Santa Monica Blvd #86294
@@ -49,9 +54,11 @@
   </tr>
 </table>
 
-<p>
-  <i><%= @payment.employee.event.name %></i> is fiscally sponsored by The Hack Foundation, a 501(c)(3) nonprofit with the EIN 81-2908499.
-</p>
+<%# Fuime: removed "<org> is fiscally sponsored by The Hack Foundation, a
+    501(c)(3) nonprofit with the EIN 81-2908499." On a PAY STUB this was the
+    worst placement of the sentence — a document a recipient may hand to a
+    landlord, a lender or the IRS, naming the wrong entity as the payer's
+    sponsor and quoting an EIN that is not ours. BRAND_STRINGS.md category 3. %>
 
 <style>
   body {

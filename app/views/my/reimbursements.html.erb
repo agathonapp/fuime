@@ -27,7 +27,7 @@
           Start report
         <% end %>
       <% else %>
-        <span class="tooltipped tooltipped--n tooltipped--xl inline-block" aria-label="You aren't a member of any Fuime organization, so you'll need to be invited to start a reimbursement report.">
+        <span class="tooltipped tooltipped--n tooltipped--xl inline-block" aria-label="You aren't a member of any Fuime business, so you'll need to be invited to start a reimbursement report.">
           <button class="!ml-0 btn bg-success" disabled>
             <%= inline_icon "plus" %>
             Start report
@@ -58,22 +58,29 @@
         </div>
       </div>
 
-      <div>
-        <label for="email_address">Start a report via email</label>
-        <p class="h5 muted mt0 mb1">
-          Send or forward from your email address.
-        </p>
-        <div class="flex gap-2" data-controller="clipboard" data-clipboard-text-value="reimburse@hcb.gg">
-          <input id="email_address" type="email" value="reimburse@hcb.gg" readonly style="cursor: text;" class="fit font-mono">
-          <button
-            type="button"
-            class="pointer pop tooltipped tooltipped--n"
-            aria-label="Copy email address"
-            data-action="clipboard#copy:prevent">
-            <%= inline_icon "copy", size: 28 %>
-          </button>
+      <%# Fuime: was a hardcoded `reimburse@hcb.gg` — Hack Club's domain, handed
+          to a Fuime founder as the address to email their receipts to. Mail sent
+          there reaches Hack Club's ingress, never ours. Shown only once Fuime has
+          an inbound domain of its own (FUIME_MAILBOX_DOMAIN). %>
+      <% if MailboxAddress.configured? %>
+        <% reimbursement_address = "reimburse@#{MailboxAddress::EMAIL_DOMAIN}" %>
+        <div>
+          <label for="email_address">Start a report via email</label>
+          <p class="h5 muted mt0 mb1">
+            Send or forward from your email address.
+          </p>
+          <div class="flex gap-2" data-controller="clipboard" data-clipboard-text-value="<%= reimbursement_address %>">
+            <input id="email_address" type="email" value="<%= reimbursement_address %>" readonly style="cursor: text;" class="fit font-mono">
+            <button
+              type="button"
+              class="pointer pop tooltipped tooltipped--n"
+              aria-label="Copy email address"
+              data-action="clipboard#copy:prevent">
+              <%= inline_icon "copy", size: 28 %>
+            </button>
+          </div>
         </div>
-      </div>
+      <% end %>
     </section>
   <% end %>
 
@@ -100,7 +107,7 @@
           <th></th>
           <th>Status</th>
           <th>Report</th>
-          <th>Organization</th>
+          <th>Business</th>
           <th>Amount</th>
           <th>Created</th>
         </tr>

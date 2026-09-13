@@ -51,7 +51,7 @@ export default class extends Controller {
           value: dataset.ccAddressCountry,
         },
       ],
-      notes: `HCB card for ${dataset.organizationName}`,
+      notes: `Fuime card for ${dataset.organizationName}`,
     }
     const encodedSaveRequest = encodeOPSaveRequest(saveRequest)
 

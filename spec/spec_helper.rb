@@ -16,7 +16,11 @@
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 
-require "simplecov"
+# Fuime: coverage is the single largest memory consumer in a suite run — branch
+# coverage over ~62k LOC repeatedly OOM-killed the 7.7 GB `web` container
+# mid-run, which looks exactly like a test failure and is not one. Default is
+# unchanged (coverage on); SKIP_COVERAGE=1 turns it off for a local run.
+require "simplecov" unless ENV["SKIP_COVERAGE"] == "1"
 require "faker"
 require "webmock/rspec"
 require "sidekiq/testing"

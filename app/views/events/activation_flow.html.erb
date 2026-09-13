@@ -11,7 +11,7 @@
 <%= render "events/settings/admin/tags", event: @event %>
 
 <%= form_with(model: @event, url: event_activate_path, method: :post, local: true, class: "mb3 mt3") do |form| %>
-  <%= form_errors @event, "organization" %>
+  <%= form_errors @event, "business" %>
   <div class="grid">
     <div class="field pr2" id="admin_settings">
       <%= form.label :name %>

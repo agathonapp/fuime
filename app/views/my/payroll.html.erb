@@ -29,8 +29,13 @@
 
 <% if @jobs.onboarding.any? %>
   <%= render "application/callout", type: "info", title: "Congrats on the new #{@jobs.onboarding.size > 1 ? "jobs" : "job with #{@jobs.onboarding.first.event.name}"}!" do %>
+    <%# Fuime: this told the reader to email their W-9 / W-8 BEN to
+          hr@hackclub.com. Those forms carry a full SSN or ITIN, so the
+          instruction routed a Fuime user's (often a minor's) tax identity
+          documents to another company's HR inbox. Pointed at Fuime's own
+          address. %>
     <div>
-      <span class="bold">You will only be able to submit invoices after being onboarded.</span> To complete your onboarding, please email a W-9 or W-8 BEN to <%= mail_to "hr@hackclub.com" %>. After receiving your W-9 or W-8 BEN, please give us approximately 2 business days to review and finalize your onboarding. We will email you once this process is complete.
+      <span class="bold">You will only be able to submit invoices after being onboarded.</span> To complete your onboarding, please email a W-9 or W-8 BEN to <%= mail_to ApplicationMailer::OPERATIONS_EMAIL %>. After receiving your W-9 or W-8 BEN, please give us approximately 2 business days to review and finalize your onboarding. We will email you once this process is complete.
     </div>
   <% end %>
 <% end %>

@@ -25,11 +25,13 @@
         </p>
       <% else %>
         <p class="text-gray-500 my-1 max-w-sm">
-          Follow a transparent organization to see updates from them here.
+          Follow a transparent business to see updates from them here.
         </p>
-        <%= link_to "https://hackclub.com/fiscal-sponsorship/directory?utm_source=hcb&utm_medium=web&utm_campaign=explore", class: "muted", target: :_blank do %>
-          View all organizations
-          <%= inline_icon "external", size: 18, class: "ml-1 align-text-top", style: "transform: scale(1.2)" %>
+        <%# Fuime: "View all organizations" linked to Hack Club's fiscal-sponsorship
+            directory with utm_source=hcb — a Fuime empty state sending founders to
+            another company's list of nonprofits. Fuime has its own directory. %>
+        <%= link_to fuime_discover_path, class: "muted" do %>
+          Discover businesses on Fuime
         <% end %>
       <% end %>
     </div>

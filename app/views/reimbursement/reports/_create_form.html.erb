@@ -7,7 +7,7 @@
     <% end %>
     <% unless current_user.created_reimbursement_reports.any? %>
       <div class="card mt2 mb2 container--sm mx-auto">
-        <p class="mt0 mb0"><strong>Paid for something out of pocket?</strong> Compile your expenses into a reimbursement report, get approval from the organization's team, and, after you do, get paid back via ACH transfer or check.</p>
+        <p class="mt0 mb0"><strong>Paid for something out of pocket?</strong> Compile your expenses into a reimbursement report, get approval from the business's team, and, after you do, get paid back via ACH transfer or check.</p>
       </div>
     <% end %>
     <div class="flex flex-col field">
@@ -73,7 +73,7 @@
       <%= form.hidden_field :user_id, value: current_user.id %>
       <%= form.hidden_field :email, value: current_user.email %>
 
-      <%= form.label :event_id, "Organization", class: "mt1 bold" %>
+      <%= form.label :event_id, "Business", class: "mt1 bold" %>
       <%= form.select(:event_id, current_user.reimbursement_event_options) %>
 
       <% if current_user.default_payout_method&.details.is_a?(LegalEntity::PayoutMethod::WiseTransfer) %>

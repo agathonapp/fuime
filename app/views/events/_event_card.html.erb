@@ -32,7 +32,11 @@
     <% if event.demo_mode? %>
       <div class="badge bg-info ml0 mb2 w-fit">Playground Mode</div>
     <% end %>
+    <%# Fuime: the palette keyed Hack Club's programme tags and defaulted an
+        untagged venture to "Nonprofit". Legacy keys stay so an inherited row
+        still gets a colour; the default is what a Fuime venture actually is. %>
     <% colors = {
+         "Business"                   => "blue",
          "Robotics Team"              => "blue",
          "Hackathon"                  => "purple",
          "Organized by Teenagers"     => "red",
@@ -41,7 +45,7 @@
        } %>
     <% if local_assigns[:show_category_badge] %>
       <div class="flex flex-row items-center gap-1 mb-2 m-0 mt-[-4px]">
-        <% tag = event.event_tags.last&.name || "Nonprofit" %>
+        <% tag = event.event_tags.last&.name || "Business" %>
         <span class="badge m-0 bg-<%= colors[tag] %>">
           <%= tag %>
         </span>

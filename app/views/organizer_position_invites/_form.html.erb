@@ -14,8 +14,11 @@
         </button>
       </div>
       <template x-if="/(team|webmaster|marketing|admin|info|about|support|sales|hello)/.test(email)">
+        <%# Fuime: the example address was ben@hackclub.com — a real Hack Club
+            staffer's address, shown to a founder as the model for who to invite
+            onto their business. %>
         <div class="warning mt-5 px-3 text-center">⚠️ For security, we discourage team emails on
-          Fuime. We recommend individual emails such as <em>ben@hackclub.com</em>!
+          Fuime. We recommend individual emails such as <em>alex@example.com</em>!
         </div>
       </template>
     </div>

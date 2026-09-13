@@ -18,8 +18,11 @@ module Api
 
       end
 
+      # Fuime: the schema name shown in the public API reference. The class,
+      # the `hcb_fee_id` param and every route path keep their upstream spelling
+      # (Rule 6) — only the name a reader sees changes.
       def self.entity_name
-        "HCB Fee"
+        "Fuime Fee"
       end
 
     end

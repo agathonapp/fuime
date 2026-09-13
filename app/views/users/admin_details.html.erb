@@ -7,7 +7,7 @@
     <% end %>
 
     <% admin_tool "p-3" do %>
-      <h3 class="mb2 mt1">Organizations</h3>
+      <h3 class="mb2 mt1">Businesses</h3>
       <% if @user.events.present? %>
         <ul>
           <% @user.events.each do |event| %>
@@ -15,7 +15,7 @@
           <% end %>
         </ul>
       <% else %>
-        <%= blankslate "No organizations" %>
+        <%= blankslate "No businesses" %>
       <% end %>
     <% end %>
 

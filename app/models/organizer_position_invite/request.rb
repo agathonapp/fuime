@@ -47,9 +47,11 @@ class OrganizerPositionInvite
       event :approve do
         transitions from: :pending, to: :approved
         after do
-          if Event::Affiliation.first_affiliation_matches?(requester, link.event)
-            Raffle.find_or_create_by!(user: requester, program: "first-worlds-2026-printer")
-          end
+          # Fuime: approving an invite request used to enrol the requester in
+          # `first-worlds-2026-printer` — a Hack Club FIRST Worlds giveaway —
+          # whenever their FIRST affiliation matched the event. This is a live
+          # path in a feature Fuime keeps, so it was still creating Raffle rows
+          # for a draw that is not ours. Removed; see config/routes.rb.
         end
       end
 

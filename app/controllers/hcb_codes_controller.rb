@@ -183,7 +183,17 @@ class HcbCodesController < ApplicationController
     can_dispute, error_reason = ::HcbCodeService::CanDispute.new(hcb_code: @hcb_code).run
 
     if can_dispute
-      redirect_to disputed_transactions_airtable_form_url(embed: false, hcb_code: @hcb_code, user: @current_user), allow_other_host: true
+      # Fuime: this redirected to forms.hackclub.com with the founder's name,
+      # login email and transaction code prefilled — Hack Club's dispute intake,
+      # reachable from the transaction meatball menu, handing a third party a
+      # Fuime user's identity and ledger reference (Prime Directive 4).
+      #
+      # Fuime has no dispute intake yet. Until it does, the honest answer is our
+      # own support address rather than someone else's form.
+      redirect_to @hcb_code, flash: {
+        info: "To dispute this transaction, email #{ApplicationMailer::OPERATIONS_EMAIL} " \
+              "with the transaction code #{@hcb_code.hashid}."
+      }
     else
       redirect_to @hcb_code, flash: { error: error_reason }
     end

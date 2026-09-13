@@ -40,7 +40,7 @@
             </tr>
           <% end %>
           <tr>
-            <td style="text-align: right;">Organization</td>
+            <td style="text-align: right;">Business</td>
             <td colspan="2" style="width: 300px">
               <%= link_to @ach_transfer.event.name, @ach_transfer.event %>
             </td>
@@ -123,7 +123,7 @@
             </td>
           </tr>
           <tr>
-            <td style="text-align: right;">Organization balance:</td>
+            <td style="text-align: right;">Business balance:</td>
             <td>
               <%= render_money @ach_transfer.event.balance_available_v2_cents %>
               <% if @ach_transfer.event.balance_available_v2_cents < 0 %>
@@ -198,14 +198,14 @@
         <legend class="py-0 px-2">Reject</legend>
 
         <%= form_with(model: false, local: true, url: ach_reject_admin_path(@ach_transfer), method: :post) do |form| %>
-          <small class="mb-5 mt-0 block">This requires you to communicate to the organizer about the reason why.</small>
+          <small class="mb-5 mt-0 block">This requires you to communicate to the founder about the reason why.</small>
 
           <div class="field">
             <%= form.label "Reject with a comment", class: "bold mb1" %> <br>
             <%= form.text_area :comment, style: "width: 400px;", placeholder: "(Markdown supported)" %>
           </div>
 
-          <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the organizer about the reason why.", turbo_confirm_danger: true } %>
+          <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the founder about the reason why.", turbo_confirm_danger: true } %>
         <% end %>
       </fieldset>
     <% elsif @ach_transfer.rejected? %>

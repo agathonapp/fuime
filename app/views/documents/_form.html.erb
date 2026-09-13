@@ -16,7 +16,7 @@
 
     <div class="field">
       <%= form.label :category %>
-      <%= form.select :category, options_for_select(Document.categories.keys.map { |k| [k.humanize, k] }, form.object.category), { include_blank: "Select a category" }, required: false %>
+      <%= form.select :category, options_for_select(document_category_options, form.object.category), { include_blank: "Select a category" }, required: false %>
     </div>
 
     <div class="actions">

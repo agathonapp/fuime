@@ -173,7 +173,7 @@ module Api
       end
 
       def hcb_fee
-        public_id_resource!(:@hcb_fee, :hcb_fee_id, BankFee, "HCB fee not found.")
+        public_id_resource!(:@hcb_fee, :hcb_fee_id, BankFee, "Fuime fee not found.")
       end
 
       def activity
@@ -237,7 +237,11 @@ module Api
 
     desc "Return a list of transparent organizations" do
       summary "Get a list of transparent organizations"
-      detail "Returns a list of organizations in <a href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'><strong>Transparency Mode</strong></a> that have opted in to public listing."
+      # Fuime: the "Transparency Mode" link pointed at blog.hcb.hackclub.com —
+      # Hack Club's announcement post, surfaced in Fuime's PUBLIC API docs as if
+      # it documented ours. Removed rather than repointed; Fuime has no
+      # equivalent post yet.
+      detail "Returns a list of organizations in <strong>Transparency Mode</strong> that have opted in to public listing."
       failure [[404]]
       is_array true
       produces ["application/json"]
@@ -255,8 +259,8 @@ module Api
     end
 
     desc "Return a list of recent activities" do
-      summary "Get a list of recent activities on transparent HCB organizations"
-      detail "Returns a list of recent activities from all HCB organizations that are in <a href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'><strong>Transparency Mode</strong></a> and have opted in to public listing."
+      summary "Get a list of recent activities on transparent organizations"
+      detail "Returns a list of recent activities from all organizations that are in <strong>Transparency Mode</strong> and have opted in to public listing."
       failure [[404]]
       is_array true
       produces ["application/json"]
@@ -276,7 +280,7 @@ module Api
     resource :organizations do
       desc "Return a transparent organization" do
         summary "Get a single organization"
-        detail "The organization must be in <a href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'><strong>Transparency Mode</strong></a>."
+        detail "The organization must be in <strong>Transparency Mode</strong>."
         produces ["application/json"]
         consumes ["application/json"]
         success Entities::Organization
@@ -323,7 +327,7 @@ module Api
         resource :card_charges do
           desc "Return a list of card charges" do
             summary "List an organization's card charges"
-            detail "Transactions created using an HCB card."
+            detail "Transactions created using a Fuime card."
             produces ["application/json"]
             consumes ["application/json"]
             is_array true
@@ -475,15 +479,15 @@ module Api
         end
 
         resource :hcb_fees do
-          desc "Return a list of HCB fees" do
-            summary "List an organization's HCB fees"
+          desc "Return a list of Fuime fees" do
+            summary "List an organization's Fuime fees"
             detail ""
             produces ["application/json"]
             consumes ["application/json"]
             is_array true
             success Entities::HcbFee
             failure [[404, "Organization not found. Check the id/slug and make sure Transparency Mode is on.", Entities::ApiError]]
-            tags ["HCB Fees"]
+            tags ["Fuime Fees"]
             nickname "list-an-organizations-hcb-fees"
           end
           params do
@@ -750,18 +754,18 @@ module Api
     end
 
     resource :hcb_fees do
-      desc "Return a single HCB fee" do
-        summary "Get a single HCB fee"
+      desc "Return a single Fuime fee" do
+        summary "Get a single Fuime fee"
         detail ""
         produces ["application/json"]
         consumes ["application/json"]
         success Entities::HcbFee
-        failure [[404, "HCB fee not found. Check the ID.", Entities::ApiError]]
-        tags ["HCB Fees"]
+        failure [[404, "Fuime fee not found. Check the ID.", Entities::ApiError]]
+        tags ["Fuime Fees"]
         nickname "get-a-single-hcb-fee"
       end
       params do
-        requires :hcb_fee_id, type: String, desc: "HCB fee ID"
+        requires :hcb_fee_id, type: String, desc: "Fuime fee ID"
         use :expand
       end
       route_param :hcb_fee_id do
@@ -917,7 +921,9 @@ module Api
 
     # Handle 404 errors (catch all)
     route :any, "*path" do
-      error!({ message: "Path not found. Please see the documentation (https://hcb.hackclub.com/docs/api/v3/) for all available paths." }, 404)
+      # Fuime: the 404 body pointed developers at hcb.hackclub.com/docs/api/v3 —
+      # Hack Club's docs for Hack Club's data. Derived from this deployment.
+      error!({ message: "Path not found. Please see the documentation (#{Rails.application.routes.url_helpers.root_url.chomp('/')}/docs/api/v3/) for all available paths." }, 404)
     end
 
     # Handle unexpected errors
@@ -941,15 +947,17 @@ module Api
 
     add_swagger_documentation(
       info: {
-        title: "The HCB API",
-        description: "The HCB API is an unauthenticated REST API that allows you to read public information
-                      from organizations with <a href='https://blog.hcb.hackclub.com/posts/transparent-finances-optional-feature-151427'>Transparency Mode</a>
+        # Fuime: this is the PUBLIC API reference at /docs/api/v3. It was titled
+        # "The HCB API", named HCB as the contact, and told developers to reach
+        # us "in the #hcb channel on the Hack Club Slack" — a support channel
+        # Fuime does not staff, run by another company.
+        title: "The Fuime API",
+        description: "The Fuime API is an unauthenticated REST API that allows you to read public information
+                      from organizations with Transparency Mode
                       enabled.
                       <br><br><strong>Questions or suggestions?</strong>
-                      <br>Reach us in the #hcb channel on the <a href='https://hackclub.com/slack'>Hack Club Slack</a>
-                      or email <a href='mailto:support@fuime.com'>support@fuime.com</a>.
-                      <br><br>Happy hacking! ✨",
-        contact_name: "HCB",
+                      <br>Email <a href='mailto:support@fuime.com'>support@fuime.com</a>.",
+        contact_name: "Fuime",
         contact_email: "support@fuime.com",
       },
       doc_version: "3.0.0",
@@ -1011,7 +1019,7 @@ module Api
           name: "Reimbursed Expenses"
         },
         {
-          name: "HCB Fees"
+          name: "Fuime Fees"
         },
         {
           name: "Cards"

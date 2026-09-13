@@ -1,6 +1,6 @@
 <%# locals: (event: nil, class: "") %>
 
-<% callout_footer = "This requirement is waived for organizations that have raised over $50,000 in the past year" %>
+<% callout_footer = "This requirement is waived for businesses that have raised over $50,000 in the past year" %>
 <% if event.present? %>
   <% callout_footer += " and events on plans with exemptions" if event.plan.exempt_from_wire_minimum? %>
   <% callout_footer += "— including #{event.name}!" unless event.minimum_wire_amount_cents > 100 %>

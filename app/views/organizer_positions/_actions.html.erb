@@ -22,14 +22,14 @@
     </div>
   <% end %>
 <% else %>
-  <div class="tooltipped tooltipped--w" aria-label="<%= policy(organizer_position).can_request_removal? ? "Remove user from organization" : "You don't have permission to remove users" %>">
+  <div class="tooltipped tooltipped--w" aria-label="<%= policy(organizer_position).can_request_removal? ? "Remove user from business" : "You don't have permission to remove users" %>">
   <%= pop_icon_to "member-remove",
                   policy(organizer_position).destroy? ? organizer_path(organizer_position) : new_event_organizer_position_remove_path(organizer_position_id: organizer_position.user.slug),
                   class: "error",
                   data: {
                     turbo_frame: "_top",
                     turbo_method: policy(organizer_position).destroy? ? :delete : :get,
-                    turbo_confirm: policy(organizer_position).destroy? ? "This will revoke their access to this organization. Their cards will be permanently canceled." : nil,
+                    turbo_confirm: policy(organizer_position).destroy? ? "This will revoke their access to this business. Their cards will be permanently canceled." : nil,
                     turbo_confirm_danger: policy(organizer_position).destroy? || nil,
                   },
                   disabled: !policy(organizer_position).can_request_removal? %>

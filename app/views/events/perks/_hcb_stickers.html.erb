@@ -8,7 +8,7 @@
       </h3>
     </span>
     <%= link_to "Request",
-      perks_available ? fillout_form("umhwJ5s1fNus", { "Recipient Name" => current_user.name, "Login Email" => current_user.email, "Organization" => event.name }, prefix: "prefill_") : root_path,
+      perks_available ? fillout_form("umhwJ5s1fNus", { "Recipient Name" => current_user.name, "Login Email" => current_user.email, "Business" => event.name }, prefix: "prefill_") : root_path,
       class: "btn #{"disabled" unless perks_available}",
       target: :_blank %>
   </div>
