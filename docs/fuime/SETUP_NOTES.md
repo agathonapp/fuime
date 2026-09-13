@@ -2,6 +2,53 @@
 
 ## Handoff (most recent first)
 
+**2026-09-12 (latest) — Five things between a real teen and a working business.**
+
+Branch `fuime/platform-review-p0`, now merged with `origin/main` (#108 + #109) —
+it had drifted 2 behind while carrying 3 commits main never got, including the
+hardened `20260912090000` ledger-index migration. Merge first if you branch from
+anything older.
+
+1. **The wizard's last screen was contradicted by three emails within twenty
+   seconds**, one of them "[Action Needed] … sign the Fuime agreement" for an
+   agreement that does not exist (`FUIME_DOCUSEAL_TEMPLATE_ID` unset). Approval
+   mail is now gated on a contract existing; the "2 business days" mail is
+   deferred two minutes and re-checks whether anyone is still waiting. The
+   abandoned-draft series went 4 → 2, inside `Fuime::MinorMailWindow`, with tips
+   that describe Fuime instead of HCB's donation pages and debit cards.
+2. **A venture named "Maya's Bakes" could never take a payment.** The descriptor
+   was hand-rolled with no character filter; `StripeService::StatementDescriptor`
+   already did it right and is now called. `spec/services/fuime/payment_link_service_spec.rb`
+   is new — nothing exercised `create_mor_checkout_session` before.
+3. **The buyer's pay-page layout rendered no flash at all**, so the minor-buyer
+   refusal, the Stripe rescue and a closed offer were all silently dead buttons.
+4. **An offer's price could never be changed** — no form existed, though
+   `offer_params` already accepted one. Inline edit on the offers row. Also
+   `"35,50"` used to mean **$3,550**.
+5. **Every refund left the operator "in arrears"** by Fuime's own fee: the
+   `fuime_feerev_` rebate matched neither sweep regex, so it never settled.
+
+**Next, in order:** `charge.dispute.closed` has no handler (a dispute Fuime
+*wins* is a permanent debit) — but exercise a real test-mode dispute first. Then
+the parent's dead end after signing, and the payout-run review page.
+
+**Gotchas that cost time here:**
+- `Fuime::Offer#publish!` refuses while the venture cannot sell, so under Connect
+  (the suite default) a `:published` offer silently stays a draft and every
+  downstream request 404s for an unrelated reason. Tag groups `:merchant_of_record`.
+- The operator floor is **16** and `Fuime::OperatorEligibility` cannot clear an
+  unknown age, so a `:attested_teen` founder blocks selling. Use
+  `create(:user, :minor, birthday: 16.years.ago.to_date)`.
+- The pay form posts `offer_token`; the GET route segment is `offer`. Posting the
+  wrong one redirects to the storefront and quietly tests a different layout.
+- A bare `perform_enqueued_jobs { }` **ignores `wait:`**, which runs a deferred
+  mail before the state it checks has moved. Drain with `perform_enqueued_jobs(at:)`.
+- **Do not use `rails runner` against `RAILS_ENV=test`.** It commits rows that no
+  transaction rolls back, and every `expect(X.count).to eq(0)` in the suite then
+  fails in files you never touched. Cost ~20 minutes here chasing "pre-existing"
+  failures that were entirely self-inflicted. Probe with a throwaway spec file.
+
+
 **2026-09-12 (latest) — The family setup wizard, both entry orders.**
 
 Branch `fuime/onboarding-wizard` off main (#108). `/setup` is a teen's five

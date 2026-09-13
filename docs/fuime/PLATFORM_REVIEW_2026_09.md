@@ -30,9 +30,23 @@
 > | Price step never named the fee | States the venture's own rate; "per lawn" placeholder now fits the trade. |
 > | Two 422px spinner boxes on an empty venture | Behind the same `@has_ledger_history` gate as the charts. |
 >
-> **Not fixed, and the top of the remaining list:** the three lifecycle emails on one Submit
-> (report #4), the statement-descriptor apostrophe (#5), the parent's dead end after signing
-> (#6), refunds and disputes never settling (#7), and everything in §3 onward.
+> **Second pass, 2026-09-12 (after merging #108 and #109 back in).** Five more rows closed,
+> each checked against its own bug before shipping — the fix was reverted and the new
+> examples watched to fail:
+>
+> | Report row | What shipped |
+> |---|---|
+> | #4 Three contradictory emails on one Submit | Approval mail gated on a contract existing; the queue mail deferred `QUEUE_MAIL_DELAY` and re-checking `under_review?`; draft reminders 4 → 2, inside `Fuime::MinorMailWindow`, tips rewritten off HCB's donation pages / cards / mobile app. |
+> | #5 Statement-descriptor apostrophe | Delegated to `StripeService::StatementDescriptor` — which also stops the suffix re-stating the brand the account prefix already supplies. |
+> | #12 Signed-in teen's Buy button silently dead | `layouts/fuime_payment_page` renders a flash; all three refusal paths are now visible. |
+> | #18 An offer's price can never be changed | Inline edit form on the offers row (name, price, unit, description). The controller already accepted it. Plus `"35,50"` no longer means $3,550 (row #55's comma bug). |
+> | #7a Refund rebate never settles | `FEE_REBATE_KEY` in the sweep; a fully refunded sale now ends at zero instead of −$2.45 "in arrears". |
+> | #69 No spec for `create_mor_checkout_session` | `spec/services/fuime/payment_link_service_spec.rb` pins the three MoR absences and the descriptor. |
+>
+> **Not fixed, and the top of the remaining list:** #7b — `charge.dispute.closed` has no
+> handler, so a dispute Fuime *wins* is a permanent debit (deliberately deferred until a
+> real test-mode dispute has been watched, per §7 item 3); the parent's dead end after
+> signing (#6); and everything in §3 onward.
 >
 > Full reasoning for each shipped fix is in the commit messages and in
 > `UPSTREAM_DIVERGENCE.md` entries 1-22 under 2026-09-12.
