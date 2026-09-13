@@ -32,7 +32,9 @@ require "rails_helper"
 RSpec.describe FlavorTextService do
   # L5's forbidden vocabulary. `interest` is deliberately absent — "0% interest"
   # is a pun about being interesting, not a deposit product claim.
-  FORBIDDEN = /\b(banks?|banking|banker|bankers|tellers?|neobank|deposits?|savings|checking|insured|FDIC)\b/i
+  def forbidden_vocabulary
+    /\b(banks?|banking|banker|bankers|tellers?|neobank|deposits?|savings|checking|insured|FDIC)\b/i
+  end
 
   # Everything the service can produce, across every branch and many seeds.
   # `sample(random:)` inside entries means one call shows one variant, so this
@@ -50,7 +52,7 @@ RSpec.describe FlavorTextService do
   end
 
   it "never calls Fuime a bank, or anything else L5 forbids" do
-    offenders = every_flavor_text.select { |t| t.match?(FORBIDDEN) }
+    offenders = every_flavor_text.select { |t| t.match?(forbidden_vocabulary) }
 
     expect(offenders.uniq).to be_empty,
                               "L5 forbidden vocabulary in a user-facing tagline:\n  #{offenders.uniq.join("\n  ")}"
@@ -85,7 +87,7 @@ RSpec.describe FlavorTextService do
     # is what it said.
     allowed = %w[www.youtube.com santatracker.google.com www.dinosaurbbq.org github.com]
 
-    hosts = every_flavor_text.flat_map { |t| t.scan(%r{https?://([a-z0-9.-]+)}i) }.flatten.uniq
+    hosts = every_flavor_text.flat_map { |t| t.scan(/https?:\/\/([a-z0-9.-]+)/i) }.flatten.uniq
 
     expect(hosts - allowed).to be_empty, "unreviewed outbound host in a tagline: #{(hosts - allowed).join(", ")}"
   end

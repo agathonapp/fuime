@@ -34,9 +34,9 @@ module Fuime
     # can say things that should not be quoted at a teenager without a human
     # reading it first. The right move is to get them to a person.
     REJECTED_MESSAGE = "We reviewed this venture and can't approve it for selling. " \
-                       "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll explain."
+                       "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll explain.".freeze
     SUSPENDED_MESSAGE = "Selling is paused on this venture. " \
-                        "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll sort it out."
+                        "Email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll sort it out.".freeze
 
     def initialize(application:)
       @application = application

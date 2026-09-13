@@ -39,7 +39,7 @@
 # Check Constraints
 #
 #  fuime_payout_batches_period_ordered  (period_end >= period_start)
-#  fuime_payout_batches_state_known     (aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[]))
+#  fuime_payout_batches_state_known     (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'approved'::character varying::text, 'paid'::character varying::text, 'cancelled'::character varying::text]))
 #
 # Fuime: one weekly payout run.
 #

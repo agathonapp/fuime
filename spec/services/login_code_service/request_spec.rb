@@ -34,7 +34,7 @@ describe LoginCodeService::Request do
     it "keeps the newest one, which is the email the person is reading" do
       request!
       newest = nil
-      expect { newest = request! }.to change { user.login_codes.active.first&.id }
+      expect { newest = request! }.to(change { user.login_codes.active.first&.id })
 
       expect(user.login_codes.active.sole.id).to eq(user.login_codes.order(:id).last.id)
     end

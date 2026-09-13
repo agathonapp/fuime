@@ -44,8 +44,8 @@
 # Check Constraints
 #
 #  fuime_payout_methods_last4_is_last4  (last4 IS NULL OR length(last4::text) <= 4) NOT VALID
-#  fuime_payout_methods_provider_known  (provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])) NOT VALID
-#  fuime_payout_methods_state_known     (aasm_state::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'failed'::character varying, 'removed'::character varying]::text[])) NOT VALID
+#  fuime_payout_methods_provider_known  (provider::text = ANY (ARRAY['plaid'::character varying::text, 'stripe'::character varying::text, 'manual'::character varying::text])) NOT VALID
+#  fuime_payout_methods_state_known     (aasm_state::text = ANY (ARRAY['pending'::character varying::text, 'verified'::character varying::text, 'failed'::character varying::text, 'removed'::character varying::text])) NOT VALID
 #
 module Fuime
   class PayoutMethod < ApplicationRecord

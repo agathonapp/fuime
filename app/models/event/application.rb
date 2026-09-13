@@ -64,7 +64,7 @@
 #
 # Check Constraints
 #
-#  event_applications_starting_point_known  (starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[])))
+#  event_applications_starting_point_known  (starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying::text, 'have_idea'::character varying::text, 'from_template'::character varying::text])))
 #
 class Event
   class Application < ApplicationRecord
