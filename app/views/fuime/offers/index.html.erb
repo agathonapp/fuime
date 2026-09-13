@@ -41,8 +41,8 @@
         <div class="field">
           <%= form.label :storefront_tagline, "One line about your business" %>
           <%= form.text_field :storefront_tagline, value: @event.storefront_tagline,
-                              class: "w-full max-w-full", maxlength: 140,
-                              placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
+                                                   class: "w-full max-w-full", maxlength: 140,
+                                                   placeholder: "Lawn care in Santa Barbara, weekends and holidays" %>
         </div>
         <div class="field">
           <%= form.label :logo, "Logo (optional)" %>
@@ -82,7 +82,73 @@
               <div class="muted"><%= offer.description %></div>
             <% end %>
           </td>
-          <td><%= offer.price_sentence %></td>
+          <td>
+            <%= offer.price_sentence %>
+            <%# FUIME: an offer's price could not be changed at all. There was no
+                edit route and no price form for a persisted offer — the only
+                PATCH on this page submitted the slug — so the workaround was
+                archive-and-recreate, which burns the URL: `assign_slug` dedupes
+                against archived rows and the pay page scopes to published, so
+                every flyer, QR code and bio link 404s.
+
+                That is a wall in front of the most ordinary thing a running
+                business does. Prices move with the season, with materials, with
+                the founder getting better at the work — and a teenager told to
+                delete the thing their customers already have the link to is
+                being told to choose between the right price and their existing
+                customers.
+
+                Inline rather than a new screen, matching the "Change this link"
+                form directly below it. The controller already accepted this:
+                `offer_params` permits name, description and unit_label, and
+                merges `price_cents` whenever the form carries a price — the form
+                was simply never built. %>
+            <% if @can_manage %>
+              <details class="mt-1">
+                <summary class="muted text-sm">Edit</summary>
+                <%= form_with url: fuime_offer_path(event_slug: @event.slug, id: offer.id),
+                              method: :patch, scope: :fuime_offer, local: true,
+                              class: "mt-1" do |form| %>
+                  <div class="field">
+                    <%= form.label :name, "What it is" %>
+                    <%= form.text_field :name, value: offer.name, required: true,
+                                               class: "w-full max-w-full text-sm" %>
+                  </div>
+                  <div class="flex gap-1 flex-wrap">
+                    <div class="field flex-1">
+                      <%= form.label :price, "Price" %>
+                      <%# No placeholder amount, for the same reason the wizard's
+                          price step has none: a number Fuime puts in this box is
+                          a Fuime-suggested rate for anyone who leaves it. %>
+                      <%= form.text_field :price, required: true, inputmode: "decimal",
+                                          placeholder: "$", class: "w-full max-w-full text-sm",
+                                          value: offer.price_cents.present? ? format("%.2f", offer.price_cents / 100.0) : nil %>
+                    </div>
+                    <div class="field flex-1">
+                      <%= form.label :unit_label, "Per what? (optional)" %>
+                      <%= form.text_field :unit_label, value: offer.unit_label,
+                                                       maxlength: Fuime::Offer::MAX_UNIT_LABEL_LENGTH,
+                                                       class: "w-full max-w-full text-sm",
+                                                       placeholder: unit_label_placeholder_for(@event) %>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <%= form.label :description, "Description (optional)" %>
+                    <%= form.text_field :description, value: offer.description,
+                                                      class: "w-full max-w-full text-sm" %>
+                  </div>
+                  <%= form.submit "Save changes", class: "btn btn--sm" %>
+                <% end %>
+                <p class="muted text-sm mt-1 mb-0">
+                  <%# Said because it is the question a founder actually has
+                      before touching a live price: does the link survive, and
+                      does anyone who already paid get re-billed. %>
+                  Your pay link stays the same, and anyone who already paid keeps
+                  what they paid. New customers see the new price.
+                </p>
+              </details>
+            <% end %>
+          </td>
           <td>
             <%= offer.published? ? "On your storefront" : "Draft" %>
             <% if offer.published? %>
@@ -95,8 +161,8 @@
                                 class: "flex items-center gap-1 mt-1 flex-wrap" do |form| %>
                     <span class="muted text-sm">/pay/<%= @event.slug %>/</span>
                     <%= form.text_field :slug, value: offer.slug,
-                                        maxlength: Fuime::Offer::MAX_SLUG_LENGTH,
-                                        placeholder: "lawn-mow", class: "text-sm" %>
+                                               maxlength: Fuime::Offer::MAX_SLUG_LENGTH,
+                                               placeholder: "lawn-mow", class: "text-sm" %>
                     <%= form.submit "Save link", class: "btn btn--sm" %>
                   <% end %>
                   <p class="muted text-sm mt-1 mb-0">

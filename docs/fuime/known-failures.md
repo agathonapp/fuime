@@ -687,3 +687,48 @@ The question was "what else publishes offers?" The answer was exactly one thing,
 payment-links API, and it was found this way rather than by reading code: **`Fuime::Offer
 .for_amount!` calls `publish!` itself**, so the API never reached the controller gate.
 Nine failures pointed straight at it.
+
+---
+
+## 2026-09-12 — `fuime/platform-review-p0` @ `f059befa1` (post-merge with #108 + #109)
+
+**4073 examples, 9 failures, 17 pending** on the first run, decomposing as:
+
+| Count | Spec | Cause |
+|---|---|---|
+| 4 | `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — the `wkhtmltopdf-binary` gem ships no `wkhtmltopdf_debian_13_arm64`, so it raises `Invalid platform` before any assertion runs. **The standing baseline**, unchanged since 2026-08-20. |
+| 5 | `user_session_spec` (five `public activity` examples) | **Self-inflicted, and fixed.** Not a baseline failure. |
+
+So the real baseline on this tree is **4**, all environmental, exactly as before.
+
+**Confirmed by a second run against a cleaned database** (`2fde424cf`):
+**4075 examples, 4 failures, 17 pending** — the four `receipt_bin_mailbox` ones and
+nothing else. Worth doing rather than reasoning about: the first run's number was
+unusable as a record, and a baseline nobody can trust is the thing this file exists to
+prevent.
+
+### The five that were not real, because the shape recurs
+
+They failed on `PublicActivity::Activity.sole` → `SoleRecordExceeded`. The cause was two
+orphaned `public_activities` rows, `event.create` for trackable ids 125 and 126 — two
+`Event`s I had created earlier in the session with `rails runner` against `RAILS_ENV=test`
+while debugging a 404, and then deleted. Deleting the Events did not delete the activity
+rows they had generated.
+
+**`rails runner` against the test database commits rows that no transaction rolls back.**
+Everything in this suite that asserts `expect(X.count).to eq(0)`, or calls `.sole`, then
+fails — in files you have never opened, with messages that look exactly like a real
+regression in somebody else's code. It cost about twenty minutes twice in one session: the
+first time I went as far as concluding seven failures were pre-existing on `main` and
+saying so, before finding two `Event`s named "Probe Co" sitting in the database.
+
+Two rules, both cheap:
+
+- **Probe with a throwaway spec file**, not `rails runner`. A spec runs inside the
+  transaction and leaves nothing behind. `docker compose cp` it in, run it, delete it.
+- **If you do pollute it, clean the DEPENDENT rows too.** `PublicActivity`, PaperTrail
+  versions, `Ledger::Item` and `HcbCode` all outlive the record that created them, and an
+  orphan is harder to recognise than the row you remember making.
+
+A clean database is worth checking before trusting a full-suite number:
+`Event.count`, `User.count` and `PublicActivity::Activity.count` should all be zero.

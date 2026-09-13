@@ -108,6 +108,80 @@ RSpec.describe Fuime::ConnectSettlementSweep do
     expect(venture.reload.balance_v2_cents).to eq(-5_00)
   end
 
+  # Fuime: the rebate matched neither key regex, so it never settled. Pending
+  # incoming is excluded from the balance — so the venture kept the settled fee
+  # DEBIT and never got the credit that cancels it, and a fully refunded sale
+  # left the operator owing Fuime its cut of money the business never kept.
+  describe "the platform-fee rebate that comes with a refund" do
+    # The whole shape of a refunded sale, in the order it is really written:
+    # payment, Fuime's fee, then the reversal and the rebate.
+    def post_refunded_sale!(intent_id:, gross_cents:, fee_cents:)
+      ledger = Fuime::VentureLedger.new(event: venture)
+      ledger.post!(key: Fuime::VentureLedger.payment_key(intent_id),
+                   amount_cents: gross_cents, memo: isolated_memo("Sale"), date: Time.current)
+      ledger.post!(key: Fuime::VentureLedger.fee_key(intent_id),
+                   amount_cents: -fee_cents, memo: isolated_memo("Fuime fee"), date: Time.current)
+      ledger.post!(key: Fuime::VentureLedger.reversal_key(intent_id:, kind: "refund",
+                                                          object_id: "re_1", amount_cents: gross_cents),
+                   amount_cents: -gross_cents, memo: isolated_memo("Refunded"), date: Time.current)
+      ledger.post!(key: Fuime::VentureLedger.fee_rebate_key(intent_id:, object_id: "re_1",
+                                                            reversal_cents: gross_cents),
+                   amount_cents: fee_cents, memo: isolated_memo("Fuime platform fee refunded"),
+                   date: Time.current)
+    end
+
+    def stub_available_refund(intent_id)
+      allow(Stripe::Refund).to receive(:list)
+        .with(hash_including(payment_intent: intent_id), anything)
+        .and_return(Stripe::ListObject.construct_from(
+                      data: [{ id: "re_1", balance_transaction: { id: "txn_r1", status: "available" } }]
+                    ))
+    end
+
+    it "settles alongside the refund it belongs to" do
+      post_refunded_sale!(intent_id: "pi_reb1", gross_cents: 35_00, fee_cents: 2_45)
+      stub_intent("pi_reb1", status: "available")
+      stub_available_refund("pi_reb1")
+
+      described_class.new(event: venture).sweep!
+
+      rebate_key = Fuime::VentureLedger.fee_rebate_key(intent_id: "pi_reb1", object_id: "re_1",
+                                                       reversal_cents: 35_00)
+      rebate_cpt = CanonicalPendingTransaction
+                   .joins(:raw_pending_donation_transaction)
+                   .find_by(raw_pending_donation_transactions: { donation_transaction_id: rebate_key })
+
+      expect(rebate_cpt.canonical_pending_settled_mapping).to be_present
+    end
+
+    # The number a teenager actually reads. Fully refunded: they keep nothing and
+    # they owe nothing. Before this it was −$2.45, labelled "in arrears".
+    it "leaves a fully refunded sale at zero rather than in arrears" do
+      post_refunded_sale!(intent_id: "pi_reb2", gross_cents: 35_00, fee_cents: 2_45)
+      stub_intent("pi_reb2", status: "available")
+      stub_available_refund("pi_reb2")
+
+      described_class.new(event: venture).sweep!
+
+      expect(venture.reload.balance_v2_cents).to eq(0)
+    end
+
+    # Exactly as conservative about disputes as the reversal line above it: a
+    # rebate keyed on a dispute object is not swept, because no dispute has ever
+    # been exercised against Stripe and settling one by construction is guessing.
+    it "does not settle a rebate that came from a dispute" do
+      Fuime::VentureLedger.new(event: venture).post!(
+        key: Fuime::VentureLedger.fee_rebate_key(intent_id: "pi_reb3", object_id: "dp_1",
+                                                 reversal_cents: 30_00),
+        amount_cents: 2_10, memo: isolated_memo("Fuime platform fee refunded"), date: Time.current
+      )
+
+      # No Stripe stub, as in the dispute example below: a match would raise on
+      # the unstubbed call, so a clean zero proves the filter held.
+      expect(described_class.new(event: venture).sweep!).to eq(0)
+    end
+  end
+
   it "never touches dispute-keyed pendings" do
     Fuime::VentureLedger.new(event: venture).post!(
       key: Fuime::VentureLedger.reversal_key(intent_id: "pi_disp1", kind: "dispute",

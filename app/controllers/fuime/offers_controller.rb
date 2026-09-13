@@ -474,12 +474,48 @@ module Fuime
     # Nothing here supplies a fallback price. See Fuime::Offer's header: a
     # default is a Fuime-set rate for anybody who does not change it (§8.3 D2).
     def price_cents_param
-      raw = params.dig(:fuime_offer, :price).to_s.gsub(/[^0-9.]/, "")
+      raw = params.dig(:fuime_offer, :price).to_s.gsub(/[^0-9.,]/, "")
       return nil if raw.blank?
 
-      (BigDecimal(raw) * 100).round
+      normalised = normalise_decimal(raw)
+      return nil if normalised.blank?
+
+      (BigDecimal(normalised) * 100).round
     rescue ArgumentError
       nil
+    end
+
+    # Turn what a person typed into something BigDecimal can read.
+    #
+    # Fuime: commas used to be stripped along with everything else
+    # (`gsub(/[^0-9.]/, "")`), which silently multiplied a comma-decimal price by
+    # a hundred: a founder typing **35,50** — how a price is written across most
+    # of Europe and Latin America, and a plain typo on a US keyboard — listed
+    # their work at **$3,550** and was shown "$3,550.00" as if that were what
+    # they had said. Silent, hundredfold, and on the one field the whole product
+    # insists Fuime must never influence.
+    #
+    # One rule decides everything: the RIGHTMOST separator is the decimal point
+    # if exactly one or two digits follow it; otherwise every separator is
+    # grouping. That reads "1,250.50", "1.250,50", "1,250" and "35,50" the way
+    # each was meant, without asking the founder which convention they use.
+    #
+    # The residual ambiguity is "1.250", which this reads as one thousand two
+    # hundred and fifty. Nothing can resolve that from the string alone, and it
+    # is the reading that matches the comma case — the alternative would have the
+    # same input mean different things depending on which key was pressed.
+    def normalise_decimal(raw)
+      last = raw.rindex(/[.,]/)
+      digits_after = last ? raw.length - last - 1 : 0
+
+      return raw.gsub(/[.,]/, "") unless last && digits_after.between?(1, 2)
+
+      whole = raw[0...last].gsub(/[.,]/, "")
+      fraction = raw[(last + 1)..].gsub(/[.,]/, "")
+
+      # "0" rather than "": BigDecimal(".50") raises, which would refuse a price
+      # somebody typed perfectly clearly.
+      "#{whole.presence || '0'}.#{fraction}"
     end
 
   end

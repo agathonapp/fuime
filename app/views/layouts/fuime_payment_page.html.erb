@@ -20,6 +20,23 @@
   </head>
   <body class="fuime-payment-page">
     <main class="mx-auto px-4 py-10" style="max-width: 30rem;">
+      <%# FUIME: this layout rendered no flash at all — head, main, footer, and
+          nothing else — while three paths that land here set one and then rely
+          on it being read:
+
+            * Fuime::CheckoutsController#refuse_minor_buyer redirects back with
+              "you have to be 18 to buy" (signup collects no date of birth, so
+              `known_adult?` is false for the whole teen user base and the first
+              person to hit it is the operator testing their own link);
+            * the Stripe rescue redirects with "we couldn't start that payment";
+            * a closed or unpublished offer explains why it cannot be bought.
+
+          With no flash rendered, every one of those is a button that visibly
+          does nothing. A buyer who taps Pay and watches the page reload
+          unchanged concludes the teenager's shop is broken, and the teenager
+          hears about it as a lost sale with no explanation attached. %>
+      <%= render "application/flash", klass: "mb2" %>
+
       <%= yield %>
     </main>
 

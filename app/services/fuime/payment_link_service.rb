@@ -225,9 +225,35 @@ module Fuime
       }
     end
 
+    # What the buyer's card statement says next to the charge.
+    #
+    # Fuime: this is a SUFFIX. Stripe prepends the account's own static prefix
+    # (`StripeService::StatementDescriptor::PREFIX`, "Fuime* ") and enforces the
+    # 22-character total, so the venture's name is all that belongs here.
+    #
+    # Two bugs this replaced, both live since the merchant-of-record cutover:
+    #
+    #   1. It hardcoded "FUIME " into the suffix, which the buyer read as
+    #      "Fuime* FUIME Maya Bake" — the brand twice, and six of the fifteen
+    #      characters the venture actually had spent before its name started.
+    #   2. It filtered no characters. Stripe rejects `' " < > \ *` in a
+    #      descriptor suffix, so a venture called "Maya's Bakes" raised
+    #      Stripe::InvalidRequestError on EVERY checkout — and
+    #      Fuime::CheckoutsController rescues Stripe::StripeError into "We
+    #      couldn't start that payment. Please try again.", which is advice that
+    #      never worked. An apostrophe is ordinary in a teenager's business name;
+    #      that venture could never take a payment and was told to retry forever.
+    #
+    # `StripeService::StatementDescriptor` already knew all of this — it
+    # transliterates, strips what Stripe forbids, budgets against the prefix and
+    # falls back to "Fuime" when a name reduces to nothing (a venture named only
+    # in non-Latin script). It was written for the donation path and never
+    # reached here.
     def statement_descriptor
-      # Max 22 chars for statement descriptor
-      "FUIME #{@event.short_name || @event.name}"[0..21].strip
+      ::StripeService::StatementDescriptor.format(
+        @event.short_name.presence || @event.name,
+        as: :suffix
+      )
     end
 
   end

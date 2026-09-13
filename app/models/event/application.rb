@@ -80,6 +80,15 @@ class Event
     # YouTube ids. The step then reappears and is mandatory again.
     ONBOARDING_VIDEO_IDS = ENV.fetch("FUIME_ONBOARDING_VIDEO_IDS", "").split(",").map(&:strip).reject(&:blank?).freeze
 
+    # Fuime: how long the "you're in a queue" mail waits before asking whether
+    # anybody is still in the queue. See the `mark_under_review` callback.
+    #
+    # Long enough that `Fuime::FounderAdmission` — which runs in the same
+    # request's `after_commit` — has certainly finished, and short enough that a
+    # founder who really is waiting on a human is not left wondering whether the
+    # form went through. Nobody perceives two minutes on an emailed acknowledgement.
+    QUEUE_MAIL_DELAY = 2.minutes
+
     has_paper_trail
 
     include PgSearch::Model
@@ -131,11 +140,26 @@ class Event
 
     include Rails.application.routes.url_helpers
 
+    # Fuime: two nudges for an abandoned draft, not four.
+    #
+    # Upstream scheduled 1, 2, 7 and 14 days. The job only fires while the
+    # application is still a draft, so a founder who finished never sees any of
+    # them — but a teenager who opened the wizard and closed it got four
+    # unsolicited emails over a fortnight, at whatever hour the queue reached
+    # them. L7 allows transactional notification of a minor and nothing at all
+    # between midnight and 6 a.m.; "you left a form unfinished" is at the edge of
+    # transactional at day one and is plainly re-engagement by day fourteen.
+    #
+    # Two is the most that can be defended as telling someone their work is still
+    # there: one the next day, one at the end of the week. Both are scheduled
+    # into `Fuime::MinorMailWindow`, and the job re-checks draft state at send.
     after_create_commit do
-      Event::ApplicationReminderJob.set(wait: 1.day).perform_later(self, 1)
-      Event::ApplicationReminderJob.set(wait: 2.days).perform_later(self, 2)
-      Event::ApplicationReminderJob.set(wait: 7.days).perform_later(self, 3)
-      Event::ApplicationReminderJob.set(wait: 14.days).perform_later(self, 4)
+      Event::ApplicationReminderJob
+        .set(wait_until: ::Fuime::MinorMailWindow.earliest_send_time(now: 1.day.from_now))
+        .perform_later(self, 1)
+      Event::ApplicationReminderJob
+        .set(wait_until: ::Fuime::MinorMailWindow.earliest_send_time(now: 7.days.from_now))
+        .perform_later(self, 2)
     end
 
     scope :not_archived, -> { where(archived_at: nil) }
@@ -255,7 +279,22 @@ class Event
       event :mark_under_review do
         transitions from: [:draft, :submitted], to: :under_review
         after do
-          Event::ApplicationMailer.with(application: self).under_review.deliver_later
+          # Fuime: this mail's whole content is a promise of a wait — "you'll hear
+          # from us within N business days". Under `Fuime::FounderAdmission` there
+          # is no wait: `mark_submitted!` calls this, and the same request then
+          # approves and activates, so the founder read "we'll be in touch in two
+          # business days" seconds before "Welcome to Fuime". The rational
+          # response to the first mail is to stop and wait, which is the opposite
+          # of what the product just did for them.
+          #
+          # Delayed and re-checked rather than suppressed at the call site,
+          # because every caller would have to know: FounderAdmission,
+          # CohortAdmission, `#on_contract_party_signed` (a real wait — the HCB
+          # party has yet to counter-sign) and the admin console all reach here.
+          # The state itself is the honest test of whether anybody is waiting.
+          Event::ApplicationMailer.with(application: self)
+                                  .under_review
+                                  .deliver_later(wait: QUEUE_MAIL_DELAY)
         end
       end
 
@@ -265,8 +304,23 @@ class Event
           if teen_led? && contract.present?
             contract.party(:hcb).schedule_reminders
           else
-            send_contract unless contract.present?
-            Event::ApplicationMailer.with(application: self).approved.deliver_later
+            # Fuime: mail only when an agreement actually exists to sign.
+            #
+            # This mail's subject is "[Action Needed] <name> has been approved"
+            # and its body is four words of congratulation followed by "you'll
+            # need to sign the Fuime agreement — go to your application status
+            # page to sign". While `FUIME_DOCUSEAL_TEMPLATE_ID` is unset
+            # `send_contract` returns nil (Event::Plan#contract_available?), the
+            # status page renders no signing step, and there is nothing anywhere
+            # to sign — so the mail marked Action Needed named an action that
+            # cannot be taken, and a founder who believed it waited for a
+            # signature request that was never coming.
+            #
+            # Approval without a contract is an internal step on the way to
+            # activation. `#activated` is the mail that tells the founder
+            # something true, and it is already addressed to them.
+            agreement = contract.presence || send_contract
+            Event::ApplicationMailer.with(application: self).approved.deliver_later if agreement.present?
           end
         end
       end

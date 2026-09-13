@@ -6374,3 +6374,203 @@ migration.
 other half — `SignedLinkSignIn` is now shared and ready for it); the guardian
 mailers (D1); `/parents` reopening and its `/family` CTA (§6 #6, a marketing
 call); the standard application for adults and second ventures, untouched.
+
+## 2026-09-12 — The mail a founder reads in the minutes after /setup
+
+The wizard shipped in #109 ends on "You're in." Three emails then contradicted
+it within about twenty seconds, because `mark_submitted!` → `mark_under_review!`
+→ `Fuime::FounderAdmission` → `mark_approved!` → `activate_event!` all run in one
+request and each transition mailed. A thirteen-year-old received "you'll hear
+from us within 2 business days", then "**[Action Needed]** <name> has been
+approved — you'll need to sign the Fuime agreement", then "Welcome to Fuime".
+Only the third was true. The second names an action nobody can take:
+`FUIME_DOCUSEAL_TEMPLATE_ID` is unset, `send_contract` returns nil, and the
+status page renders no signing step. The rational response to the first two is
+to stop and wait for a signature request that is never coming — at the
+highest-intent moment in the funnel.
+
+| Change | Why | Files |
+|---|---|---|
+| `mark_approved`'s mail is gated on an agreement actually existing (`contract.presence \|\| send_contract`) | The mail's entire body is "go and sign". With no DocuSeal template there is nothing to sign; approval is then an internal step and `#activated` is the mail that says something true | `app/models/event/application.rb` |
+| `mark_under_review`'s mail is deferred by `QUEUE_MAIL_DELAY` (2 min) and the mailer returns `NullMail` unless the record is *still* `under_review` | The mail's content is a promise of a wait. Deferred-and-rechecked rather than suppressed per call site, because `FounderAdmission`, `CohortAdmission`, `#on_contract_party_signed` and the admin console all reach that transition and only the state knows whether anybody is actually waiting | `app/models/event/application.rb`, `app/mailers/event/application_mailer.rb` |
+| Draft reminders cut 4 → 2 (day 1, day 7) and scheduled inside `Fuime::MinorMailWindow` | L7: transactional only, nothing 12–6 a.m. Four unsolicited mails over a fortnight to a minor is re-engagement by day 14. The window is applied at schedule time, since `wait_until` is what the queue honours | `app/models/event/application.rb`, `app/lib/fuime/minor_mail_window.rb` |
+| Reminder tips rewritten | All four were upstream HCB's: a free donation page, reimbursements, debit cards with Apple/Google Pay, and a mobile app. Fuime has none of them (`DisabledModules`, `Event::Plan::Free`, no app) — four nonexistent products advertised to a minor | `app/mailers/event/application_mailer.rb` |
+| Subject "[Action Needed] Complete your Fuime application!" → "Your Fuime business is still a draft"; body speaks of a *business*, not an *application*; CTA points at `setup_url` | A teen who used `/setup` never saw the word "application". `/setup` resumes a draft from the DATABASE, so the link works on a device that never held the wizard's session cookie | `app/mailers/event/application_mailer.rb`, `app/views/event/application_mailer/incomplete.html.erb` |
+| `ApplicationReminderJob` also returns early for a user who has a venture | A founder who abandoned one draft and built a business anyway is not a stalled signup | `app/jobs/event/application_reminder_job.rb` |
+
+Pinned by `spec/models/fuime_application_lifecycle_mail_spec.rb` (admission
+sends exactly one founder-addressed mail, and it is the welcome; a genuine queue
+still gets told) and `spec/jobs/fuime_draft_reminder_spec.rb` (two reminders,
+never inside quiet hours, nothing advertising a product Fuime does not have).
+
+The delay had to be respected in the spec rather than collapsed: a bare
+`perform_enqueued_jobs { }` ignores `wait:` and runs the queue mail *before*
+admission advances the state, which is the exact race `QUEUE_MAIL_DELAY`
+removes. Drained with `perform_enqueued_jobs(at:)` instead.
+
+**Not done here:** `Event::ApplicationMailer#confirmation` still describes an
+agreement, but it only fires when a contract exists, so it is correct whenever
+it sends. Whether an abandoned-draft nudge to a minor is transactional at all is
+a counsel question; two is the most that can be defended, and zero may be right.
+
+## 2026-09-12 — An apostrophe in a business name, and a Buy button that said nothing
+
+Two defects on the buyer's side of the product, found together because they
+compound: the first makes checkout fail, and the second makes the failure
+invisible.
+
+**`Fuime::PaymentLinkService#statement_descriptor`** was
+`"FUIME #{short_name || name}"[0..21].strip`, passed as
+`statement_descriptor_suffix`. Two bugs in one line. It filtered no characters,
+and Stripe rejects `' " < > \ *` in a suffix — so a venture called
+*Maya's Bakes* raised `Stripe::InvalidRequestError` on **every** checkout, which
+`Fuime::CheckoutsController` rescues into "We couldn't start that payment.
+Please try again." That venture could never take a payment and was told to retry
+forever. And it hardcoded "FUIME " into a *suffix*, which Stripe prefixes with
+the account's own `Fuime* ` — the buyer read "Fuime\* FUIME Maya Bake", the brand
+twice, six of the venture's fifteen characters spent before its name began.
+
+`StripeService::StatementDescriptor` already solved all of this — transliterate,
+strip what Stripe forbids, budget against `PREFIX`, fall back to "Fuime" when a
+name reduces to nothing. It was written for the donation path and never reached
+here. The fix is to call it.
+
+**`layouts/fuime_payment_page.html.erb` rendered no flash**, so three paths that
+redirect back to the pay page carrying an explanation all arrived silent:
+`#refuse_minor_buyer` ("Checkout is billed to an adult" — and since signup
+collects no date of birth, `known_adult?` is false for the whole teen user base,
+so the first person to meet it is the operator testing their own link), the
+Stripe rescue above, and a closed offer. What a buyer saw was the page reloading
+unchanged; what the operator heard was a sale that did not happen.
+
+| Change | Why | Files |
+|---|---|---|
+| `#statement_descriptor` delegates to `StripeService::StatementDescriptor.format(…, as: :suffix)` | One sanitizer, already correct, already knows the prefix budget | `app/services/fuime/payment_link_service.rb` |
+| The pay-page layout renders `application/_flash` above `yield` | Every refusal on the page had an explanation attached and no way to show it | `app/views/layouts/fuime_payment_page.html.erb` |
+
+`spec/services/fuime/payment_link_service_spec.rb` is new and closes
+`PLATFORM_REVIEW_2026_09.md` row 69: **nothing** previously exercised
+`create_mor_checkout_session`. It pins the descriptor and, more importantly, the
+three ABSENCES that make the session merchant-of-record rather than a platform
+charge — no `stripe_account:`, no `application_fee_amount`, the fee stamped in
+metadata at exactly `Event#fuime_fee_cents_on`. Absences are what a refactor
+removes without anything failing, which is why they needed a test and the fee
+computation did not.
+
+Both fixes were checked against their own bug: the five descriptor examples fail
+on the old one-liner, and both buyer examples fail with the flash render removed.
+
+**Worth knowing for the next session:** `Fuime::Offer#publish!` refuses while the
+venture cannot take payments, so under Connect (the suite default) a
+`:published` offer silently stays a draft and any pay-page request 404s for an
+unrelated reason. Tag the group `:merchant_of_record`. And the pay form posts
+`offer_token`, while the GET route segment is `offer` — posting the wrong one
+redirects to the storefront and quietly tests a different layout.
+
+**Not fixed:** the Stripe rescue still advises "Please try again" for
+`Stripe::InvalidRequestError`, which is never transient. It reports to
+`Rails.error`, so this is a copy problem rather than a silent one.
+
+## 2026-09-12 — A price that could never be changed, and a comma worth a hundredfold
+
+Half of who Fuime is for is a teenager who already runs something. That founder
+could not change a price. There was no edit route and no price form for a
+persisted `Fuime::Offer` — the only PATCH on `/offers` submitted the slug — so
+the only route to a new price was archive-and-recreate, and that burns the URL:
+`assign_slug` dedupes against archived rows so the new offer cannot reuse the
+old slug, and the pay page scopes to published so the old one 404s. Every
+flyer, QR code, bio link and repeat customer's bookmark breaks. The founder is
+choosing between the right price and the customers they have.
+
+Nothing in the controller needed to change. `offer_params` already permits
+`name`, `description` and `unit_label` and merges `price_cents` whenever the
+form carries a price (that merge is the fix from `b4352af15`, where a rename
+form carrying no price could never save). The form was simply never built.
+
+Built inline as a `<details>` on the offers row, matching the "Change this link"
+form immediately below it, rather than as a new screen — the page already has
+this idiom and a new route would be a second place to keep authorised.
+
+**The comma.** `price_cents_param` stripped everything outside `[0-9.]`, so
+`"35,50"` became `"3550"` and then **$3,550**. That is how a price is written
+across most of Europe and Latin America, and a plain typo on a US keyboard —
+and the error is silent, hundredfold, and lands on the one field the entire
+product insists Fuime must never influence. `normalise_decimal` now applies one
+rule: the rightmost separator is the decimal point if exactly one or two digits
+follow it, otherwise every separator is grouping. That reads `1,250.50`,
+`1.250,50`, `1,250` and `35,50` the way each was meant without asking which
+convention the founder uses. The wizard's price step shares this method, so it
+is fixed in both places.
+
+The residual ambiguity is `"1.250"`, read as one thousand two hundred and fifty.
+Nothing resolves that from the string alone, and it is the reading that matches
+the comma case — the alternative would make the same input mean different things
+depending on which key was pressed.
+
+| Change | Files |
+|---|---|
+| Inline edit form (name, price, unit, description) on each offer row, with a line saying the pay link survives and nobody is re-billed | `app/views/fuime/offers/index.html.erb` |
+| `normalise_decimal` replaces the `[^0-9.]` strip | `app/controllers/fuime/offers_controller.rb` |
+
+`spec/requests/fuime_offer_editing_spec.rb` pins both, including a table of ten
+things a person might type. Checked against the old parser: three examples fail
+on it, among them the explicit "never multiplies a comma-decimal price by a
+hundred".
+
+**Note for specs in this area:** the operator floor is 16 and
+`Fuime::OperatorEligibility` cannot clear an unknown age, so a `:attested_teen`
+founder (13+ tick, no date of birth) blocks the venture from selling, which
+makes `Fuime::Offer#publish!` refuse and every downstream example fail for an
+unrelated reason. Use `create(:user, :minor, birthday: 16.years.ago.to_date)`.
+
+**Not done:** price-change history. Nothing records what an offer used to cost,
+so a dispute about a price a customer says they were quoted has no answer in the
+product. `has_paper_trail` is not on `Fuime::Offer`.
+
+## 2026-09-12 — Every refund left the operator "in arrears" by Fuime's own fee
+
+`#refund_platform_fee` gives back Fuime's cut in proportion to what was
+refunded, keyed `fuime_feerev_{pi}_{object}_{amount}`. That key matched
+**neither** of `Fuime::ConnectSettlementSweep`'s regexes — `PAYMENT_GROUP_KEY`
+wants `pi_` immediately after an optional `fee_`/`stripefee_`, and
+`REFUND_REVERSAL_KEY` matches `fuime_rev_…_refund_` literally — so from the day
+refunds started working, no rebate ever settled.
+
+Pending incoming is excluded from the balance. So the venture kept the settled
+fee **debit** and never received the credit that cancels it: a fully refunded
+$35 sale left the operator at **−$2.45, labelled "in arrears"** — owing Fuime
+its cut of money the business never kept — with the orphaned rebate displayed on
+the same page as "a further $2.45 still coming", permanently.
+
+The rebate settles on the refund's own condition, because it *is* part of the
+refund: `#refund_platform_fee` is called from the reversal recorder, in the same
+transaction as the reversal line, against the same PaymentIntent. So it joins
+the `:refunds` group and gates on `refunds_available?`.
+
+The kind is matched through the **rebated object's** id (`re_`/`pyr_` for a
+Stripe Refund) rather than through the key, because a rebate key — unlike a
+reversal key — does not carry one. A dispute rebate is keyed on a `dp_`/`du_`
+id and still falls through to "not swept", which keeps this exactly as
+conservative about disputes as the reversal line above it.
+
+Changing `fee_rebate_key` to carry the kind was the obvious alternative and was
+rejected on money-safety grounds: rows already written in production would stop
+matching `VentureLedger.find_row`, and that lookup is the idempotency that stops
+a re-delivered `charge.refunded` rebating a second time.
+
+| Change | Files |
+|---|---|
+| `FEE_REBATE_KEY`, routed into the refunds group | `app/services/fuime/connect_settlement_sweep.rb` |
+
+Pinned in `spec/services/fuime/connect_settlement_sweep_spec.rb`: the rebate
+settles with its refund, a fully refunded sale ends at **exactly zero** rather
+than in arrears, and a dispute-keyed rebate is still refused. The first two fail
+without the change.
+
+**Still open, and the largest remaining money hole:** `charge.dispute.closed`
+has no handler at all, so a dispute Fuime **wins** stays a permanent debit
+against the operator. That is not in this commit on purpose — no dispute has
+ever been exercised against Stripe, and writing money back into a teenager's
+ledger from a code path nobody has watched run is how you create the next
+finding. It wants a real test-mode dispute first
+(`PLATFORM_REVIEW_2026_09.md` §7 item 3).

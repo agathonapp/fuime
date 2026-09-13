@@ -141,8 +141,23 @@ Rails.application.configure do
   # than depending on LIVE_URL_HOST being set by hand.
   mailer_host = Credentials.fetch(:LIVE_URL_HOST, fallback: ENV["RENDER_EXTERNAL_HOSTNAME"])
 
-  config.action_mailer.default_url_options = { host: mailer_host }
+  # `protocol` as well as `host`.
+  #
+  # Fuime: without it every absolute URL this app generates in production is
+  # `http://`. That is three separate problems, not one cosmetic one. A pay link
+  # returned by the payment-links API (Fuime::Api::V1::PaymentLinksController)
+  # is what an operator pastes into a bio or a flyer, so the link a stranger
+  # clicks to hand over a card number visibly begins http. Every mailer link —
+  # the login code, the guardian invite, the draft reminder — makes a plaintext
+  # hop before the redirect. And a mail client or link scanner that declines to
+  # upgrade simply fails.
+  #
+  # Set on both, because they are read by different callers: `action_mailer` by
+  # templates, `routes.default_url_options` by `*_url` helpers called outside a
+  # request (jobs, services, the API serializer).
+  config.action_mailer.default_url_options = { host: mailer_host, protocol: "https" }
   Rails.application.routes.default_url_options[:host] = mailer_host
+  Rails.application.routes.default_url_options[:protocol] = "https"
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {
