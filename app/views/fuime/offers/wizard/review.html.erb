@@ -47,15 +47,29 @@
   <% end %>
 <% end %>
 
+<%# Fuime: never offer a button that cannot work.
+    When the venture has publish blockers — for a new founder, always, because
+    the review has not run — Publish was the big blue primary action sitting
+    directly under a callout explaining that publishing is impossible. Pressing
+    it re-rendered the same page with a red error. So the screen's most
+    emphasised control was the one guaranteed to fail, and the control that does
+    work, Save draft, was the grey one beside it.
+    When blocked: Save draft becomes the primary action and Publish is not shown.
+    The callout above already says why and what happens next. %>
+<% publish_blocked = @selling_blockers.any? %>
+
 <% content_for :footer do %>
   <div class="flex flex-row-reverse justify-between items-center w-full gap-2 flex-wrap">
     <div class="flex gap-2">
-      <button type="submit" name="intent" value="draft" class="btn bg-muted" form="offer_wizard">
+      <button type="submit" name="intent" value="draft"
+              class="btn <%= publish_blocked ? "bg-blue" : "bg-muted" %>" form="offer_wizard">
         Save draft
       </button>
-      <button type="submit" name="intent" value="publish" class="btn bg-blue" form="offer_wizard">
-        Publish
-      </button>
+      <% unless publish_blocked %>
+        <button type="submit" name="intent" value="publish" class="btn bg-blue" form="offer_wizard">
+          Publish
+        </button>
+      <% end %>
     </div>
     <%= link_to "← Back", new_fuime_offer_step_path(event_slug: @event.slug, step: "storefront"), class: "btn bg-muted" %>
   </div>

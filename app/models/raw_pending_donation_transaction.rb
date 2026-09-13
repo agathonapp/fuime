@@ -12,6 +12,11 @@
 #  updated_at              :datetime         not null
 #  donation_transaction_id :string
 #
+# Indexes
+#
+#  index_rpdt_on_donation_transaction_id_pattern  (donation_transaction_id)
+#  index_rpdt_on_fuime_donation_transaction_id    (donation_transaction_id) UNIQUE WHERE ((donation_transaction_id)::text ~~ 'fuime\_%'::text)
+#
 class RawPendingDonationTransaction < ApplicationRecord
   monetize :amount_cents
 

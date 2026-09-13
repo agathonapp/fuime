@@ -344,7 +344,7 @@ class Event
         # after_commit on the application also runs this; a second call is
         # already_has_venture. Kept here so a request that submits still
         # admits even if the commit hook is skipped in a wrapping transaction.
-        ::Fuime::FounderAdmission.new(application: @application.reload).call
+        admission = ::Fuime::FounderAdmission.new(application: @application.reload).call
         confetti!
         invite_error = @application.guardian_invite_error
         @application.reload
@@ -357,6 +357,21 @@ class Event
           flash[:success] = "You're in. Draft something to sell — publishing waits on a review."
           redirect_to event_path(@application.event)
         else
+          # Fuime: say why, because this branch used to say nothing at all.
+          #
+          # Admission is refused by `activation_blockers` — most commonly a
+          # second venture on the Free plan — and the redirect carried no flash.
+          # The founder landed on a status page inherited from HCB that reads
+          # "under review", waiting on a review that is never going to run,
+          # for a reason nobody told them. A blocked submit is a sentence and a
+          # next action, not silence.
+          flash[:error] =
+            if admission&.message.present?
+              "Your application is in, but we couldn't set the business up yet: #{admission.message}"
+            else
+              "Your application is in. We couldn't set the business up automatically — " \
+              "email #{ApplicationMailer::OPERATIONS_EMAIL} and we'll finish it."
+            end
           redirect_to application_path(@application)
         end
       rescue AASM::InvalidTransition

@@ -24,8 +24,8 @@
 # Indexes
 #
 #  index_guardianships_on_guardian_id                (guardian_id)
-#  index_guardianships_on_guardian_id_and_minor_id   (guardian_id,minor_id) UNIQUE
 #  index_guardianships_on_invite_token               (invite_token) UNIQUE
+#  index_guardianships_on_live_guardian_and_minor    (guardian_id,minor_id) UNIQUE WHERE (status <> 2)
 #  index_guardianships_on_minor_id                   (minor_id)
 #  index_guardianships_on_revoked_by_id              (revoked_by_id)
 #  index_guardianships_on_status_and_invite_sent_at  (status,invite_sent_at)
@@ -59,6 +59,36 @@ class Guardianship < ApplicationRecord
   # nobody.
   CURRENT_AGREEMENT_VERSION = "2026-09-11-v4"
 
+  # ── A teenager cannot stand as another teenager's guardian ─────────────────
+  #
+  # Every age check here asks `guardian.is_minor?`, which reads a birthday. Since
+  # 2026-08-20 signup asks for a "13 or older" tick instead of a date, so nobody
+  # has a birthday and `is_minor?` is nil for every real account — the check was
+  # true only of a population that no longer exists.
+  #
+  # What was left: teen A invites classmate B, B ticks the 18+ box, and
+  # `attest_adult_18_plus!` overwrites B's own minor_13_plus attestation. B is
+  # now a "known adult" — so B's own venture no longer needs a guardian either,
+  # and A has cleared the L2 gate that decides who may be paid. At a cohort event
+  # where fifty founders know each other, two of them can do this in a minute, and
+  # Fuime would then be paying a minor standing as legal payee and clawback
+  # obligor. `self_signed_signals` does not catch it: that looks for one person
+  # with two inboxes, and this is two real people.
+  #
+  # So the test is not age, which we do not know. It is whether this account has
+  # told us, by its own use of Fuime, that it is a young founder. A parent who
+  # ticked 13+ at signup before being invited is not caught — they have no
+  # venture, no application of their own, and nobody has named them a minor.
+  YOUNG_FOUNDER_AS_GUARDIAN = "This person is signed up as a young founder, so they can't be a guardian."
+
+  def self.signed_up_as_a_young_founder?(user)
+    return false if user.blank?
+    return false unless user.attested_minor_13_plus?
+
+    user.guardianships_as_minor.where.not(status: :revoked).exists? ||
+      user.organizer_positions.exists?
+  end
+
   # Invite links are bearer tokens granting authority over a minor's account.
   # They expire so a forwarded or leaked email doesn't stay usable forever.
   INVITE_VALID_FOR = 7.days
@@ -79,7 +109,17 @@ class Guardianship < ApplicationRecord
 
   enum :status, { pending: 0, active: 1, revoked: 2 }, default: :pending
 
-  validates :guardian_id, uniqueness: { scope: :minor_id, message: "already has a guardianship with this minor" }
+  # Scoped to LIVE rows, matching the partial index added in 20260912120000.
+  # A revoked guardianship is history, not an occupied slot: without this a
+  # parent who withdrew consent could never be invited again, and the teen was
+  # told the invite "didn't go through".
+  validates :guardian_id,
+            uniqueness: {
+              scope: :minor_id,
+              conditions: -> { where.not(status: :revoked) },
+              message: "already has a guardianship with this minor"
+            },
+            unless: :revoked?
   validates :invite_token, uniqueness: true, allow_nil: true
 
   validate :guardian_must_be_adult
@@ -213,6 +253,10 @@ class Guardianship < ApplicationRecord
 
     if guardian.is_minor? == true
       blockers << "A guardian must be 18 or older."
+    end
+
+    if self.class.signed_up_as_a_young_founder?(guardian)
+      blockers << YOUNG_FOUNDER_AS_GUARDIAN
     end
 
     if guardian_id == minor_id
@@ -579,6 +623,10 @@ class Guardianship < ApplicationRecord
 
     if guardian.is_minor? == true
       errors.add(:guardian, "must be 18 or older")
+    end
+
+    if self.class.signed_up_as_a_young_founder?(guardian)
+      errors.add(:guardian, "is signed up as a young founder, so they can't be a guardian")
     end
   end
 

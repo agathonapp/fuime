@@ -68,6 +68,14 @@ module Fuime
       "fuime_rev_#{intent_id}_"
     end
 
+    # One kind of reversal of one payment. Needed because Stripe reports refunds
+    # CUMULATIVELY (`charge.amount_refunded` is the running total, not this
+    # refund) while a dispute amount stands alone, so "how much of what Stripe is
+    # now reporting have we already booked?" can only be answered per kind.
+    def self.reversal_kind_prefix(intent_id, kind)
+      "#{reversal_key_prefix(intent_id)}#{kind}_"
+    end
+
     def self.reversal_key(intent_id:, kind:, object_id:, amount_cents:)
       "#{reversal_key_prefix(intent_id)}#{kind}_#{object_id}_#{amount_cents}"
     end
@@ -152,9 +160,11 @@ module Fuime
       ::RawPendingDonationTransaction.find_by(donation_transaction_id: key)
     end
 
-    # Total already reversed against a payment, as a positive number.
-    def self.reversed_cents_for(intent_id)
-      sum_by_prefix(reversal_key_prefix(intent_id)).abs
+    # Total already reversed against a payment, as a positive number. With `kind:`,
+    # only that kind — see `reversal_kind_prefix` for why the distinction matters.
+    def self.reversed_cents_for(intent_id, kind: nil)
+      prefix = kind ? reversal_kind_prefix(intent_id, kind) : reversal_key_prefix(intent_id)
+      sum_by_prefix(prefix).abs
     end
 
     # Total fee already given back for a payment, as a positive number.

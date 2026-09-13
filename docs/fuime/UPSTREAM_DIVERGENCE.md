@@ -6031,3 +6031,304 @@ RSpec shard 8/8 on PR #106: four Playground Mode examples called `create_session
 | Change | Why | Files |
 |---|---|---|
 | `include SessionSupport` in Playground Mode context | undefined `create_session` | `spec/controllers/fuime/checkouts_controller_spec.rb` |
+
+## 2026-09-12 — Platform review: five P0s in money, authorization and the payouts page
+
+Found by a multi-agent read of the whole platform (money pipeline, authorization, legal
+copy, UI/flow) against `main` at `67f4d90a6`. Each was confirmed against the code and is
+pinned by a spec that fails without the fix.
+
+1. **`app/controllers/fuime/payouts_controller.rb`** — `@pending_request` used the bare
+   `awaiting_approval` scope, so a weekly batch line (state `pending`, `requested_by: nil`
+   by design) became "the pending request" and the view dereferenced `requested_by.name`.
+   Every Wednesday from batch generation until admin approval, `/:slug/payouts` 500'd for
+   the operator **and** their guardian — the one page the payables framing points at. Now
+   `.person_initiated`, the scope `PayoutRequest` already documented for exactly this.
+   Spec: `spec/requests/fuime_payouts_page_during_batch_spec.rb`.
+
+2. **`db/migrate/20260912090000_add_unique_index_on_fuime_ledger_keys.rb`** — the ledger key
+   `raw_pending_donation_transactions.donation_transaction_id` had **no index at all**, and
+   idempotency was a `find_row` check standing outside the transaction that inserts. Stripe
+   sends `checkout.session.completed` and `payment_intent.succeeded` for one sale
+   milliseconds apart, both keyed to the PaymentIntent, and production Puma serves them on
+   different threads — so one sale (and its 7% fee) could post twice, overstating what Fuime
+   owes and paying the operator for a sale that happened once. Adds a partial unique index
+   over Fuime's own `fuime_%` key space only (upstream HCB donation rows keep their existing
+   behaviour, Rule 3), plus a `varchar_pattern_ops` index for the `LIKE 'fuime_…%'` prefix
+   scans behind `PayablesLedger` and `ConnectSettlementSweep`.
+   `Fuime::PaymentWebhookHandler#already_recorded` turns the loser's violation back into the
+   winner's row, and both posting transactions are now `requires_new: true` so the rescue
+   works when something wraps them.
+
+3. **`app/services/fuime/payment_webhook_handler.rb`** — `charge.amount_refunded` is Stripe's
+   **cumulative** total, and it was booked as if it were this refund. A second $30 refund on a
+   $100 sale arrived as 70 and posted -$60 on top of the first -$40: **$100 taken off a
+   teenager's earnings for $70 actually refunded.** The existing specs could not see it
+   because both ended on a *full* refund, which the outstanding cap rescues either way. Now
+   subtracts what this kind has already booked (`VentureLedger.reversed_cents_for(id, kind:)`),
+   with the outstanding balance still capping the result, and without netting a chargeback
+   against an earlier refund.
+
+4. **`app/models/guardianship.rb`** — every guardian age check asked `guardian.is_minor?`,
+   which reads a birthday; signup stopped collecting birthdays on 2026-08-20, so the check
+   was true only of a population that no longer exists. Teen A could name classmate B as
+   guardian, B ticks the 18+ box, `attest_adult_18_plus!` overwrites B's own minor
+   attestation — B's venture then needs no guardian either, and A has cleared the L2 payout
+   gate. Two founders at one cohort event, about a minute. Now refused by
+   `Guardianship.signed_up_as_a_young_founder?` (13+ attested **and** has a venture or is
+   somebody's ward) in both the validation and `structural_activation_blockers`, so the
+   invite, the create and the accept form are all closed. The ordinary parent path — an
+   account that only ever ticked 13+ at signup — still works, and is specced.
+
+5. **`app/policies/event_policy.rb`** — five school branches read "the responsible party is a
+   manager (the guide or business office)" and called `manager?`, which resolves through
+   `Event#ancestor_ids` — a list that begins `[id]`. Every founder is a manager of their own
+   venture (`activate_event!` invites with `role: :manager`; the column defaults to manager),
+   so on a School-plan venture **the student passed every check written for the school**:
+   connect the payout destination, decide the payout, settle it, grant themselves award
+   money, and issue a card whose liability the school carries. The guardian requirement
+   cannot catch it — `payout_setup_blockers` deliberately skips the guardian on an
+   institutionally sponsored venture, because the school branch *replaces* the L2 gate.
+   New `EventPolicy#school_manager?` reads authority from the institution node and above,
+   never from what hangs below it (the school's own pages still work, which a first attempt
+   broke). `spec/support/school_tree.rb#create_student` was `:member` — a shape no real path
+   produces — which is why the suite could not see any of this; it is now `:manager`, and
+   that change alone surfaced the cards instance.
+
+Files: `app/controllers/fuime/payouts_controller.rb`, `app/services/fuime/payment_webhook_handler.rb`,
+`app/services/fuime/venture_ledger.rb`, `app/models/guardianship.rb`, `app/policies/event_policy.rb`,
+`db/migrate/20260912090000_*`, `db/schema.rb`, `spec/support/school_tree.rb`, and four specs.
+Nothing in the ledger engine was touched (Rule 3); no migration was edited (Rule 5).
+
+## 2026-09-12 — Platform review: login-code brute force, a dead rate limit, and a contract that understated the fee
+
+Same review as the entry above; this is the security and legal-copy half.
+
+6. **`app/services/login_code_service/request.rb` + `config/initializers/rack_attack.rb`** —
+   login is a six-digit emailed code, and two things made it weak at once.
+   `LoginCode.active` is every unused code from the last fifteen minutes, so each request
+   **added** a working key rather than replacing one (initiation is throttled at 5/20s per
+   IP, so ~225 codes could be live against one account); and nothing throttled
+   `POST /logins/:id/complete`, which re-renders the form on a wrong code — the only limiter
+   was the generic 1000-per-5-minutes anti-scraper ceiling. Inherited from upstream, but
+   these accounts now hold a venture's ledger and, for a guardian, the payout destination.
+   Now: minting a code supersedes the account's live ones (one key, not 225), and two new
+   throttles cover the verify path — 10 per 15 minutes per Login, 30 per 15 minutes per IP.
+   No migration. Specs in `spec/services/login_code_service/request_spec.rb` and
+   `spec/initializers/rack_attack_spec.rb`.
+
+7. **`config/initializers/rack_attack.rb`** — the guardian-invite throttle matched
+   `"/guardianships"`. The route is `/guardian` (`resources :guardianships, path: "guardian"`),
+   so the matcher never returned a key and the rule **never counted a single request** since
+   it was written. Each unthrottled POST creates a `User` for any typed address and sends
+   invite mail that names a real minor and their venture, plus day-3 and day-6 reminders.
+   Same class of bug PR #85 fixed for the checkout throttle; now matched the same way,
+   suffix and trailing slash included, and pinned by a spec so a future `path:` change
+   cannot silently disarm it again.
+
+8. **`app/views/static_pages/terms.html.erb`, `app/views/learn/lessons/_what_fuime_takes.html.erb`** —
+   both rendered `Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`, which derives from
+   `Event::Plan::FALLBACK_REVENUE_FEE` = **5%** — a fallback for a venture with no plan
+   resolved, and a rate no real venture is charged. Every venture is created on
+   `Event::Plan::Free` at **7%**. So Fuime's binding Terms of Service, and the one lesson
+   page that is about Fuime, understated Fuime's own fee by two points while live money
+   moved. The FAQ was corrected for exactly this in PR #94 and these two were missed.
+   Both now read the Free rate (the lesson prefers the venture's own rate when it has one),
+   and `spec/fuime_marketing_pricing_spec.rb` pins all three surfaces together, including a
+   check that no customer-facing page renders the fallback constant.
+
+Still open from this half, not fixed here: the Privacy Policy has not had the
+merchant-of-record pass (it describes a date-of-birth age screen that no longer exists and
+omits Plaid and Help Scout from the processor list); `site/pricing.html` says nothing is
+billed during the private beta while the 7% is being deducted, and claims there is no floor
+under the fee when there is a 50c per-sale minimum; and the Terms carry no auto-renewal or
+cancellation clause for the $19.99/mo family plan. Those are copy decisions for counsel and
+the founder rather than code.
+
+## 2026-09-12 — Platform review: what a brand-new founder actually sees
+
+From walking the real signup as a new teen (screenshots and a step log, 14 screens from
+"start signup" to "a draft offer saved"). Four things the flow said that were not true.
+
+9.  **`app/views/fuime/_selling_blockers.html.erb`** — the partial's usage comment was
+    written as `Usage: <%%= render … %> %>`. An ERB comment ends at the FIRST `%>`, so the
+    block closed early and the trailing `%>` was **printed to the page as literal text** —
+    on the offer wizard's review step, the last screen a teenager reads before publishing.
+    The same partial also ignored the `title:` local every call site passed, so a wizard
+    asking "Ready to publish?" was answered "This business can't take payments yet" — a
+    much bigger statement than the caller meant, on a venture whose only problem was that
+    the review had not run yet. Both fixed; the usage line is no longer ERB.
+
+10. **`app/views/event/applications/review.html.erb`** — HCB's out-of-office callout told a
+    founder who opened the last page before Submit on a Saturday: "Fuime is closed…
+    Applications will be reviewed within 2 business days." Submit then runs
+    `Fuime::FounderAdmission`, which approves and activates on the spot, and the next screen
+    says "You're in." Nobody reviews an application any more — the human review Fuime has is
+    operator vetting before an offer can be **published**. It also discouraged exactly the
+    founder we want: a teenager at a weekend event, which is when Founders Weekend runs.
+    Removed from this page (kept wherever a human really is the next step).
+
+11. **`app/controllers/event/applications_controller.rb`** — when admission is refused
+    (`activation_blockers`, most often a second venture on Free) the redirect carried **no
+    flash at all**. The founder landed on an inherited "under review" status page, waiting
+    on a review that will never run, for a reason nobody had told them. Now says which
+    blocker stopped it, or names support when the service failed.
+
+12. **`app/javascript/components/command_bar/actions.js`** — the first row of the ⌘K palette
+    read "Search HCB" for every signed-in user. Now "Search Fuime". The remaining `HCB`
+    names in that file are admin-only and refer to `HcbCode`, a model name Rule 6 keeps.
+
+Specs: `spec/requests/fuime_application_submit_truth_spec.rb` (the review page carries no
+closed-for-the-weekend promise on any day, and a blocked submit explains itself).
+
+Seen in the same walk and NOT fixed here, for whoever picks this up next: the code-entry
+screen is headed "Sign in to Fuime" during a brand-new signup; `POST /applications` takes
+~9.5s with the button disabled; the offer price step never mentions the 7%; its "Per what?"
+placeholder is hard-coded "per lawn"; the venture page still offers HCB's "Schedule an
+onboarding call"; the HelpScout Beacon loads (and 404s) on every signed-in page, which is a
+third-party call from a minors' product worth an L7 decision; and the venture home runs
+78–84 SQL queries in 2–4.7s.
+
+13. **`app/views/fuime/storefronts/show.html.erb`** — the "Public Ledger" card was rendered
+    unconditionally while `publishes_ledger` defaults to **false**. So every teen storefront
+    told the public "This business's finances are transparent. You can view their complete
+    transaction history", about a child who had published nothing, and the "View full
+    ledger" link went to a page whose policy then bounced the customer to a login screen —
+    a dead link on the one public page Fuime ever shows a buyer. Now gated on
+    `publishes_ledger?`. Spec: `spec/requests/fuime_storefront_public_ledger_spec.rb`.
+
+14. **`app/views/fuime/offers/wizard/review.html.erb`, `app/views/fuime/offers/index.html.erb`** —
+    Publish was the big blue primary button sitting directly under a callout explaining that
+    publishing was impossible, and pressing it re-rendered the page with a red error. For a
+    new founder that is always the case, because the review has not run. On the wizard,
+    "Save draft" (the action that works) is now the primary and Publish is not offered while
+    blocked; on the offers list the Publish button is disabled and carries the blocker as its
+    tooltip, rather than hidden — a founder coming back after the review needs to see where
+    it will appear.
+
+Checked and NOT a bug, recorded so nobody "fixes" it: the arch mark on the storefront and
+the first-run screens is Fuime's own logo (`fuime-logo.png`), not Hack Club's. Hack Club's
+mark is a red wordmark and appears nowhere in the product.
+
+15. **`app/views/fuime/offers/wizard/price.html.erb`, `app/helpers/fuime_helper.rb`** — the
+    screen where a founder chooses their price never mentioned what Fuime keeps; the
+    take-rate was first stated two steps later, in the sale terms on the review page, after
+    the number was set. It now says it here, read from the venture's own plan. The "Per
+    what?" placeholder was also hard-coded "per lawn", so a dog walker, a tutor and an
+    illustrator were each shown a lawn-care example; `unit_label_placeholder_for` matches
+    the business category instead. The price box itself still has no example number — that
+    rule is unchanged, because a number there would read as a rate Fuime suggested.
+
+16. **`app/views/events/show.html.erb`** — the empty-state gate that already covered the
+    Insights charts missed the `balance_transactions` frame above them: two cards reserving
+    422px of placeholder each, so a brand-new venture's home on a phone was two enormous
+    spinner boxes for a ledger with nothing in it, sitting above the one sentence that
+    matters. `empty:hidden` only helps after a lazy frame has loaded, which does not happen
+    until the founder scrolls to it. Now behind the same `@has_ledger_history` EXISTS pair,
+    so it costs no extra query.
+
+Flagged for a product decision rather than changed: the venture home shows HCB's "Schedule
+an onboarding call" card to every venture by default, and the button emails ops and tells
+the founder "a member of our team will reach out to schedule a call soon". At a fifty-teen
+event that is a promise nobody can staff, and it occupies the slot above the founder's
+actual next step. `Event#onboarding_scheduling_link` returns nil, so there is no self-serve
+link behind it either. Removing it is Rushil's call, not a review's.
+
+17. **`app/controllers/fuime/offers_controller.rb`** — `offer_params` merged
+    `price_cents: price_cents_param` unconditionally, and `price_cents_param` returns nil
+    when the form carried no price. The "Change this link" form on the offers page submits
+    the slug and nothing else, so every save wrote nil over a real price and was refused
+    with "Price cents has to be an amount you've decided on" — a complaint about a field the
+    operator was not editing and could not see on that form. Renaming a payment link, the
+    one affordance for tidying the URL a founder pastes into an Instagram bio, could never
+    succeed. Now the price is only set when the form carried one; absent and blank stay
+    different, so a cleared price box still gets the model's message.
+    Spec: `spec/requests/fuime_offer_link_rename_spec.rb`.
+
+18. **`app/views/fuime/billing/show.html.erb`, `app/controllers/fuime/billing_controller.rb`** —
+    Stripe returns a payer to `?subscribed=1` immediately, while
+    `customer.subscription.created` writes the record a beat later. In that window the page
+    fell through to the Free-plan branch and rendered the green "Welcome to the family plan"
+    callout **directly above a live "Upgrade — $19.99/mo" button** — and the callout is
+    exactly what invites a second press. A second press opens a second Checkout: the parent
+    pays twice. Every other double-subscription route was already guarded (`#subscribe`
+    sends an existing `stripe_backed` record to the portal); this was the one window with no
+    record to find. Now a "Confirming your payment" state with no Upgrade button, and the
+    ordinary page returns on any later visit so a webhook that never arrives does not lock a
+    family out of buying.
+
+19. **`db/migrate/20260912120000_*`, `app/models/guardianship.rb`,
+    `app/services/fuime/guardian_invite_service.rb`** — the unique index on
+    `(guardian_id, minor_id)` had no status scope, and the pair is the natural key for "this
+    parent, this teen". So once a guardianship was revoked — which the accept page
+    explicitly invites ("You can withdraw your consent at any time"), and which an ops
+    mis-click also produces — **that parent could never be invited again.** The teen was
+    told the invite "didn't go through", the one thing it had not done, and the only way
+    back was a different email address for the same human being.
+    `GuardianInviteService` compounded it by returning the revoked row as "already exists",
+    so a re-invite silently sent nothing. Now a partial unique index over live rows only:
+    two live guardianships for one pair are still refused, and the revoked row is **kept**
+    rather than reused, because L4 requires the consent record and a withdrawal is part of
+    it. Overwriting it to make room would destroy the evidence a dispute would turn on.
+
+20. **`app/services/fuime/founder_progress.rb`** — `vetted?` is
+    `operator_vetting_approved?`, so of the four vetting states, **rejected and suspended
+    both fell through to "We'll do a quick review before you go live."** A founder whose
+    venture had been reviewed and refused, or frozen after approval, was told to wait for
+    something that had already happened and gone against them — so they waited, and nobody
+    was coming. Both states now say what happened and point at a person.
+    `operator_vetting_notes` is deliberately not quoted: it is written for admins and can
+    say things no teenager should read without a human in between.
+
+21. **`app/helpers/events_helper.rb`, `app/views/guardianships/index.html.erb`** — **the
+    guardian's one required job had no route to it.** `EventPolicy#connect_payout_method?`
+    resolves to `guardian_reader?` on a family venture: the guardian is the only person who
+    may connect a bank account, which is correct under L2. But both money nav entries were
+    gated on `policy(...) && organizer_signed_in?`, and `organizer_signed_in?` needs an
+    OrganizerPosition — which accepting a guardianship deliberately never creates. So the
+    venture nav hid both items from them, `/guardian` listed Ledger and Transactions and
+    nothing else, the teen's payouts page says "your parent can connect the bank account"
+    with no URL to forward, and the acceptance email links only to the dashboard.
+    The consequence is not a missing link: every venture sits on the payout batch skip list,
+    "No payout destination set up yet", indefinitely, and nobody is ever paid. Found
+    independently by the payouts reviewer and the guardian reviewer.
+    Masked today only because `PlaidLinkService.collectable?` is false while Plaid is in
+    sandbox alongside live Stripe, so the item is hidden from everyone — the day Plaid flips
+    to production (a no-code-change step per `render.yaml`) this becomes the thing that stops
+    the money. The nav now trusts the policy alone, which already grants the guardian and
+    still refuses a stranger, and the guardian's own overview carries both links.
+    Spec: `spec/requests/fuime_guardian_can_reach_payouts_spec.rb`.
+
+22. **`app/services/flavor_text_service.rb`** — the rotating tagline beside the signed-in
+    home page heading. **About twenty live entries used L5's forbidden vocabulary**: "The
+    bank that smiles back!", "*technically not a bank*", "🐨 Koalaty banking", "no hack, only
+    bank", "all your bank are belong to us", "The only bank brave enough to say…", "U want
+    sum bank?", "bank is such a weird word… bank bank bank", "I was gonna tell a Bank joke",
+    "If money talks, why do we need bank tellers?", plus a `%w[… finance banking].sample`.
+    Rendered to every signed-in user — teenagers, and the parents who are the legal account
+    holders — on the most-visited page in the product. The existing L5 sweep covers mailers
+    and helpers; this service is neither, so nothing caught it. Found independently by three
+    UI reviewers.
+    **Three further entries leaked a minor's PII to Hack Club**: links to
+    `hack.af/hcb-stickers` with the signed-in user's name, email and venture name prefilled
+    in the query string (Prime Directive 4 and L7). The file's own header says Hack Club
+    links were stripped for exactly that reason — these survived because they sit inside
+    conditional splats rather than being plain strings. Also removed: "aka Hack Bank",
+    "The Hack Foundation dba The Dolla Store", a promo-code comment pointing at
+    hack.af, and "hack on hcb" as the label on Fuime's own repository link.
+    25 entries removed in total. `spec/services/flavor_text_service_spec.rb` sweeps every
+    list across 40 seeds for forbidden vocabulary, Hack Club references, user data in
+    outbound links, and any host not on a reviewed allowlist — so the lists stay editable
+    without this recurring.
+
+23. **`db/migrate/20260912090000_*`** — the unique ledger index now refuses to run if Fuime
+    keys are already duplicated, instead of letting `add_index … concurrently` fail and
+    leave an INVALID index behind. A duplicate is exactly the bug the index prevents, and
+    the double-post window has been open since the merchant-of-record cutover, so
+    production may well contain one — that would otherwise have turned a known data problem
+    into a broken deploy plus a second thing to clean up. The error names the affected keys
+    and says what reconciliation is needed (which row is the real sale, whether a payout
+    batch already paid the inflated amount) rather than deleting anything: that is a
+    judgement call about real money. Verified both ways — clean data passes, a planted
+    duplicate refuses and names the key.
+

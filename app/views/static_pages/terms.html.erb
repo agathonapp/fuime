@@ -101,11 +101,23 @@
 </p>
 
 <h2>7. Fees</h2>
+<%# Fuime: read from Event::Plan::Free, the plan every new venture is created on
+    (Event#default_plan), NOT from FUIME_PLATFORM_FEE_PERCENT.
+
+    That constant derives from Event::Plan::FALLBACK_REVENUE_FEE, which is 5% —
+    a fallback for a venture with no plan resolved, and a number no real venture
+    is charged. So this clause, in the binding contract, understated Fuime's own
+    fee by two points on live money. The FAQ was corrected for this in PR #94;
+    the Terms and the /learn lesson were not, which is the ordinary shape of a
+    copy fix that lands in one place. spec/fuime_marketing_pricing_spec.rb now
+    pins all three. %>
 <p>
   When Fuime processes a payment for a business, it keeps
-  <%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>% of that payment
-  as a platform fee, shown as a separate line on the ledger. If we change the
-  fee, we will tell you before it applies to you.
+  <%= (Event::Plan::Free::REVENUE_FEE * 100).round %>% of that payment
+  as a platform fee, shown as a separate line on the ledger. A school programme
+  or a venture we have waived can be lower, and the rate for a business is shown
+  on its storefront and on every sale in its ledger. If we change the fee, we
+  will tell you before it applies to you.
 </p>
 
 <%# Fuime: the sale-and-refunds section, added 2026-08-19.

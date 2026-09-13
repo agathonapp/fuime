@@ -8,12 +8,26 @@
     Renders nothing when there is nothing wrong, so it is safe to drop at the top
     of any venture page.
 
-    Usage: <%%= render "fuime/selling_blockers", event: @event %> %>
+    Usage: render "fuime/selling_blockers", event: @event
+    Optional: blockers: (defaults to event.offer_publish_blockers), title:
+
+    The usage line above is deliberately NOT written as ERB. An `<%%=` escape
+    still carries a `%>`, and a `<%#` comment ends at the FIRST `%>` it meets —
+    so the remainder of this block closed early and the trailing `%>` was printed
+    to the page, as literal text, above the callout. It was visible on the offer
+    wizard's review step: the last screen a teenager reads before publishing. %>
 
 <% blockers = local_assigns.fetch(:blockers) { event.offer_publish_blockers } %>
 
+<%# The caller's title, when there is one. Every call site passed `title:` and
+    this partial ignored it, so the offer wizard asked "Ready to publish?" and
+    was answered "This business can't take payments yet" — a bigger, more
+    alarming statement than the one the caller meant, on a venture whose only
+    problem was that the review had not run yet. %>
+<% callout_title = local_assigns.fetch(:title, "This business can't take payments yet") %>
+
 <% if blockers.any? %>
-  <%= render "application/callout", type: "warning", title: "This business can't take payments yet" do %>
+  <%= render "application/callout", type: "warning", title: callout_title do %>
     <ul class="mb-2 pl-4">
       <% blockers.each do |blocker| %>
         <li><%= blocker %></li>

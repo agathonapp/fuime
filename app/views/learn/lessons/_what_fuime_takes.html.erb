@@ -12,9 +12,13 @@
 
 <h2 class="text-lg font-bold mt-2 mb-0">The fee</h2>
 
+<%# The figure this page warns about, one line above, was the figure this page
+    printed: FUIME_PLATFORM_FEE_PERCENT is Event::Plan::FALLBACK_REVENUE_FEE — 5%,
+    a fallback no real venture is charged. Reading the venture's own rate when we
+    have one, and the Free rate otherwise, is what the comment above asked for. %>
 <p>
   Fuime keeps
-  <strong><%= Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT %>%</strong>
+  <strong><%= number_to_percentage((venture&.revenue_fee || Event::Plan::Free::REVENUE_FEE) * 100, precision: 0) %></strong>
   of what a customer pays. That is the standard rate. A school programme or a
   waived venture can be lower, and the figure for your own business is shown on
   your storefront and on every sale in your ledger.

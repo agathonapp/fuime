@@ -80,9 +80,25 @@
               <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
                 <div>
                   <%= link_to event.name, event_path(event), class: "font-bold" %>
+                  <%# Fuime: the guardian's own money links, which were missing.
+                      This page listed Ledger and Transactions — both read-only —
+                      while the one thing only a guardian may do, connecting the
+                      payout destination (EventPolicy#connect_payout_method? →
+                      guardian_reader?), appeared nowhere in the product. The
+                      teen's payouts page tells them "your parent can connect the
+                      bank account" with no URL to forward, and the acceptance
+                      email links only to the dashboard. Gated on the same
+                      policies the pages authorize on, so nothing is offered that
+                      would then be refused. %>
                   <p class="muted text-sm mb-0">
                     <%= link_to "Ledger", event_path(event) %> ·
                     <%= link_to "Transactions", event_transactions_path(event) %>
+                    <% if policy(event).payouts? %>
+                      · <%= link_to "Payouts", fuime_payouts_path(event_slug: event.slug) %>
+                    <% end %>
+                    <% if ::Fuime::Features.merchant_of_record? && policy(event).payout_method? %>
+                      · <%= link_to "Payout account", fuime_payout_method_path(event_slug: event.slug) %>
+                    <% end %>
                   </p>
                 </div>
                 <div class="text-right">

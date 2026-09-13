@@ -41,4 +41,48 @@ RSpec.describe "Fuime pricing truth (G3)" do
       expect(body).to include("7%"), "#{rel} is missing the 7% take-rate"
     end
   end
+
+  # ── The contract itself said 5% ───────────────────────────────────────────
+  #
+  # Both of these rendered `Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`,
+  # which derives from `Event::Plan::FALLBACK_REVENUE_FEE` — 5%, the fallback for
+  # a venture with no plan resolved, and a rate no real venture is charged. Every
+  # venture is created on Free, at 7%. So Fuime's binding Terms of Service, and
+  # the one lesson page that is about Fuime, both understated Fuime's own fee by
+  # two points while live money moved.
+  #
+  # The FAQ was corrected for exactly this in PR #94 and these two were missed,
+  # which is the ordinary shape of a copy fix that lands in one place. That is
+  # what this example is for: all three surfaces, pinned together.
+  describe "the fee stated in the Terms and the /learn lesson", type: :request do
+    it "is the rate a real venture pays, not the 5% fallback" do
+      free_rate = "#{(Event::Plan::Free::REVENUE_FEE * 100).round}%"
+
+      get "/terms"
+      expect(response.body).to include(free_rate)
+      expect(response.body).not_to match(/keeps\s*5%/)
+
+      get "/learn/what-fuime-takes"
+      if response.status == 200
+        expect(response.body).to include(free_rate)
+        expect(response.body).not_to match(/keeps\s*<strong>5%/)
+      end
+    end
+
+    it "never renders the fallback constant as a customer-facing rate" do
+      expect(Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT).to eq(5)
+      expect((Event::Plan::Free::REVENUE_FEE * 100).round).to eq(7)
+
+      %w[
+        app/views/static_pages/terms.html.erb
+        app/views/static_pages/faq.html.erb
+        app/views/learn/lessons/_what_fuime_takes.html.erb
+      ].each do |rel|
+        body = File.read(Rails.root.join(rel))
+        rendered = body.gsub(/<%#.*?%>/m, "") # comments may name the constant
+        expect(rendered).not_to include("FUIME_PLATFORM_FEE_PERCENT"),
+                                "#{rel} states the 5% fallback as the fee"
+      end
+    end
+  end
 end

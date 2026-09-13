@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1058,7 +1058,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.index ["fuime_cohort_id"], name: "index_event_applications_on_fuime_cohort_id"
     t.index ["service_type"], name: "index_event_applications_on_service_type", where: "(service_type IS NOT NULL)"
     t.index ["user_id"], name: "index_event_applications_on_user_id"
-    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying::text, 'have_idea'::character varying::text, 'from_template'::character varying::text]))", name: "event_applications_starting_point_known"
+    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[]))", name: "event_applications_starting_point_known"
   end
 
   create_table "event_configurations", force: :cascade do |t|
@@ -1345,12 +1345,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.index ["event_id"], name: "index_fuime_offers_on_event_id"
     t.index ["fuime_api_key_id"], name: "index_fuime_offers_on_fuime_api_key_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
-    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text])", name: "fuime_offers_state_known"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
   end
 
   add_check_constraint "fuime_offers", "created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL", name: "fuime_offers_api_offers_name_their_key", validate: false
-  add_check_constraint "fuime_offers", "created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])", name: "fuime_offers_created_via_known", validate: false
+  add_check_constraint "fuime_offers", "created_via::text = ANY (ARRAY['operator'::character varying, 'api'::character varying]::text[])", name: "fuime_offers_created_via_known", validate: false
 
   create_table "fuime_payout_batches", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
@@ -1375,7 +1375,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
     t.index ["paid_by_id"], name: "index_fuime_payout_batches_on_paid_by_id"
     t.index ["period_end"], name: "index_live_fuime_payout_batches_on_period_end", unique: true, where: "((aasm_state)::text <> 'cancelled'::text)"
-    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'approved'::character varying::text, 'paid'::character varying::text, 'cancelled'::character varying::text])", name: "fuime_payout_batches_state_known"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[])", name: "fuime_payout_batches_state_known"
     t.check_constraint "period_end >= period_start", name: "fuime_payout_batches_period_ordered"
   end
 
@@ -1399,9 +1399,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.index ["event_id"], name: "index_live_fuime_payout_methods_on_event", unique: true, where: "((aasm_state)::text <> 'removed'::text)"
   end
 
-  add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying::text, 'verified'::character varying::text, 'failed'::character varying::text, 'removed'::character varying::text])", name: "fuime_payout_methods_state_known", validate: false
+  add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'failed'::character varying, 'removed'::character varying]::text[])", name: "fuime_payout_methods_state_known", validate: false
   add_check_constraint "fuime_payout_methods", "last4 IS NULL OR length(last4::text) <= 4", name: "fuime_payout_methods_last4_is_last4", validate: false
-  add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying::text, 'stripe'::character varying::text, 'manual'::character varying::text])", name: "fuime_payout_methods_provider_known", validate: false
+  add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])", name: "fuime_payout_methods_provider_known", validate: false
 
   create_table "fuime_subscriptions", force: :cascade do |t|
     t.bigint "billed_to_id", null: false
@@ -1558,6 +1558,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.string "agreement_version"
     t.datetime "created_at", null: false
     t.bigint "guardian_id", null: false
+    t.datetime "invite_day3_reminded_at"
+    t.datetime "invite_day6_reminded_at"
     t.datetime "invite_sent_at"
     t.string "invite_token"
     t.bigint "minor_id", null: false
@@ -1565,9 +1567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.bigint "revoked_by_id"
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
-    t.datetime "invite_day3_reminded_at"
-    t.datetime "invite_day6_reminded_at"
-    t.index ["guardian_id", "minor_id"], name: "index_guardianships_on_guardian_id_and_minor_id", unique: true
+    t.index ["guardian_id", "minor_id"], name: "index_guardianships_on_live_guardian_and_minor", unique: true, where: "(status <> 2)"
     t.index ["guardian_id"], name: "index_guardianships_on_guardian_id"
     t.index ["invite_token"], name: "index_guardianships_on_invite_token", unique: true
     t.index ["minor_id"], name: "index_guardianships_on_minor_id"
@@ -2251,7 +2251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
     t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
-    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying::text, 'personal_transfer'::character varying::text, 'fuime_vendor_payment'::character varying::text])", name: "payout_requests_destination_known"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying, 'fuime_vendor_payment'::character varying]::text[])", name: "payout_requests_destination_known"
     t.check_constraint "reserve_held_cents >= 0", name: "payout_requests_reserve_not_negative"
   end
 
@@ -2406,6 +2406,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
     t.string "donation_transaction_id"
     t.string "state"
     t.datetime "updated_at", null: false
+    t.index ["donation_transaction_id"], name: "index_rpdt_on_donation_transaction_id_pattern", opclass: :varchar_pattern_ops
+    t.index ["donation_transaction_id"], name: "index_rpdt_on_fuime_donation_transaction_id", unique: true, where: "((donation_transaction_id)::text ~~ 'fuime\\_%'::text)"
   end
 
   create_table "raw_pending_fee_reimbursement_transactions", force: :cascade do |t|
@@ -2737,7 +2739,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_180000) do
 
   add_check_constraint "school_fundings", "amount_cents > 0", name: "school_fundings_amount_positive", validate: false
   add_check_constraint "school_fundings", "status::text <> 'succeeded'::text OR stripe_topup_id IS NOT NULL AND succeeded_at IS NOT NULL", name: "school_fundings_succeeded_is_evidenced", validate: false
-  add_check_constraint "school_fundings", "status::text = ANY (ARRAY['pending'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text, 'canceled'::character varying::text])", name: "school_fundings_status_known", validate: false
+  add_check_constraint "school_fundings", "status::text = ANY (ARRAY['pending'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])", name: "school_fundings_status_known", validate: false
 
   create_table "sponsors", force: :cascade do |t|
     t.text "address_city"

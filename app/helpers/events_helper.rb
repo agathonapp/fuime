@@ -151,7 +151,16 @@ module EventsHelper
       icon: "cash",
       data: { tour_step: "payouts" },
       symbol: :payouts,
-      available_proc: ->(event) { policy(event).payouts? && organizer_signed_in? }
+      # Fuime: the policy alone, NOT `&& organizer_signed_in?`.
+      #
+      # `EventPolicy#payouts?` is `auditor_or_reader?`, and `reader?` includes
+      # `guardian_reader?` — so the policy already says a guardian may see this.
+      # `organizer_signed_in?` requires an OrganizerPosition, which a guardian
+      # never has (accepting a guardianship deliberately creates no position), so
+      # the extra clause hid the page from the one person the policy was written
+      # for. A stranger is still refused: `reader?` is false without a position
+      # or a guardianship. See "Payout account" below for why this mattered.
+      available_proc: ->(event) { policy(event).payouts? }
     },
     # Fuime: where the money goes — the merchant-of-record counterpart to
     # "Payments" above, and its exact complement.
@@ -175,10 +184,27 @@ module EventsHelper
       tooltip: "Where your money gets sent",
       icon: "bank-account",
       symbol: :payout_method,
+      # Fuime: the `organizer_signed_in?` clause here was a P0 in plain sight.
+      #
+      # `EventPolicy#connect_payout_method?` resolves to `guardian_reader?` on a
+      # family venture — the guardian is the ONLY person who may connect a bank,
+      # which is correct under L2. But this nav entry required an
+      # OrganizerPosition, which a guardian never has. So the single required
+      # action in the guardian's entire relationship with Fuime had no route to
+      # it: the teen's payouts page says "your parent can connect the bank
+      # account" with no link to forward, the acceptance email links only to the
+      # dashboard, and /guardian lists Ledger and Transactions and nothing else.
+      # Every venture would sit on the batch skip list, "No payout destination
+      # set up yet", indefinitely.
+      #
+      # Masked today only because PLAID_ENV is sandbox alongside live Stripe, so
+      # `collectable?` is false and the item is hidden from everyone. The moment
+      # Plaid flips to production — documented as a no-code-change step in
+      # render.yaml — this becomes the thing that stops anyone being paid.
       available_proc: lambda { |event|
         ::Fuime::Features.merchant_of_record? &&
           ::Fuime::PlaidLinkService.collectable? &&
-          policy(event).payout_method? && organizer_signed_in?
+          policy(event).payout_method?
       }
     },
     # Fuime: money the school put in ("$100 per A").

@@ -35,7 +35,12 @@ module Fuime
 
       # Idempotent: an invite (or an active guardianship) for this pair already
       # exists — re-sending on every submission edit would spam the parent.
-      existing = Guardianship.find_by(minor: @minor, guardian:)
+      #
+      # A REVOKED row is not that. It is a record of consent withdrawn, and
+      # returning it here meant a re-invite silently did nothing: no new invite,
+      # no new token, and a caller that reasonably read the returned object as
+      # success. Scoped to live rows so the same parent can be asked again.
+      existing = Guardianship.where(minor: @minor, guardian:).where.not(status: :revoked).first
       return existing if existing
 
       guardianship = Guardianship.create!(minor: @minor, guardian:)

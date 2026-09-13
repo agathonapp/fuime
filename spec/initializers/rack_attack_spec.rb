@@ -161,6 +161,69 @@ RSpec.describe Rack::Attack, type: :request do
     end
   end
 
+  # Fuime: the guardian-invite throttle spent its whole life matching a URL that
+  # does not exist.
+  #
+  # It was written as `req.path == "/guardianships"`, the controller name, while
+  # config/routes.rb declares `resources :guardianships, path: "guardian"`. The
+  # matcher never returned a key, so the rule never counted a request and invite
+  # mail — which creates a User for any typed address and enrols it in day-3 and
+  # day-6 reminders, each naming a real minor — had no limiter but the generic
+  # anti-scraper ceiling. Same class of bug PR #85 fixed for the checkout rule.
+  describe "fuime/guardian_invite/user" do
+    it "throttles POST to the real guardian-invite route" do
+      expect(discriminator("fuime/guardian_invite/user", "/guardian", session_token: "abc", method: "POST"))
+        .to eq("abc")
+    end
+
+    it "covers the format suffix Rails adds to every route" do
+      expect(discriminator("fuime/guardian_invite/user", "/guardian.json", session_token: "abc", method: "POST"))
+        .to eq("abc")
+    end
+
+    it "does not throttle reading the guardian pages, or accepting an invite" do
+      expect(discriminator("fuime/guardian_invite/user", "/guardian", session_token: "abc")).to be_nil
+      expect(discriminator("fuime/guardian_invite/user", "/guardian/new", session_token: "abc", method: "POST")).to be_nil
+      expect(discriminator("fuime/guardian_invite/user", "/guardian/sometoken", session_token: "abc", method: "POST")).to be_nil
+    end
+
+    it "keeps the 10-a-day cap" do
+      throttle = Rack::Attack.throttles.fetch("fuime/guardian_invite/user")
+      expect(throttle.limit).to eq(10)
+      expect(throttle.period).to eq(1.day)
+    end
+  end
+
+  # Fuime: guessing a login code had no limit of its own.
+  #
+  # Every other login rule throttles ASKING for a code. `POST /logins/:id/complete`
+  # re-rendered the form on a wrong code and left the Login usable, so the same
+  # URL took another guess immediately — bounded only by the 1000-per-five-minutes
+  # ceiling written as an anti-scraper measure. Paired with LoginCodeService
+  # superseding older codes, this is what makes six digits a lock rather than a
+  # speed bump.
+  describe "logins/verify" do
+    it "throttles POST to the code-verify endpoint, per Login and per IP" do
+      expect(discriminator("logins/verify/login", "/logins/QR3uLy/complete", method: "POST")).to eq("QR3uLy")
+      expect(discriminator("logins/verify/ip", "/logins/QR3uLy/complete", method: "POST")).to eq("203.0.113.7")
+    end
+
+    it "covers the format suffix" do
+      expect(discriminator("logins/verify/login", "/logins/QR3uLy/complete.json", method: "POST")).to eq("QR3uLy")
+    end
+
+    it "leaves GET and the factor-trigger paths to their own rules" do
+      expect(discriminator("logins/verify/login", "/logins/QR3uLy/complete")).to be_nil
+      expect(discriminator("logins/verify/login", "/logins/QR3uLy/email", method: "POST")).to be_nil
+    end
+
+    it "keeps ten guesses per quarter hour against one Login" do
+      throttle = Rack::Attack.throttles.fetch("logins/verify/login")
+      expect(throttle.limit).to eq(10)
+      expect(throttle.period).to eq(15.minutes)
+    end
+  end
+
   # Public, unauthenticated, and every request creates a Stripe PaymentIntent.
   # The matcher has to be the real storefront-pay route — a wrong path here is
   # an unthrottled card-testing hole, not a missed log line.

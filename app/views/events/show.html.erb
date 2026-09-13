@@ -209,13 +209,29 @@
 
   <%= render "events/public_message" %>
 
-  <%= turbo_frame_tag "balance_transactions", src: event_balance_transactions_path(@event), class: "flex-1 homepage-row empty:hidden flex gap-4 mb-4", loading: "lazy", target: "_top" do %>
-    <div class="card card--breakdown p-0 text-center flex-1 flex flex-col items-center justify-center min-h-[422px]">
-      <%= render partial: "application/loading_container" %>
-    </div>
-    <div class="card card--breakdown p-0 text-center flex-1 flex flex-col items-center justify-center min-h-[422px]" style="flex: 1">
-      <%= render partial: "application/loading_container" %>
-    </div>
+  <%# Fuime: the same gate the Insights charts already have, extended to the
+      frame that was missed.
+
+      This is the balance chart and the recent-transactions list: two cards, each
+      reserving 422px of placeholder, stacked at the top of the page. On a
+      brand-new venture they are the first thing under the fold on a phone —
+      two enormous spinner boxes for a ledger with nothing in it, sitting above
+      the one sentence that matters ("publish one so people can buy it").
+      `empty:hidden` only helps after the lazy frame has loaded, which does not
+      happen until the founder scrolls to it.
+
+      A balance chart with no money is not an empty state worth reserving a
+      screen for; `@has_ledger_history` is the same EXISTS pair the charts use,
+      so this costs no extra query. %>
+  <% if @has_ledger_history %>
+    <%= turbo_frame_tag "balance_transactions", src: event_balance_transactions_path(@event), class: "flex-1 homepage-row empty:hidden flex gap-4 mb-4", loading: "lazy", target: "_top" do %>
+      <div class="card card--breakdown p-0 text-center flex-1 flex flex-col items-center justify-center min-h-[422px]">
+        <%= render partial: "application/loading_container" %>
+      </div>
+      <div class="card card--breakdown p-0 text-center flex-1 flex flex-col items-center justify-center min-h-[422px]" style="flex: 1">
+        <%= render partial: "application/loading_container" %>
+      </div>
+    <% end %>
   <% end %>
 
   <%# Fuime: Tax Tracker card %>
