@@ -37,9 +37,9 @@ RSpec.describe OrganizerPositionInvite::Request, type: :model do
 
       expect {
         request_record.approve!
-      }.not_to change {
+      }.not_to(change do
         Raffle.where(user: requester, program: "first-worlds-2026-printer").count
-      }
+      end)
     end
 
     it "still approves the request" do

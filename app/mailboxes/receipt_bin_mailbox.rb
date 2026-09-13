@@ -39,11 +39,11 @@ class ReceiptBinMailbox < ApplicationMailbox
 
   # Fuime: the legacy Hack Club addresses stay so mail already in flight to them
   # still resolves, and Fuime's own `receipts@` is added once a domain is set.
-  RECEIPTS_ADDRESSES = ([
+  RECEIPTS_ADDRESSES = [
     "receipts@hackclub.com",
     "receipts@#{MailboxAddress::LEGACY_EMAIL_DOMAIN}",
     ("receipts@#{MailboxAddress::EMAIL_DOMAIN}" if MailboxAddress.configured?)
-  ].compact).freeze
+  ].compact.freeze
 
   def set_user
     if mail.recipients.any? { |addr| RECEIPTS_ADDRESSES.include?(addr) }
