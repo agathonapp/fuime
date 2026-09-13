@@ -2,6 +2,27 @@
 
 ## Handoff (most recent first)
 
+**2026-09-13 — Hack Club's face on every reachable page (PR #111).**
+Two screenshots (Documents "Nonprofit status", a Card grants tab for a blocked
+module) opened into 196 files. The worst items say neither "Hack Club" nor
+"HCB", so BRAND_STRINGS' grep recipe cannot find them: W-9s routed to
+`hr@hackclub.com`, the Stripe Payment Element telling payers they paid "HCB",
+receipt mailboxes on `hcb.gg`, an App Store redirect to their app, and raffle
+enrolment into Hack Club's FIRST Worlds giveaway from a live approve path.
+Vocabulary moved to "business"/"founder" (124 views) — Fuime's own surfaces
+already used those and zero "organization".
+**Next session: two loose ends.** (1) `EventTag` rows in PRODUCTION — the admin
+tags picker reads the DB, not the constant this PR changed; dev has 0 rows.
+(2) `User::SYSTEM_USER_EMAIL` is still `bank@hackclub.com`, a stored value
+needing a data migration, and it has no `full_name` so automated comments
+render as that address.
+**Testing trap, read before trusting a red suite:** the 7.7 GB `web` container
+OOM-dies mid-run under SimpleCov branch coverage, and it looks exactly like test
+failures — three "results" this session were really the container dying. Use
+`SKIP_COVERAGE=1` and run per-directory. Real baseline: 4 environmental failures
+(`wkhtmltopdf`, no `debian_13_arm64` binary).
+
+
 **2026-09-12 (latest) — Five things between a real teen and a working business.**
 
 Branch `fuime/platform-review-p0`, now merged with `origin/main` (#108 + #109) —
