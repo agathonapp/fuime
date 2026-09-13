@@ -6526,3 +6526,51 @@ unrelated reason. Use `create(:user, :minor, birthday: 16.years.ago.to_date)`.
 **Not done:** price-change history. Nothing records what an offer used to cost,
 so a dispute about a price a customer says they were quoted has no answer in the
 product. `has_paper_trail` is not on `Fuime::Offer`.
+
+## 2026-09-12 — Every refund left the operator "in arrears" by Fuime's own fee
+
+`#refund_platform_fee` gives back Fuime's cut in proportion to what was
+refunded, keyed `fuime_feerev_{pi}_{object}_{amount}`. That key matched
+**neither** of `Fuime::ConnectSettlementSweep`'s regexes — `PAYMENT_GROUP_KEY`
+wants `pi_` immediately after an optional `fee_`/`stripefee_`, and
+`REFUND_REVERSAL_KEY` matches `fuime_rev_…_refund_` literally — so from the day
+refunds started working, no rebate ever settled.
+
+Pending incoming is excluded from the balance. So the venture kept the settled
+fee **debit** and never received the credit that cancels it: a fully refunded
+$35 sale left the operator at **−$2.45, labelled "in arrears"** — owing Fuime
+its cut of money the business never kept — with the orphaned rebate displayed on
+the same page as "a further $2.45 still coming", permanently.
+
+The rebate settles on the refund's own condition, because it *is* part of the
+refund: `#refund_platform_fee` is called from the reversal recorder, in the same
+transaction as the reversal line, against the same PaymentIntent. So it joins
+the `:refunds` group and gates on `refunds_available?`.
+
+The kind is matched through the **rebated object's** id (`re_`/`pyr_` for a
+Stripe Refund) rather than through the key, because a rebate key — unlike a
+reversal key — does not carry one. A dispute rebate is keyed on a `dp_`/`du_`
+id and still falls through to "not swept", which keeps this exactly as
+conservative about disputes as the reversal line above it.
+
+Changing `fee_rebate_key` to carry the kind was the obvious alternative and was
+rejected on money-safety grounds: rows already written in production would stop
+matching `VentureLedger.find_row`, and that lookup is the idempotency that stops
+a re-delivered `charge.refunded` rebating a second time.
+
+| Change | Files |
+|---|---|
+| `FEE_REBATE_KEY`, routed into the refunds group | `app/services/fuime/connect_settlement_sweep.rb` |
+
+Pinned in `spec/services/fuime/connect_settlement_sweep_spec.rb`: the rebate
+settles with its refund, a fully refunded sale ends at **exactly zero** rather
+than in arrears, and a dispute-keyed rebate is still refused. The first two fail
+without the change.
+
+**Still open, and the largest remaining money hole:** `charge.dispute.closed`
+has no handler at all, so a dispute Fuime **wins** stays a permanent debit
+against the operator. That is not in this commit on purpose — no dispute has
+ever been exercised against Stripe, and writing money back into a teenager's
+ledger from a code path nobody has watched run is how you create the next
+finding. It wants a real test-mode dispute first
+(`PLATFORM_REVIEW_2026_09.md` §7 item 3).

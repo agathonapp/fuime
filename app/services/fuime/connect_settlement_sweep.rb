@@ -44,13 +44,16 @@
 # "raw created" and "settled mapping created" resumes instead of duplicating.
 #
 # Scope: the three payment-group keys (payment, Fuime fee, Stripe processing
-# fee), and refund reversal lines — added after refunds were exercised for real
-# (re_3U1EHWJvQ1BSjJCo…, docs/fuime/STRIPE_PASS.md). A refund line settles when
-# every refund balance transaction on its PaymentIntent reports "available";
+# fee), refund reversal lines — added after refunds were exercised for real
+# (re_3U1EHWJvQ1BSjJCo…, docs/fuime/STRIPE_PASS.md) — and the FEE REBATE that
+# accompanies a refund, which was missing and is why a refunded operator sat
+# permanently "in arrears" by Fuime's own cut. A refund line settles when every
+# refund balance transaction on its PaymentIntent reports "available";
 # per-refund mapping is deliberately not attempted because the recorder clamps
 # cumulative amounts, so one ledger line does not correspond 1:1 to one refund
-# object. Dispute-kind reversals remain excluded — disputes have never been
-# exercised, and settling them by construction would be guessing.
+# object. Dispute-kind reversals and dispute-kind rebates remain excluded —
+# disputes have never been exercised, and settling them by construction would be
+# guessing.
 module Fuime
   class ConnectSettlementSweep
     UNIQUE_BANK_IDENTIFIER = "FUIMECONNECT"
@@ -61,6 +64,30 @@ module Fuime
     # Refund reversal keys: fuime_rev_{pi}_refund_{object}_{amount}. The kind is
     # matched literally so dispute-kind keys fall through to "not swept".
     REFUND_REVERSAL_KEY = /\Afuime_rev_(pi_\w+)_refund_/
+
+    # Fee-rebate keys: fuime_feerev_{pi}_{object}_{amount}.
+    #
+    # Fuime: these matched NEITHER regex above, so from the day refunds started
+    # working every rebate stayed pending forever. Pending incoming is excluded
+    # from the balance, so the venture kept the settled fee debit and never
+    # received the credit that cancels it: a fully refunded $35 sale left the
+    # operator at **−$2.45, "in arrears"** — owing Fuime its cut of money the
+    # business never kept — with the orphaned rebate also shown on the same page
+    # as "a further $2.45 still coming", forever.
+    #
+    # It settles on the refund's own condition, because it IS part of the refund:
+    # `#refund_platform_fee` is called from the reversal recorder in the same
+    # transaction as the reversal line, against the same PaymentIntent.
+    #
+    # The kind is matched through the REBATED OBJECT's id rather than through the
+    # key, because — unlike a reversal key — a rebate key does not carry one.
+    # `re_` is a Stripe Refund and `pyr_` its legacy spelling; a dispute rebate is
+    # keyed on a `dp_`/`du_` id and falls through to "not swept", which keeps this
+    # exactly as conservative about disputes as the line above it. Changing the
+    # key format to carry the kind was the alternative and was rejected: rows
+    # already written in production would stop matching `#find_row`, and the
+    # idempotency that stops a re-delivered webhook rebating twice is that lookup.
+    FEE_REBATE_KEY = /\Afuime_feerev_(pi_\w+)_(?:re|pyr)_\w+_\d+\z/
 
     # Fuime: which ventures to sweep, and why the answer changed under MoR.
     #
@@ -178,7 +205,9 @@ module Fuime
         key = cpt.raw_pending_donation_transaction.donation_transaction_id
         if (match = PAYMENT_GROUP_KEY.match(key))
           groups[:payments][match[1]] << cpt
-        elsif (match = REFUND_REVERSAL_KEY.match(key))
+        elsif (match = REFUND_REVERSAL_KEY.match(key)) || (match = FEE_REBATE_KEY.match(key))
+          # Both settle on `refunds_available?`: the rebate is part of the refund,
+          # posted in the same transaction against the same PaymentIntent.
           groups[:refunds][match[1]] << cpt
         end
       end
