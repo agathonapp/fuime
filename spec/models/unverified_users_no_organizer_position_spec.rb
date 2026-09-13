@@ -90,7 +90,13 @@ RSpec.describe "Unverified users cannot have an OrganizerPosition" do
       expect { request_record.approve! }.to change { request_record.reload.aasm_state }.from("pending").to("approved")
     end
 
-    it "still creates the printer raffle entry on approval when the requester is unverified but affiliation matches" do
+    # FUIME-DISABLED: the raffle half. This example existed to show that approval
+    # runs its after-callbacks for an UNVERIFIED requester, and used the FIRST
+    # Worlds printer raffle as the visible evidence. That enrolment is gone (see
+    # spec/models/organizer_position_invite/request_approve_raffle_spec.rb), so
+    # the assertion now covers the thing this file is actually about — approval
+    # itself works for an unverified user — plus the absence of the raffle row.
+    it "approves an unverified requester without enrolling them in any raffle" do
       requester = create(:user, verified: false)
       requester.affiliations.create!(name: "first", league: "frc", team_number: "1234")
       event.affiliations.create!(name: "first", league: "frc", team_number: "1234")
@@ -98,7 +104,9 @@ RSpec.describe "Unverified users cannot have an OrganizerPosition" do
 
       expect {
         request_record.approve!
-      }.to change { Raffle.where(user: requester, program: "first-worlds-2026-printer").count }.by(1)
+      }.not_to change(Raffle, :count)
+
+      expect(request_record.reload).to be_approved
     end
 
     it "transitions normally when the requester is verified" do

@@ -19,7 +19,7 @@
       </p>
 
       <p>
-        <strong>Organization</strong>
+        <strong>Business</strong>
         <%= link_to @opdr.event.name, event_path(@opdr.event) %>
       </p>
 
@@ -95,7 +95,7 @@
                         size: 24,
                         style: "vertical-align: middle; margin: -0.2rem 0 0 -0.2rem;" %>
         Woah! This user is THE LAST organizer that has signed the fiscal
-        sponsorship contract for this organization! Are you sure you want
+        sponsorship contract for this business! Are you sure you want
         to remove them?
       </p>
     <% elsif @opdr.organizer_position.signee? %>
@@ -104,7 +104,7 @@
                         size: 24,
                         style: "vertical-align: middle; margin: -0.2rem 0 0 -0.2rem;" %>
         Woah! This user has signed the Fuime agreement for this
-        organization. Are you sure you want to remove them?
+        business. Are you sure you want to remove them?
         (<%= pluralize(@opdr.event.signees.size - 1, "signee") %> will remain)
       </p>
     <% end %>
@@ -120,7 +120,7 @@
                               "from #{@opdr.event.name}. This has PERMANENT " \
                               "consequences (e.g. canceled cards). " \
                               "#{"⚠️ They are the last signee for this organization! " \
-                                "This organization will be left with NO SIGNEES! ⚠️ " if @opdr.organizer_last_signee?}" \
+                                "This business will be left with NO SIGNEES! ⚠️ " if @opdr.organizer_last_signee?}" \
                               "Are you sure you want to do this?",
                       turbo_confirm_danger: true
                     },

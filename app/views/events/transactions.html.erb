@@ -7,7 +7,12 @@
 <% if @event&.is_public %>
   <% auto_discover_feed(@event) %>
   <% content_for :head do %>
-    <% img = "https://hcb-og.hackclub.com/api/embeds/#{@event.slug}" %>
+    <%# Fuime: was `https://hcb-og.hackclub.com/api/embeds/<slug>` — Hack Club's
+        OG card renderer. Every share of a public Fuime venture sent the slug to
+        their service and rendered THEIR card for our page (Prime Directive 4).
+        Fuime has no card renderer, so the venture's own logo is used when it has
+        one and the Fuime mark otherwise — both served from this deployment. %>
+    <% img = @event.logo.attached? ? url_for(@event.logo) : image_url("logo-512.png") %>
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta property="og:image" content="<%= img %>">

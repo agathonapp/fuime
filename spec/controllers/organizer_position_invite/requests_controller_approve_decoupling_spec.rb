@@ -46,13 +46,17 @@ RSpec.describe OrganizerPositionInvite::RequestsController, type: :controller do
         expect(OrganizerPosition.where(user: requester, event:)).to be_present
       end
 
-      it "creates the printer raffle entry" do
+      # FUIME-DISABLED: the FIRST Worlds printer raffle. Approving an invite
+      # request used to enrol the requester in Hack Club's giveaway — a live
+      # path inside a feature Fuime keeps. See
+      # spec/models/organizer_position_invite/request_approve_raffle_spec.rb.
+      it "does not create a raffle entry" do
         request_record = build_request_for(requester:)
         create_session(manager, verified: true)
 
         expect {
           post :approve, params: { id: request_record.hashid, role: :member }
-        }.to change { Raffle.where(user: requester, program: "first-worlds-2026-printer").count }.by(1)
+        }.not_to change(Raffle, :count)
       end
     end
 
@@ -80,13 +84,14 @@ RSpec.describe OrganizerPositionInvite::RequestsController, type: :controller do
         expect(OrganizerPosition.where(user: requester, event:)).to be_empty
       end
 
-      it "still creates the printer raffle entry on approval" do
+      # FUIME-DISABLED: see the note on the verified case above.
+      it "does not create a raffle entry either" do
         request_record = build_request_for(requester:)
         create_session(manager, verified: true)
 
         expect {
           post :approve, params: { id: request_record.hashid, role: :member }
-        }.to change { Raffle.where(user: requester, program: "first-worlds-2026-printer").count }.by(1)
+        }.not_to change(Raffle, :count)
       end
     end
   end

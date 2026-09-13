@@ -2,6 +2,9 @@
 
 require "rails_helper"
 
+# Fuime: the subject says "sub-business", not "sub-organization" — user-facing
+# copy moved from HCB's "organization" to Fuime's "business" (CLAUDE.md
+# Milestone 3 explicitly expects mailer specs asserting copy to be updated).
 RSpec.describe EventMailer, type: :mailer do
   describe "#subevent_created" do
     let(:parent_event) { create(:event) }
@@ -25,7 +28,7 @@ RSpec.describe EventMailer, type: :mailer do
     end
 
     it "renders a subject naming the parent, creator, and sub-organization" do
-      expect(mailer.subject).to eq("[#{parent_event.name}] #{creator.name} created #{subevent.name}, a new sub-organization under #{parent_event.name}")
+      expect(mailer.subject).to eq("[#{parent_event.name}] #{creator.name} created #{subevent.name}, a new sub-business under #{parent_event.name}")
     end
 
     it "links to the new sub-organization in the body" do

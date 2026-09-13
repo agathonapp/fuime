@@ -7,14 +7,14 @@
 <div class="flex justify-center mt5">
   <img class="w-20 h-20 mx-auto center rounded-lg" src="<%= @guild.icon_url || Discord.random_avatar %>">
 </div>
-<h2 class="border-none center regular mb2">Choose an organization to connect to the channel  <strong>#<%= @channel.name %></strong> in <strong><%= @guild.name %></strong>.</h2>
+<h2 class="border-none center regular mb2">Choose a business to connect to the channel  <strong>#<%= @channel.name %></strong> in <strong><%= @guild.name %></strong>.</h2>
 
 <section class="mb2">
   <div class="flex items-start">
     <span class="muted mr2"><%= inline_icon "important" %></span>
 
     <p class="mt0">
-      Fuime will send notifications about your organization to the <strong><%= @channel.name %></strong>.
+      Fuime will send notifications about your business to the <strong><%= @channel.name %></strong>.
       <br>
       <small>Want to choose a different channel? Re-run the <code>/link</code> command in your desired channel.</small>
     </p>

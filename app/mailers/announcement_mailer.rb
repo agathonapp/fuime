@@ -30,7 +30,7 @@ class AnnouncementMailer < ApplicationMailer
     @scheduled_for = Date.today.next_month.beginning_of_month
     @warning_date = @scheduled_for - 7.days
 
-    mail to: @emails, subject: "[#{@event.name}] Monthly announcements have been enabled for your organization"
+    mail to: @emails, subject: "[#{@event.name}] Monthly announcements have been enabled for your business"
   end
 
   def set_warning_variables

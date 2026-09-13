@@ -156,12 +156,12 @@
         <legend class="py-0 px-2">Reject</legend>
 
         <%= form_with(model: false, local: true, url: reject_wire_path(@wire), method: :post) do |form| %>
-          <small class="mb-5 mt-0 block">This requires you to communicate to the organizer about the reason why.</small>
+          <small class="mb-5 mt-0 block">This requires you to communicate to the founder about the reason why.</small>
           <div class="field">
             <%= form.label "Reject with a comment", class: "bold mb1" %> <br>
             <%= form.text_area :comment, style: "width: 400px;", placeholder: "(Markdown supported)" %>
           </div>
-          <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the organizer about the reason why.", turbo_confirm_danger: true } %>
+          <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the founder about the reason why.", turbo_confirm_danger: true } %>
         <% end %>
       </fieldset>
     <% else %>

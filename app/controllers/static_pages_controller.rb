@@ -19,8 +19,9 @@ class StaticPagesController < ApplicationController
   end
 
   def index
-    return redirect_to first_index_path if current_user(allow_unverified: true)&.redirect_to_first_dashboard?
-
+    # Fuime: the FIRST Robotics dashboard this redirected to is gone (see
+    # config/routes.rb). A user carrying an inherited `first` affiliation now
+    # lands on the normal Fuime home page like everybody else.
     return redirect_to auth_users_path(require_reload: true, signup: params[:signup]) unless signed_in?
 
     @service = StaticPageService::Index.new(current_user:)

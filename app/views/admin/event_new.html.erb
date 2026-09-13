@@ -1,14 +1,14 @@
-<% title "Create an organization" %>
+<% title "Create a business" %>
 
-<h1>Create an organization</h1>
+<h1>Create a business</h1>
 
 <%= form_with(local: true, url: event_create_admin_index_path) do |form| %>
   <fieldset>
-    <legend>Organization</legend>
+    <legend>Business</legend>
     <p>
       <%= form.label :name, "Name (required)" %>
       <br>
-      <%= form.text_field :name, placeholder: "Organization Name", value: params[:name], required: true %>
+      <%= form.text_field :name, placeholder: "Business Name", value: params[:name], required: true %>
     </p>
 
     <p>
@@ -32,9 +32,14 @@
     </div>
 
     <div class="field mb2">
-      <%= form.label :tags, "Organization Tags" %>
+      <%= form.label :tags, "Business Tags" %>
       <br>
-      <%= form.select(:tags, EventTag::Tags::ALL.map { |tag| [tag.to_s.titleize, tag] }, selected: params[:tags], multiple: true) %>
+      <%# Fuime: offers EventTag::Tags::SELECTABLE, not ALL — see EventTag. %>
+      <% if EventTag::Tags::SELECTABLE.any? %>
+        <%= form.select(:tags, EventTag::Tags::SELECTABLE.map { |tag| [tag.to_s.titleize, tag] }, selected: params[:tags], multiple: true) %>
+      <% else %>
+        <p class="muted h5 m-0">No preset tags. Add tags from the business's settings once it exists.</p>
+      <% end %>
     </div>
 
     <div class="field">
@@ -64,6 +69,6 @@
   </fieldset>
 
   <p>
-    <%= form.submit "Create organization" %>
+    <%= form.submit "Create business" %>
   </p>
 <% end %>

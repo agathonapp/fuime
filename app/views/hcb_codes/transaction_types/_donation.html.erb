@@ -138,7 +138,9 @@
         +<%= donation_payment_processor_fee(true, @donation) %>
         <span class="muted">
           <% "Pending " unless @donation&.fee_reimbursement&.t_transaction %>
-          (<%= link_to "learn more", "https://blog.hcb.hackclub.com/posts/were-making-payment-processing-fees-disappear-101088" %>)
+          <%# Fuime: the "learn more" link went to blog.hcb.hackclub.com, Hack
+              Club's announcement of THEIR fee change, presented as ours. Removed
+              rather than repointed — Fuime has no equivalent post. %>
         </span>
       </span>
     </p>

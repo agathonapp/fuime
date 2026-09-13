@@ -7,9 +7,9 @@
         Fee Waiver
       </h3>
       <% if !event.plan.promotions_enabled? %>
-        <% fee_waiver_ineligible_reason = "Perks are not available for #{event.plan.label} organizations" %>
+        <% fee_waiver_ineligible_reason = "Perks are not available for #{event.plan.label} businesses" %>
       <% elsif !perks_available %>
-        <% fee_waiver_ineligible_reason = "You must be a manager and organization must not be in demo mode" %>
+        <% fee_waiver_ineligible_reason = "You must be a manager and business must not be in demo mode" %>
       <% end %>
 
       <% if fee_waiver_ineligible_reason %>
@@ -24,7 +24,7 @@
     </div>
     <h3 class="mb0 mt0">Raise some money this month with zero fees on Fuime!</h3>
     <p>
-      Are you a teen-led organization? We’d love to waive all of your Fuime fees till <%= Date.current.end_of_month.strftime("%B %e, %Y") %>! Fee waiver status updates nightly.
+      Are you a teen-led business? We’d love to waive all of your Fuime fees till <%= Date.current.end_of_month.strftime("%B %e, %Y") %>! Fee waiver status updates nightly.
     </p>
     <table class="mb2">
       <tr class="<%= "card__darker" if active_teenagers_count.between?(0, 4) %>">

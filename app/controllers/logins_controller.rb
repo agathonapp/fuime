@@ -174,12 +174,16 @@ class LoginsController < ApplicationController
     end
 
     if @login.complete? && @login.user_session.present?
+      # Fuime: `for_first?` logins can only exist for rows created before the
+      # FIRST Robotics flow was removed. Their affiliation and raffle state is
+      # still applied so nothing is lost from the record, but there is no FIRST
+      # dashboard to land on any more — they continue to the normal home page.
       if @login.for_first?
         raffle = @login.state["raffle"]
         affiliations_attributes = @login.state.dig("user_params", "affiliations_attributes")
         Raffle.find_or_create_by!(user: @login.user, program: raffle) if raffle.present?
         @login.user.update!(affiliations_attributes:) if affiliations_attributes.present?
-        redirect_to first_index_path
+        redirect_to root_path
       elsif @referral_link.present?
         redirect_to referral_link_path(@referral_link)
       # Fuime A2: a name is the whole of onboarding — the same test as

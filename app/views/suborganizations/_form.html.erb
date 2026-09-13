@@ -3,8 +3,8 @@
 <%= form_with(url: event_create_sub_organization_path(event.slug), method: :post, html: { class: "[&_input]:max-w-full [&_textarea]:!max-w-full", "x-data" => "{ scoped_tags: [], query: '' }" }) do |form| %>
   <div class="card border b--info mt2 mb2 container--sm mx-auto">
     <p class="mt0 mb0">
-      Sub-organizations are subsidiaries of your organization. All members
-      of <%= event.name %> can access and view sub-organizations<% unless Flipper.enabled?(:member_subevent_creation, event) %>, but only
+      Sub-businesses are subsidiaries of your business. All members
+      of <%= event.name %> can access and view sub-businesses<% unless Flipper.enabled?(:member_subevent_creation, event) %>, but only
       managers can create and edit them<% end %>.
     </p>
   </div>
@@ -18,7 +18,7 @@
     <div data-sub-org-name-check-target="warning" hidden class="card border b--warning mt1">
       <div class="flex items-center warning">
         <%= inline_icon "important", size: 20, class: "mr1 flex-shrink-0" %>
-        <span>A sub-organization named <strong><a data-sub-org-name-check-target="link" href="#"></a></strong> already exists under this organization.</span>
+        <span>A sub-business named <strong><a data-sub-org-name-check-target="link" href="#"></a></strong> already exists under this business.</span>
       </div>
     </div>
   </div>
@@ -34,7 +34,7 @@
   <% unless event.config.subevent_plan.constantize <= Event::Plan::HackClubAffiliate %>
     <div class="field">
       <%= form.label :cosigner_email, "Co-signer email", class: "bold" %>
-      <%= form.email_field :cosigner_email, placeholder: "Include this if the organizer is under 18", value: params[:cosigner_email] %>
+      <%= form.email_field :cosigner_email, placeholder: "Include this if the founder is under 18", value: params[:cosigner_email] %>
     </div>
   <% end %>
 
@@ -101,6 +101,6 @@
   </small>
 
   <div class="inline-block">
-    <%= form.submit "Create sub-organization", class: "mt1", disabled: event&.demo_mode? %>
+    <%= form.submit "Create sub-business", class: "mt1", disabled: event&.demo_mode? %>
   </div>
 <% end %>

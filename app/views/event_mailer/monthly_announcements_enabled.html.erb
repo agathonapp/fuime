@@ -14,7 +14,7 @@
       appear. %>
   By default each announcement summarises how the business did that month — what it sold and what it spent — and you can edit it to say whatever you like.
   Your first monthly announcement has been generated and is scheduled to be sent on <%= @scheduled_for.strftime("%B #{@scheduled_for.day.ordinalize}") %> - <%= link_to "view or edit it on Fuime", announcement_url(@monthly_announcement) %>!
-  If your organization doesn't have any activity from this month to include in the announcement by <%= @warning_date.strftime("%B #{@warning_date.day.ordinalize}") %>, the announcement will not be sent.
+  If your business doesn't have any activity from this month to include in the announcement by <%= @warning_date.strftime("%B #{@warning_date.day.ordinalize}") %>, the announcement will not be sent.
 </p>
 
 <p>Managers can disable monthly announcements at any time in <%= link_to "your settings", edit_event_url(@event) %>.</p>

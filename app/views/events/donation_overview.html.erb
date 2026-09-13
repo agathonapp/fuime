@@ -23,7 +23,7 @@
 
   <% if @event.donation_page_available? %>
   <% else %>
-    <p>You can start accepting donations once you enable it in your organization's <%= link_to "settings", edit_event_path(@event, tab: "donations") %>.</p>
+    <p>You can start accepting donations once you enable it in your business's <%= link_to "settings", edit_event_path(@event, tab: "donations") %>.</p>
   <% end %>
 
   <div class="statset">

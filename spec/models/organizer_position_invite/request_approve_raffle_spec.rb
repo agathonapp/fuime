@@ -2,13 +2,20 @@
 
 require "rails_helper"
 
-# When a manager approves an OrganizerPositionInvite::Request whose requester
-# shares a FIRST affiliation with the event, the requester is auto-enrolled in
-# the FIRST Worlds 3D-printer raffle. The previous implementation gated the
-# raffle on the event having ANY FIRST affiliation, regardless of whether it
-# matched the requester's team — meaning a hand-approved request from an
-# unrelated user could grant a printer raffle entry. This spec pins the
-# affiliation-match requirement.
+# FUIME-DISABLED: the FIRST Worlds 3D-printer raffle enrolment on invite approval.
+#
+# Upstream, approving an OrganizerPositionInvite::Request whose requester shared
+# a FIRST affiliation with the event auto-enrolled them in Hack Club's
+# `first-worlds-2026-printer` giveaway, drawn at the FIRST Robotics World
+# Championship. That made this a LIVE path into a Hack Club programme inside a
+# feature Fuime keeps — invite requests — so it kept writing Raffle rows for a
+# draw that is not ours. The `/raffles` routes are gone too (config/routes.rb).
+#
+# The original examples pinned the affiliation-MATCH requirement, because an
+# earlier upstream implementation granted an entry to any hand-approved
+# requester. That distinction no longer exists: nobody is enrolled at all. These
+# examples are inverted to pin the disabled state, so restoring the callback
+# trips a red suite.
 RSpec.describe OrganizerPositionInvite::Request, type: :model do
   describe "#approve! after-callback raffle enrollment" do
     let(:requester) { create(:user, verified: true) }
@@ -22,7 +29,7 @@ RSpec.describe OrganizerPositionInvite::Request, type: :model do
       described_class.create!(requester:, link:)
     end
 
-    it "enrolls the requester in the printer raffle when the event affiliation matches the requester's" do
+    it "does not enroll the requester even when the event affiliation matches theirs" do
       requester.affiliations.create!(name: "first", league: "frc", team_number: "1234")
       event.affiliations.create!(name: "first", league: "frc", team_number: "1234")
 
@@ -30,9 +37,19 @@ RSpec.describe OrganizerPositionInvite::Request, type: :model do
 
       expect {
         request_record.approve!
-      }.to change {
+      }.not_to change {
         Raffle.where(user: requester, program: "first-worlds-2026-printer").count
-      }.by(1)
+      }
+    end
+
+    it "still approves the request" do
+      requester.affiliations.create!(name: "first", league: "frc", team_number: "1234")
+      event.affiliations.create!(name: "first", league: "frc", team_number: "1234")
+
+      request_record = build_request_for(event:, requester:)
+      request_record.approve!
+
+      expect(request_record.reload).to be_approved
     end
 
     it "does not enroll the requester when the event has no FIRST affiliation match for them" do

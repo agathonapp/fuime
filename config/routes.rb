@@ -53,7 +53,14 @@ Rails.application.routes.draw do
   get "stripe_charge_lookup", to: "static_pages#stripe_charge_lookup"
   get "money-printer", to: "money_printer#index", as: :money_printer
 
-  resources :raffles, only: [:new, :create]
+  # Fuime 2026-09-13: raffles removed. Every programme behind them is Hack
+  # Club's — `first-worlds-2026-macbook`, `-printer`, `-airpods`, drawn at the
+  # FIRST Robotics World Championship. `/raffles/new` was reachable by an
+  # unverified visitor (`skip_before_action :signed_in_user`), and
+  # RaffleMailer told the entrant to share their link "with your teammates and
+  # friends in FIRST robotics" over the signature "The Fuime Team". Fuime runs
+  # no raffle and has no relationship with FIRST. Controller, model, mailer and
+  # views remain (CLAUDE.md Rule 2).
 
   # Fuime: Guardian invite/accept flow
   #
@@ -488,14 +495,25 @@ Rails.application.routes.draw do
       end
     end
 
-    resources "first", only: [:index, :create] do
+    # Fuime 2026-09-13: the FIRST Robotics dashboard and its public landing page
+    # are removed. This was never a Fuime surface — it is Hack Club's program for
+    # FRC/FTC/FLL booster clubs, and `/first/welcome` was PUBLIC
+    # (`skip_before_action :signed_in_user`), so anyone could reach a page headed
+    # "FIRST on Fuime — the ultimate booster club for FRC, FTC and FLL teams"
+    # under the Fuime logo, offering "501(c)(3) nonprofit status: become part of
+    # Hack Club's legal entity". Fuime is a for-profit platform for teen
+    # businesses; it cannot confer 501(c)(3) status and has no relationship with
+    # FIRST. Rebranding it would turn a true statement about Hack Club into a
+    # false one about Fuime, so it is disabled instead (CLAUDE.md Rule 2 — the
+    # controller, views and specs all remain).
+    #
+    # `verify_email` and `sign_out` stay routed: they are generic account actions
+    # that merely happen to live on this controller, and `application/_user_menu`
+    # renders both for signed-out and unverified visitors on every page.
+    resources "first", only: [] do
       collection do
-        get "welcome", to: "first#new"
-        get "team", to: "first#team"
         post "verify_email", to: "first#verify_email"
-        post "request_org_invite", to: "first#request_org_invite"
         delete "sign_out", to: "first#sign_out"
-        get "macbook_qr_code"
       end
     end
 
@@ -1007,7 +1025,12 @@ Rails.application.routes.draw do
   end
 
   get "brand_guidelines", to: redirect("branding")
-  get "mobile", to: "static_pages#mobile"
+  # Fuime: `/mobile` removed 2026-09-13. It sniffed the User-Agent and redirected
+  # to "HCB by Hack Club" on the App Store, to com.hackclub.hcb on Google Play,
+  # or to hackclub.com/hcb — a public Fuime URL whose entire job was to send our
+  # users to install another company's app. Fuime has no mobile app (CLAUDE.md,
+  # "out of scope for Phase 0"), so there is nothing to repoint it at. The
+  # controller action remains (Rule 2); nothing links to it.
   get "branding", to: "static_pages#branding"
   get "security", to: "static_pages#security"
   # Fuime: these three used to redirect to hackclub.com and help.hcb.hackclub.com.

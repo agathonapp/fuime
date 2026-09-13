@@ -24,7 +24,7 @@
     <% if @legal_entity.default_payout_method.present? %>
       <p>
         You're all set! <%= @legal_entity.person? ? "You" : (@legal_entity.name.presence || "Business") %>
-        can now receive payments from any organization on Fuime.
+        can now receive payments from any business on Fuime.
         <% if (under_review_count = @legal_entity.payments.under_review.count) > 0 %>
           Once your <%= "payment".pluralize(under_review_count) %> <%= under_review_count == 1 ? "is" : "are" %>
           approved by Fuime, we'll send <%= under_review_count == 1 ? "it" : "them" %> using your default payout method.
@@ -132,7 +132,7 @@
   <% elsif @legal_entity.tin_banned? %>
     <p>
       <%= @legal_entity.person? ? "You have" : "#{@legal_entity.name.presence || "Business"} has" %>
-      been banned from receiving payments from organizations on Fuime.
+      been banned from receiving payments from businesses on Fuime.
     </p>
   <% else %>
     <p>
@@ -154,7 +154,7 @@
 <% else %>
   <p>
     Finish filling in <%= @legal_entity.person? ? "your" : "#{@legal_entity.name.presence || "Business"}'s" %>
-    tax information before you can receive payments from organizations on Fuime.
+    tax information before you can receive payments from businesses on Fuime.
   </p>
 
   <%= link_to "Go to tax form", tax_form_path(@legal_entity.latest_tax_form), class: "btn" %>

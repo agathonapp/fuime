@@ -8,11 +8,11 @@
     </h3>
 
     <% if !event.plan.promotions_enabled? %>
-      <% jukebox_ineligible_reason = "Perks are not available for #{event.plan.label} organizations" %>
+      <% jukebox_ineligible_reason = "Perks are not available for #{event.plan.label} businesses" %>
     <% elsif !perks_available %>
-      <% jukebox_ineligible_reason = "You must be a manager and organization must not be in demo mode" %>
+      <% jukebox_ineligible_reason = "You must be a manager and business must not be in demo mode" %>
     <% elsif active_teenagers_count < 10 %>
-      <% jukebox_ineligible_reason = "Organization must have 10 or more active teenagers" %>
+      <% jukebox_ineligible_reason = "Business must have 10 or more active teenagers" %>
     <% end %>
     <% if jukebox_ineligible_reason %>
       <div class="tooltipped tooltipped--w inline-block" aria-label="<%= jukebox_ineligible_reason %>">
@@ -27,7 +27,7 @@
   </div>
 
   <p>
-    Does your Fuime organization have 10 or more active teenagers? Add a link to
+    Does your Fuime business have 10 or more active teenagers? Add a link to
     <%= link_to "Jukebox Print", "https://www.jukeboxprint.com/custom-stickers" %>
     to your website for a $500 coupon to spend on custom stickers, cards, marketing materials, and more!
   </p>
@@ -36,6 +36,6 @@
     Note that international shipping costs are not covered by the coupon.
   </p>
   <section class="card__banner card__darker secondary border-top italic">
-    You currently have <%= active_teenagers_count %>/10 active teenagers in your organization!
+    You currently have <%= active_teenagers_count %>/10 active teenagers in your business!
   </section>
 </div>

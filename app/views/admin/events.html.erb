@@ -1,4 +1,4 @@
-<% title "Organizations" %>
+<% title "Businesses" %>
 
 <%= form_with local: true, class: "card overflow-visible", url: events_admin_index_path, method: :get do |form| %>
   <%= render "events/filters/search", form: %>
@@ -30,8 +30,8 @@
 
 <div class="flex items-center mb2 flex-col sm:flex-row">
   <div class="flex-grow">
-    <%= page_entries_info @events, entry_name: "organizations" %>.
-    <%= link_to "Create a new organization", event_new_admin_index_path %>.
+    <%= page_entries_info @events, entry_name: "businesses" %>.
+    <%= link_to "Create a new business", event_new_admin_index_path %>.
   </div>
   <%= paginate @events %>
 </div>

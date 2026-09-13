@@ -91,9 +91,14 @@ module Users
     end
 
     def verify_email
-      return redirect_to welcome_first_index_path unless current_user(allow_unverified: true)&.unverified?
+      # Fuime: both `welcome_first_index_path` and `first_index_path` were removed
+      # with the FIRST Robotics flow (config/routes.rb), but THIS action stayed
+      # routed — `application/_user_menu` renders "Verify your email" from it on
+      # every page for an unverified visitor. Left as-was it raised NameError on
+      # a live path. Both now resolve to the normal Fuime home page.
+      return redirect_to root_path unless current_user(allow_unverified: true)&.unverified?
 
-      @login = Login.create!(state: { purpose: "first", return_to: first_index_path }, user: current_user(allow_unverified: true))
+      @login = Login.create!(state: { purpose: "first", return_to: root_path }, user: current_user(allow_unverified: true))
 
       cookies.signed["browser_token_#{@login.hashid}"] = { value: @login.browser_token, expires: Login::EXPIRATION.from_now }
 

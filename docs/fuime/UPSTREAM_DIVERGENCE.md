@@ -6574,3 +6574,219 @@ ever been exercised against Stripe, and writing money back into a teenager's
 ledger from a code path nobody has watched run is how you create the next
 finding. It wants a real test-mode dispute first
 (`PLATFORM_REVIEW_2026_09.md` §7 item 3).
+
+---
+
+## 2026-09-13 — Brand sweep: reachable pages still wearing HCB
+
+Triggered by a founder screenshot: a Documents page headed "Nonprofit status"
+and "Tax-exemption documents", and a **Card grants** tab in org settings for a
+module `Fuime::DisabledModules` already blocks.
+
+The useful finding is not the count. It is that `BRAND_STRINGS.md`'s reachability
+model had gone stale, and the naive `grep "Hack Club" app/` it recommends
+**cannot find most of this** — the worst items say neither "Hack Club" nor "HCB".
+They are a Stripe business name, an `hr@` address, an app-store URL and a
+`business.name` JS literal.
+
+### Category A — a third party received Fuime users' data (Prime Directive 4)
+
+| What | Where | Why it matters |
+|---|---|---|
+| **W-9 / W-8 BEN → `hr@hackclub.com`** | `my/payroll.html.erb`, `employees/show.html.erb` | Those forms carry a full SSN/ITIN. Payroll is live; this instructed a Fuime contractor (often a minor) to mail their tax identity to another company's HR inbox |
+| **Dispute intake → `forms.hackclub.com`** | `hcb_codes_controller#dispute` | Reachable from the transaction meatball menu; redirected with the founder's name, login email and transaction code prefilled. Now points at `support@fuime.com` until Fuime has its own intake |
+| **Receipt mailboxes on `hcb.gg`** | `MailboxAddress` | Every generated forwarding address ended in Hack Club's domain, so forwarded receipts reached their ingress, not ours |
+| OG card renderer | `events/transactions.html.erb` | Every share of a public venture sent the slug to `hcb-og.hackclub.com` and rendered *their* card for our page |
+| 2FA page icon, pay-stub logo | `users/generate_totp.html.erb`, `employee/payments/stub.pdf.erb` | Live fetches from `icons.`/`assets.hackclub.com` |
+
+### Category B — false statements about Fuime
+
+- **19 mailers and one pay stub PDF** asserted "*&lt;org&gt; is fiscally sponsored by
+  The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit (EIN:
+  81-2908499)*". Reimbursements and payroll are **not** disabled modules, so these
+  were live. On a pay stub it is a document a recipient may hand to a lender.
+  Removed, not reworded (BRAND_STRINGS category 3).
+- `events/landing/_footer` made the same claim on a **public** page
+  (`/donate/start/:event_name` is a plain GET), with the EIN written as ours.
+  Now renders `application/_status_disclosure`.
+- **`users/first`** — upstream's **FIRST Robotics** program, not "a user's first
+  venture". `/first/welcome` was public and headed "FIRST on Fuime — the ultimate
+  booster club for FRC, FTC and FLL teams", offering "501(c)(3) nonprofit status:
+  become part of Hack Club's legal entity". Its controller composed an advisor
+  email reading "*a nonprofit, Hack Club. They run a service called Fuime*" and
+  CC'd `hcb-raffles@hackclub.com`. Routes removed; `verify_email` and `sign_out`
+  stay because `_user_menu` renders them on every page.
+- `/mobile` sniffed the User-Agent and redirected to **"HCB by Hack Club" on the
+  App Store** / `com.hackclub.hcb` on Google Play. Route removed.
+
+### Category C — customer-visible, and none of it says "Hack Club"
+
+- `stripe_controller.js` declared `business: { name: 'HCB' }` on the Payment
+  Element. Stripe shows that to the **payer** — mandate text, Apple Pay and Link
+  sheets — so a customer buying from a teen's storefront was told they were
+  paying Hack Club. **This is on the live money-in path.**
+- The public API reference at `/docs/api/v3` was titled "The HCB API" and told
+  developers to reach us "in the #hcb channel on the Hack Club Slack".
+
+### The trap-page fix
+
+`Card grants` is in `DISABLED_CONTROLLER_PREFIXES`, but the settings nav entry
+carried no `module_prefix`, so the filter never saw it. The plan gate is not a
+substitute: `Standard#features` drops `card_grants`, but the legacy plans an
+inherited org can sit on do not. Fixed in both halves — `module_prefix` hides the
+link, and `EventsController#edit` now redirects any tab whose module is blocked,
+which closes the URL as well (and closes the Donations tab for the same reason).
+
+### Deliberately NOT changed
+
+- `User::SYSTEM_USER_EMAIL = "bank@hackclub.com"` — a **stored value** on an
+  existing row; `system_user?` compares against it. A code change here orphans
+  that row. Needs a data migration, not a string edit. It has no `full_name`, so
+  an automated comment renders as that address — worth fixing next, as data.
+- `Document` enum keys, `HACK CLUB FEE`, the memo-parsing regexes, `hcb-code`
+  CSS classes, `party(:hcb)`, `nickname`/`hcb_fee_id` in the API contract.
+- `grants/_activate_form` (501(c)(3) copy) and `users/_card_grant_conversion_callout`
+  — disabled module and an orphan partial respectively.
+
+| Change | Files |
+|---|---|
+| Nav/tab trap | `app/helpers/events_helper.rb`, `app/controllers/events_controller.rb` |
+| Document categories relabelled | `app/helpers/documents_helper.rb` (new), `documents/index`, `documents/_form` |
+| FIRST Robotics removed | `config/routes.rb`, `static_pages_controller`, `logins_controller`, `users_helper` |
+| Fiscal-sponsorship footnote | 19 mailers + `employee/payments/stub.pdf.erb` |
+| Mailbox domain | `MailboxAddress`, `mailbox_addresses_controller`, `receipt_bin_mailbox`, `my/inbox`, `my/reimbursements` |
+| Third-party calls | `events/transactions`, `users/generate_totp`, `my/feed`, `employee/payments/stub.pdf` |
+| Customer-visible names | `stripe_controller.js`, `1pass_controller.js`, `api/v3.rb`, `entities/hcb_fee.rb`, `api/directory.rb` |
+| Tax-document addresses | `my/payroll`, `employees/show` |
+| Misc copy | `sudo_mode/reauthenticate`, `contracts/_contract`, `events/settings/_details`, `exports/collect_email`, `organizer_position_invites/_form`, `layouts/docs`, `hcb_codes/transaction_types/_check_deposit`, `_donation` |
+
+### How to re-measure
+
+The count in BRAND_STRINGS is not the metric — comments legitimately say "Hack
+Club", and the severe items do not say it at all. Ask instead what leaves the
+machine or reaches a stranger:
+
+```bash
+# anything that resolves to Hack Club, on a surface that is not disabled
+grep -rnoE "https?://[a-zA-Z0-9.-]*(hackclub|hcb\.gg)[a-zA-Z0-9./-]*" app/ \
+  --include="*.erb" --include="*.rb" --include="*.js" | grep -v assets/builds
+
+# addresses handed to users
+grep -rnoE "[a-zA-Z0-9._+-]+@(hackclub\.com|hcb\.gg)" app/
+```
+
+---
+
+## 2026-09-13 (later) — FIRST Robotics, raffles, and HCB's tag taxonomy
+
+Follow-up to the brand sweep above, on a direct ask: no "made by teenagers",
+no FRC, no FIRST anywhere in the app or admin.
+
+### Raffles were Hack Club's FIRST Worlds 2026 giveaways
+
+`resources :raffles` was routed and `RafflesController` skipped
+`signed_in_user`, so `/raffles/new` was reachable by an **unverified** visitor.
+The three programmes are `first-worlds-2026-macbook`, `-printer` and `-airpods`,
+drawn at the FIRST Robotics World Championship, and `RaffleMailer` told the
+entrant to keep sharing their link "with your teammates and friends in FIRST
+robotics" over the signature **"The Fuime Team"**.
+
+The part that mattered most was not the route. `OrganizerPositionInvite::Request`
+enrols the requester in `first-worlds-2026-printer` on `approve` whenever
+`Event::Affiliation.first_affiliation_matches?` — a **live path inside a feature
+Fuime keeps**, still writing Raffle rows for a draw that is not ours. That call
+is removed; the route, controller, model, mailer and views remain (Rule 2).
+
+### Every event tag in the taxonomy is HCB's
+
+`EventTag::Tags::ALL` is Hack Club's programme and funder vocabulary end to end:
+their hackathon and FIRST programmes (`Hackathon`, `Robotics Team`), their
+partnerships (`Climate`, `128 Collective Funded`/`Recommended`, `Vermont-based`),
+their own orgs (`Hack Club`, `Organized by Hack Clubbers`), and `YSWS` (You Ship
+We Ship). It was offered in three admin pickers: `admin/event_new`,
+`contract/parties/show`, and the settings tags panel.
+
+`Organized by Teenagers` is wrong for a second reason worth writing down: on
+Fuime **every** venture is teen-run, so the tag distinguishes nothing.
+
+Fixed with the same lever as `Event::Plan.selectable?` — a new
+`EventTag::Tags::SELECTABLE`. The constants stay defined so existing
+`event_tags` rows keep resolving and `Event#hackathon?` / `Event.ysws` keep
+working (Rule 6: these are stored strings); they are simply no longer offered.
+`SELECTABLE` is **empty** rather than a guessed Fuime taxonomy, because
+inventing business categories is a product decision, not a rebrand. Free-form
+tag creation in `events/settings/_tags` is untouched.
+
+> **Not a code fix — check production data.** `events/settings/admin/_tags`
+> builds its picker from `EventTag.find_each`, i.e. **DB rows**, not the
+> constant. Dev has 0 rows so nothing leaks there, but if production was seeded
+> with HCB's tags those rows still appear in that picker and need a data
+> cleanup.
+
+### The public API called every Fuime venture a nonprofit
+
+`Api::Entities::Organization#category` defaulted to `"nonprofit"` and could
+report `robotics_team`, `hackathon`, `hack_club` or `hack_club_hq`. That is not
+off-brand, it is false about every row: a Fuime venture is a for-profit teen
+business. Default is now `"business"`; the legacy values still resolve for
+inherited rows, so a consumer reading historical data sees no change.
+
+### Deliberately NOT changed
+
+- **`teenager` as a Fuime domain concept** — `User#teenager`, the teen-led
+  branch of `Event::Application`, the Alpine `teenager` binding in
+  `applications/project_info`. Fuime is for teenagers; this is our vocabulary,
+  not HCB's. Only the *tag* was retired.
+- **Admin's "Active/New Teenagers Leaderboard"** (`Admin::Nav`) — HCB framing,
+  but teens genuinely are Fuime's users. Open question, not a defect.
+- `Event::Affiliation`'s FIRST/VEX leagues and `users/first`'s views: the model
+  is still read by `first_affiliation_matches?`, and the views are unreachable
+  now that the routes are gone.
+
+| Change | Files |
+|---|---|
+| Raffles disabled | `config/routes.rb`, `app/models/organizer_position_invite/request.rb` |
+| Tag taxonomy no longer offered | `app/models/event_tag.rb`, `admin/event_new`, `contract/parties/show` |
+| API category | `app/api/api/entities/organization.rb` |
+| Badge palette + default | `app/views/events/_event_card.html.erb` |
+
+### Specs touched, and one testing trap worth knowing
+
+Specs that pinned the removed behaviour were **inverted to pin the disabled
+state** (the `spec/requests/documents_letters_spec.rb` convention), not skipped:
+
+| Spec | Was |
+|---|---|
+| `requests/users/first_controller_spec.rb` | rewritten: the removed FIRST routes 404 / no longer reach `Users::FirstController`; the two kept actions still work |
+| `requests/users/first_request_org_invite_spec.rb` | deleted — its entire subject is gone, superseded by the above |
+| `requests/users/first_verify_email_spec.rb` | asserted a redirect to the removed welcome page; now the home page |
+| `models/organizer_position_invite/request_approve_raffle_spec.rb` | asserted the raffle IS created; now asserts it is not, and that approval still happens |
+| `models/unverified_users_no_organizer_position_spec.rb` | same, for an unverified requester |
+| `controllers/organizer_position_invite/requests_controller_approve_decoupling_spec.rb` | same, both cases |
+| `mailers/event_mailer_subevent_created_spec.rb` | subject copy: "sub-organization" → "sub-business" |
+
+**A regression the suite caught that review would not have.** `verify_email` is
+deliberately KEPT routed — `application/_user_menu` renders it on every page for
+an unverified visitor — but it still called `welcome_first_index_path` and
+`first_index_path`, both removed with the FIRST routes. It would have raised
+`NameError` on a live path. Fixed to `root_path`.
+
+**`/first` does not 404.** It now falls through to the event slug route
+(`events#show`, id `"first"`), because "first" is an ordinary venture slug. The
+specs therefore assert "no longer reaches `Users::FirstController`" rather than
+"unrouted", which is the claim that actually matters.
+
+#### SKIP_COVERAGE
+
+`spec/spec_helper.rb` now reads `require "simplecov" unless ENV["SKIP_COVERAGE"] == "1"`.
+Default is unchanged. Branch coverage over ~62k LOC is the largest memory
+consumer in a run and repeatedly OOM-killed the 7.7 GB `web` container mid-suite.
+**That failure mode is worth recognising: it looks exactly like a test failure.**
+Three times this session a "result" was really the container dying — a 29-failure
+run, a cascade of `EXIT=1` shards (`container is not running`), and a 29-byte log.
+A `spec/requests` failure attributed to this work did not reproduce once the
+memory pressure was gone: 431 examples, 0 failures.
+
+Baseline for this branch: **4 failures, all environmental** —
+`spec/mailboxes/receipt_bin_mailbox_spec.rb`, where `wkhtmltopdf` has no
+`debian_13_arm64` binary. Confirmed 4/4 identical with the work stashed.

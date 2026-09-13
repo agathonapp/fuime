@@ -9,7 +9,7 @@
     <%= form.hidden_field :event_id, value: @event&.id || params[:event_id] %>
   <% else %>
     <fieldset>
-      <legend class="heading h2 pt2 pb2">Which organization?</legend>
+      <legend class="heading h2 pt2 pb2">Which business?</legend>
       <%= form.select :event_id, current_user.events.not_demo_mode.where.not(id: current_user.reader_events).pluck(:name, :id) %>
     </fieldset>
   <% end %>

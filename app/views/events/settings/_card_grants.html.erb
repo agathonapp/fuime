@@ -3,7 +3,7 @@
 <% disabled = !policy(event).update? %>
 
 <%= form_with(model: event, local: true, class: "mb3") do |form| %>
-  <%= form_errors event, "organization" %>
+  <%= form_errors event, "business" %>
   <% if event.card_grant_setting.present? %>
 
     <%= form.fields_for :card_grant_setting, event.card_grant_setting do |card_grant_setting_fields| %>

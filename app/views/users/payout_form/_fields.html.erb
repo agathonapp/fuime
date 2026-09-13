@@ -102,7 +102,7 @@
 <section data-behavior="wise_transfer_payout_method_inputs" class="<%= "hidden" unless pm_is.call(LegalEntity::PayoutMethod::WiseTransfer) %>" x-data="{ currency: <%= payout_method.try(:currency) ? "'#{payout_method.currency}'" : "null" %>, amount: null, account_type: <%= payout_method.try(:account_type) ? "'#{payout_method.account_type}'" : "null" %>, use_same_email_for_interac: <%= payout_method.try(:use_same_email_for_interac) ? "'#{payout_method.use_same_email_for_interac}'" : "false" %>, email: null }">
   <%= form.fields_for :payout_method_wise_transfer, detail_for.call(LegalEntity::PayoutMethod::WiseTransfer) do |form| %>
     <p class="muted mt-2 mb-5">
-      We've integrated Wise into Fuime to offer international reimbursements to over 100 countries. Fuime never charges fees on reimbursements, however Wise will charge processing fees to the organization reimbursing you. An account with Wise is not required; funds will be sent directly via a local bank transfer.
+      We've integrated Wise into Fuime to offer international reimbursements to over 100 countries. Fuime never charges fees on reimbursements, however Wise will charge processing fees to the business reimbursing you. An account with Wise is not required; funds will be sent directly via a local bank transfer.
     </p>
 
     <%= render partial: "transfers/recipient_details", locals: { form:, disabled: false, required: false } %>
