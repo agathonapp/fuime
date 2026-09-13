@@ -87,7 +87,8 @@ export default class extends Controller {
 
   // data-action="click->wizard#leaveBack" on a Back link.
   leaveBack() {
-    if (!this.reduced) this.panelTarget?.classList.add('wizard-panel--exit-back')
+    if (!this.reduced)
+      this.panelTarget?.classList.add('wizard-panel--exit-back')
   }
 
   storageKey(name) {
@@ -98,7 +99,7 @@ export default class extends Controller {
     try {
       const raw = sessionStorage.getItem(this.storageKey(name))
       return raw === null ? NaN : Number(raw)
-    } catch (_) {
+    } catch {
       return NaN
     }
   }
@@ -106,7 +107,7 @@ export default class extends Controller {
   write(name, value) {
     try {
       sessionStorage.setItem(this.storageKey(name), String(value))
-    } catch (_) {
+    } catch {
       /* private browsing, storage disabled — motion is optional */
     }
   }
