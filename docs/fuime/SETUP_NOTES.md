@@ -43,6 +43,17 @@ the parent's dead end after signing, and the payout-run review page.
   wrong one redirects to the storefront and quietly tests a different layout.
 - A bare `perform_enqueued_jobs { }` **ignores `wait:`**, which runs a deferred
   mail before the state it checks has moved. Drain with `perform_enqueued_jobs(at:)`.
+- **Your dev database is probably missing #109's migration.** `bin/dev` and
+  `annotaterb` both fail with `Undeclared attribute type for enum 'initiated_by'
+  in Guardianship` until you run `docker compose exec web bundle exec rails
+  db:migrate`. The test DB has it (schema load), so the suite is green while dev
+  is broken — which is the confusing order to discover it in.
+- **`annotaterb models` rewrites six unrelated models on some machines, and it is
+  not a fix.** Check-constraint annotations render as
+  `ARRAY['x'::character varying::text]` or `ARRAY['x'::character varying]::text[]`
+  depending on the Postgres version behind `pg_get_constraintdef`. `5324d62cd`
+  normalised those six files specifically to satisfy CI, so if annotaterb flips
+  them back, `git checkout --` them rather than committing the churn.
 - **Do not use `rails runner` against `RAILS_ENV=test`.** It commits rows that no
   transaction rolls back, and every `expect(X.count).to eq(0)` in the suite then
   fails in files you never touched. Cost ~20 minutes here chasing "pre-existing"
