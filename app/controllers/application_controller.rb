@@ -148,9 +148,21 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # Fuime: one front door for anybody without a name yet.
+  #
+  # This used to send them to the settings form, which is a settings form — it
+  # asks a person who has never seen Fuime to fill in a profile. `/setup` is
+  # the family setup wizard, which asks the same two questions (name, 13+) as
+  # its first screen and then keeps going. The settings form's onboarding
+  # branch stays exactly where it is (Rule 2) and still works if reached
+  # directly.
+  #
+  # `return_to` only for GETs: replaying a POST after sign-up is not something
+  # a redirect can honestly promise, and the wizard drops any `return_to` that
+  # points back into itself.
   def redirect_to_onboarding
     if current_user&.onboarding?
-      redirect_to my_settings_path
+      redirect_to setup_path(return_to: (request.get? ? request.fullpath : nil))
     end
   end
 

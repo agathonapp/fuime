@@ -1,0 +1,103 @@
+<% @is_dark = !!@dark || cookies[:theme] == "dark" || (cookies[:theme] == "system" && cookies[:system_preference] == "dark") %>
+<% content_for(:container_class, "container--full !px-0") %>
+<% no_app_shell %>
+
+<%# Fuime: the family setup wizard's chrome.
+
+    Cloned from layouts/fuime_product (the offer wizard) rather than extending
+    it: that layout's header is venture-scoped ("Add something to sell" over
+    @event.name) and its exit link goes to a venture, neither of which exists
+    for somebody who is still signing up. The shared parts — the two-column
+    info pane, the progress strip, the sticky footer — are the same shape, so
+    the two read as one product.
+
+    The one addition that is not cosmetic is the standing status disclosure at
+    the bottom. `no_app_shell` means application/_footer never renders, and
+    these are eight pages on which somebody reads and signs a legal agreement
+    about money. 12 CFR 328.102(b)(3)(ii) makes the omission the violation.
+    See app/views/application/_status_disclosure.html.erb. %>
+
+<% content_for(:head) do %>
+  <style>
+    html, body { overflow-x: hidden }
+    @media (min-width: 640px) {
+      html, body { height: 100vh; margin: 0; padding: 0; }
+    }
+  </style>
+<% end %>
+
+<main class="container <%= content_for :container_class %> h-screen"
+      data-controller="wizard"
+      data-wizard-key-value="<%= wizard_path %>"
+      data-wizard-progress-value="<%= wizard_progress %>"
+      data-wizard-step-value="<%= wizard_step_index %>">
+  <div class="flex flex-col h-full max-h-dvh overflow-hidden">
+    <div class="flex flex-col">
+      <div class="flex flex-row items-center justify-between p-4 gap-4 bg-snow dark:bg-darkless">
+        <div class="flex flex-row items-center justify-start gap-4 min-w-0">
+          <%= render partial: "application/logo" %>
+          <div class="flex flex-col items-start justify-start min-w-0">
+            <h2 class="m-0 truncate"><%= yield(:wizard_title) %></h2>
+            <h3 class="text-sm muted m-0 truncate"><%= yield(:wizard_subtitle) %></h3>
+          </div>
+        </div>
+        <div class="hidden md:block">
+          <%= render "application/flash" unless @hide_flash %>
+        </div>
+        <%# A half-onboarded person has no dashboard to go back to, so the only
+            honest escape is out. There is no "Exit" — it would land nowhere. %>
+        <%= button_to "Sign out", logout_users_path,
+                      method: :delete,
+                      class: "btn bg-muted text-sm shrink-0",
+                      form: { data: { turbo: false } } %>
+      </div>
+
+      <div class="flex-row justify-center flex md:hidden bg-snow dark:bg-darkless">
+        <%= render "application/flash", klass: "mb-2" unless @hide_flash %>
+      </div>
+
+      <div class="wizard-bar" role="progressbar"
+           aria-valuenow="<%= wizard_progress %>" aria-valuemin="0" aria-valuemax="100"
+           aria-label="Setup progress">
+        <div class="wizard-fill" data-wizard-target="fill" style="width: <%= wizard_progress %>%"></div>
+      </div>
+
+      <%= render "fuime/onboarding/rail" %>
+    </div>
+
+    <div class="flex-1 overflow-auto p-6 relative" style="margin-left: calc(100vw - 100%)">
+      <% if content_for?(:info_pane) %>
+        <div class="flex flex-col md:flex-row gap-6 lg:gap-4">
+          <div class="md:sticky md:top-0 flex flex-col flex-grow w-full md:max-w-[50%] lg:max-w-md xl:max-w-lg lg:mx-6">
+            <%= yield(:info_pane) %>
+          </div>
+          <div class="flex flex-col items-center flex-grow">
+            <div class="md:max-w-[600px] w-full">
+              <section class="wizard-panel" data-wizard-target="panel">
+                <%= yield %>
+              </section>
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <div class="max-w-xl mx-auto w-full">
+          <section class="wizard-panel" data-wizard-target="panel">
+            <%= yield %>
+          </section>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="wizard-footer p-4 flex flex-col gap-3 border-solid border-t-2 border-x-0 border-b-0 border-smoke dark:border-slate bg-snow dark:bg-darkless">
+      <% if content_for?(:footer) %>
+        <div class="flex flex-row-reverse justify-between items-center w-full gap-2 flex-wrap">
+          <%= yield(:footer) %>
+        </div>
+      <% end %>
+      <%= render "application/status_disclosure" %>
+    </div>
+  </div>
+</main>
+
+<% @hide_flash = true %>
+<% parent_layout "application" %>

@@ -1,0 +1,43 @@
+<%# locals: (agreement_partial:, minor:, guardian:, minor_label: nil) %>
+<%# Fuime: the agreement a guardian reads and the box they tick, shared by the
+    two screens that can produce a signature — guardianships/show (a parent
+    following a teen's emailed invite) and the family setup wizard's `sign`
+    step (a parent setting the family up themselves).
+
+    Extracted byte-for-byte from guardianships/show. The checkbox id, the label
+    wording and the scroll box are what specs and, more importantly, what past
+    signers saw; they must not drift between the two entry points, because the
+    consent record does not say which screen produced it.
+
+    The FORM is deliberately not in here. The two callers post to different
+    URLs (an invite token vs the wizard step) and the wizard's version has a
+    name field above the box, so the wrapper, the submit button and the
+    record-keeping note stay with the caller. What is shared is the text and
+    the tick. %>
+<% label_name = local_assigns[:minor_label].presence || minor&.name.presence || "this minor" %>
+
+<h2 class="mb-2 mt-4">Guardian agreement</h2>
+<div class="border rounded-lg p-4 mb-4 overflow-y-auto wizard-agreement" style="max-height: 24rem">
+  <% if agreement_partial %>
+    <%= render agreement_partial, minor: minor, guardian: guardian %>
+  <% else %>
+    <p class="error mb-0">
+      The agreement text could not be loaded. Please contact
+      <%= mail_to "support@fuime.com" %> before signing.
+    </p>
+  <% end %>
+</div>
+
+<div class="field field--checkbox mb-3" style="align-items: flex-start;">
+  <%= check_box_tag :agree, "1", false,
+                    required: true,
+                    id: "agree",
+                    class: "mt1",
+                    style: "width: 1.25rem; height: 1.25rem; flex-shrink: 0;",
+                    aria: { required: true } %>
+  <%= label_tag :agree do %>
+    I confirm I am the parent or legal guardian of
+    <strong><%= label_name %></strong>,
+    that I am 18 or older, and I agree to the guardian agreement above.
+  <% end %>
+</div>

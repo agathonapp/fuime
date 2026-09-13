@@ -22,6 +22,8 @@ FriendlyId.defaults do |config|
   config.reserved_words = %w[
     new
     edit
+    setup
+    join
     index
     stylesheets
     assets

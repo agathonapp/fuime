@@ -44,7 +44,32 @@ module Fuime
     TEEN_EMAIL = "playground+maya@fuime.test"
     GUARDIAN_EMAIL = "playground+parent@fuime.test"
     NEW_FOUNDER_EMAIL = "playground+new@fuime.test"
+    NEW_PARENT_EMAIL = "playground+priya@fuime.test"
+    NEW_KID_EMAIL = "playground+kid@fuime.test"
     BANK_IDENTIFIER = "FUIMEPLAYGROUND"
+
+    PERSONA_EMAILS = [
+      TEEN_EMAIL, GUARDIAN_EMAIL, NEW_FOUNDER_EMAIL, NEW_PARENT_EMAIL, NEW_KID_EMAIL
+    ].freeze
+
+    # Is this address part of a demo cast?
+    #
+    # Matched by SHAPE rather than by the list above, because a demo creates
+    # addresses the list cannot know — a presenter naming a teen in the family
+    # wizard types one. `playground+…@fuime.test` and the demo sandbox's
+    # `demo+…@fuime.test` are both reserved domains that cannot reach a real
+    # inbox, which is what makes shape-matching safe here.
+    #
+    # Two callers: the wizard refuses a persona typing a non-persona address
+    # (so a live demo cannot mail a stranger), and
+    # Fuime::PlaygroundMailInterceptor drops anything that gets past that.
+    def self.persona?(email)
+      address = email.to_s.strip.downcase
+      return false if address.blank?
+      return true if address.start_with?("playground+") && address.end_with?("@fuime.test")
+
+      ::Fuime::DemoSandbox.demo_email?(address)
+    end
 
     # How long Maya has "been on Fuime". Backdated once, on first seed, so the
     # storefront's "On Fuime since" and the home page's Insights timeframe menu
@@ -121,9 +146,10 @@ module Fuime
         wipe_mock_ledger!(event)
         fund!(event)
         new_founder = reset_new_founder!
+        new_parent = reset_new_parent!
         event.reload
 
-        { event:, teen:, guardian:, new_founder:, warnings: @warnings }
+        { event:, teen:, guardian:, new_founder:, new_parent:, warnings: @warnings }
       end
     end
 
@@ -172,6 +198,62 @@ module Fuime
       end
     end
 
+    # Put Priya back to "has never used Fuime": no name, no age answer, no
+    # guardianships, and no stub teen left over from the last demo.
+    #
+    # The mirror of reset_new_founder! for the parent-first path. The kid stub
+    # is destroyed rather than emptied because the wizard creates it by email
+    # address, and a presenter who types a different address next time would
+    # otherwise leave a trail of half-made teenagers.
+    def reset_new_parent!
+      without_mail do
+        parent = User.find_or_initialize_by(email: NEW_PARENT_EMAIL)
+        parent.verified = true
+        save_unvalidated!(parent)
+
+        if parent.persisted?
+          Guardianship.where(guardian_id: parent.id).delete_all
+          Guardianship.where(minor_id: parent.id).delete_all
+        end
+
+        kid = User.find_by(email: NEW_KID_EMAIL)
+        if kid
+          Guardianship.where(minor_id: kid.id).delete_all
+          kid.events.find_each do |event|
+            event.destroy
+          rescue => e
+            @warnings << "Could not remove #{event.slug}: #{e.message}"
+          end
+          OrganizerPosition.where(user_id: kid.id).find_each(&:destroy)
+          Event::Application.where(user_id: kid.id).find_each do |application|
+            application.destroy
+          rescue => e
+            @warnings << "Could not remove application #{application.id}: #{e.message}"
+          end
+          begin
+            kid.destroy
+          rescue => e
+            @warnings << "Could not remove the demo teen: #{e.message}"
+          end
+        end
+
+        # Straight to the columns: `full_name` is validated present once it has
+        # ever been set, and `age_attestation` is write-once by validation —
+        # both correct for real users, both in the way of a reset.
+        parent.update_columns(
+          full_name: nil,
+          preferred_name: nil,
+          birthday: nil,
+          age_attestation: nil,
+          age_attested_at: nil,
+          age_attestation_ip: nil,
+          age_attestation_user_agent: nil,
+          updated_at: Time.current
+        )
+        parent.reload
+      end
+    end
+
     # One more income line on the pitch venture, through the same path the
     # seed uses. Returns the CanonicalTransaction, or nil (with a warning)
     # when the venture is not the pitch venture or the import failed.
@@ -191,6 +273,7 @@ module Fuime
       event = self.class.pitch_venture
       teen = User.find_by(email: TEEN_EMAIL)
       new_founder = User.find_by(email: NEW_FOUNDER_EMAIL)
+      new_parent = User.find_by(email: NEW_PARENT_EMAIL)
       {
         slug: SLUG,
         event:,
@@ -198,6 +281,9 @@ module Fuime
         guardian: User.find_by(email: GUARDIAN_EMAIL),
         new_founder:,
         new_founder_fresh: new_founder.present? && new_founder.full_name.blank? && new_founder.events.none?,
+        new_parent:,
+        new_parent_fresh: new_parent.present? && new_parent.full_name.blank? &&
+          new_parent.guardianships_as_guardian.none?,
         offers: event&.fuime_offers&.live&.in_operator_order || [],
         published_offer: event&.fuime_offers&.published&.in_operator_order&.first,
         published: event&.fuime_offers&.published&.count || 0,
@@ -216,6 +302,7 @@ module Fuime
         Pitch playground  /#{event.slug}  (demo_mode=#{event.demo_mode})
           Open /admin/playground and Become a persona (existing impersonate):
             Sam    #{NEW_FOUNDER_EMAIL}  — brand-new founder, lands on signup step 1
+            Priya  #{NEW_PARENT_EMAIL}  — brand-new parent, lands on /setup/parent
             Maya   #{TEEN_EMAIL}  — running the business: Home → What you sell → storefront Buy
             Denise #{GUARDIAN_EMAIL}  — the parent: /guardian
           Storefront /b/#{event.slug} is public; Buy never hits Stripe. Discover excludes this venture.

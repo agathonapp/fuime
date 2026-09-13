@@ -10,6 +10,49 @@ class GuardianshipPolicy < ApplicationPolicy
     user.present?
   end
 
+  # An adult setting up a family from the parent side (Fuime::OnboardingController).
+  #
+  # Deliberately NOT `#new?`'s mirror image. `#new?` admits anyone who is not a
+  # known adult, because a teen inviting their parent is the ordinary case and
+  # unknown age is the ordinary state. This admits the opposite population and
+  # for the same reason: unknown age may proceed, because the 18+ claim is made
+  # on the agreement checkbox (the only path to `adult_18_plus`, exactly as
+  # `#accept?`), not here.
+  #
+  # What it does refuse is an account that is itself somebody's ward. A young
+  # founder whose own parent signed for them must not be able to stand up a
+  # "family" of their own — that is how a minor would end up as the responsible
+  # adult on another minor's business, and `Guardianship`'s own validations
+  # (`signed_up_as_a_young_founder?`) refuse the same thing one layer down.
+  def create_as_guardian?
+    return false if user.blank?
+    return false if user.is_minor? == true
+
+    # An account that ticked "I'm 13 or older" during a FOUNDER signup may not
+    # turn itself into a guardian — the parent path ends in
+    # `attest_adult_18_plus!`, which overwrites that answer, so admitting them
+    # would make self-serve adulthood a two-click affair. A genuine
+    # parent-first parent is never asked that question.
+    #
+    # Deliberately stricter here than `Guardianship.signed_up_as_a_young_founder?`,
+    # which also requires a venture or a guardianship: that predicate governs an
+    # INVITED parent, where a teen naming them is evidence they are the parent.
+    # Nobody invited this one.
+    return false if user.attested_minor_13_plus?
+
+    user.guardianships_as_minor.none?
+  end
+
+  # Re-send the join link to a ward who has not finished signing up. The
+  # guardian only: the link signs its holder in as the minor, so the teen
+  # cannot ask for their own, and a minor who has already joined has no use
+  # for one.
+  def resend_join?
+    return false if user.blank?
+
+    record.guardian == user && record.active? && record.minor.onboarding?
+  end
+
   # Teen can create a guardianship invite (inviting their parent).
   #
   # `is_minor?` is nil (not false) when no birthday is recorded, which is the

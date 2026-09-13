@@ -457,7 +457,10 @@ RSpec.describe LoginsController do
         }
       )
 
-      expect(response).to redirect_to(edit_user_path(user.slug))
+      # Fuime: the family setup wizard is the one front door for a user who
+      # has not finished signing up (ApplicationController#redirect_to_onboarding
+      # and WaitlistInvitesController land there too).
+      expect(response).to redirect_to(setup_path(return_to: nil))
     end
 
     # Fuime A2: signup asks for a name and the 13+ confirmation only, so a name

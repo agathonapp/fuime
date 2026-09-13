@@ -1,0 +1,26 @@
+Hi <%= @greeting_name.presence || "there" %> —
+
+<%= @guardian_name %> signed as your parent or guardian on Fuime, a financial
+platform for young founders. That means you can set up a business and, once a
+person at Fuime approves it, sell what you make or do. <%= @guardian_first_name %>
+approves the money when you ask to be paid, and signing off was the part that
+had to happen first — that's already done.
+
+<% if @existing_account -%>
+You already have a Fuime account — this just adds <%= @guardian_first_name %> to
+it as your parent or guardian.
+<% else -%>
+Your part: your name, one checkbox, and what your business does. About three
+minutes.
+<% end -%>
+
+<%= @existing_account ? "Open Fuime" : "Set up my business" %>:
+<%= @join_url %>
+
+The link works for <%= ::Fuime::FamilyInviteService::JOIN_EXPIRES_IN.inspect %> and
+signs you in on this browser with the same email this message was sent to.
+After that, go to <%= auth_users_url %> and we'll email you a login code.
+
+Not expecting this? Ignore it — nothing happens unless you open it.
+
+— the Fuime team
