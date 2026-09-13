@@ -15,11 +15,11 @@
 # whole platform — the launch cohort's. When profiles carry a zone, pass it in;
 # the signature already takes one.
 #
-# Deliberately NOT applied to mail that already existed
-# (`Event::ApplicationReminderJob`, `GuardianshipMailer#accepted`): those are
-# pre-existing L7 gaps, logged in UPSTREAM_DIVERGENCE.md, and widening this
-# change to them would put a scheduling behaviour change inside an onboarding
-# PR. New minor-addressed mail uses it from the start.
+# `Event::ApplicationReminderJob` was excluded when this was written, to keep a
+# scheduling change out of an onboarding PR; the draft-reminder series was cut
+# from four mails to two and moved inside this window afterwards, in the same
+# pass that rewrote the lifecycle mail. `GuardianshipMailer#accepted` is
+# addressed to the guardian, an adult, so L7 does not reach it.
 module Fuime
   module MinorMailWindow
     QUIET_UNTIL_HOUR = 6

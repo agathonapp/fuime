@@ -1,19 +1,24 @@
 <p>Hi <%= @application.user.name %>,</p>
 
+<%# FUIME: "business", not "application". A teen who went through /setup never
+    saw the word application anywhere — they named a business and answered what
+    they do — so a mail about their "application" reads as being about something
+    else. The answers they did give are still saved; say that, because the fear
+    that stops someone reopening a half-finished form is that it emptied. %>
 <p>
   <% if @application.name.present? %>
-    Your application for <%= @application.name %> hasn't been submitted yet.
+    <%= @application.name %> is still a draft — you didn't finish setting it up.
   <% else %>
-    Your Fuime application hasn't been submitted yet.
+    You started setting up a business on Fuime and didn't finish.
   <% end %>
   <% if @application.may_mark_submitted? %>
-    You've already filled out the required fields, but you still need to submit your application.
+    Everything you entered is saved, and you're one step from done.
   <% else %>
-    It only takes a few more minutes to complete your application.
+    Everything you entered is saved. There are a couple of questions left.
   <% end %>
 </p>
 
-<%= link_to "Continue your application →", application_url(@application), style: "border: 0; border-radius: 6px; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.125); cursor: pointer; display: inline-flex; font-size: 1rem; font-weight: 600; justify-content: center; align-items: center; height: 36px; letter-spacing: 0; overflow: hidden; padding: 0 1rem; position: relative; text-align: center; text-decoration: none; user-select: none; min-height: 36px; background-color: #74B3E7; color: #121519 !important; margin: 12px 0px;" %>
+<%= link_to "Pick up where you left off →", @resume_url, style: "border: 0; border-radius: 6px; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.125); cursor: pointer; display: inline-flex; font-size: 1rem; font-weight: 600; justify-content: center; align-items: center; height: 36px; letter-spacing: 0; overflow: hidden; padding: 0 1rem; position: relative; text-align: center; text-decoration: none; user-select: none; min-height: 36px; background-color: #74B3E7; color: #121519 !important; margin: 12px 0px;" %>
 
 <p>If you have any questions, we're here to help! Just reply to this email or reach out to <%= link_to "support@fuime.com", "mailto:support@fuime.com" %>.</p>
 

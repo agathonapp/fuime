@@ -6374,3 +6374,41 @@ migration.
 other half — `SignedLinkSignIn` is now shared and ready for it); the guardian
 mailers (D1); `/parents` reopening and its `/family` CTA (§6 #6, a marketing
 call); the standard application for adults and second ventures, untouched.
+
+## 2026-09-12 — The mail a founder reads in the minutes after /setup
+
+The wizard shipped in #109 ends on "You're in." Three emails then contradicted
+it within about twenty seconds, because `mark_submitted!` → `mark_under_review!`
+→ `Fuime::FounderAdmission` → `mark_approved!` → `activate_event!` all run in one
+request and each transition mailed. A thirteen-year-old received "you'll hear
+from us within 2 business days", then "**[Action Needed]** <name> has been
+approved — you'll need to sign the Fuime agreement", then "Welcome to Fuime".
+Only the third was true. The second names an action nobody can take:
+`FUIME_DOCUSEAL_TEMPLATE_ID` is unset, `send_contract` returns nil, and the
+status page renders no signing step. The rational response to the first two is
+to stop and wait for a signature request that is never coming — at the
+highest-intent moment in the funnel.
+
+| Change | Why | Files |
+|---|---|---|
+| `mark_approved`'s mail is gated on an agreement actually existing (`contract.presence \|\| send_contract`) | The mail's entire body is "go and sign". With no DocuSeal template there is nothing to sign; approval is then an internal step and `#activated` is the mail that says something true | `app/models/event/application.rb` |
+| `mark_under_review`'s mail is deferred by `QUEUE_MAIL_DELAY` (2 min) and the mailer returns `NullMail` unless the record is *still* `under_review` | The mail's content is a promise of a wait. Deferred-and-rechecked rather than suppressed per call site, because `FounderAdmission`, `CohortAdmission`, `#on_contract_party_signed` and the admin console all reach that transition and only the state knows whether anybody is actually waiting | `app/models/event/application.rb`, `app/mailers/event/application_mailer.rb` |
+| Draft reminders cut 4 → 2 (day 1, day 7) and scheduled inside `Fuime::MinorMailWindow` | L7: transactional only, nothing 12–6 a.m. Four unsolicited mails over a fortnight to a minor is re-engagement by day 14. The window is applied at schedule time, since `wait_until` is what the queue honours | `app/models/event/application.rb`, `app/lib/fuime/minor_mail_window.rb` |
+| Reminder tips rewritten | All four were upstream HCB's: a free donation page, reimbursements, debit cards with Apple/Google Pay, and a mobile app. Fuime has none of them (`DisabledModules`, `Event::Plan::Free`, no app) — four nonexistent products advertised to a minor | `app/mailers/event/application_mailer.rb` |
+| Subject "[Action Needed] Complete your Fuime application!" → "Your Fuime business is still a draft"; body speaks of a *business*, not an *application*; CTA points at `setup_url` | A teen who used `/setup` never saw the word "application". `/setup` resumes a draft from the DATABASE, so the link works on a device that never held the wizard's session cookie | `app/mailers/event/application_mailer.rb`, `app/views/event/application_mailer/incomplete.html.erb` |
+| `ApplicationReminderJob` also returns early for a user who has a venture | A founder who abandoned one draft and built a business anyway is not a stalled signup | `app/jobs/event/application_reminder_job.rb` |
+
+Pinned by `spec/models/fuime_application_lifecycle_mail_spec.rb` (admission
+sends exactly one founder-addressed mail, and it is the welcome; a genuine queue
+still gets told) and `spec/jobs/fuime_draft_reminder_spec.rb` (two reminders,
+never inside quiet hours, nothing advertising a product Fuime does not have).
+
+The delay had to be respected in the spec rather than collapsed: a bare
+`perform_enqueued_jobs { }` ignores `wait:` and runs the queue mail *before*
+admission advances the state, which is the exact race `QUEUE_MAIL_DELAY`
+removes. Drained with `perform_enqueued_jobs(at:)` instead.
+
+**Not done here:** `Event::ApplicationMailer#confirmation` still describes an
+agreement, but it only fires when a contract exists, so it is correct whenever
+it sends. Whether an abandoned-draft nudge to a minor is transactional at all is
+a counsel question; two is the most that can be defended, and zero may be right.
