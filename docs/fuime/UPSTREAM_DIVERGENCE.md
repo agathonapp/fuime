@@ -6470,3 +6470,59 @@ redirects to the storefront and quietly tests a different layout.
 **Not fixed:** the Stripe rescue still advises "Please try again" for
 `Stripe::InvalidRequestError`, which is never transient. It reports to
 `Rails.error`, so this is a copy problem rather than a silent one.
+
+## 2026-09-12 — A price that could never be changed, and a comma worth a hundredfold
+
+Half of who Fuime is for is a teenager who already runs something. That founder
+could not change a price. There was no edit route and no price form for a
+persisted `Fuime::Offer` — the only PATCH on `/offers` submitted the slug — so
+the only route to a new price was archive-and-recreate, and that burns the URL:
+`assign_slug` dedupes against archived rows so the new offer cannot reuse the
+old slug, and the pay page scopes to published so the old one 404s. Every
+flyer, QR code, bio link and repeat customer's bookmark breaks. The founder is
+choosing between the right price and the customers they have.
+
+Nothing in the controller needed to change. `offer_params` already permits
+`name`, `description` and `unit_label` and merges `price_cents` whenever the
+form carries a price (that merge is the fix from `b4352af15`, where a rename
+form carrying no price could never save). The form was simply never built.
+
+Built inline as a `<details>` on the offers row, matching the "Change this link"
+form immediately below it, rather than as a new screen — the page already has
+this idiom and a new route would be a second place to keep authorised.
+
+**The comma.** `price_cents_param` stripped everything outside `[0-9.]`, so
+`"35,50"` became `"3550"` and then **$3,550**. That is how a price is written
+across most of Europe and Latin America, and a plain typo on a US keyboard —
+and the error is silent, hundredfold, and lands on the one field the entire
+product insists Fuime must never influence. `normalise_decimal` now applies one
+rule: the rightmost separator is the decimal point if exactly one or two digits
+follow it, otherwise every separator is grouping. That reads `1,250.50`,
+`1.250,50`, `1,250` and `35,50` the way each was meant without asking which
+convention the founder uses. The wizard's price step shares this method, so it
+is fixed in both places.
+
+The residual ambiguity is `"1.250"`, read as one thousand two hundred and fifty.
+Nothing resolves that from the string alone, and it is the reading that matches
+the comma case — the alternative would make the same input mean different things
+depending on which key was pressed.
+
+| Change | Files |
+|---|---|
+| Inline edit form (name, price, unit, description) on each offer row, with a line saying the pay link survives and nobody is re-billed | `app/views/fuime/offers/index.html.erb` |
+| `normalise_decimal` replaces the `[^0-9.]` strip | `app/controllers/fuime/offers_controller.rb` |
+
+`spec/requests/fuime_offer_editing_spec.rb` pins both, including a table of ten
+things a person might type. Checked against the old parser: three examples fail
+on it, among them the explicit "never multiplies a comma-decimal price by a
+hundred".
+
+**Note for specs in this area:** the operator floor is 16 and
+`Fuime::OperatorEligibility` cannot clear an unknown age, so a `:attested_teen`
+founder (13+ tick, no date of birth) blocks the venture from selling, which
+makes `Fuime::Offer#publish!` refuse and every downstream example fail for an
+unrelated reason. Use `create(:user, :minor, birthday: 16.years.ago.to_date)`.
+
+**Not done:** price-change history. Nothing records what an offer used to cost,
+so a dispute about a price a customer says they were quoted has no answer in the
+product. `has_paper_trail` is not on `Fuime::Offer`.
