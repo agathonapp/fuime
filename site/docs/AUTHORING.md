@@ -93,7 +93,9 @@ per-student guardian is required.
 
 **Pricing.** `min(max(5% × amount, 50¢), amount)`. A FLOOR, not an additive
 fee — on a $400 sale the fee is $20.00, not $20.50. No monthly fee. Nothing
-until a sale. Unlimited businesses and API keys included. Anything outside the
+until a sale. Unlimited businesses, and API keys included rather than unlocked
+by a plan — note that "included" is not "unlimited": there is a cap of 10 live
+keys per venture, which is a safety limit you rotate within, not a tier. Anything outside the
 standard rate is a conversation with sales. Stripe's ~2.9% + 30¢ is paid by
 fuime out of its own 5% and is **never** added to what the founder pays.
 Founders cohort is 0%, by invitation. Fees bill the guardian, never the minor.

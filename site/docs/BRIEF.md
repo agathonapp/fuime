@@ -76,7 +76,8 @@ These numbers must match `Event::Plan::Free` and `/billing`. There is **one
 price and no tiers** (2026-09-14) — do not invent a second one.
 
 **5% of collections, with a 50¢ minimum.** No monthly fee, and nothing at all
-until a sale. Unlimited businesses and API keys **included, not unlocked**.
+until a sale. Unlimited businesses. API keys **included, not unlocked** — but "included" is
+not "unlimited": 10 live keys per venture is a safety cap you rotate within.
 Founders 0% for the launch cohort, by invitation. Anything outside the standard
 rate is a conversation with sales, not a tier.
 
