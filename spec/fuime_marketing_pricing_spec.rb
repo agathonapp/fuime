@@ -2,86 +2,105 @@
 
 require "rails_helper"
 
-# Fuime G3: marketing and /billing must state the Plan that Checkout charges.
+# Fuime G3 / L8: marketing and /billing must state the price that Checkout charges.
 #
-# Event::Plan::Pro is $19.99/mo + 7% (same take-rate as Free). It unlocks
-# unlimited ventures and API keys. It is not a cheaper fee. Stripe Billing
-# creates `fuime_monthly_<cents>` from Plan#monthly_fee_cents — there is no
-# unused $15 Pro price to "correct" toward.
-RSpec.describe "Fuime pricing truth (G3)" do
-  marketing_files = %w[
-    site/index.html
-    site/pricing.html
-    site/parents.html
-    site/site.js
-    site/docs/BRIEF.md
-  ].map { |rel| Rails.root.join(rel) }
+# ── 2026-09-14: one flat price ───────────────────────────────────────────────
+#
+# 7% + a $19.99 family plan became **5% + 50¢, flat**, with nothing gated and no
+# monthly fee. Anything outside the standard rate is a sales conversation.
+#
+# This file exists because of L8 — "fuime.com must describe the product that
+# exists… never let site copy lead the code again." The previous failure it
+# caught was the Terms understating Fuime's own fee by two points while live
+# money moved. The failure modes now are different and worth naming:
+#
+#   1. A second tier reappearing in copy after the product stopped having one.
+#   2. Quoting "5%" without the 50¢ floor. Under merchant-of-record a $5 sale is
+#      charged the floor — 10%, not 5% — so the bare percentage describes a
+#      price Fuime does not charge.
+RSpec.describe "Fuime pricing truth (G3 / L8)" do
+  # Methods, not constants: a constant defined inside a describe block leaks to
+  # the top level.
+  def public_price_pages = %w[site/index.html site/pricing.html site/parents.html]
 
-  it "charges Pro at $19.99/mo and the same 7% as Free" do
-    expect(Event::Plan::Pro.new.monthly_fee_cents).to eq(1999)
-    expect(Event::Plan::Pro::REVENUE_FEE).to eq(Event::Plan::Free::REVENUE_FEE)
-    expect(Event::Plan::Free::REVENUE_FEE).to eq(0.07)
-  end
+  def marketing_files = public_price_pages + %w[site/site.js site/docs/BRIEF.md]
 
-  it "does not advertise the retired $15/mo + 4% Pro on marketing pages" do
-    marketing_files.each do |path|
-      body = File.read(path)
-      expect(body).not_to include("$15/mo + 4%"), "#{path} still sells Pro at $15 + 4%"
-      expect(body).not_to include("Pro is $15"), "#{path} still sells Pro at $15"
-      expect(body).not_to include("plus 4%"), "#{path} still claims a 4% Pro fee"
-      expect(body).not_to include("drops to 4%"), "#{path} still implies a rate cut"
+  def read(rel) = File.read(Rails.root.join(rel))
+
+  describe "the code" do
+    it "charges 5% with a 50¢ floor and no monthly fee" do
+      expect(Event::Plan::Free::REVENUE_FEE).to eq(0.05)
+      expect(Event::Plan::MINIMUM_FEE_CENTS).to eq(50)
+      expect(Event::Plan::Free.new.monthly_fee_cents).to eq(0)
+    end
+
+    # The fallback and the real rate are now the same number, which retires the
+    # trap the old version of this file was written for: a page rendering
+    # FUIME_PLATFORM_FEE_PERCENT used to understate the fee by two points.
+    it "no longer has a fallback rate that differs from what ventures pay" do
+      expect(Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT).to eq(5)
+      expect((Event::Plan::Free::REVENUE_FEE * 100).round).to eq(5)
     end
   end
 
-  it "states the live Pro price and same-rate unlock on every public price page" do
-    %w[site/index.html site/pricing.html site/parents.html].each do |rel|
-      body = File.read(Rails.root.join(rel))
-      expect(body).to include("$19.99"), "#{rel} is missing $19.99"
-      expect(body).to include("API keys"), "#{rel} is missing the API-key unlock"
-      expect(body).to include("7%"), "#{rel} is missing the 7% take-rate"
-    end
-  end
-
-  # ── The contract itself said 5% ───────────────────────────────────────────
-  #
-  # Both of these rendered `Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT`,
-  # which derives from `Event::Plan::FALLBACK_REVENUE_FEE` — 5%, the fallback for
-  # a venture with no plan resolved, and a rate no real venture is charged. Every
-  # venture is created on Free, at 7%. So Fuime's binding Terms of Service, and
-  # the one lesson page that is about Fuime, both understated Fuime's own fee by
-  # two points while live money moved.
-  #
-  # The FAQ was corrected for exactly this in PR #94 and these two were missed,
-  # which is the ordinary shape of a copy fix that lands in one place. That is
-  # what this example is for: all three surfaces, pinned together.
-  describe "the fee stated in the Terms and the /learn lesson", type: :request do
-    it "is the rate a real venture pays, not the 5% fallback" do
-      free_rate = "#{(Event::Plan::Free::REVENUE_FEE * 100).round}%"
-
-      get "/terms"
-      expect(response.body).to include(free_rate)
-      expect(response.body).not_to match(/keeps\s*5%/)
-
-      get "/learn/what-fuime-takes"
-      if response.status == 200
-        expect(response.body).to include(free_rate)
-        expect(response.body).not_to match(/keeps\s*<strong>5%/)
+  describe "every public price page" do
+    it "states the rate and the floor together" do
+      public_price_pages.each do |rel|
+        body = read(rel)
+        expect(body).to match(/5%/), "#{rel} is missing the 5% rate"
+        expect(body).to match(/50¢|\$0\.50/), "#{rel} states 5% without the 50¢ floor"
       end
     end
 
-    it "never renders the fallback constant as a customer-facing rate" do
-      expect(Fuime::PaymentLinkService::FUIME_PLATFORM_FEE_PERCENT).to eq(5)
-      expect((Event::Plan::Free::REVENUE_FEE * 100).round).to eq(7)
+    it "offers a way to talk to us instead of a second tier" do
+      public_price_pages.each do |rel|
+        expect(read(rel)).to match(/custom pricing|talk to us|contact us/i),
+                             "#{rel} has no sales route for anyone outside the standard rate"
+      end
+    end
+  end
 
-      %w[
-        app/views/static_pages/terms.html.erb
-        app/views/static_pages/faq.html.erb
-        app/views/learn/lessons/_what_fuime_takes.html.erb
-      ].each do |rel|
-        body = File.read(Rails.root.join(rel))
-        rendered = body.gsub(/<%#.*?%>/m, "") # comments may name the constant
-        expect(rendered).not_to include("FUIME_PLATFORM_FEE_PERCENT"),
-                                "#{rel} states the 5% fallback as the fee"
+  describe "no retired tier survives anywhere in marketing" do
+    it "sells no monthly subscription" do
+      marketing_files.each do |rel|
+        body = read(rel)
+        expect(body).not_to include("$19.99"), "#{rel} still sells the retired family plan"
+        expect(body).not_to include("$15/mo"), "#{rel} still sells a retired monthly price"
+      end
+    end
+
+    it "no longer claims a 7% take-rate" do
+      marketing_files.each do |rel|
+        expect(read(rel)).not_to match(/\b7%/), "#{rel} still advertises the retired 7% rate"
+      end
+    end
+
+    it "does not gate ventures or API keys behind an upgrade" do
+      marketing_files.each do |rel|
+        body = read(rel)
+        expect(body).not_to match(/one venture\b/i), "#{rel} still advertises a one-venture limit"
+        expect(body).not_to match(/drops? to|plus 4%|\$15\/mo \+ 4%/), "#{rel} implies a rate cut"
+      end
+    end
+  end
+
+  # The surfaces the old version of this file pinned together, kept pinned: a
+  # copy fix that lands on one page and misses the binding one is the ordinary
+  # shape of this bug.
+  describe "the Terms and the /learn lesson", type: :request do
+    it "state the rate a real venture actually pays" do
+      get "/terms"
+      # Asserted before the body, so a future failure says "terms redirected"
+      # rather than "the rate is missing" — they need very different fixes, and
+      # this example once failed in a way that could not distinguish them.
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to match(/5%/)
+      expect(response.body).not_to match(/keeps\s*7%/)
+
+      get "/learn/what-fuime-takes"
+      if response.status == 200
+        expect(response.body).to match(/5%/)
+        expect(response.body).not_to match(/keeps\s*<strong>7%/)
       end
     end
   end

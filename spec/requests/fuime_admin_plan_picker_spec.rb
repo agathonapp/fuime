@@ -30,7 +30,9 @@ RSpec.describe "admin plan picker", type: :request do
     get edit_event_path(venture, tab: "admin")
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Fuime free (7.0%)")
+    # Fuime's own plan states rate + floor, because a sale is charged
+    # max(5%, 50¢). The legacy HCB plans below still use the bare percentage.
+    expect(response.body).to include("Fuime (5% + $0.50)")
     expect(response.body).to include("Fuime for schools (0.0%)")
     expect(response.body).to include("Fuime standard (5.0% + $15.00/mo)")
     # No lowercase HCB leftovers left in the control.

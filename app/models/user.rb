@@ -793,18 +793,20 @@ class User < ApplicationRecord
                                            status: Fuime::Subscription::ACTIVE_STATUSES).exists?
   end
 
-  # Fuime: free tier = one venture. Room for another?
+  # Fuime: is there room for another venture? Always, since 2026-09-14.
   #
-  # Pro (the family subscription) unlocks unlimited — theirs, or any
-  # guardian's. Ventures inside a school programme never consume the slot.
-  # Single source of truth: Event::Application's activation gate and the
-  # in-flow paywall banner both read this, so the wall and its signage can
-  # never disagree.
+  # This used to be the free tier's one-venture wall, lifted by the $19.99
+  # family plan. With one flat price (see Event::Plan::Free) there is nothing to
+  # sell an upgrade for, and the wall was the most expensive thing in the
+  # product: it stopped a founder at the exact moment they had just succeeded at
+  # something and wanted to do it again.
+  #
+  # Kept as a method rather than deleted, and still the single source of truth
+  # for Event::Application's activation gate and the in-flow banner. If a limit
+  # ever comes back it comes back here, and the gate and its signage cannot
+  # disagree — which is the property this method was created for.
   def venture_slot_available?
-    return true if fuime_pro?
-    return true if guardians.any?(&:fuime_pro?)
-
-    events.not_hidden.reject(&:institutionally_sponsored?).empty?
+    true
   end
 
   # Fuime: is this user the signing guardian for someone else?

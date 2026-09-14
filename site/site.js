@@ -373,11 +373,11 @@
   /* ── live fee calculator ─────────────────────────────────────────────── */
 
   // The one place on the site where the pricing is not a claim. Drag it and
-  // the invoice recomputes with the arithmetic Free and Pro both run — 7%
+  // the invoice recomputes with the one arithmetic every business runs — 5%
   // platform fee, with Stripe's own 2.9% + 30c shown as its own line because
   // an all-in figure that hides the processor is a deceptive one. Pro does not
-  // cut this rate; it is $19.99/mo for a second venture and API keys.
-  // Price list at the 7% take-rate Free and Pro both run.
+  // There is no second tier and no monthly fee: unlimited businesses and API
+  // keys are included. Price list at the one 5% + 50¢ rate.
   var STRIPE_PCT = 0.029
   var STRIPE_FIXED = 0.3
   var FUIME_PCT = 0.07
@@ -422,7 +422,7 @@
       // with the range or it reads as a threshold that trips.
       set(
         out.monthly,
-        "Free is $0/mo + 7%. Pro is $19.99/mo + 7% \u2014 same take-rate, plus unlimited ventures and API keys. Stripe's 2.9% + 30\u00A2 applies on both."
+        "One price: 5% + 50\u00A2 of what you collect, no monthly fee. Unlimited businesses and API keys included. Card processing comes out of our 5%, not on top."
       )
 
       var pct = ((amount - range.min) / (range.max - range.min)) * 100

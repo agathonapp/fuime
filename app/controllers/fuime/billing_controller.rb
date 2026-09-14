@@ -31,43 +31,23 @@ module Fuime
       @pending_guardian_invite = pending_guardian_invite?
     end
 
+    # Fuime: RETIRED 2026-09-14. Fuime has one flat price and nothing to sell a
+    # subscription for.
+    #
+    # The action is kept and refuses, rather than the route being removed: the
+    # Upgrade button is gone from #show, but this path has always been reachable
+    # by a bookmark, a back-button re-post or a double submit — which is the
+    # exact hole the old duplicate-subscription guard was written for. A removed
+    # route would 404 at a parent who bookmarked their billing page; this tells
+    # them why instead.
+    #
+    # What was here: an adult check, a guard against minting a second Stripe
+    # subscription for a family that already had one, and a Checkout session.
+    # All of it only made sense while there was something to buy. Families who
+    # are STILL being billed cancel through #portal, which is untouched and is
+    # now the only Stripe writer on this controller.
     def subscribe
-      return refuse_minor unless adult?
-
-      # Fuime: refuse a second subscription for the same family (2026-08-21).
-      #
-      # Nothing stopped a repeat POST here. The page hides the Upgrade button once
-      # the plan is active, but the route was reachable — a double submit, a
-      # bookmarked form, or a back-button re-post minted a SECOND Stripe
-      # subscription against the same customer. The webhook then overwrote
-      # `stripe_subscription_id` with the new one, so the first became invisible to
-      # Fuime while continuing to charge the guardian's card every month, forever,
-      # with no surface anywhere in the app that could see it.
-      #
-      # `#active?` covers the already-have-it case (paid active/trialing, and a
-      # comp). `#stripe_backed?` is the rest of the hole: past_due / unpaid /
-      # incomplete still have a live Stripe subscription, and opening Checkout
-      # would mint a second one the same way. Those go to the billing portal.
-      existing = service.record
-      if existing&.active?
-        redirect_to my_billing_path,
-                    alert: existing.comped? ? "You already have the family plan, comped by Fuime — there's nothing to buy." : "You're already on the family plan."
-        return
-      end
-
-      if existing&.stripe_backed?
-        session = service.portal_session(return_url: my_billing_url)
-        redirect_to session.url, allow_other_host: true
-        return
-      end
-
-      session = service.checkout_session(
-        success_url: my_billing_url(subscribed: 1),
-        cancel_url: my_billing_url
-      )
-      redirect_to session.url, allow_other_host: true
-    rescue Fuime::SubscriptionService::NotBillable => e
-      redirect_to my_billing_path, alert: e.message
+      refuse_retired_plan
     end
 
     def portal
@@ -101,6 +81,13 @@ module Fuime
     # (ONBOARDING_PLAN §2 #11).
     def pending_guardian_invite?
       current_user.guardianships_as_guardian.pending.exists?
+    end
+
+    def refuse_retired_plan
+      redirect_to my_billing_path,
+                  alert: "Fuime is one flat price now — #{Event::Plan.fuime_price_label} and no " \
+                         "monthly fee. Unlimited businesses and API keys are included, so there's " \
+                         "nothing to subscribe to."
     end
 
     def refuse_minor

@@ -17,9 +17,15 @@
     <h3 class="mt0">You're on the family plan 🎉</h3>
     <p>
       Unlimited ventures and API keys, one subscription.
-      Fuime still keeps
-      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>
-      of what each venture collects — the same take-rate as Free.
+      <%# FUIME 2026-09-14: this plan is retired and buys nothing. Said at the
+          top, in the parent's terms, because the alternative is a family
+          quietly paying $19.99 a month for a feature set every account now
+          has. Fuime should not need to be asked for that money back. %>
+      <strong>This subscription no longer gives you anything.</strong>
+      Fuime moved to one flat price — <strong><%= Event::Plan.fuime_price_label %></strong>
+      of what each business collects, no monthly fee — and unlimited businesses
+      and API keys are now included for everyone. Please cancel it below; you
+      will not lose anything.
       <% if @subscription.current_period_end %>
         Renews <%= @subscription.current_period_end.strftime("%B %-d, %Y") %><%= @subscription.cancel_at_period_end ? " (set to cancel)" : "" %>.
       <% end %>
@@ -31,8 +37,8 @@
       <p class="muted mb-0">Fuime comped this plan for your family, so there's nothing to pay and no card on file.</p>
     <% elsif @is_adult %>
       <%# Fuime: turbo: false is load-bearing — see the Upgrade button below. %>
-      <%= button_to "Manage billing", my_billing_portal_path, class: "btn btn--secondary", form: { data: { turbo: false } } %>
-      <p class="muted text-sm mt-1">Card changes, invoices, and cancellation happen in Stripe's secure portal — Fuime never sees your card.</p>
+      <%= button_to "Cancel this subscription", my_billing_portal_path, class: "btn", form: { data: { turbo: false } } %>
+      <p class="muted text-sm mt-1">Cancellation and invoices happen in Stripe's secure portal — Fuime never sees your card.</p>
     <% end %>
   <% elsif @subscription&.stripe_backed? %>
     <%# past_due / unpaid / incomplete still have a live Stripe subscription.
@@ -69,60 +75,28 @@
       subscription would charge you twice.
     </p>
   <% else %>
-    <h3 class="mt0">Free plan</h3>
+    <%# FUIME 2026-09-14: there is no upgrade, because there is no second tier.
+        The whole branch that lived here — a Free-vs-family comparison, an
+        Upgrade button, and three different ways of telling a teenager to go ask
+        an adult for one — went away with the family plan. What is left is the
+        price, stated once.
+
+        Note this screen is now the same for a teen and a parent. The old
+        @is_adult / @pending_guardian_invite / @guardians branching existed only
+        to decide who was allowed to enter a card, and nobody enters a card any
+        more. %>
+    <h3 class="mt0">Your plan</h3>
     <p>
-      One venture, with Fuime keeping
-      <strong><%= number_to_percentage(Event::Plan::Free::REVENUE_FEE * 100, precision: 1) %></strong> of what it collects.
-      The family plan is
-      <%# Fuime: render_money, not integer division. `1999 / 100` is 19 in Ruby,
-          so this page advertised "$19/month" and Stripe charged $19.99 — a
-          price the product does not have, on the one screen whose entire job is
-          stating the price. %>
-      <strong><%= render_money(@pro_plan.monthly_fee_cents) %>/month</strong> for
-      <strong>unlimited ventures</strong> and
-      <strong>API keys</strong>,
-      at the same
-      <strong><%= number_to_percentage(Event::Plan::Pro::REVENUE_FEE * 100, precision: 1) %></strong>
-      take-rate — not a cheaper fee.
+      One price: Fuime keeps
+      <strong><%= Event::Plan.fuime_price_label %></strong>
+      of what your business collects, and nothing at all until you sell
+      something. No monthly fee.
     </p>
-    <% if @is_adult %>
-      <%# Fuime: `turbo: false`, and it is the whole reason this button worked.
-          #subscribe answers with a 302 to checkout.stripe.com. Turbo Drive
-          submits button_to over fetch, and a fetch cannot render a cross-origin
-          redirect — so the session was created on Stripe every single click and
-          the browser simply sat there. Three live sessions were opened in 90
-          seconds by somebody pressing a button that looked dead.
-          Opting out makes it an ordinary form post, which the browser follows
-          across origins by itself. Same reason payout_methods/show does it for
-          Plaid. %>
-      <%= button_to "Upgrade — #{render_money(@pro_plan.monthly_fee_cents)}/mo", my_billing_subscribe_path, class: "btn bg-accent", form: { data: { turbo: false } } %>
-      <p class="muted text-sm mt-1">Payment happens in Stripe's secure checkout — Fuime never sees your card.</p>
-      <%# Staff reach the buttons without a birthday on file (User#staff?), so
-          say whose card this is: the subscription belongs to the signed-in
-          account, not to whoever the admin was just looking at. %>
-      <% if @is_staff && !current_user.known_adult? %>
-        <p class="muted text-sm mb-0">You're seeing the adult view as Fuime staff. This subscribes <strong><%= current_user.email %></strong>.</p>
-      <% end %>
-    <% elsif @pending_guardian_invite %>
-      <%# Fuime: an invited parent who has not signed yet. Accepting is what
-          makes them a known adult (GuardianshipsController#accept), so say the
-          ordering rather than "ask your parent". The accept link lives in the
-          email; the guardian page can resend it if that email is gone. %>
-      <p class="mb-0">
-        You can upgrade once you've accepted a guardian invitation — that's what
-        confirms you're the adult on the account. Open the link in the email a young
-        founder sent you, or
-        <%= link_to "resend it from your guardian page", guardianships_path %>.
-      </p>
-    <% elsif @guardians.any? %>
-      <p class="mb-0">
-        The family plan is billed to a parent or guardian — ask
-        <strong><%= @guardians.map { |g| g.name.presence || g.email }.to_sentence %></strong>
-        to upgrade from their account.
-      </p>
-    <% else %>
-      <p class="mb-0">The family plan is billed to a parent or guardian, so it unlocks once yours has joined Fuime.</p>
-    <% end %>
+    <p class="mb-0">
+      <strong>Unlimited businesses</strong> and <strong>API keys</strong> are
+      included. Selling at a scale where this stops making sense?
+      <a href="mailto:support@fuime.com">Talk to us</a> about custom pricing.
+    </p>
   <% end %>
 </div>
 

@@ -2,6 +2,60 @@
 
 ## Handoff (most recent first)
 
+**2026-09-14 (b) — Subscriptions for operators, and one flat price. All green.**
+Everything below from the earlier 2026-09-14 note has now RUN: both migrations
+applied, full suite exercised. Two features on top.
+1. **Operators can sell monthly/yearly.** Renewals post from `invoice.paid` —
+   NOT from the session or the PaymentIntent, neither of which works for a
+   renewal (see UPSTREAM_DIVERGENCE). The trap worth knowing: Fuime's own family
+   plan bills through Stripe Billing on the SAME platform account and
+   `SubscriptionWebhookHandler` matches on `fuime_event_id`, so an operator's
+   subscription is stamped `fuime_subscription_kind` and the plan handler refuses
+   anything stamped. Without it, a customer cancelling a teen's $9.99 tool would
+   cancel that venture's own Fuime plan.
+2. **Pricing is now 5% + 50¢ flat, no monthly fee, nothing gated.** Pro is
+   retired (`#retired?`), the one-venture wall and the paywall banner are gone,
+   and `BillingController#subscribe` refuses server-side. Site copy rewritten in
+   the same pass — L8 requires it, and the guard spec now enforces "never quote
+   5% without the 50¢".
+**⚠️ ONE THING NEEDS A HUMAN: every live `Fuime::Subscription` with no event is
+still billing $19.99 in Stripe.** Retiring the plan does not cancel them.
+**Also corrected:** the site claimed Stripe's 2.9% + 30¢ applies "on top" for
+sellers. Under MoR it does not — Fuime absorbs it. We were overstating seller
+cost by ~3 points.
+**Next:** self-serve subscription cancellation for buyers (FTC click-to-cancel;
+the pay page currently points at support@fuime.com), then `PLAID_ENV` so a seller
+can attach a bank at all.
+
+**2026-09-14 (a) — Paddle gap analysis, and two Tier-0 fixes written but NOT RUN.**
+Research pass on Paddle (product, pricing, design) landed as
+`PADDLE_GAP_ANALYSIS.md` and `PADDLE_DESIGN_TEARDOWN.md`. The gap list is real
+but it is **not** the top of the queue: money comes in on live keys and
+`PayoutBatchService#mark_paid!` sends none out (no `Stripe::Payout`, no ACH
+originator), while `PLAID_ENV=sandbox` means a seller cannot even attach a bank.
+That decision is the founder's — see GAP_ANALYSIS §2.
+Decided and built: **manual transfers with an honest ledger.** `mark_paid!` now
+requires a `transfer_reference` and refuses without one — it posts the only
+ledger debit in the product and sends no money, so a misclick used to zero a
+teenager's payable against a transfer nobody made. Eight existing spec call
+sites updated for the new signature.
+Also written this session: `Fuime::MissedMorPaymentSweepJob` + hourly schedule entry
+(the sweep existed and was never scheduled), and buyer-jurisdiction capture —
+migration `20260914120000`, `Fuime::SaleJurisdiction`, and
+`PaymentWebhookHandler#record_jurisdiction`. `billing_address_collection` has
+been set on every MoR checkout for months and the answer was thrown away, so
+nothing in this app can compute a nexus threshold; that is now fixed at the
+capture end.
+**⚠️ NONE OF IT HAS RUN.** Docker's daemon was down and the only local Ruby
+besides 4.0.6 is 3.4.10 against a Gemfile pinned to 3.4.9 — so no `db:migrate`,
+no `rspec`, no schema regeneration. `ruby -c` passes on all five files and that
+is the whole of the verification. **Run both migrations, then
+`spec/models/fuime/sale_jurisdiction_spec.rb`, `spec/services/fuime/payout_batch_service_spec.rb`
+and `spec/requests/fuime_full_business_flow_spec.rb` before trusting any of it.**
+Start Docker, or install Ruby 3.4.9 — the local 3.4.10 is refused by the Gemfile pin.
+Also corrected: `STRIPE_FEATURE_AUDIT.md:151` is stale — `ProvisionConnectAccountJob`
+is already gated under MoR at `provision_connect_account_job.rb:46`.
+
 **2026-09-13 — Hack Club's face on every reachable page (PR #111).**
 Two screenshots (Documents "Nonprofit status", a Card grants tab for a blocked
 module) opened into 196 files. The worst items say neither "Hack Club" nor

@@ -172,6 +172,12 @@ class Event
       created_at < Date.new(2024, 8, 24)
     end
 
+    # Fuime: is this plan still sold? Overridden to true by plans Fuime has
+    # stopped offering but cannot delete, because ventures are still on them
+    # (Rule 2 — disable, don't delete). A retired plan keeps working exactly as
+    # it did; it just never appears as something to choose.
+    def retired? = false
+
     def revenue_fee_label
       ActionController::Base.helpers.number_to_percentage(revenue_fee * 100, precision: 1)
     end
@@ -192,6 +198,27 @@ class Event
     # "5.0% + $15.00/mo", or just "5.0%" when nothing is billed monthly.
     def price_label
       [revenue_fee_label, monthly_fee_label].compact.join(" + ")
+    end
+
+    # Fuime's ONE public price, stated the way it is actually charged.
+    #
+    # A percentage alone is not the price. Under merchant-of-record every sale
+    # is charged `max(rate × amount, MINIMUM_FEE_CENTS)`, so a $5 sale pays 50¢
+    # — 10%, not 5%. Quoting "5%" on a storefront, a FAQ or fuime.com would
+    # describe a price Fuime does not charge, which is the specific failure L8
+    # exists to prevent ("fuime.com must describe the product that exists").
+    #
+    # A class method because this is the PLATFORM's price, not a property of any
+    # one venture's plan row — the FAQ and the marketing page need it without
+    # having an Event in hand. A venture on a legacy or negotiated plan still
+    # states its own #price_label; this is the number Fuime advertises.
+    def self.fuime_price_label
+      rate = ActionController::Base.helpers.number_to_percentage(
+        Event::Plan::Free::REVENUE_FEE * 100, precision: 0
+      )
+      floor = ActionController::Base.helpers.number_to_currency(MINIMUM_FEE_CENTS / 100.0)
+
+      "#{rate} + #{floor}"
     end
 
     def self.available_features

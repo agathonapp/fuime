@@ -36,12 +36,18 @@ RSpec.describe Event::Plan, "labels" do
       expect(Event::Plan::Standard.new.label).to eq("Fuime standard (5.0% + $15.00/mo)")
     end
 
-    it "names the family plan's real price" do
-      expect(Event::Plan::Pro.new.label).to eq("Fuime family (7.0% + $19.99/mo)")
+    # Retired 2026-09-14, and the label says so — but it still prints the $19.99
+    # Stripe is charging these families until somebody cancels. An admin looking
+    # at this plan needs to see the live debit, not a tidied-up zero.
+    it "names the retired family plan's real, still-charged price" do
+      expect(Event::Plan::Pro.new.label).to eq("Fuime family — retired (5.0% + $19.99/mo)")
     end
 
-    it "collapses to just the rate when nothing is billed monthly" do
-      expect(Event::Plan::Free.new.label).to eq("Fuime free (7.0%)")
+    # Fuime's own price is the exception to #price_label: it states the 50¢ floor
+    # as well as the rate, because that is what a sale is actually charged. See
+    # Event::Plan.fuime_price_label.
+    it "states Fuime's one price as rate plus floor, with no monthly fee" do
+      expect(Event::Plan::Free.new.label).to eq("Fuime (5% + $0.50)")
       expect(Event::Plan::Free.new.monthly_fee_label).to be_nil
     end
 

@@ -43,15 +43,23 @@ runs. Never quote a review-time SLA; there is none.
 
 ### Pricing
 
-These numbers must match `Event::Plan::{Free,Pro}` and `/billing`. Do not invent
-a cheaper Pro fee.
+These numbers must match `Event::Plan::Free` and `/billing`. There is **one
+price and no tiers** (2026-09-14) — do not invent a second one.
 
-Free $0/mo + 7% of collections, one venture. Pro $19.99/mo + 7% — **the same
-take-rate** — unlocking unlimited ventures and API keys. Founders 0% for the
-launch cohort, by invitation. Pro is not a discount on the fee.
-Stripe's card processing (~2.9% + 30¢) is separate, goes to Stripe, and **must be
-disclosed wherever a fee appears** — an all-in cost that only becomes visible
-later is the FTC's hidden-fee fact pattern. Subscriptions bill the **guardian**,
+**5% + 50¢** of collections. No monthly fee, and nothing at all until a sale.
+Unlimited businesses and API keys **included, not unlocked**. Founders 0% for the
+launch cohort, by invitation. Anything outside the standard rate is a
+conversation with sales, not a tier.
+
+**The 50¢ is part of the price and must be quoted with the 5%.** Under
+merchant-of-record a sale is charged `max(5%, 50¢)`, so a $5 sale pays 10%.
+Writing "5%" alone describes a price fuime does not charge (L8).
+
+**Card processing is NOT charged on top.** fuime is the merchant of record, so
+Stripe bills Ninth Street Labs, LLC — not the founder — and its ~2.9% + 30¢ comes
+out of fuime's 5%. What the founder is owed is the sale minus the fuime fee.
+Earlier copy said processing "applies on top"; that was wrong and overstated what
+a founder pays. Fees bill the **guardian**,
 never the minor: a minor's payment authorisation is voidable at the minor's
 option, the guardian's is not.
 
@@ -255,17 +263,16 @@ Three steps. One of them needs a parent.
    warning when you cross the $400 of net self-employment income at which the
    IRS expects a return.
 
-Pricing on the page must match the Pricing section above, including Stripe's
-separate processing fee. A flat monthly fee on a kid making $80 a month is a tax
-on starting, which is why Free has none — but never imply the 7% is the
-all-in cost, and never imply Pro cuts the 7%.
-Stripe's card processing is separate and goes to Stripe. We show it on every
-invoice so the math is never a surprise.
+Pricing on the page must match the Pricing section above. A flat monthly fee on
+a kid making $80 a month is a tax on starting, which is why there is none — but
+never quote the 5% without the 50¢, and never imply there is a tier to upgrade to.
 
-Free      $0/mo + 7% of what you collect. One venture. No fee on an invoice nobody pays.
-Pro       $19.99/mo + 7%. Same take-rate. Unlimited ventures and API keys.
+fuime     5% + 50¢ of what you collect. No monthly fee. Unlimited businesses and
+          API keys included. No fee on an invoice nobody pays.
+Scale     Custom pricing — a conversation, not a tier. support@fuime.com
 Founders  0% for the launch cohort, by invitation.
-Stripe    2.9% + 30¢ a card payment, on top of every plan above, paid to Stripe.
+Cards     ~2.9% + 30¢ a payment, paid by fuime out of its 5% — NOT charged to the
+          founder on top, because fuime is the legal seller.
 Billed to the guardian who holds the account, never to the young founder.
 
 For parents
@@ -294,9 +301,8 @@ hi@fuime.com
 ```
 Invoice 0014 · Maya R. · Photography · Due on receipt
 Senior portraits · 3 hr session      $400.00
-Stripe processing · 2.9% + 30¢       −$11.90
-fuime platform fee · 7% (Free / Pro) −$28.00
-Left for the venture                 $360.10
+fuime fee · 5% + 50¢                 −$20.00
+Left for the venture                 $380.00
 Paid Jun 14 · Visa ···· 4242
 ```
 

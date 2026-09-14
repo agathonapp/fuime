@@ -6790,3 +6790,170 @@ memory pressure was gone: 431 examples, 0 failures.
 Baseline for this branch: **4 failures, all environmental** —
 `spec/mailboxes/receipt_bin_mailbox_spec.rb`, where `wkhtmltopdf` has no
 `debian_13_arm64` binary. Confirmed 4/4 identical with the work stashed.
+
+
+## 2026-09-14 — Where the buyer was, and the sweep nobody scheduled
+
+Two Fuime-only additions, both additive. **Neither has been executed** — see the
+SETUP_NOTES handoff for the same date; Docker was down and the pinned Ruby was
+not installed, so `db:migrate` and `rspec` did not run.
+
+**1. Buyer jurisdiction is now persisted.**
+`Fuime::PaymentLinkService` has set `billing_address_collection: "required"` on
+every merchant-of-record checkout since digital goods were allowed
+(`MOR_RISK_ACCEPTANCE.md` §7), on the stated grounds that nexus is measured on
+history and history cannot be backfilled. But `Fuime::PaymentWebhookHandler`
+persisted none of it — the address lived only in Stripe's records, so the comment
+at `operator_eligibility.rb:59-66` claiming the data "is already being captured"
+was true of Stripe and false of this database. Nothing in the app could compute a
+state economic-nexus threshold.
+
+- `db/migrate/20260914120000_create_fuime_sale_jurisdictions.rb` — new table,
+  keyed on the PaymentIntent id (the same key the ledger is idempotent on).
+  Country, state, postal code, amount, `occurred_at`. **Deliberately not** city
+  or street lines: nexus counting does not need them.
+- `app/models/fuime/sale_jurisdiction.rb` — create-or-**enrich**, because the two
+  success events carry different payloads for one sale and only
+  `checkout.session.completed` has `customer_details.address`. Enrichment fills
+  blanks and never overwrites. Every failure is swallowed and reported: a
+  compliance record must never take a founder's ledger line down with it.
+- `app/services/fuime/payment_webhook_handler.rb` — `#record_jurisdiction`, called
+  *before* the ledger idempotency early-return so the session event can still
+  enrich a row the PaymentIntent event created. `PaymentView` gains
+  `buyer_address`. Gated on `merchant_of_record?` — on the Connect path the nexus
+  is the seller's, not Fuime's.
+- `spec/models/fuime/sale_jurisdiction_spec.rb` — new.
+
+This closes the capture end only. `Fuime::NexusReportService`
+(`MOR_MIGRATION_PLAN.md:354`) still does not exist, and Fuime is still registered
+to collect and remit nowhere.
+
+**2. `Fuime::MissedMorPaymentSweep` is now scheduled.**
+The service existed, was documented as the recovery path for a dropped webhook
+(TEEN_GROWTH G10), and was reachable only by rake — so the failure it covers
+stayed silent by construction. `app/jobs/fuime/missed_mor_payment_sweep_job.rb`
+wraps it, gated on `merchant_of_record?` because it reads PaymentIntents on the
+platform account; `config/schedule.yml` runs it hourly at :20. Hourly rather than
+half-hourly: the sweep reads a 24-hour window, so a faster cadence re-reads the
+same page of Stripe results for no new information.
+
+**Correction to an existing doc:** `STRIPE_FEATURE_AUDIT.md:151` lists
+`ProvisionConnectAccountJob` as ungated under MoR. It is gated — the job returns
+early at `provision_connect_account_job.rb:46` and
+`ConnectOnboardingService#find_or_create_account!` raises as a second belt. No
+code change; the audit line is stale.
+
+**3. `mark_paid!` will no longer claim a payment happened without evidence.**
+`Fuime::PayoutBatchService#mark_paid!` posts the only ledger debit in the
+product — it is what zeroes a teenager's payable — and it sends no money: a human
+wires it from a bank outside this app (STRIPE_FEATURE_AUDIT.md §4.3). That
+division is a deliberate choice at this volume. Taking the human's word for it on
+a confirm dialog was not: a misclick produced a ledger reading "paid" against a
+transfer nobody made, with no record of what was meant to have been sent.
+
+- `db/migrate/20260914130000_add_transfer_reference_to_fuime_payout_batches.rb` —
+  nullable, because existing rows predate the requirement.
+- `payout_batch_service.rb` — `mark_paid!(batch:, paid_by:, transfer_reference:)`,
+  raising the new `MissingTransferReference` on blank. Stripped, not
+  format-validated: Fuime does not know any given institution's reference format,
+  and a shape rule teaches people to type around it. The trip to the bank is the
+  control.
+- `admin_controller.rb#payout_batch_mark_paid` passes it through; the existing
+  `rescue Error` already covers the new subclass.
+- `app/views/admin/payout_batch.html.erb` — the button becomes a form with a
+  required field. A paid run displays its reference, and a run paid before this
+  change says "No transfer reference was recorded" rather than rendering blank,
+  so an unevidenced run is visibly unevidenced.
+- Specs: eight existing call sites updated for the new signature (`spec/services/
+  fuime/payout_batch_service_spec.rb`, `spec/requests/fuime_full_business_flow_spec.rb`),
+  plus three new examples covering the refusal, that a refused run stays approved
+  with no ledger touched, and that the reference is stored stripped.
+
+**Still true after all three:** Fuime cannot actually pay a seller. `PLAID_ENV`
+is `sandbox` under live Stripe, so no seller can attach a bank account and the
+payout nav item is hidden. That is the next blocker, not this one.
+
+
+## 2026-09-14 — Recurring billing, and one flat price
+
+Two separate changes on the same day. Both green; see the SETUP_NOTES handoff.
+
+### 1. Operators can sell subscriptions
+
+`MOR_RISK_ACCEPTANCE.md` §8 recorded the absence deliberately — recurring was not
+attempted the night before a real-money launch. The driver then is the driver now:
+the archetypal founder vibecodes a tool and wants $9.99/month for it.
+
+- `20260914140000` + `20260914140001` — `fuime_offers.billing_interval`, NULL =
+  one-time, constrained to `month`/`year`. Added unvalidated then validated in a
+  second migration, per the Strong Migrations house rule.
+- `Fuime::Offer` — `#recurring?`, `#one_time?`, `#price_cadence`, and
+  `#price_sentence` now leads with the cadence and DISPLACES the unit label. "$9.99
+  per lawn per month" reads as a rate for a thing; the one fact a buyer must not
+  miss is that it repeats.
+- `Fuime::PaymentLinkService` — takes `offer:`, switches to `mode: "subscription"`
+  with a `recurring` price, and puts metadata in `subscription_data` rather than
+  `payment_intent_data` (Stripe gives a subscription no PaymentIntent to hang it on,
+  and that metadata is the only way a renewal months later can be attributed).
+- **`Fuime::PaymentWebhookHandler#record_subscription_invoice`, from `invoice.paid`.**
+  Neither existing path works for a renewal: `checkout.session.completed` is refused
+  for subscription mode and fires once anyway, and Stripe does not copy subscription
+  metadata onto the renewal's PaymentIntent — so renewals would have vanished
+  silently. The fee is RECOMPUTED per renewal rather than reusing the
+  `fuime_fee_cents` stamped at signup, which would bill a venture forever at the plan
+  it had the day a customer subscribed.
+
+**The collision this was built around.** Fuime bills its own family plan through
+Stripe Billing on the SAME platform account, and `Fuime::SubscriptionWebhookHandler`
+finds those rows by `fuime_event_id` — which an operator's subscription must also
+carry. Without a discriminator, a customer cancelling a teenager's $9.99 tool would
+have written that `canceled` status onto the venture's own plan row. Operator sales
+are now stamped `fuime_subscription_kind: "operator_sale"`
+(`PaymentLinkService::OPERATOR_SALE_KIND`) and the plan handler refuses anything
+stamped. Specced in both directions.
+
+⚠️ **Known gaps, both documented in code rather than left as surprises:**
+self-serve cancellation does not exist (the pay page directs buyers to
+support@fuime.com — an unclear cancellation path is what the FTC negative-option
+rules target, and under MoR the chargeback is Fuime's); and a dropped `invoice.paid`
+is not recoverable, because `MissedMorPaymentSweep` lists PaymentIntents and skips
+invoice-backed ones. A subscription-aware backfill has to list invoices.
+
+### 2. One flat price: 5% + 50¢, no monthly fee
+
+Founder's decision, matching the merchant-of-record market (Paddle, Lemon Squeezy and
+Polar's entry tier are all 5% + 50¢ and none charges a monthly fee). Anything outside
+the standard rate is a sales conversation.
+
+- `Event::Plan::Free::REVENUE_FEE` 0.07 → **0.05**. `MINIMUM_FEE_CENTS` was already 50¢.
+- **Nothing is gated.** `Free#features` no longer subtracts `api_keys`, and
+  `User#venture_slot_available?` always answers true. The one-venture blocker is gone
+  from `Event::Application#activation_blockers`, and
+  `_family_plan_banner.html.erb` renders nothing.
+- `Event::Plan.fuime_price_label` — the ONE public price, stated as rate + floor,
+  because a sale is charged `max(5%, 50¢)` and "5%" alone describes a price Fuime does
+  not charge (L8).
+- **`Event::Plan::Pro` is retired, not deleted** (Rule 2). Its rate already delegated
+  to Free so nobody on it is worse off. `#monthly_fee_cents` deliberately still reports
+  $19.99 — that is what STRIPE is billing until somebody cancels, and a plan reporting
+  $0 while a parent's card is charged would make the app lie about a real debit.
+- `Fuime::BillingController#subscribe` refuses, server-side. The button was never the
+  control: that route is reachable by a bookmark or a back-button re-post, which is the
+  hole the old duplicate-subscription guard was written for. `#portal` is untouched and
+  is now the only Stripe writer there — retiring a plan must not trap the families
+  still paying for it.
+
+⚠️ **OPERATIONAL, NOT CODE: every live `Fuime::Subscription` with no event is still
+billing $19.99.** Cancelling them is a Stripe action. The billing page now leads with
+"This subscription no longer gives you anything… please cancel it."
+
+**A factual error corrected while rewriting the site.** Every page said Stripe's
+2.9% + 30¢ "applies on top". Under merchant-of-record that is false — Fuime is the
+legal seller, so Stripe bills Ninth Street Labs and the fee comes out of Fuime's cut
+(`Event::Plan::Pro` header; `PayablesLedger#processing_fee_cents` is $0 on every MoR
+sale). The site had been overstating what sellers pay by roughly three points. Fixed
+across `site/{index,pricing,parents}.html`, `site/site.js`, `site/docs/BRIEF.md`.
+
+`spec/fuime_marketing_pricing_spec.rb` was rewritten to enforce the new contract:
+no page may quote 5% without the 50¢, none may advertise a second tier or a 7% rate,
+and every public price page must offer the sales route.
