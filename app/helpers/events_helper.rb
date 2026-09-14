@@ -271,6 +271,22 @@ module EventsHelper
           event.payment_account&.cards_profile?
       }
     },
+    # Fuime: what the business sold. Sits next to Taxes rather than near the
+    # ledger, because both answer "how is the business doing" rather than "what
+    # is my money doing right now".
+    {
+      name: "Sales",
+      path_proc: ->(event_id) { fuime_sales_path(event_slug: event_id) },
+      tooltip: "What you've sold, and what sells best",
+      # `analytics` exists in app/assets/images/icons — confirmed, because
+      # `inline_icon` raises Errno::ENOENT on a missing file and 500s every page
+      # that renders the org nav, not just this item. See the Taxes note below.
+      icon: "analytics",
+      symbol: :sales,
+      # `show?`, the same as Taxes and the ledger: a guardian reads this class of
+      # information. There is nothing here to write.
+      available_proc: ->(event) { policy(event).show? && organizer_signed_in? }
+    },
     # Fuime: Tax Tracker nav item
     {
       name: "Taxes",

@@ -188,6 +188,9 @@ Rails.application.routes.draw do
                               param: :id, constraints: { id: /[^\/]+/ }
   end
 
+  # Fuime: what the business sold — the questions the ledger cannot answer.
+  get "/:event_slug/sales", to: "fuime/sales#show", as: :fuime_sales
+
   # Fuime: Tax Tracker
   get "/:event_slug/taxes", to: "fuime/taxes#show", as: :fuime_taxes
   get "/:event_slug/taxes/download", to: "fuime/taxes#download_packet", as: :fuime_taxes_download
