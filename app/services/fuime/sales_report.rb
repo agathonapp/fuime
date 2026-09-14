@@ -35,6 +35,20 @@ module Fuime
   class SalesReport
     INTERVALS = %w[day week month].freeze
 
+    # Frozen SQL per interval, looked up rather than interpolated.
+    #
+    # `revenue_series` validates its argument against INTERVALS first, so
+    # interpolating was safe in practice — but it is the wrong shape: the guard
+    # and the query are separated by enough lines that a future edit could move
+    # one without the other, and a reader has to prove the safety rather than
+    # see it. A lookup cannot express an injection at all, whatever the caller
+    # passes. (Flagged by CodeQL `rb/sql-injection`, and it was right to.)
+    INTERVAL_SQL = {
+      "day"   => Arel.sql("date_trunc('day', occurred_at)"),
+      "week"  => Arel.sql("date_trunc('week', occurred_at)"),
+      "month" => Arel.sql("date_trunc('month', occurred_at)")
+    }.freeze
+
     def initialize(event:, since: nil, until_time: nil)
       @event = event
       @since = since
@@ -62,12 +76,13 @@ module Fuime
     # produces the wrong one half the time. #revenue_series_filled is the chart's
     # version.
     def revenue_series(interval: "month")
-      unless INTERVALS.include?(interval.to_s)
+      grouping = INTERVAL_SQL[interval.to_s]
+      if grouping.blank?
         raise ArgumentError, "interval must be one of #{INTERVALS.join(', ')}"
       end
 
       scope
-        .group(Arel.sql("date_trunc('#{interval}', occurred_at)"))
+        .group(grouping)
         .sum(:amount_cents)
         .transform_keys { |t| t.in_time_zone }
         .sort

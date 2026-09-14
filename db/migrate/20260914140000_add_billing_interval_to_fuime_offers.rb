@@ -7,6 +7,9 @@
 # driver now: the archetypal founder vibecodes a tool and wants $9.99/month for
 # it, and under one-time-only they can sell access once and never again.
 #
+# NOTE: renamed to `recurring_interval` the same day by 20260914180000 — see
+# that migration for why.
+#
 # ── Why a string enum and not a boolean ──────────────────────────────────────
 #
 # Because "recurring?" is not the question anyone downstream actually asks.

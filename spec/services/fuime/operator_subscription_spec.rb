@@ -13,13 +13,13 @@ RSpec.describe "Operator subscriptions", :merchant_of_record do
 
   describe Fuime::Offer do
     it "is one-time by default — nothing recurs unless the operator said so" do
-      expect(build(:fuime_offer, event:).billing_interval).to be_nil
+      expect(build(:fuime_offer, event:).recurring_interval).to be_nil
       expect(build(:fuime_offer, event:)).to be_one_time
     end
 
     it "accepts month and year" do
       %w[month year].each do |interval|
-        expect(build(:fuime_offer, event:, billing_interval: interval)).to be_valid
+        expect(build(:fuime_offer, event:, recurring_interval: interval)).to be_valid
       end
     end
 
@@ -28,20 +28,20 @@ RSpec.describe "Operator subscriptions", :merchant_of_record do
     # impossible to narrow once somebody has sold one.
     it "refuses intervals Fuime does not sell" do
       %w[day week fortnight].each do |interval|
-        expect(build(:fuime_offer, event:, billing_interval: interval)).not_to be_valid
+        expect(build(:fuime_offer, event:, recurring_interval: interval)).not_to be_valid
       end
     end
 
     it "says the cadence the way a buyer reads it" do
-      expect(build(:fuime_offer, event:, billing_interval: "month").price_cadence).to eq("per month")
-      expect(build(:fuime_offer, event:, billing_interval: "year").price_cadence).to eq("per year")
+      expect(build(:fuime_offer, event:, recurring_interval: "month").price_cadence).to eq("per month")
+      expect(build(:fuime_offer, event:, recurring_interval: "year").price_cadence).to eq("per year")
       expect(build(:fuime_offer, event:).price_cadence).to be_nil
     end
 
     it "is enforced in the database, not only the model" do
       offer = create(:fuime_offer, event:)
 
-      expect { offer.update_column(:billing_interval, "week") }
+      expect { offer.update_column(:recurring_interval, "week") }
         .to raise_error(ActiveRecord::StatementInvalid)
     end
   end
@@ -69,7 +69,7 @@ RSpec.describe "Operator subscriptions", :merchant_of_record do
     end
 
     it "sells a recurring offer as a subscription on the stated interval" do
-      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, billing_interval: "month"))
+      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, recurring_interval: "month"))
 
       expect(args[:mode]).to eq("subscription")
       expect(args[:line_items].first[:price_data][:recurring]).to eq(interval: "month")
@@ -79,7 +79,7 @@ RSpec.describe "Operator subscriptions", :merchant_of_record do
     # `payment_intent_data` inside mode: "subscription". Getting either wrong is
     # a 400 at the moment a real buyer clicks pay.
     it "sends subscription metadata where a renewal can still read it" do
-      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, billing_interval: "month"))
+      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, recurring_interval: "month"))
 
       expect(args).not_to have_key(:payment_intent_data)
       expect(args[:subscription_data][:metadata][:fuime_event_id]).to eq(event.id)
@@ -87,7 +87,7 @@ RSpec.describe "Operator subscriptions", :merchant_of_record do
 
     # The whole reason the discriminator exists — see the handler spec below.
     it "stamps an operator's subscription as an operator sale" do
-      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, billing_interval: "month"))
+      args = session_args_for(create(:fuime_offer, event:, price_cents: 9_99, recurring_interval: "month"))
 
       expect(args[:subscription_data][:metadata][:fuime_subscription_kind])
         .to eq(described_class::OPERATOR_SALE_KIND)

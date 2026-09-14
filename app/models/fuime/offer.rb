@@ -21,22 +21,22 @@
 #
 # Table name: fuime_offers
 #
-#  id               :bigint           not null, primary key
-#  aasm_state       :string           default("draft"), not null
-#  billing_interval :string
-#  created_via      :string           default("operator"), not null
-#  description      :text
-#  listed           :boolean          default(TRUE), not null
-#  name             :string           not null
-#  position         :integer          default(0), not null
-#  price_cents      :integer          not null
-#  public_token     :string
-#  slug             :string
-#  unit_label       :string
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  event_id         :bigint           not null
-#  fuime_api_key_id :bigint
+#  id                 :bigint           not null, primary key
+#  aasm_state         :string           default("draft"), not null
+#  created_via        :string           default("operator"), not null
+#  description        :text
+#  listed             :boolean          default(TRUE), not null
+#  name               :string           not null
+#  position           :integer          default(0), not null
+#  price_cents        :integer          not null
+#  public_token       :string
+#  recurring_interval :string
+#  slug               :string
+#  unit_label         :string
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  event_id           :bigint           not null
+#  fuime_api_key_id   :bigint
 #
 # Indexes
 #
@@ -55,10 +55,10 @@
 # Check Constraints
 #
 #  fuime_offers_api_offers_name_their_key  (created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL) NOT VALID
-#  fuime_offers_billing_interval_known     (billing_interval IS NULL OR (billing_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[])))
-#  fuime_offers_created_via_known          (created_via::text = ANY (ARRAY['operator'::character varying, 'api'::character varying]::text[])) NOT VALID
+#  fuime_offers_created_via_known          (created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])) NOT VALID
 #  fuime_offers_price_in_range             (price_cents > 0 AND price_cents <= 1000000)
-#  fuime_offers_state_known                (aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[]))
+#  fuime_offers_recurring_interval_known   (recurring_interval IS NULL OR (recurring_interval::text = ANY (ARRAY['month'::character varying::text, 'year'::character varying::text])))
+#  fuime_offers_state_known                (aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text]))
 #
 module Fuime
   class Offer < ApplicationRecord
@@ -102,11 +102,11 @@ module Fuime
     # Fuime: one-time (NULL) or recurring. See AddBillingIntervalToFuimeOffers
     # for why this is an interval rather than a boolean, and why day/week are
     # deliberately absent.
-    BILLING_INTERVALS = %w[month year].freeze
+    RECURRING_INTERVALS = %w[month year].freeze
 
-    validates :billing_interval, inclusion: { in: BILLING_INTERVALS }, allow_nil: true
+    validates :recurring_interval, inclusion: { in: RECURRING_INTERVALS }, allow_nil: true
 
-    def recurring? = billing_interval.present?
+    def recurring? = recurring_interval.present?
     def one_time? = !recurring?
 
     # What the buyer is agreeing to, said the way a buyer reads it. Used on the
@@ -114,7 +114,7 @@ module Fuime
     # the three cannot drift apart — a subscription described as a one-off
     # purchase anywhere is the chargeback that follows.
     def price_cadence
-      case billing_interval
+      case recurring_interval
       when "month" then "per month"
       when "year"  then "per year"
       end

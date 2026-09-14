@@ -97,7 +97,7 @@
               written about, on a product where the chargeback is Fuime's.
               ⚠️ Self-serve cancellation is a real gap; this is the honest
               interim, not the finished answer. %>
-          This renews automatically <%= @offer.billing_interval == "month" ? "every month" : "every year" %>
+          This renews automatically <%= @offer.recurring_interval == "month" ? "every month" : "every year" %>
           until you cancel. To cancel, email
           <a href="mailto:support@fuime.com">support@fuime.com</a> — we'll stop it
           before your next payment.

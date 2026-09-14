@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_170001) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1340,7 +1340,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_170001) do
 
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
-    t.string "billing_interval"
     t.datetime "created_at", null: false
     t.string "created_via", default: "operator", null: false
     t.text "description"
@@ -1351,6 +1350,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_170001) do
     t.integer "position", default: 0, null: false
     t.integer "price_cents", null: false
     t.string "public_token"
+    t.string "recurring_interval"
     t.string "slug"
     t.string "unit_label"
     t.datetime "updated_at", null: false
@@ -1361,8 +1361,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_170001) do
     t.index ["fuime_api_key_id"], name: "index_fuime_offers_on_fuime_api_key_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
-    t.check_constraint "billing_interval IS NULL OR (billing_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[]))", name: "fuime_offers_billing_interval_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
+    t.check_constraint "recurring_interval IS NULL OR (recurring_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[]))", name: "fuime_offers_recurring_interval_known"
   end
 
   add_check_constraint "fuime_offers", "created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL", name: "fuime_offers_api_offers_name_their_key", validate: false

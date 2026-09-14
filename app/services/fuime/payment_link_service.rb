@@ -112,7 +112,7 @@ module Fuime
                 unit_amount: @amount_cents,
                 # Absent on a one-time sale. Stripe rejects `recurring` in
                 # `mode: "payment"`, so this cannot be set unconditionally.
-                **(recurring? ? { recurring: { interval: @offer.billing_interval } } : {}),
+                **(recurring? ? { recurring: { interval: @offer.recurring_interval } } : {}),
               },
               quantity: 1,
             },

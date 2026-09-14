@@ -30,7 +30,7 @@
 #
 # Check Constraints
 #
-#  fuime_webhook_deliveries_status_known  (status::text = ANY (ARRAY['pending'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[]))
+#  fuime_webhook_deliveries_status_known  (status::text = ANY (ARRAY['pending'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text]))
 #
 module Fuime
   # Fuime: one event's fate at one endpoint.
