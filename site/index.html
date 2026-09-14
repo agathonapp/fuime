@@ -176,147 +176,86 @@
             <h1>You're already working.<br />Start billing.</h1>
             <p class="lead">
               Write a real invoice, keep books that hold up, and know what you
-              owe at tax time. Your client buys from Fuime, and Fuime pays you
-              what the sale earned. You run the business.
+              owe at tax time. You run the business.
             </p>
 
             <div class="hero__cta">
               <a class="btn btn--accent" href="/get-started">Start your business</a>
               <a class="btn btn--ghost" href="/parents">Parents: what you'll be asked to sign</a>
-              <p class="hero__note">
-                Free to start. Nothing at all until you sell something.
-              </p>
+              <p class="hero__note">Free to start. Nothing until you sell something.</p>
             </div>
           </div>
         </div>
 
       </section>
 
-      
-      <!-- ── the work ──────────────────────────────────────────────────── -->
-      <div class="band band--night" style="padding-block: 0">
+      <!-- ── the work ──────────────────────────────────────────────────────
+           A band of its own, so the density counter stops folding the
+           marquee into the hero above it. -->
+      <section class="band band--night" style="padding-block: 0">
         <div class="strip">
           <span class="artifact-label wrap">Examples of the work</span>
           <div class="strip__row">
             <span class="strip__item">Senior portraits</span>
             <span class="strip__item">Lawn and hedges, weekly</span>
-            <span class="strip__item">SAT tutoring, two hours</span>
+            <span class="strip__item">SAT tutoring</span>
             <span class="strip__item">Wedding highlight reel</span>
             <span class="strip__item">A Shopify storefront</span>
             <span class="strip__item">Birthday DJ set</span>
-            <span class="strip__item">Dog walking</span>
             <span class="strip__item">Logo and brand kit</span>
-            <span class="strip__item">Car detailing</span>
             <span class="strip__item">Piano lessons</span>
-            <span class="strip__item">Sneaker restoration</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- ── the artifact, live ────────────────────────────────────────── -->
+      <!-- ── the artifact ──────────────────────────────────────────────────
+           The slider lives on /pricing now. This band keeps the artifact and
+           the three-way split bar under it, which is the claim. -->
       <section class="band band--cream">
-        <div class="wrap rise" data-calc>
-          <div class="bhead">
+        <div class="wrap split rise">
+          <div>
             <p class="eyebrow">What the client gets</p>
             <h2 class="h2">An invoice with your name on it.</h2>
-            <p class="lead mt-5" style="max-width: 54ch">
-              Not a Venmo request. A numbered invoice, with every deduction shown
-              before you agree to it. When a client pays, they buy from Ninth
-              Street Labs, LLC as seller of record.
-            </p>
+            <p class="lead mt-5">Not a Venmo request.</p>
           </div>
 
-          <div class="calc mt-8">
-            <div>
-              <p class="calc__label">Move it. This is the price list at launch.</p>
-              <p class="calc__figure num" data-out="lands">$380.00</p>
-              <p class="calc__hint">
-                is left for the venture on a
-                <span class="num" data-out="charged">$400.00</span> job. There
-                is one rate and there is no monthly fee.
-              </p>
-
-              <div class="calc__slider">
-                <input
-                  class="calc__range"
-                  type="range"
-                  min="25"
-                  max="2000"
-                  step="5"
-                  value="400"
-                  aria-label="Invoice amount"
-                />
-                <div class="calc__ticks">
-                  <span>$25</span>
-                  <span>$2,000</span>
+          <div>
+            <span class="artifact-label">Worked example</span>
+            <div class="invoice">
+              <div class="invoice__head">
+                <div>
+                  <strong>Invoice 0014</strong>
+                  <div class="muted small">Maya R. · Photography</div>
+                </div>
+                <span class="tag">Due on receipt</span>
+              </div>
+              <div class="invoice__body">
+                <div class="invoice__row">
+                  <span>Senior portraits · 3 hr session</span>
+                  <span class="num">$400.00</span>
+                </div>
+                <div class="invoice__row">
+                  <span class="muted">fuime fee · 5%, minimum 50¢</span>
+                  <span class="muted num">−$20.00</span>
+                </div>
+                <div class="invoice__row invoice__row--total">
+                  <span>Left for the venture</span>
+                  <span class="num">$380.00</span>
                 </div>
               </div>
-
-              <p class="calc__hint" data-out="monthly">
-                One price: 5%, minimum 50¢, no monthly fee. Unlimited businesses and
-                API keys included. Card processing comes out of our 5%, not on
-                top of it.
-              </p>
-            </div>
-
-            <div>
-              <span class="artifact-label">Worked example</span>
-              <div class="invoice">
-                <div class="invoice__head">
-                  <div>
-                    <strong>Invoice 0014</strong>
-                    <div class="muted small">Maya R. · Photography</div>
-                  </div>
-                  <span class="tag">Due on receipt</span>
-                </div>
-                <div class="invoice__body">
-                  <div class="invoice__row">
-                    <span>Senior portraits · 3 hr session</span>
-                    <span class="num" data-out="charged">$400.00</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">fuime fee · 5%, minimum 50¢</span>
-                    <span class="muted num" data-out="fuime">−$20.00</span>
-                  </div>
-                  <div class="invoice__row invoice__row--total">
-                    <span>Left for the venture</span>
-                    <span class="num" data-out="lands">$380.00</span>
-                  </div>
-                </div>
-                <div class="invoice__foot">
-                  <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
-                  <span class="tag">Paid</span>
-                </div>
+              <div class="invoice__foot">
+                <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
+                <span class="tag">Paid</span>
               </div>
-              <!-- 28 — the split, at full scale, directly under the arithmetic
-                   it is a picture of. -->
-              <div
-                class="split-mount mt-5"
-                data-fx-split="full"
-                data-you="95.0"
-                data-fuime="2.0"
-                data-stripe="3.0"
-              ></div>
             </div>
+            <div
+              class="split-mount mt-5"
+              data-fx-split="full"
+              data-you="95.0"
+              data-fuime="2.0"
+              data-stripe="3.0"
+            ></div>
           </div>
-
-          <p class="mt-7">
-            <a class="tlink" href="/pricing"
-              >See the full breakdown<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
-          </p>
         </div>
       </section>
 
@@ -380,10 +319,7 @@
                 <path d="M11 13.25v2.5" />
               </svg>
               <h3 class="h4">A business account</h3>
-              <p>
-                Requires 18. That's the whole wall, and waiting it out costs you
-                two years of clients.
-              </p>
+              <p>Requires 18. Waiting it out costs you two years of clients.</p>
             </article>
           </div>
         </div>
@@ -419,14 +355,10 @@
             <h2 class="h2">Three steps. One of them needs a parent.</h2>
           </div>
 
-          <div class="grid grid--3 mt-8" data-fx-steps>
-            <article class="step">
-              <p class="step__n">01</p>
-              <h3 class="h4">Sign up and name your business</h3>
-              <p>
-                About a minute. You'll need a parent or guardian's email
-                address, because of step two.
-              </p>
+          <div class="grid grid--3 mt-8">
+            <article class="card">
+              <h3 class="h4">01 Name your business</h3>
+              <p>About a minute. You'll need a parent or guardian's email address.</p>
               <picture>
                 <source
                   type="image/avif"
@@ -456,17 +388,11 @@
               </picture>
             </article>
 
-            <article class="step">
-              <div class="step__meta">
-                <p class="step__n">02</p>
-                <span class="tag">Requires a guardian</span>
-              </div>
-              <h3 class="h4">A guardian accepts the agreement</h3>
+            <article class="card">
+              <h3 class="h4">02 A guardian signs</h3>
               <p>
-                We email your parent or legal guardian the Guardian Agreement.
-                They accept it, and that makes them the legal payee and clawback
-                obligor; you run the venture day to day. They must approve the
-                payout destination before the first payout.
+                They accept the Guardian Agreement, become the legal payee, and
+                approve the payout destination.
               </p>
               <picture>
                 <source
@@ -497,13 +423,9 @@
               </picture>
             </article>
 
-            <article class="step">
-              <p class="step__n">03</p>
-              <h3 class="h4">Invoice clients and keep the books</h3>
-              <p>
-                Send a link. fuime keeps the books as it goes: income, expenses,
-                and net, with tax-prep milestones flagged as you go.
-              </p>
+            <article class="card">
+              <h3 class="h4">03 Invoice and keep books</h3>
+              <p>Send a link. fuime keeps the books: income, expenses, and net.</p>
               <picture>
                 <source
                   type="image/avif"
@@ -541,58 +463,36 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">What it costs</p>
-            <h2 class="h2">One price. $0 a month, and nothing until you sell.</h2>
-            <p class="lead">
-              5% of what you collect, minimum 50¢. Unlimited businesses and API keys
-              are included, not unlocked. Card processing comes out of that 5%
-              rather than being charged to you on top — because fuime is the
-              legal seller, Stripe bills us, not you.
-            </p>
+            <h2 class="h2">One price. Nothing until you sell.</h2>
           </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row card--fig">
               <div>
-                <h3 class="h4">Fuime · 5% of what you collect, minimum 50¢</h3>
-                <p>
-                  No monthly fee. Unlimited businesses and API keys included. If
-                  a client never pays, there is no fee. Card processing comes out
-                  of our 5%.
-                </p>
+                <h3 class="h4">fuime · 5% of what you collect, minimum 50¢</h3>
+                <p>No monthly fee. Stripe's 2.9% + 30¢ comes out of it.</p>
               </div>
               <p class="price__fig">5%<sub>min 50¢</sub></p>
             </article>
             <article class="card card--row card--fig">
               <div>
                 <h3 class="h4">Selling at scale · talk to us</h3>
-                <p>
-                  Doing real volume, or selling something the standard rate does
-                  not fit? We will work out a rate with you rather than make you
-                  pick a tier. Email support@fuime.com.
-                </p>
+                <p>Custom pricing, a conversation rather than a tier.</p>
               </div>
               <p class="price__fig">Custom</p>
             </article>
             <article class="card card--row card--fig">
               <div>
                 <h3 class="h4">Founders · the launch cohort</h3>
-                <p>
-                  No platform fee at all, by invitation. Stripe's 2.9% + 30¢
-                  still applies.
-                </p>
+                <p>No platform fee at all, by invitation.</p>
               </div>
               <p class="price__fig">0%</p>
             </article>
           </div>
 
-          <p class="mt-6 small muted">
-            Every fuime fee is billed to the parent or legal guardian who is
-            the legal payee, never to the young founder.
-          </p>
-
           <p class="mt-7">
             <a class="tlink" href="/pricing"
-              >The worked example, and what you're not charged for<svg
+              >The full price list<svg
                 class="arrow"
                 width="14"
                 height="14"
@@ -620,34 +520,6 @@
               Your kid is going to keep taking money for work either way. This
               is the version with a paper trail.
             </p>
-            <div class="arch arch--portrait mt-7">
-              <picture>
-                <source
-                  type="image/avif"
-                  srcset="
-                    /img/parents-arch-640.avif   640w,
-                    /img/parents-arch-1000.avif 1000w
-                  "
-                  sizes="(max-width: 900px) 92vw, 44vw"
-                />
-                <source
-                  type="image/webp"
-                  srcset="
-                    /img/parents-arch-640.webp   640w,
-                    /img/parents-arch-1000.webp 1000w
-                  "
-                  sizes="(max-width: 900px) 92vw, 44vw"
-                />
-                <img
-                  src="/img/parents-arch-1000.webp"
-                  alt="A tall arched window at night seen from inside a dark room, two mugs on the sill, the lights of a town in the valley below."
-                  width="1000"
-                  height="1250"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
-            </div>
             <p class="mt-6">
               <a class="tlink" href="/parents"
                 >Read what you're actually signing<svg
@@ -667,37 +539,33 @@
             </p>
           </div>
 
-          <div class="grid grid--2">
-            <article class="card">
-              <h3 class="h4">You are the legal payee</h3>
-              <p>
-                You are the legal payee and clawback obligor. They run invoices,
-                books, and what the business does. Your own Venmo and cards stay
-                out of it.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">You see everything</h3>
-              <p>
-                Every invoice and every payment, in a read-only view. You can
-                revoke the guardianship and shut it off.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">Tax time is legible</h3>
-              <p>
-                Income, expenses, and net for the year, with tax-prep
-                milestones flagged as you go.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">How payment works</h3>
-              <p>
-                Client payments settle because Ninth Street Labs, LLC is the
-                seller. What you see in the app is a payable owed to the
-                venture. Payouts go to a destination you approve.
-              </p>
-            </article>
+          <div class="arch arch--portrait">
+            <picture>
+              <source
+                type="image/avif"
+                srcset="
+                  /img/parents-arch-640.avif   640w,
+                  /img/parents-arch-1000.avif 1000w
+                "
+                sizes="(max-width: 900px) 92vw, 44vw"
+              />
+              <source
+                type="image/webp"
+                srcset="
+                  /img/parents-arch-640.webp   640w,
+                  /img/parents-arch-1000.webp 1000w
+                "
+                sizes="(max-width: 900px) 92vw, 44vw"
+              />
+              <img
+                src="/img/parents-arch-1000.webp"
+                alt="A tall arched window at night seen from inside a dark room, two mugs on the sill, the lights of a town in the valley below."
+                width="1000"
+                height="1250"
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
           </div>
         </div>
       </section>
@@ -737,7 +605,7 @@
           <div class="portal__in">
             <p class="eyebrow">Schools, teachers and cohorts</p>
             <h2 class="h2">Bringing a class or a closed group?</h2>
-            <p class="lead">Leave your address. We read every one and follow up by email.</p>
+            <p class="lead">Leave your address. We read every one.</p>
             <form class="capture" data-source="home-cohort" novalidate>
               <div class="capture__row">
                 <input
@@ -759,8 +627,8 @@
               </p>
             </form>
             <p class="small muted">
-              On your own? You don't need this —
-              <a class="tlink" href="/get-started">start your business</a>.
+              On your own?
+              <a class="tlink" href="/get-started">Start your business</a>.
             </p>
           </div>
         </div>

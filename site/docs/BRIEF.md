@@ -141,25 +141,63 @@ pages be read by a thirty-year-old freelancer without a second design.
 
 ## The system (law)
 
-The design language is Mercury.com's, adopted deliberately: alternating
-dark→cream band rhythm, full-bleed cinematic hero with type high and subject
-low, 4px as the dominant radius with pills reserved for buttons, and display
-weight **480** — not 400, not 500. That weight is the detail that makes it look
-bespoke instead of Figma-default.
+The design language is **paddle.com's, measured rather than remembered** —
+rendered at 1440x900 and counted, with the numbers in `docs/DENSITY.md`.
 
-One divergence: the accent is `#C2401F`, not an indigo.
+It was Mercury's until 2026-09-14: alternating dark/cream bands, a full-bleed
+cinematic hero with type high and subject low, 4px radius, display weight 480.
+That site was beautiful and it read as cluttered, and the measurements said why
+rather than anyone arguing about it — 12,857px against their 6,383, a hero of
+~120 words of which ~75 were legal against their ~30, 416KB of effects across
+19 modules against a site with five keyframes and no animation library.
 
-All tokens live in `style.css` under `:root`. **A hex literal outside `:root`
-is a build failure.** Use the variables:
+Three decisions carry it:
+
+1. **No pure black and no pure white.** Every neutral is warm; the darks are
+   brown-black `#1c1a15`, not blue-black. Against a warm ground one saturated
+   accent reads as a natural extreme rather than a bolt-on, which is why one
+   accent is enough for a whole site — and why the accent appears **once per
+   page, at the ask**, never in the nav and the hero and the footer.
+2. **A serif display over a neutral sans body.** Gambetta 500 for headings,
+   General Sans for everything else. Paddle's own face is a licensed condensed
+   serif; Gambetta is the closest thing on the foundry the CSP already allows.
+3. **Seven type sizes.** 14 / 16 / 20 / 24 / 40 / 48 / 64 and nothing between.
+   There is nowhere for inconsistency to enter when there is no eighth size to
+   reach for.
+
+The hero is **light, centred, 55svh, and does not fill the viewport** — theirs
+run 30-71%, median 55, so the next section is always partly visible and the page
+reads as continuing rather than as a wall. Headline, one subhead, two buttons,
+one note. Nothing else, and no photograph: a photograph behind type is a
+contrast problem you solve on every page forever.
+
+**Motion is almost nothing.** Five fx modules, down from fifteen, and only the
+ones caused by a hand rather than by scrolling — the fee arithmetic, the ruled
+lists, the calculator odometer, the split bar, focus rings. **No scroll reveals**
+(parking sections at `opacity:0` was the single biggest reason this read as
+busy), no loader, no video, no canvas. `fx/boot.js` names every retired module
+and why; the files are kept, not deleted.
+
+One divergence kept on purpose: the accent is `#C2401F`, not their yellow. The
+teardown's warning governs it — *steal the system, not the identity.*
+
+All tokens live in `style.css` under `:root`. **A hex literal outside `:root` is
+a build failure** (the sole exception, the first-paint block, went with the
+loader). Use the variables:
 
 ```
---ink #272735   --ink-muted #535461   --ink-faint #C3C3CC
---on-dark #EDEDF3   --on-dark-mu   --on-dark-faint
---cream #F4F1EC   --paper #FFFFFF   --night #141420   --night-2 #1D1D2B
---accent #C2401F  --accent-tint     --hair
---t-hero --t-h2 --t-h3 --t-h4 --t-lead --t-body --t-small
---s1…--s10   --r --r-card --r-pill --r-media   --ease --dur   --wrap --gut
+--ink #1c1a15   --ink-muted (alpha of ink)   --ink-faint
+--on-dark #fcfcfc   --on-dark-mu   --on-dark-faint
+--paper #f9f8f7   --cream #ebe7df   --night #1c1a15   --night-2 #33312c
+--accent #C2401F  --accent-lit  --accent-deep  --accent-tint  --hair
+--font  --font-display ('Gambetta')  --w-display 500
+--t-hero 64 --t-h2 48 --t-h3 40 --t-h4 24 --t-lead 20 --t-body 16 --t-small 14
+--s1…--s10   --r 10px --r-card 16px --r-pill   --ease --dur-fast/--dur/--dur-slow
+--wrap 1248px --gut
 ```
+
+Section ground is also available as one attribute — `data-surface="light|brown|
+dark"` — which is how a whole page's cadence becomes one word per section.
 
 ### Class vocabulary — already written in `style.css`. Compose these. Do not invent new CSS.
 
@@ -169,10 +207,10 @@ is a build failure.** Use the variables:
 | `.band` `.band--night` `.band--cream` `.band--paper`                                                                         | full-width section + its ground                      |
 | `.eyebrow`                                                                                                                   | uppercase 14px label above a heading                 |
 | `.h2` `.h3` `.h4` `.lead` `.muted` `.small`                                                                                  | type roles                                           |
-| `.nav` `.nav--over` `.nav--solid` `.nav__in` `.nav__links` `.nav__link` `.nav__burger` `.mark`                               | the shared nav                                       |
+| `.nav` `.nav--solid` `.nav__in` `.nav__links` `.nav__link` `.nav__burger` `.mark`                               | the shared nav                                       |
 | `.btn` + `.btn--accent` `.btn--ink` `.btn--light` `.btn--ghost`                                                              | buttons                                              |
 | `.tlink` `.arrow`                                                                                                            | inline text link with an arrow that slides on hover  |
-| `.hero` `.hero--short` `.hero__media` `.hero__in` `.hero__body` `.hero__cta` `.hero__note` `.hero__disclaimer` `.disclaimer` | hero                                                 |
+| `.hero` `.hero--short` `.hero__in` `.hero__body` `.hero__cta` `.hero__note` | hero — light, centred, no media. `.hero__media`, `.hero__glow`, `.hero__live`, `.grain`, `.beta` and `.hero__disclaimer` are retired |
 | `.capture` `.capture__row` `.capture__msg` `.capture__done`                                                                  | the email form                                       |
 | `.grid` `.grid--2` `.grid--3` `.grid--4` `.split` `.stack-lg`                                                                | layout                                               |
 | `.card` `.icon`                                                                                                              | cards                                                |
@@ -346,8 +384,8 @@ why the storage swap was safe to make at all.
 
 ## Voice — copy is PORTED, not rewritten
 
-The old site's copy is the source of truth for tone. Mercury supplies layout,
-type and rhythm. fuime keeps its own voice: specific, direct, a little angry,
+The old site's copy is the source of truth for tone. paddle.com supplies layout,
+type, rhythm and density. fuime keeps its own voice: specific, direct, a little angry,
 never corporate. **Any line that comes out more corporate than the line it
 replaces is a regression.**
 
@@ -521,7 +559,7 @@ The hero image is eager (`fetchpriority="high"`, no `loading="lazy"`);
 everything below the fold is lazy. Every `<img>` carries real `width`/`height`
 so nothing shifts on load.
 
-## Acceptance criteria — all 15, verbatim
+## Acceptance criteria — all 16, verbatim
 
 1. Twenty-two pages ship (see **The sitemap**), sharing one nav and one footer
    stamped by `tools/sync-chrome.mjs`. Every nav link, footer link and in-page
@@ -533,12 +571,10 @@ so nothing shifts on load.
    dominant border-radius is 4px; the page alternates `#141420` and `#F4F1EC`
    bands; accent `#C2401F` appears on primary buttons and the wordmark's `i`
    and nowhere else.
-4. Where a hero carries a photograph it is a fal-generated frame, cut at 21:9
-   (desktop) and 4:5 (mobile), subject in the bottom third. **Measured**
-   contrast between the headline and the actual pixels behind it is ≥ 4.5:1 at
-   1440px and at 390px — sampled from the rendered screenshot, not asserted
-   from the CSS. A page with no photograph is fine and normal; most of the
-   pages added in 2026-09 are argument, not atmosphere.
+4. **No hero carries a photograph.** The hero is a warm light ground, centred,
+   and does not fill the viewport. In-body imagery is still fal-generated and
+   pre-encoded, and a page with no photograph at all is normal — most pages are
+   argument, not atmosphere.
 5. Every raster image on the site is fal-generated; every icon is hand-built
    SVG. No stock, no placeholder greys, no emoji standing in for an icon.
    **No page references an image file that does not exist** — a 404'd
@@ -559,8 +595,9 @@ so nothing shifts on load.
    by **screenshot at each width**, looked at — not by an assertion that only
    proves the CSS parsed.
 9. `prefers-reduced-motion: reduce` disables every transform and opacity
-   animation, including the scroll-reveal. Verified by rendering with the media
-   feature forced.
+   animation. There is very little left to disable: no scroll reveal, no
+   loader, no video, no canvas, and five fx modules. Verified by rendering with
+   the media feature forced.
 10. Total transferred weight of `/` is under 1.2MB with images served as AVIF
     with WebP fallback, and LCP under 2.5s measured in a real headless load,
     not estimated.
@@ -575,7 +612,10 @@ so nothing shifts on load.
     from the seller. Check the rendered number, not the label beside it: the
     guards assert that "5%" and "50¢" appear, not that the total is right, and
     a wrong total passed every suite for weeks.
-15. **No page claims a capability the code does not have.** In particular: no
+15. **Every page is inside the budget in `docs/DENSITY.md`** — `node
+    tools/density.mjs` exits clean. Never delete a card, a row or an FAQ
+    question to hit a number; cut because a thing is said twice.
+16. **No page claims a capability the code does not have.** In particular: no
     identity or KYC check, no payout timing or rail, no cards, no sales tax, no
     multi-currency, nothing outside the US, no buyer self-service, no
     testimonials, user counts, launch dates or SLAs. `docs/AUTHORING.md` carries

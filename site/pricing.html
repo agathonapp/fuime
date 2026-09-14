@@ -152,181 +152,98 @@
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <h1>Two plans you can pick.<br />$0 a month to start.</h1>
+            <h1>One price.<br />$0 a month to start.</h1>
           </div>
         </div>
       </section>
 
       <!-- ── the live number ───────────────────────────────────────────── -->
       <section class="band band--cream">
-        <div class="wrap rise" data-calc>
-          <div class="bhead">
+        <div class="wrap split rise" data-calc>
+          <div>
             <p class="eyebrow">Run it yourself</p>
             <h2 class="h2">Put a real job in it.</h2>
-            <p class="lead">
-              The arithmetic every business runs at live launch — one 5% rate, floored at 50¢,
-              take-rate. Drag it to something you have actually charged for and
-              read the bottom line.
+            <p class="lead mt-5">
+              Drag it to something you have actually charged for.
             </p>
           </div>
 
-          <div class="calc split mt-8">
-            <div>
-              <p class="calc__label">What is left, after everything</p>
-              <p class="calc__figure num" data-out="lands">$380.00</p>
-              <p class="calc__hint">
-                is left for the venture on a
-                <span class="num" data-out="charged">$400.00</span> job. There
-                is one rate and there is no monthly fee.
-              </p>
+          <div>
+            <p class="calc__label">What is left, after everything</p>
+            <p class="calc__figure num" data-out="lands">$380.00</p>
+            <p class="calc__hint">
+              is left for the venture on a
+              <span class="num" data-out="charged">$400.00</span> job.
+            </p>
 
-              <div class="calc__slider">
-                <input
-                  class="calc__range"
-                  type="range"
-                  min="25"
-                  max="2000"
-                  step="5"
-                  value="400"
-                  aria-label="Invoice amount"
-                />
-                <div class="calc__ticks">
-                  <span>$25</span>
-                  <span>$2,000</span>
-                </div>
+            <div class="calc__slider">
+              <input
+                class="calc__range"
+                type="range"
+                min="25"
+                max="2000"
+                step="5"
+                value="400"
+                aria-label="Invoice amount"
+              />
+              <div class="calc__ticks">
+                <span>$25</span>
+                <span>$2,000</span>
               </div>
-
-              <p class="calc__hint" data-out="monthly">
-                One price: 5%, minimum 50¢, no monthly fee, unlimited businesses and
-                API keys included. Stripe's 2.9% + 30¢ comes out of our 5%
-                applies on both.
-              </p>
             </div>
 
-            <div>
-              <span class="artifact-label">Worked example</span>
-              <div class="invoice">
-                <div class="invoice__head">
-                  <div>
-                    <strong>Invoice 0014</strong>
-                    <div class="muted small">Maya R. · Photography</div>
-                  </div>
-                  <span class="tag">Due on receipt</span>
-                </div>
-                <div class="invoice__body">
-                  <div class="invoice__row">
-                    <span>Senior portraits · 3 hr session</span>
-                    <span class="num" data-out="charged">$400.00</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">fuime fee · 5%, minimum 50¢</span>
-                    <span class="muted num" data-out="fuime">−$20.00</span>
-                  </div>
-                  <div class="invoice__row invoice__row--total">
-                    <span>Left for the venture</span>
-                    <span class="num" data-out="lands">$380.00</span>
-                  </div>
-                </div>
-                <div class="invoice__foot">
-                  <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
-                  <span class="tag">Paid</span>
-                </div>
-              </div>
-              <div
-                class="split-mount mt-5"
-                data-fx-split="full"
-                data-you="95.0"
-                data-fuime="2.0"
-                data-stripe="3.0"
-              ></div>
-            </div>
+            <p class="calc__hint" data-out="monthly">
+              5% of what you collect, minimum 50¢. No monthly fee.
+            </p>
           </div>
-
-          <p class="lead mt-8" style="max-width: 62ch">
-            Stripe takes 2.9% plus 30 cents to run the card — and it takes it
-            from us, not from you. Because fuime is the merchant of record, the
-            card is charged by Ninth Street Labs, LLC, so Stripe's fee comes out
-            of our 5%. Most businesses pay that fee on top of their platform's
-            cut. Here it is already inside the one number.
-          </p>
-          <p class="lead mt-5" style="max-width: 62ch">
-            There is no second figure. No monthly subscription, and no
-            separate charge for a second business or for API keys — those are
-            included. Every fuime fee is
-            billed to the parent or legal guardian who is the legal payee, never
-            to the young founder.
-          </p>
         </div>
       </section>
 
-      <!-- ── the three numbers ─────────────────────────────────────────── -->
+      <!-- ── the artifact ──────────────────────────────────────────────── -->
       <section class="band band--night">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">The whole price list</p>
-            <h2 class="h2">One price, and what it costs.</h2>
-            <p class="lead">
-              A flat monthly fee on a kid making $80 a month is a tax on
-              starting, so there isn't one. 5% of what you collect, minimum 50¢, and
-              nothing at all until you sell something. Card processing comes out
-              of our 5% rather than being added to your side of it.
-            </p>
+        <div class="wrap split rise">
+          <div>
+            <p class="eyebrow">The worked example</p>
+            <h2 class="h2">One fee line, and Stripe is not it.</h2>
+            <p class="lead mt-5">Stripe bills fuime, not you.</p>
           </div>
 
-          <div class="rows mt-8" data-fx-rows="plain">
-            <article class="card card--row card--fig">
-              <div>
-                <h3 class="h4">Fuime · no monthly fee</h3>
-                <p>
-                  5% on what you collect, minimum 50¢, and nothing at all until you sell
-                  something. Unlimited businesses and API keys included. No fee on
-                  an invoice a client never pays. Stripe's 2.9% + 30¢ is not
-                  charged on top — it comes out of our 5%.
-                </p>
+          <div>
+            <div class="invoice">
+              <div class="invoice__head">
+                <div>
+                  <strong>Invoice 0014</strong>
+                  <div class="muted small">Maya R. · Photography</div>
+                </div>
+                <span class="tag">Due on receipt</span>
               </div>
-              <p class="price__fig">5%<sub>min 50¢</sub></p>
-            </article>
-            <article class="card card--row card--fig">
-              <div>
-                <h3 class="h4">Selling at scale · talk to us</h3>
-                <p>
-                  Doing real volume, or selling something the standard rate does
-                  not fit? We will work out a rate with you rather than make you
-                  pick a tier. Email
-                  <a href="mailto:support@fuime.com">support@fuime.com</a>.
-                </p>
+              <div class="invoice__body">
+                <div class="invoice__row">
+                  <span>Senior portraits · 3 hr session</span>
+                  <span class="num">$400.00</span>
+                </div>
+                <div class="invoice__row">
+                  <span class="muted">fuime fee · 5%, minimum 50¢</span>
+                  <span class="muted num">−$20.00</span>
+                </div>
+                <div class="invoice__row invoice__row--total">
+                  <span>Left for the venture</span>
+                  <span class="num">$380.00</span>
+                </div>
               </div>
-              <p class="price__fig">Custom</p>
-            </article>
-            <article class="card card--row card--fig">
-              <div>
-                <h3 class="h4">Founders · the launch cohort</h3>
-                <p>
-                  No platform fee and no monthly fee, by invitation, for the
-                  ventures we onboard by hand. Stripe's 2.9% + 30¢ still applies.
-                </p>
+              <div class="invoice__foot">
+                <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
+                <span class="tag">Paid</span>
               </div>
-              <p class="price__fig">0%</p>
-            </article>
+            </div>
+            <div
+              class="split-mount mt-5"
+              data-fx-split="full"
+              data-you="95.0"
+              data-fuime="2.0"
+              data-stripe="3.0"
+            ></div>
           </div>
-
-          <p class="mt-7">
-            <a class="tlink" href="/parents"
-              >Who the fees are billed to, and why<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
-          </p>
         </div>
       </section>
 
@@ -352,68 +269,51 @@
         />
       </picture>
 
-      <!-- ── what you are not charged for ──────────────────────────────── -->
+      <!-- ── the price list ────────────────────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise">
           <div class="bhead">
-            <p class="eyebrow">What you are not charged for</p>
-            <h2 class="h2">Six things that never turn into a bill.</h2>
-            <p class="lead">
-              There is no second page to the pricing. If it isn't that 5%,
-              it isn't a fee.
-            </p>
+            <h2 class="h2">One price, and what it costs.</h2>
           </div>
 
-          <div class="grid grid--2 mt-8">
-            <article class="card">
-              <h3 class="h4">No setup fee</h3>
-              <p>
-                Signing up costs nothing. Naming the venture costs nothing. The
-                agreement your guardian accepts costs nothing.
-              </p>
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">fuime · 5%, minimum 50¢</h3>
+                <p>
+                  No monthly fee. Nothing until you sell. Stripe's 2.9% + 30¢
+                  comes out of it.
+                </p>
+              </div>
+              <p class="price__fig">5%<sub>min 50¢</sub></p>
             </article>
-            <article class="card">
-              <h3 class="h4">No fee on an invoice that never gets paid</h3>
-              <p>
-                The platform fee comes out of money that arrives. If a client
-                ghosts you, you lose the work. You do not also pay us for it.
-              </p>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">
+                  Selling at scale ·
+                  <a href="mailto:support@fuime.com">talk to us</a>
+                </h3>
+                <p>Custom pricing, a conversation rather than a tier.</p>
+              </div>
+              <p class="price__fig">Custom</p>
             </article>
-            <article class="card">
-              <h3 class="h4">No fee to send an invoice</h3>
-              <p>
-                Send one this year or forty this week. There is no per-invoice
-                charge and no cap on how many you write.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">No minimum</h3>
-              <p>
-                Nothing to clear before the account works. A $25 job goes
-                through the same way a $2,500 one does.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">No contract</h3>
-              <p>
-                Nothing to sign for a term and nothing to cancel out of. Stay
-                on Free and there is no monthly bill. Cancel Pro and the
-                subscription stops.
-              </p>
-            </article>
-            <article class="card">
-              <h3 class="h4">No charge for the guardian's account</h3>
-              <p>
-                Their login, the read-only view of every invoice, and the
-                year-end summary are all part of it. There is no subscription
-                that ever reaches them.
-              </p>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Founders · the launch cohort</h3>
+                <p>No platform fee at all, by invitation.</p>
+              </div>
+              <p class="price__fig">0%</p>
             </article>
           </div>
+
+          <p class="mt-6 small muted">
+            Every fuime fee is billed to the parent or legal guardian who is the
+            legal payee, never to the young founder.
+          </p>
 
           <p class="mt-7">
-            <a class="tlink" href="/#how"
-              >How the whole thing works<svg
+            <a class="tlink" href="/parents"
+              >Who the fees are billed to<svg
                 class="arrow"
                 width="14"
                 height="14"
@@ -431,6 +331,87 @@
         </div>
       </section>
 
+      <!-- ── where this stops ──────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Where this stops</p>
+            <h2 class="h2">Four limits, said out loud.</h2>
+          </div>
+
+          <div class="grid lrow--boxed mt-8">
+            <div class="lrow">
+              <span>Sales tax</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">Not calculated, not filed</span>
+            </div>
+            <div class="lrow">
+              <span>Payout dates</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">A person approves every run</span>
+            </div>
+            <div class="lrow">
+              <span>What the app shows</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">What fuime owes you, not a balance</span>
+            </div>
+            <div class="lrow">
+              <span>At 18</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">The account stays in your guardian's name</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── what you are not charged for ──────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What you are not charged for</p>
+            <h2 class="h2">Seven things that never turn into a bill.</h2>
+          </div>
+
+          <div class="grid lrow--boxed mt-8">
+            <div class="lrow">
+              <span>Signing up</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">$0</span>
+            </div>
+            <div class="lrow">
+              <span>Sending an invoice</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">$0</span>
+            </div>
+            <div class="lrow">
+              <span>An invoice nobody pays</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">$0</span>
+            </div>
+            <div class="lrow">
+              <span>A second business</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">$0</span>
+            </div>
+            <div class="lrow">
+              <span>The guardian's login</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">$0</span>
+            </div>
+            <div class="lrow">
+              <span>API keys</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">Included, 10 live per business</span>
+            </div>
+            <div class="lrow">
+              <span>A monthly minimum</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">None</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ── questions ─────────────────────────────────────────────────── -->
       <section class="band band--paper">
         <div class="wrap rise">
@@ -443,64 +424,55 @@
             <details>
               <summary>What happens if a client never pays?</summary>
               <p class="faq__a">
-                You owe nothing. The platform fee is charged on money that
-                arrives, so an unpaid invoice costs you the chasing and nothing
-                else. fuime keeps it in the books as outstanding, not as income,
-                so your year-end total stays honest.
+                You owe nothing. The fee is charged on money that arrives.
+                fuime keeps the invoice in the books as outstanding, not as
+                income, so your year-end total stays honest.
               </p>
             </details>
 
             <details>
               <summary>Why 5%, and not less?</summary>
               <p class="faq__a">
-                Because there is nothing underneath it. No setup fee, no
-                per-invoice charge, no monthly bill, and no upgrade to buy —
-                unlimited businesses, and API keys are included. Card processing
-                comes out of that 5% rather than being charged to you on top,
-                which is most of where it goes. The 50¢ is there because a card
-                payment costs us about 30¢ whatever its size, so without it a
-                $3 sale would cost us money to process.
+                There is nothing underneath it: no setup fee, no per-invoice
+                charge, no monthly bill, no upgrade to buy. Card processing
+                comes out of it. The 50¢ floor is there because a card payment
+                costs about 30¢ whatever its size.
               </p>
             </details>
 
             <details>
-              <summary>Who pays fuime's fees?</summary>
+              <summary>What happens when I refund a client?</summary>
               <p class="faq__a">
-                The parent or legal guardian who is the legal payee, because
-                they are the person on the hook for it. Never the young founder.
+                The reversal posts to the ledger and fuime's fee is rebated in
+                proportion. A partial refund books the increment, not the
+                running total.
               </p>
             </details>
 
             <details>
-              <summary>What does card processing cost on top?</summary>
+              <summary>Can a client cancel a subscription themselves?</summary>
               <p class="faq__a">
-                Nothing extra. Because fuime is the merchant of record — the
-                legal seller on the receipt — Stripe charges its 2.9% plus 30
-                cents to us, not to you, and it comes out of our 5%. What you
-                are owed is the sale minus the fuime fee, and that is the number
-                the invoice shows.
+                No. A buyer cannot cancel a recurring offer on their own. They
+                email support@fuime.com and we do it.
               </p>
             </details>
 
             <details>
               <summary>Does fuime ever hold the money?</summary>
               <p class="faq__a">
-                Client payments settle to Fuime's payment processor account
-                because Fuime is the seller. Ninth Street Labs, LLC is the seller
-                of record. What you see in the app is an amount owed to your
-                venture (a payable), not a bank balance. Payouts go to a
-                destination your guardian approves. fuime is a financial
-                technology company and not a bank.
+                Client payments settle to fuime's payment processor account,
+                because Ninth Street Labs, LLC is the seller of record. What
+                you see in the app is what fuime owes your venture, not a
+                balance.
               </p>
             </details>
 
             <details>
               <summary>What happens when I turn 18?</summary>
               <p class="faq__a">
-                Nothing resets. Your invoices, clients and books stay attached to
-                the account, and the plan and its price stay the same. What we
-                have not built yet is moving the account itself out of your
-                guardian's name and into yours. We will say so here when we have.
+                Nothing resets. Your invoices, clients and books stay attached
+                to the account, and the price stays the same. Moving the
+                account itself out of your guardian's name is not built yet.
               </p>
             </details>
           </div>
@@ -513,7 +485,6 @@
           <div class="bhead">
             <p class="eyebrow">Schools, teachers and cohorts</p>
             <h2 class="h2">Bringing a class or a closed group?</h2>
-            <p class="lead">Leave your address. We read every one and follow up by email.</p>
           </div>
 
           <form class="capture mt-7" data-source="pricing-cohort" novalidate>
@@ -538,12 +509,12 @@
           </form>
 
           <p class="small muted mt-5">
-            On your own? You don't need this —
-            <a class="tlink" href="/get-started">start your business</a>.
+            On your own?
+            <a class="tlink" href="/get-started">Start your business</a>.
           </p>
 
           <p class="small muted mt-5">
-            A question the page didn't answer:
+            A question this page didn't answer:
             <a class="tlink" href="mailto:rushil@fuime.com">rushil@fuime.com</a>
           </p>
         </div>

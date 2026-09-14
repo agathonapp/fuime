@@ -738,28 +738,6 @@ section[id] {
    accent dot, because the one thing a status chip has to survive is being sat
    on top of a photograph. The dot cannot shrink or the flex row collapses it
    to nothing when the label wraps on a phone. */
-.beta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-  margin-bottom: var(--s5);
-  padding: var(--s2) var(--s4);
-  border-radius: var(--r-pill);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--on-dark-faint);
-  font-size: var(--t-small);
-  font-weight: var(--w-ui);
-  letter-spacing: var(--track-hud);
-  text-transform: uppercase;
-  color: var(--on-dark);
-}
-.beta::before {
-  content: '';
-  flex: 0 0 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--accent-lit);
-}
 
 /* ── email capture ─────────────────────────────────────────────────────── */
 
