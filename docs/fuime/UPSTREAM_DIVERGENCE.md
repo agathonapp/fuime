@@ -7161,6 +7161,14 @@ with tax registrations in zero jurisdictions.
 need a Rails boot and a database and cannot run on a machine without the gem bundle — which is
 how a page ships unchecked.
 
+### Canonicals followed the pages
+
+Moving the front door left three `<link rel="canonical">` tags pointing at redirects —
+`index.html` at `/home` (now a 308), `start.html` at `/` (it is `/dive` now), and
+`start-scroll.html` at `/start`, which is a 307 to the app's sign-up on another origin.
+All three repointed, along with the in-body `/home#how` links on `pricing.html` and
+`parents.html`.
+
 **Verification:** chrome 22/22 in sync · copy-guard 22/22 clean · `server.test.mjs` 25/25 ·
 `waitlist.test.mjs` 18/18 · all 22 URLs answer 200 · every footer href resolves · no page
 references a missing image · FAQ JSON-LD matches its page verbatim (17 and 6 Q&A, 0 drift).
