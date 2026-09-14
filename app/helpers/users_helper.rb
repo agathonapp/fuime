@@ -18,26 +18,21 @@ module UsersHelper
         name: "Home",
         path: root_path,
         icon: "home",
-        tooltip: current_user&.events&.any? ? "See all your organizations" : "See your dashboard",
+        tooltip: current_user&.events&.any? ? "See all your businesses" : "See your dashboard",
         selected: selected == :home
       }
     ]
 
-    if current_user(allow_unverified: true)&.show_first_dashboard? && !current_user(allow_unverified: true)&.redirect_to_first_dashboard?
-      items << {
-        name: "FIRST",
-        path: first_index_path,
-        tooltip: "Explore Fuime for FIRST teams",
-        icon: "resources",
-        selected: selected == :first
-      }
-    end
+    # Fuime: the "FIRST" nav item is gone with the FIRST Robotics dashboard it
+    # linked to (config/routes.rb). It was shown to anyone carrying an inherited
+    # `first` affiliation and its tooltip read "Explore Fuime for FIRST teams" —
+    # a Hack Club program Fuime does not run.
 
     if current_user&.followed_events&.any?
       items << {
         name: "Feed",
         path: my_feed_path,
-        tooltip: "See announcements for organizations you're following",
+        tooltip: "See announcements for businesses you're following",
         icon: "announcement",
         selected: selected == :feed
       }
@@ -120,7 +115,10 @@ module UsersHelper
   end
 
   def gravatar_url(email, name, id, size)
-    email ||= "bank@hackclub.com"
+    # Fuime: the fallback seed was "bank@hackclub.com". It is only hashed to pick
+    # a deterministic placeholder avatar, but it also derives the initials shown
+    # on it — a user with no email on file was badged from Hack Club's address.
+    email ||= "support@fuime.com"
 
     name ||= begin
       temp = email.split("@").first.split(/[^a-z\d]/i).compact_blank

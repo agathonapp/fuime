@@ -94,19 +94,18 @@ RSpec.describe Fuime::SubscriptionService do
 
     before { Guardianship.create!(guardian:, minor: teen, status: :active) }
 
-    it "activates the first venture free, refuses the second, allows it on Pro" do
-      first = activate!(teen, "Free Venture One")
+    # Retired 2026-09-14 with the family plan. The wall stopped a founder at the
+    # exact moment they had just succeeded at something and wanted to do it
+    # again, and pointed them at a paywall to continue.
+    it "activates a second venture with no plan, no upgrade and no wall" do
+      first = activate!(teen, "Venture One")
       expect(first).to be_present
 
-      expect { activate!(teen, "Free Venture Two") }
-        .to raise_error(ArgumentError, /free plan includes one venture/)
-
-      stub_billing!
-      described_class.new(guardian:).checkout_session(success_url: "s", cancel_url: "c")
-      Fuime::Subscription.family.find_by(billed_to: guardian).update!(status: "active")
-
-      second = activate!(User.find(teen.id), "Pro Venture Two")
+      second = activate!(User.find(teen.id), "Venture Two")
       expect(second).to be_present
+
+      third = activate!(User.find(teen.id), "Venture Three")
+      expect(third).to be_present
     end
 
     it "a school venture does not consume the free slot" do
@@ -166,22 +165,19 @@ RSpec.describe "family plan banner", type: :request do
 
   before { Guardianship.create!(guardian:, minor: teen, status: :active) }
 
-  it "appears for a slotless teen, naming the guardian; absent with a free slot" do
+  # Retired 2026-09-14. The inverse is what is worth pinning now: a founder
+  # starting their second business must not be shown a paywall, an upgrade, or
+  # an instruction to go and ask an adult to pay for one.
+  it "never appears, however many businesses the founder already has" do
     login_as!(teen)
 
     get new_application_path
-    expect(response.body).not_to include("needs the family plan")
+    expect(response.body).not_to match(/needs the family plan/)
 
-    create(:event, name: "Slot Taken", organizers: [teen])
+    create(:event, name: "Second Business", organizers: [teen])
     get new_application_path
-    expect(response.body).to include("needs the family plan")
-    expect(response.body).to include("$19.99")
-    expect(response.body).to include("API keys")
-    expect(response.body).to include("not a cheaper fee")
-    expect(response.body).to include(ERB::Util.html_escape(guardian.name.presence || guardian.email))
 
-    Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_ban_1")
-    get new_application_path
-    expect(response.body).not_to include("needs the family plan")
+    expect(response.body).not_to match(/needs the family plan|\$19\.99|Upgrade —/)
+    expect(response.body).not_to match(/free plan includes one venture/)
   end
 end

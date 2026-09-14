@@ -109,10 +109,19 @@ L7. **No targeted advertising, sale, or profiling of minors' data — ever** (CT
     SCOPE; NY CDPA "strictly necessary"). Paid acquisition targets parents. Transactional-only
     notifications to minors, none 12–6 a.m. No algorithmic/social feed without legal review.
 
-L8. **fuime.com must describe the product that exists.** Pricing (G3, 2026-09): Free is
-    $0/mo + 7%, one venture; Pro is $19.99/mo + 7% (same take-rate), unlimited ventures
-    and API keys. Do not re-advertise a cheaper Pro fee. Other site/app gaps (Connect
-    vs MoR, KYC claims) remain — never let site copy lead the code again.
+L8. **fuime.com must describe the product that exists.** Pricing (2026-09-14): **one flat
+    price, 5% + 50¢, no monthly fee**, unlimited businesses and API keys included.
+    Anything outside the standard rate is a sales conversation, not a tier. Two rules
+    the guard spec (`spec/fuime_marketing_pricing_spec.rb`) enforces:
+    **(a) never quote the 5% without the 50¢** — a sale is charged `max(5%, 50¢)`, so a
+    $5 sale pays 10% and the bare percentage describes a price Fuime does not charge;
+    **(b) never reintroduce a second tier in copy.**
+    ⚠️ **Card processing is NOT charged to the seller on top.** Fuime is the merchant of
+    record, so Stripe bills Ninth Street Labs and its ~2.9% + 30¢ comes out of Fuime's 5%.
+    Site copy claimed otherwise until 2026-09-14 and overstated what sellers pay.
+    *Superseded: Free $0/mo + 7% / Pro $19.99/mo + 7%. The family plan is retired —
+    `Event::Plan::Pro#retired?`.* Other site/app gaps (KYC claims) remain — never let
+    site copy lead the code again.
 
 ---
 

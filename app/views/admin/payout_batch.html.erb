@@ -76,10 +76,25 @@
       <strong>No ledger line has been posted.</strong> Mark the run as paid once the
       transfers have actually gone out — that is what debits each operator's ledger.
     </p>
-    <div class="flex gap-2 flex-wrap">
-      <%= button_to "Mark as paid", payout_batch_mark_paid_admin_index_path(id: @batch.id),
-                    method: :post, class: "btn",
-                    form: { data: { turbo_confirm: "Confirm that #{render_money @batch.total_cents} has been sent to #{@batch.operator_count} operator(s)? This debits their ledgers." } } %>
+    <%# Fuime: the reference is required because this app sends no money. A human
+        wires it from the bank and then records that they did; without evidence,
+        a misclick here produces a ledger that says "paid" about a transfer that
+        never happened. See Fuime::PayoutBatchService#mark_paid!. %>
+    <%= form_with(url: payout_batch_mark_paid_admin_index_path(id: @batch.id),
+                  method: :post, local: true,
+                  data: { turbo_confirm: "Confirm that #{render_money @batch.total_cents} has been sent to #{@batch.operator_count} operator(s)? This debits their ledgers." }) do |form| %>
+      <div class="field mb1">
+        <%= form.label :transfer_reference, "Bank reference for the transfer" %>
+        <%= form.text_field :transfer_reference, required: true, autocomplete: "off",
+                            placeholder: "e.g. the wire confirmation or ACH trace number" %>
+        <p class="muted mt0 mb0">
+          Send the money first. This field records what paid these operators, and
+          marking the run paid is what debits their ledgers.
+        </p>
+      </div>
+      <%= form.submit "Mark as paid", class: "btn" %>
+    <% end %>
+    <div class="flex gap-2 flex-wrap mt1">
       <%= button_to "Cancel this run", payout_batch_cancel_admin_index_path(id: @batch.id),
                     method: :post, class: "btn bg-muted",
                     form: { data: { turbo_confirm: "Cancel this approved run and decline every line on it?" } } %>
@@ -89,6 +104,13 @@
       Marked paid by <%= @batch.paid_by&.name || "an admin" %>
       on <%= @batch.paid_at&.strftime("%-d %b %Y") %>. Each line below has been
       debited from its operator's ledger.
+      <% if @batch.transfer_reference.present? %>
+        Transfer reference <strong><%= @batch.transfer_reference %></strong>.
+      <% else %>
+        <%# Runs marked paid before the reference was required. Said plainly
+            rather than left blank, so an unevidenced run is visibly unevidenced. %>
+        <em>No transfer reference was recorded for this run.</em>
+      <% end %>
     </p>
   <% else %>
     <p class="mt0 mb0">

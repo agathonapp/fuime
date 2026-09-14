@@ -103,8 +103,9 @@ RSpec.describe "demo sandbox smoke", :merchant_of_record, type: :request do
     login_as!(parent)
     get my_billing_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Upgrade")
-    expect(response.body).to include("$19.99")
+    # Retired 2026-09-14: one flat price, nothing to upgrade to.
+    expect(response.body).to include("5% + $0.50")
+    expect(response.body).not_to include("Upgrade")
 
     delete logout_users_path
 

@@ -6,9 +6,9 @@ RSpec.describe MockTransactionEngineService::GenerateMockTransaction do
   let(:rows) { described_class.new.run }
 
   it "only generates income and the Free take-rate as a Fuime service fee" do
-    expect(Event::Plan::Free::REVENUE_FEE).to eq(0.07)
+    expect(Event::Plan::Free::REVENUE_FEE).to eq(0.05)
     expect(described_class::SERVICE_FEE_RATE).to eq(Event::Plan::Free::REVENUE_FEE)
-    expect(described_class::SERVICE_FEE_LABEL).to eq("Fuime service fee (7%)")
+    expect(described_class::SERVICE_FEE_LABEL).to eq("Fuime service fee (5%)")
 
     memos = rows.map { |row| row.local_hcb_code.custom_memo }
     expect(memos).to include(described_class::SERVICE_FEE_LABEL)
@@ -25,7 +25,10 @@ RSpec.describe MockTransactionEngineService::GenerateMockTransaction do
     expect(income_memos).to all(match(/lawn|hedge|tutor/i))
   end
 
-  it "charges 7% of each sale, not an invented 4% or 5%" do
+  # Derived from Event::Plan::Free::REVENUE_FEE rather than restated, so a
+  # repricing moves the demo data with the product instead of leaving a mock
+  # ledger quoting a rate Fuime stopped charging.
+  it "charges the real take-rate on each sale, not an invented one" do
     pairs = rows.each_slice(2).to_a
     expect(pairs).to be_present
 

@@ -1,6 +1,6 @@
 <% if @event.demo_mode? %>
   <div class="muted mt-6">
-    Once your organization is activated, you'll be able to create and send invoices
+    Once your business is activated, you'll be able to create and send invoices
   </div>
 <% else %>
   <%= form_with(model: invoice, url: event_invoices_path(@event), local: true, data: { controller: "invoice-form" }, html: { "x-data" => "{ amount: null }" }) do |form| %>

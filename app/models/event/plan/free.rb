@@ -22,26 +22,37 @@
 #
 class Event
   class Plan
-    # Fuime: the zero-friction entry plan, and the D2C default for new ventures.
+    # Fuime: THE plan. One flat price, everything included.
     #
-    # 7% is not arbitrary — it is HCB's own nonprofit rate, which makes the
-    # sentence honest and easy: "free to start, same rate Hack Club charges."
-    # The family plan does NOT cut this rate; it unlocks a second venture and
-    # API keys at $19.99/mo. A kid can start selling before any adult has
-    # entered a card: the guardian signs the guardianship (free), and Fuime
-    # earns only when the kid does.
+    # ── 2026-09-14: 7% + a $19.99 family plan became 5% + 50¢, flat ──────────
+    #
+    # Founder's decision, matching the merchant-of-record market: Paddle, Lemon
+    # Squeezy and Polar's entry tier are all 5% + 50¢ to the cent, and none of
+    # them charges a monthly fee. Anything outside the standard rate is a
+    # conversation with sales, not a tier in a picker.
+    #
+    # What went away with the monthly fee: the family plan gated exactly two
+    # things — a second venture, and API keys — at the SAME take-rate as Free.
+    # It was a feature gate wearing a pricing tier's clothes. Both are now
+    # included for everyone, so there is one number to explain and no upgrade
+    # screen between a founder and the thing they came to do.
+    #
+    # ⚠️ The 50¢ floor is not decoration and must be quoted with the rate. Under
+    # merchant-of-record Stripe's 2.9% + 30¢ comes out of FUIME's balance, so at
+    # 5% alone the break-even is 30¢ ÷ (5% − 2.9%) = $14.29, and every sale below
+    # that loses money. `Event::Plan::MINIMUM_FEE_CENTS` is what makes small
+    # baskets viable — see Event#fuime_fee_cents_on, which applies it only under
+    # MoR. Copy that says "5%" without the floor describes a price Fuime does not
+    # charge (L8).
     class Free < Standard
-      REVENUE_FEE = 0.07
+      REVENUE_FEE = 0.05
 
-      # Fuime: everything Standard has, minus the developer API.
+      # Fuime: everything Standard has. Nothing is withheld.
       #
-      # The one feature the family plan sells beyond unlimited ventures. See
-      # Event::Plan.available_features for why the list of safe-to-gate things
-      # is so short.
-      def features
-        super - %w[api_keys]
-      end
-
+      # `api_keys` was subtracted here while the family plan existed — the one
+      # paid-only feature. With one flat price there is nothing to withhold it
+      # for, and a founder ready to use the API is exactly the founder worth
+      # keeping.
 
       def self.selectable?
         true
@@ -55,14 +66,16 @@ class Event
         0
       end
 
+      # States the floor alongside the rate, because the floor is part of the
+      # price — see the class header.
       def label
-        "Fuime free (#{revenue_fee_label})"
+        "Fuime (#{Event::Plan.fuime_price_label})"
       end
 
       def description
-        "Free to start, one venture — Fuime keeps #{revenue_fee_label} of what it collects. " \
-          "The family plan is #{Event::Plan::Pro.new.price_label} for unlimited ventures " \
-          "and API keys, at the same take-rate."
+        "One price, no monthly fee: Fuime keeps #{Event::Plan.fuime_price_label} of what it " \
+          "collects, and nothing until you sell. Unlimited businesses and API keys included. " \
+          "Selling at scale? Talk to us about custom pricing."
       end
 
     end

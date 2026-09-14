@@ -4,12 +4,12 @@
 
 <div class="flex flex-col gap-4">
   <% admin_tool "p-3" do %>
-    <strong>Organization’s slug history:</strong> <%= event.slugs.pluck(:slug).join ", " %>
+    <strong>Business’s slug history:</strong> <%= event.slugs.pluck(:slug).join ", " %>
   <% end %>
 
   <% if @event.application.present? %>
     <% admin_tool "p-3" do %>
-      <%= link_to "Go to organization's application", submission_application_path(@event.application) %>
+      <%= link_to "Go to business's application", submission_application_path(@event.application) %>
     <% end %>
   <% end %>
 
@@ -44,7 +44,7 @@
       </p>
 
       <% if Event::Plan.legacy_plans.any? %>
-        <p class="muted italic">Retired plans inherited from HCB, kept only for organizations already on them: <%= Event::Plan.legacy_plans.map { |plan| plan.new.label }.sort.to_sentence %>.</p>
+        <p class="muted italic">Retired plans inherited from HCB, kept only for businesses already on them: <%= Event::Plan.legacy_plans.map { |plan| plan.new.label }.sort.to_sentence %>.</p>
       <% end %>
     </details>
   <% end %>
@@ -95,7 +95,7 @@
   <% end %>
 
   <%= form_with(model: event, local: true, html: { "x-data" => "{ship_type: '#{event.stripe_card_shipping_type}'}" }) do |form| %>
-    <%= form_errors event, "organization" %>
+    <%= form_errors event, "business" %>
     <% admin_tool "p-3" do %>
       <%= link_to (event.hidden? ? "Un-hide project" : "Hide project"),
                   event_toggle_hidden_path(event),
@@ -194,7 +194,7 @@
   <% if Flipper.enabled?(:parent_event_assignment_2025_09_18, current_user) %>
     <% admin_tool "p-3" do %>
       <%= form_with(model: event, local: true) do |form| %>
-        <h3 id="parent_organization" class="mb2 mt1">Parent Organization</h3>
+        <h3 id="parent_organization" class="mb2 mt1">Parent Business</h3>
 
         <div class="field">
           <%= form.select(
@@ -214,7 +214,7 @@
   <% admin_tool "p-3" do %>
     <%= form_with(model: event, local: true) do |form| %>
 
-      <h3 id="sub_organizations" class="mb2 mt1">Sub-organizations</h3>
+      <h3 id="sub_organizations" class="mb2 mt1">Sub-businesses</h3>
 
       <ul>
         <% event.subevents.order(created_at: :desc).each do |subevent| %>
@@ -226,10 +226,10 @@
 
       <%= form.fields_for :config do |config| %>
         <div class="field">
-          <%= config.label :subevent_plan, "Sub-organization default plan" %>
+          <%= config.label :subevent_plan, "Sub-business default plan" %>
           <%= config.select :subevent_plan, { selected: event.config.subevent_plan }, {}, disabled: do %>
             <optgroup label="🚫 Disabled">
-              <option value="">🚫 Disable creating sub-organizations</option>
+              <option value="">🚫 Disable creating sub-businesses</option>
             </optgroup>
             <optgroup label="✅ Enabled">
               <%= options_for_select(Event::Plan.select_options(event.config.subevent_plan), event.config.subevent_plan) %>
@@ -286,7 +286,7 @@
   <% end %>
 
   <% admin_tool "p-3" do %>
-    <%= button_to "Delete organization", event_path(event), method: :delete, class: "btn bg-error", disabled: !event.demo_mode?, data: { turbo_confirm: "⚠️ Are you sure you'd like to delete this organization?", turbo_confirm_danger: true } %>
+    <%= button_to "Delete business", event_path(event), method: :delete, class: "btn bg-error", disabled: !event.demo_mode?, data: { turbo_confirm: "⚠️ Are you sure you'd like to delete this business?", turbo_confirm_danger: true } %>
     <% unless event.demo_mode? %>
       <p class="h5 muted mt0 mb1">
         Only demo accounts can be deleted.

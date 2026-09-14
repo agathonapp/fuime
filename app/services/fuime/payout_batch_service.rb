@@ -29,6 +29,9 @@ module Fuime
     class Error < StandardError; end
     class NotPermitted < Error; end
     class WrongState < Error; end
+    # Raised when somebody tries to debit every operator's ledger without saying
+    # what transfer actually paid them. See #mark_paid!.
+    class MissingTransferReference < Error; end
 
     # Ventures Fuime could conceivably owe money to.
     #
@@ -115,13 +118,41 @@ module Fuime
     # through Fuime::VentureLedger, so a retry after a partial failure resumes
     # rather than double-posting — the same idempotency the school-settlement path
     # relies on.
-    def mark_paid!(batch:, paid_by:)
+    #
+    # ── Why a transfer reference is mandatory ────────────────────────────────
+    #
+    # This method sends no money. There is no Stripe::Payout, no Stripe::Transfer
+    # and no ACH originator behind it; a human sends the money from a bank,
+    # outside this app, and then comes here to record that they did
+    # (STRIPE_FEATURE_AUDIT.md §4.3). That division is fine at this volume.
+    #
+    # What is not fine is the app believing it on a confirm dialog alone. The
+    # debit posted here is what zeroes an operator's payable — the single most
+    # consequential write in the product from a teenager's point of view — and
+    # before this it could be produced by a misclick, leaving a ledger that said
+    # "paid" about a transfer nobody made and no record of what was meant to have
+    # been sent. Requiring the reference means somebody has to go and look at the
+    # bank before the ledger will move.
+    #
+    # Deliberately not format-validated: Fuime does not know what any given
+    # institution's reference looks like, and a shape rule would only teach people
+    # to type around it. The trip to the bank is the control.
+    def mark_paid!(batch:, paid_by:, transfer_reference:)
       raise WrongState, "Only an approved run can be marked as paid." unless batch.approved?
       raise NotPermitted, "Only a Fuime admin can mark a payout run as paid." unless paid_by&.admin?
+
+      reference = transfer_reference.to_s.strip
+      if reference.blank?
+        raise MissingTransferReference, <<~MSG.squish
+          Record the bank reference for the transfer before marking this run paid.
+          Marking it paid debits every operator's ledger, and Fuime sends this money by hand.
+        MSG
+      end
 
       ::Fuime::PayoutBatch.transaction do
         batch.paid_by = paid_by
         batch.paid_at = Time.current
+        batch.transfer_reference = reference
         batch.mark_paid!
         batch.save!
 
@@ -134,7 +165,7 @@ module Fuime
 
         Rails.logger.info(
           "[Fuime] payout batch #{batch.id} marked paid by user #{paid_by.id}: " \
-          "#{batch.operator_count} line(s)"
+          "#{batch.operator_count} line(s), transfer reference #{reference}"
         )
 
         batch

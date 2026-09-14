@@ -15,15 +15,39 @@ require "rails_helper"
 # Prices are pinned separately in spec/fuime_marketing_pricing_spec.rb; do not
 # fold them in here.
 RSpec.describe "Fuime marketing copy truth (L8)" do
-  # Everything server.js will serve as a page: the dive at /, its scroll
-  # variant, and the three closed-but-on-disk marketing pages (CLOSED in
-  # site/server.js bounces them to / today, and they come back as-is).
+  # Every page server.js serves, and the list is the guard: these checks are
+  # hardcoded rather than globbed, so a page missing from here escapes ALL of
+  # them — it may say "private beta", quote a retired rate, drop the not-a-bank
+  # disclosure and ship no sign-up CTA, and the suite stays green.
+  #
+  # Keep in step with PUBLIC_FILES in site/server.js, with `public_pages` in
+  # site/test/copy-guard.mjs (which replicates these assertions offline, for a
+  # machine with no gem bundle), and with the page list in
+  # site/test/server.test.mjs. Four lists, one fact — the marketing site has no
+  # build step, so there is nowhere better to put it.
   public_pages = %w[
     site/start.html
     site/start-scroll.html
     site/index.html
     site/parents.html
     site/pricing.html
+    site/payment-links.html
+    site/subscriptions.html
+    site/books.html
+    site/taxes.html
+    site/api.html
+    site/merchant-of-record.html
+    site/why-has-fuime-charged-me.html
+    site/for/tutoring.html
+    site/for/photo-video.html
+    site/for/lawn-care.html
+    site/for/schools.html
+    site/compare.html
+    site/compare/venmo.html
+    site/compare/paddle.html
+    site/compare/waiting.html
+    site/roadmap.html
+    site/faq.html
   ]
 
   # Matched case-insensitively against the whole file, HTML comments included:

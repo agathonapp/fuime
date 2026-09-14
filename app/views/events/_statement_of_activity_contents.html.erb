@@ -70,7 +70,7 @@
 
 <% if statement_of_activity.event_group || statement_of_activity.include_descendants %>
   <details>
-    <summary>Included organizations (<%= included_events.count %>)</summary>
+    <summary>Included businesses (<%= included_events.count %>)</summary>
     <% if statement_of_activity.event_group && statement_of_activity.events.empty? %>
       <p>This group does not have any associated events</p>
     <% else %>
@@ -95,7 +95,7 @@
             <th class="w-[40%]">Transaction Memo</th>
             <th>Amount</th>
             <% if show_organization_column %>
-              <th>Organization</th>
+              <th>Business</th>
             <% end %>
             <th>ID</th>
           </tr>
@@ -130,7 +130,7 @@
                 <th class="w-[40%]">Transaction Memo</th>
                 <th>Amount</th>
                 <% if show_organization_column %>
-                  <th>Organization</th>
+                  <th>Business</th>
                 <% end %>
                 <th>ID</th>
               </tr>

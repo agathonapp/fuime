@@ -1500,22 +1500,28 @@ section[id] {
    the whole row to the far edge, and the row's own gap keeps its columns tight.
 
    A grid fixes it because the columns are placed on tracks instead of packed.
-   1.6fr for the brand cell gives the mark room to sit under the eye without
-   owning half the footer, and the two equal tracks after it land the columns at
-   roughly the thirds. display:contents on .foot__nav promotes the two .foot__col
-   into this grid without adding a wrapper to the markup; it is safe here because
-   the div carries no role, and the accessibility-tree bug with display:contents
-   only bites elements that do. */
+   (That first fix gave the brand a 1.6fr cell and promoted .foot__col into the
+   same grid with display:contents. Superseded by the five-column sitemap
+   below, which needs .foot__nav to be a real grid with a gap of its own.) */
+/* 2026-09-14: the footer became the sitemap. With five columns instead of two,
+   display:contents no longer works — six tracks on one row gives each column
+   ~165px at 1180, which wraps "Why has fuime charged me?" into four lines and
+   jams the wordmark against PRODUCT. So the brand takes its own row and the
+   columns get a grid of their own underneath, which is also the shape that
+   degrades cleanly: 5 → 3 → 2 tracks without the wordmark ever sharing a row. */
 .foot__top {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
-  gap: var(--s7);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s8);
   align-items: start;
   padding-bottom: var(--s8);
   border-bottom: 1px solid var(--on-dark-faint);
 }
 .foot__nav {
-  display: contents;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s7) var(--s5);
+  align-items: start;
 }
 .foot__col h4 {
   font-size: var(--t-small);
@@ -2785,6 +2791,15 @@ section[id] {
   }
 }
 
+@media (max-width: 900px) {
+  /* Five ~165px columns survive to about 900. Below it the longest label
+     ("Why has fuime charged me?") starts wrapping to three lines, so drop to
+     three tracks before that happens rather than after. */
+  .foot__nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   /* A phone hero is short, so the copy lands on the lit table rather than on
      empty sky. The scrim has to reach further down than it does on desktop.
@@ -2892,18 +2907,13 @@ section[id] {
   .capture .btn {
     width: 100%;
   }
-  /* .foot__nav is display:contents now, so it has no gap of its own to shrink —
-     the rule that used to live here was doing nothing. Three tracks are far too
-     narrow at 390 (they would be ~90px each), so drop to two and let the
-     wordmark span them, which is the stacked shape the flex version fell into by
-     wrapping. Two equal columns also stops COMPANY hugging PRODUCT with 200px of
-     empty night to its right. */
-  .foot__top {
+  /* Three tracks are far too narrow at 390 (they would be ~90px each), so drop
+     to two. The wordmark has its own row at every width now, so it never needs
+     to span. Two equal columns also stops the last column hugging the one
+     before it with 200px of empty night to its right. */
+  .foot__nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--s7) var(--s6);
-  }
-  .foot__top > .mark {
-    grid-column: 1 / -1;
   }
 
   /* The closing copy is absolutely positioned over the bottom of the archway,

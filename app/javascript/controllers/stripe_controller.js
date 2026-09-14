@@ -26,7 +26,10 @@ export default class extends Controller {
 
     const paymentElement = this.elements.create('payment', {
       business: {
-        name: 'HCB',
+        // Fuime: was 'HCB'. Stripe shows this name to the PAYER — on the mandate
+        // text, and in the Apple Pay / Link sheets — so a customer buying from a
+        // teen's storefront was told they were paying Hack Club.
+        name: 'Fuime',
       },
       terms: { card: 'never' },
     })

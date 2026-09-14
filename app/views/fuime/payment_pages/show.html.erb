@@ -74,10 +74,35 @@
                                             placeholder: "Address, date, or a note" %>
         </div>
 
-        <%= form.submit "Pay #{number_to_currency(@offer.price)}", class: "btn btn--lg btn--primary" %>
+        <%# FUIME: the button says which kind of commitment this is. "Pay $9.99"
+            on a monthly subscription is the sentence a chargeback is written
+            about — the buyer agreed to a number, not to a recurrence. %>
+        <%= form.submit(
+              @offer.recurring? ? "Subscribe — #{number_to_currency(@offer.price)} #{@offer.price_cadence}"
+                                : "Pay #{number_to_currency(@offer.price)}",
+              class: "btn btn--lg btn--primary"
+            ) %>
       <% end %>
 
       <p class="text-sm muted mt-3 mb-0 text-center">
+        <% if @offer.recurring? %>
+          <%# Said before the click, in the buyer's own terms, and said plainly
+              rather than in small print: renews, when, and that they control
+              stopping it. Under merchant-of-record the refund and chargeback
+              obligation is Fuime's, so an unclear recurrence is Fuime's cost. %>
+          <%# Cancellation names a route that actually exists. Fuime is the seller
+              of record, so cancelling is Fuime's job, not the venture's — and
+              claiming a self-serve portal Fuime has not built would be the
+              unclear-cancellation problem the FTC negative-option rules are
+              written about, on a product where the chargeback is Fuime's.
+              ⚠️ Self-serve cancellation is a real gap; this is the honest
+              interim, not the finished answer. %>
+          This renews automatically <%= @offer.recurring_interval == "month" ? "every month" : "every year" %>
+          until you cancel. To cancel, email
+          <a href="mailto:support@fuime.com">support@fuime.com</a> — we'll stop it
+          before your next payment.
+          <br>
+        <% end %>
         Secure checkout by Stripe. You'll be taken to Stripe to pay.
       </p>
 

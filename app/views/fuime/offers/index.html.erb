@@ -133,6 +133,29 @@
                     </div>
                   </div>
                   <div class="field">
+                    <%# FUIME: recurring. One-time is first and is the blank
+                        option, so it stays the default — a founder who never
+                        touches this control keeps selling exactly as before.
+                        Worded as what the buyer experiences ("Charge them once")
+                        rather than as a schema value, because the mistake this
+                        prevents is a founder not realising they just created a
+                        subscription. %>
+                    <%= form.label :recurring_interval, "How often do they pay?" %>
+                    <%= form.select :recurring_interval,
+                                    [["Once", ""], ["Every month", "month"], ["Every year", "year"]],
+                                    { selected: offer.recurring_interval },
+                                    class: "w-full max-w-full text-sm" %>
+                    <% if offer.recurring? %>
+                      <p class="muted text-sm mt-1 mb-0">
+                        <%# The thing a founder does not think about until it
+                            happens: a subscription they sold keeps billing on
+                            the terms it was sold on. %>
+                        Customers who already subscribed keep paying
+                        <%= offer.price_sentence %> until they cancel.
+                      </p>
+                    <% end %>
+                  </div>
+                  <div class="field">
                     <%= form.label :description, "Description (optional)" %>
                     <%= form.text_field :description, value: offer.description,
                                                       class: "w-full max-w-full text-sm" %>

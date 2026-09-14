@@ -85,13 +85,33 @@ class Event
         ENV.fetch("FUIME_PRO_MONTHLY_CENTS", "1999").to_i
       end
 
+      # Fuime: RETIRED 2026-09-14. Nothing new is sold onto this plan.
+      #
+      # Fuime moved to one flat price and everything this plan gated — unlimited
+      # ventures and API keys — is now included for everyone. So an active family
+      # subscription buys literally nothing, at the same take-rate it always had.
+      #
+      # ⚠️ `monthly_fee_cents` deliberately still reports $19.99. It is not a
+      # price Fuime is charging for value any more, it is what STRIPE is still
+      # billing this family until somebody cancels the subscription — and a plan
+      # object that reported $0 while a parent's card was charged $19.99 would
+      # make the app lie about a real debit. The app's job here is to say the
+      # uncomfortable true thing loudly enough that it gets cancelled.
+      #
+      # ⚠️ OPERATIONAL, NOT CODE: every live Fuime::Subscription with no event is
+      # still billing. Cancelling them is a Stripe action nobody can do from this
+      # file — see Fuime::Subscription.cancel_in_stripe! and the admin
+      # subscriptions queue.
+      def retired? = true
+
       def label
-        "Fuime family (#{price_label})"
+        "Fuime family — retired (#{price_label})"
       end
 
       def description
-        "The family plan: unlimited ventures and API keys, #{price_label} — the same " \
-          "take-rate as Free, billed to the parent. Not a cheaper fee."
+        "Retired. Everything this plan included — unlimited businesses and API keys — " \
+          "is now part of Fuime's one flat price of #{Event::Plan.fuime_price_label}, " \
+          "so this subscription no longer buys anything and should be cancelled."
       end
 
     end

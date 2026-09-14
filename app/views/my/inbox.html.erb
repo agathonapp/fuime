@@ -34,20 +34,27 @@
     </div>
   </div>
 
-  <%= form_for current_user do |form| %>
-    <%= form.label :receipt_identifier, "Send in via email" %>
-    <p class="h5 muted mt0 mb1">
-      Send from in-store terminals, or forward emails later.
-    </p>
+  <%# Fuime: hidden until FUIME_MAILBOX_DOMAIN is set. Every address this
+      minted ended in `hcb.gg`, Hack Club's domain, so a founder who forwarded a
+      receipt sent it to another company's ingress and Fuime never saw it.
+      Offering the feature without an inbound domain of our own advertises a
+      mailbox that drops mail. See MailboxAddress. %>
+  <% if MailboxAddress.configured? %>
+    <%= form_for current_user do |form| %>
+      <%= form.label :receipt_identifier, "Send in via email" %>
+      <p class="h5 muted mt0 mb1">
+        Send from in-store terminals, or forward emails later.
+      </p>
 
-    <%= turbo_frame_tag "mailbox_address" do %>
-      <% if @mailbox_address %>
-        <%= render @mailbox_address %>
-      <% else %>
-        <%= link_to "Choose an email address",
-            mailbox_addresses_path,
-            class: "btn btn-small pl2 pr2",
-            data: { turbo: true, "turbo-method" => "post" } %>
+      <%= turbo_frame_tag "mailbox_address" do %>
+        <% if @mailbox_address %>
+          <%= render @mailbox_address %>
+        <% else %>
+          <%= link_to "Choose an email address",
+              mailbox_addresses_path,
+              class: "btn btn-small pl2 pr2",
+              data: { turbo: true, "turbo-method" => "post" } %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>

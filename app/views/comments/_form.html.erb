@@ -65,8 +65,8 @@
       <%= form.hidden_field :return_to, value: url_for(only_path: false) %>
       <%= dropdown_button form:,
                           options: [
-                            ["Add comment", "private", "Only visible to #{commentable.event&.name || 'this organization'}"],
-                            ["Share with #{disbursement.counterparty_label}", "shared", "Visible to both organizations"]
+                            ["Add comment", "private", "Only visible to #{commentable.event&.name || 'this business'}"],
+                            ["Share with #{disbursement.counterparty_label}", "shared", "Visible to both businesses"]
                           ],
                           button_class: "bg-info",
                           button_icon: "send",

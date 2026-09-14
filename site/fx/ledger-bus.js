@@ -21,9 +21,16 @@ import { getStage } from 'cwe/stage'
 const DEFAULTS = {
   stripePct: 0.029,
   stripeFixed: 0.3,
-  fuimePct: 0.07,
-  monthlyThreshold: 250,
-  monthlyFee: 15,
+  fuimePct: 0.05,
+  // A FLOOR, not an additive fee. Event#fuime_fee_cents_on computes
+  // min(max(amount * 5%, 50c), amount), so a $5 sale pays 50c — 10% — and a
+  // $400 sale pays $20.00, not $20.50. Writing this as `+` would overstate
+  // fuime's own price at every amount above $10 (L8).
+  fuimeMin: 0.5,
+  // No second tier and no monthly fee (2026-09-14). Kept at 0 rather than
+  // deleted so threshold.js still reads a number if something re-enables it.
+  monthlyThreshold: 0,
+  monthlyFee: 0,
   sliderSelector: '.calc__range',
   storageKey: 'fuime.fee',
   eventName: 'fuime:fee',
@@ -52,12 +59,29 @@ export function initLedgerBus(config) {
 
   /* ── the arithmetic ─────────────────────────────────────────────────── */
 
+  /* Under merchant-of-record the seller is charged ONE fee. fuime is the legal
+     seller, so Stripe bills Ninth Street Labs and its 2.9% + 30c comes out of
+     fuime's own cut — it is never deducted from the venture (CLAUDE.md L8).
+     The previous version of this function subtracted BOTH, which understated
+     what a founder takes home by $19.90 on a $400 job.
+
+     So three numbers come out of one sale:
+       lands    what the venture is owed   = charge - fee
+       stripe   what Stripe costs          paid by fuime, out of `fee`
+       fuimeNet what fuime actually keeps  = fee - stripe
+
+     They sum to the charge, which is what lets split.js draw the sale as one
+     rule cut three ways without the segments lying about who pays whom. Below
+     about $14.29 `fuimeNet` is negative — fuime loses money on small jobs by
+     design — and the bar clamps it at 0 rather than drawing a negative slice. */
   function compute(charge) {
     const stripe = charge * cfg.stripePct + cfg.stripeFixed
-    const fuime = charge * cfg.fuimePct
-    const lands = charge - stripe - fuime
-    const over = charge >= cfg.monthlyThreshold
-    return { charge, stripe, fuime, lands, over }
+    const fee = Math.min(Math.max(charge * cfg.fuimePct, cfg.fuimeMin), charge)
+    const lands = charge - fee
+    const fuimeNet = Math.max(fee - stripe, 0)
+    // `fuime` is the seller-facing fee, because that is what [data-out="fuime"]
+    // prints on the invoice. `fuimeNet` is the slice split.js draws.
+    return { charge, fee, fuime: fee, stripe, fuimeNet, lands, over: false }
   }
 
   const state = compute(readInitialCharge())

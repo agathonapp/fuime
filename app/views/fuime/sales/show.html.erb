@@ -1,0 +1,177 @@
+<%# Fuime: the sales dashboard.
+
+    Design follows docs/fuime/PADDLE_DESIGN_TEARDOWN.md §6.2 where it earns its
+    place: the KPI row is ONE bordered container split by hairlines rather than
+    three floating cards, the table carries its own bar chart in the label cell
+    so a row is label and chart at once, and the page header states in plain
+    words what the page is for. Deliberately NOT copied: their dark chrome and
+    accent palette, which belong to Paddle. %>
+
+<% title "Sales – #{@event.name}" %>
+<%= render "events/nav", selected: :sales %>
+
+<div class="container container--sm">
+  <header class="mb-4">
+    <h1 class="h2 mt0 mb-1">Sales</h1>
+    <%# The cheapest onboarding there is: five words saying what this page is,
+        for the founder who has never opened it. %>
+    <p class="muted mt0 mb0">What your business has sold, and what sells best.</p>
+  </header>
+
+  <% if @report.sale_count.zero? %>
+    <%# The empty state is the state most founders see first, so it says what
+        will appear here rather than "no data". %>
+    <div class="card">
+      <h2 class="h4 mt0 mb-1">No sales yet</h2>
+      <p class="muted mb-2">
+        Once someone buys something, this page shows what you sold, which product
+        earns most, and where your customers are.
+      </p>
+      <%= link_to "See your storefront", fuime_storefront_path(slug: @event.slug), class: "btn btn--sm" %>
+    </div>
+  <% else %>
+    <%# One container, hairline-divided — three separate cards read as three
+        unrelated facts. %>
+    <div class="card flex flex-wrap mb-4" style="gap: 0; padding: 0;">
+      <div class="flex-1 p-3" style="min-width: 8rem;">
+        <span class="muted text-sm block">Revenue</span>
+        <span class="h3 mb0 block"><%= render_money @report.total_revenue_cents %></span>
+      </div>
+      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+        <span class="muted text-sm block">Sales</span>
+        <span class="h3 mb0 block"><%= number_with_delimiter @report.sale_count %></span>
+      </div>
+      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+        <span class="muted text-sm block">Average sale</span>
+        <span class="h3 mb0 block"><%= render_money @report.average_sale_cents %></span>
+      </div>
+      <% if @customer_count.positive? %>
+        <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+          <span class="muted text-sm block">Customers</span>
+          <span class="h3 mb0 block"><%= number_with_delimiter @customer_count %></span>
+          <% if @repeat_customer_count.positive? %>
+            <%# The number a small business actually cares about: somebody came
+                back. Shown next to the count rather than as its own tile,
+                because it is only meaningful against it. %>
+            <span class="muted text-sm"><%= @repeat_customer_count %> came back</span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <section class="mb-4">
+      <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+        <h2 class="h4 mt0 mb0">Revenue over time</h2>
+        <div class="flex gap-1">
+          <% Fuime::SalesReport::INTERVALS.each do |option| %>
+            <%= link_to option.capitalize,
+                        fuime_sales_path(event_slug: @event.slug, interval: option),
+                        class: "btn btn--sm #{'bg-muted' unless option == @interval}" %>
+          <% end %>
+        </div>
+      </div>
+
+      <%# A bar per bucket, widths relative to the largest. Deliberately CSS and
+          not a charting library: one dependency for one chart is a poor trade,
+          and this stays legible with the stylesheet disabled. %>
+      <% peak = @series.values.max.to_i %>
+      <div class="card">
+        <% @series.each do |bucket, cents| %>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="muted text-sm" style="min-width: 7rem;">
+              <%= @interval == "month" ? bucket.strftime("%b %Y") : bucket.strftime("%-d %b %Y") %>
+            </span>
+            <span style="flex: 1; background: var(--smoke); border-radius: 4px; height: 1.25rem; overflow: hidden;">
+              <span style="display: block; height: 100%; border-radius: 4px; background: var(--info);
+                           width: <%= peak.positive? ? ((cents.to_f / peak) * 100).round(1) : 0 %>%;"></span>
+            </span>
+            <span class="text-sm" style="min-width: 5rem; text-align: right;">
+              <%= render_money cents %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </section>
+
+    <% if @top_offers.any? %>
+      <section class="mb-4">
+        <h2 class="h4 mt0 mb-2">What sells</h2>
+        <div class="card">
+          <% best = @top_offers.first[:revenue_cents] %>
+          <% @top_offers.each do |row| %>
+            <div class="flex items-center gap-2 mb-1">
+              <%# In-cell bar: the row is its own chart, at no extra height. %>
+              <span style="flex: 1; position: relative; padding: .35rem .5rem; border-radius: 4px; overflow: hidden;">
+                <span style="position: absolute; inset: 0; width: <%= ((row[:revenue_cents].to_f / best) * 100).round(1) %>%;
+                             background: var(--smoke); border-radius: 4px;"></span>
+                <span style="position: relative;">
+                  <%= row[:offer_name] %>
+                  <span class="muted text-sm">· <%= pluralize row[:sale_count], "sale" %></span>
+                </span>
+              </span>
+              <span class="text-sm" style="min-width: 5rem; text-align: right;">
+                <%= render_money row[:revenue_cents] %>
+              </span>
+            </div>
+          <% end %>
+
+          <% if @report.unattributed_revenue_cents.positive? %>
+            <%# Reported separately rather than bucketed as "other": how much of
+                the business happens off the storefront is a real question. %>
+            <p class="muted text-sm mt-2 mb0">
+              Another <%= render_money @report.unattributed_revenue_cents %> came from
+              payment links where you set the price yourself, not from a listed product.
+            </p>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <% if @top_customers.any? %>
+      <section class="mb-4">
+        <h2 class="h4 mt0 mb-2">Your customers</h2>
+        <div class="card">
+          <% @top_customers.each do |row| %>
+            <div class="flex justify-between items-baseline gap-2 mb-1 flex-wrap">
+              <span>
+                <%= row[:customer].display_name %>
+                <% if row[:purchase_count] > 1 %>
+                  <%# Said plainly rather than as a badge: "bought 3 times" is
+                      what a founder wants to know before they call someone. %>
+                  <span class="muted text-sm">· bought <%= row[:purchase_count] %> times</span>
+                <% end %>
+              </span>
+              <span class="text-sm"><%= render_money row[:revenue_cents] %></span>
+            </div>
+            <% if row[:customer].name.present? %>
+              <p class="muted text-sm mt0 mb-2"><%= row[:customer].email %></p>
+            <% end %>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <% if @by_jurisdiction.any? %>
+      <section class="mb-4">
+        <h2 class="h4 mt0 mb-2">Where your customers are</h2>
+        <div class="card">
+          <% @by_jurisdiction.first(8).each do |place, cents| %>
+            <div class="flex justify-between mb-1">
+              <span><%= place %></span>
+              <span class="text-sm"><%= render_money cents %></span>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <%# Carried from the service rather than written here, so a surface cannot
+        render these numbers without their disclaimers. A figure a founder
+        cannot reconcile against their payout is worse than no figure. %>
+    <p class="muted text-sm mb0">
+      <% @report.caveats.each do |caveat| %>
+        <%= caveat %>
+      <% end %>
+    </p>
+  <% end %>
+</div>

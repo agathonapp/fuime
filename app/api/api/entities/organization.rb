@@ -7,10 +7,19 @@ module Api
         expose :name
         expose :slug
         expose :website
+        # Fuime: this defaulted every venture to "nonprofit" and could report it
+        # as "robotics_team", "hackathon", "hack_club" or "hack_club_hq" — Hack
+        # Club's programme taxonomy, in Fuime's PUBLIC API. A Fuime venture is a
+        # for-profit teen business and none of those describe it, so "nonprofit"
+        # was not merely off-brand but factually wrong about every row.
+        #
+        # The legacy values still resolve for inherited rows carrying those tags,
+        # so an API consumer reading historical data sees no change; what changes
+        # is that a normal Fuime business now reports "business".
         expose :category, documentation: {
-          values: ["hack_club_hq", "robotics_team", "hackathon", "hack_club", "climate", "nonprofit"]
+          values: ["business", "climate", "nonprofit", "robotics_team", "hackathon", "hack_club", "hack_club_hq"]
         } do |organization|
-          category = "nonprofit"
+          category = "business"
           category = "climate" if organization.event_tags.where(name: EventTag::Tags::CLIMATE).exists?
           category = "hack_club" if organization.event_tags.where(name: EventTag::Tags::HACK_CLUB).exists?
           category = "hackathon" if organization.hackathon?

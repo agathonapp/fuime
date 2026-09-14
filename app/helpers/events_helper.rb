@@ -32,7 +32,7 @@ module EventsHelper
     {
       name: "Activate",
       path_proc: ->(event_id) { event_activation_flow_path(event_id:) },
-      tooltip: "Activate this organization",
+      tooltip: "Activate this business",
       icon: "checkmark",
       symbol: :activation_flow,
       adminTool: true,
@@ -271,6 +271,22 @@ module EventsHelper
           event.payment_account&.cards_profile?
       }
     },
+    # Fuime: what the business sold. Sits next to Taxes rather than near the
+    # ledger, because both answer "how is the business doing" rather than "what
+    # is my money doing right now".
+    {
+      name: "Sales",
+      path_proc: ->(event_id) { fuime_sales_path(event_slug: event_id) },
+      tooltip: "What you've sold, and what sells best",
+      # `analytics` exists in app/assets/images/icons — confirmed, because
+      # `inline_icon` raises Errno::ENOENT on a missing file and 500s every page
+      # that renders the org nav, not just this item. See the Taxes note below.
+      icon: "analytics",
+      symbol: :sales,
+      # `show?`, the same as Taxes and the ledger: a guardian reads this class of
+      # information. There is nothing here to write.
+      available_proc: ->(event) { policy(event).show? && organizer_signed_in? }
+    },
     # Fuime: Tax Tracker nav item
     {
       name: "Taxes",
@@ -328,7 +344,7 @@ module EventsHelper
       name: "Donations",
       module_prefix: "donations",
       path_proc: ->(event_id) { event_donation_overview_path(event_id:) },
-      tooltip: "Support this organization",
+      tooltip: "Support this business",
       icon: "support",
       data: { tour_step: "donations" },
       symbol: :donations,
@@ -461,7 +477,7 @@ module EventsHelper
       tooltip: "Manage domain Google Workspace",
       dynamic_tooltip: lambda do |event|
         if !policy(event).g_suite_overview?
-          "Your organization isn't eligible for Google Workspace."
+          "Your business isn't eligible for Google Workspace."
         else
           if event.g_suites.any?
             "Manage domain Google Workspace"
@@ -509,9 +525,9 @@ module EventsHelper
       available_proc: ->(_event) { organizer_signed_in? }
     },
     {
-      name: "Sub-organizations",
+      name: "Sub-businesses",
       path_proc: ->(event_id) { event_sub_organizations_path(event_id:) },
-      tooltip: "Create & manage subsidiary organizations",
+      tooltip: "Create & manage subsidiary businesses",
       icon: "channels",
       symbol: :sub_organizations,
       available_proc: ->(event) { policy(event).sub_organizations? }
@@ -519,13 +535,13 @@ module EventsHelper
     {
       dropdown: "Settings",
       available_proc: ->(event) { policy(event).edit? },
-      tooltip: "Edit organization settings",
+      tooltip: "Edit business settings",
       icon: "settings",
       dropdown_items: [
         {
-          name: "Organization",
+          name: "Business",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "details") },
-          tooltip: "Edit organization details and visibility",
+          tooltip: "Edit business details and visibility",
           symbol: :settings_details,
           available_proc: ->(event) { true },
         },
@@ -547,7 +563,15 @@ module EventsHelper
           }
         },
         {
+          # Fuime: `module_prefix` added 2026-09-13. Card grants are in
+          # DisabledModules::DISABLED_CONTROLLER_PREFIXES, so every write to
+          # them is refused — but this entry carried no prefix, so the nav
+          # filter above never saw it and the tab rendered anyway. The plan gate
+          # is not a substitute: Standard drops `card_grants` from #features,
+          # yet the legacy plans an inherited org can still sit on do not, which
+          # is how a settings tab for a dead module reached a founder.
           name: "Card grants",
+          module_prefix: "card_grants",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "card_grants") },
           tooltip: "Edit card grant default settings, restrictions, and support",
           symbol: :settings_card_grants,
@@ -582,7 +606,7 @@ module EventsHelper
         {
           name: "Audit log",
           path_proc: ->(event_id) { edit_event_path(event_id, tab: "audit_log") },
-          tooltip: "View all organization activity",
+          tooltip: "View all business activity",
           symbol: :settings_audit_log,
           available_proc: ->(event) { true }
         },
@@ -715,6 +739,11 @@ module EventsHelper
     "show_mock_data_#{event.id}".to_sym
   end
 
+  # ⚠️ Fuime: DO NOT WIRE THIS UP. It builds a forms.hackclub.com URL with a
+  # Fuime user's name and email prefilled, i.e. it hands their identity to Hack
+  # Club (Prime Directive 4). Kept only because Rule 2 says disable rather than
+  # delete; it has no callers. Replace the host with Fuime's own intake before
+  # any view links to it again.
   def paypal_transfers_airtable_form_url(embed: false, event: nil, user: nil)
     # The airtable form is located within the Bank Promotions base
     form_id = "4j6xJB5hoRus"

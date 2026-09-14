@@ -29,7 +29,10 @@
       <div>
           <span class="bold">They will only be able to submit invoices after being onboarded.</span>
           To complete their onboarding, they must email a W-9 or W-8 BEN
-          to <%= mail_to "hr@hackclub.com" %>. After we receive their W-9 or W-8
+          <%# Fuime: was hr@hackclub.com — a W-9 / W-8 BEN carries a full SSN or
+              ITIN, so this sent a contractor's tax identity documents to another
+              company's HR inbox. %>
+          to <%= mail_to ApplicationMailer::OPERATIONS_EMAIL %>. After we receive their W-9 or W-8
           BEN, please give us approximately 2 business days to review and finalize
           their onboarding. We will email them once this process is complete.
       </div>

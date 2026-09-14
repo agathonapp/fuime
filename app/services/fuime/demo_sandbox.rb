@@ -237,11 +237,12 @@ module Fuime
         {
           id: "billing",
           n: 8,
-          title: "Billing / Pro upgrade",
+          title: "Billing / one flat price",
           persona_key: "parent.store",
           href: routes.my_billing_path,
-          expect: "$19.99",
-          do: "Become Denise Store. Upgrade — $19.99/mo, take-rate stays 7%. Teen sees who to ask, no button."
+          expect: "5% + $0.50",
+          do: "Become Denise Store. One price, 5% + 50¢, no monthly fee and nothing to upgrade to. " \
+              "A teen sees the same page an adult does — there is no card to enter and nobody to ask."
         },
         {
           id: "remind",

@@ -6574,3 +6574,650 @@ ever been exercised against Stripe, and writing money back into a teenager's
 ledger from a code path nobody has watched run is how you create the next
 finding. It wants a real test-mode dispute first
 (`PLATFORM_REVIEW_2026_09.md` §7 item 3).
+
+---
+
+## 2026-09-13 — Brand sweep: reachable pages still wearing HCB
+
+Triggered by a founder screenshot: a Documents page headed "Nonprofit status"
+and "Tax-exemption documents", and a **Card grants** tab in org settings for a
+module `Fuime::DisabledModules` already blocks.
+
+The useful finding is not the count. It is that `BRAND_STRINGS.md`'s reachability
+model had gone stale, and the naive `grep "Hack Club" app/` it recommends
+**cannot find most of this** — the worst items say neither "Hack Club" nor "HCB".
+They are a Stripe business name, an `hr@` address, an app-store URL and a
+`business.name` JS literal.
+
+### Category A — a third party received Fuime users' data (Prime Directive 4)
+
+| What | Where | Why it matters |
+|---|---|---|
+| **W-9 / W-8 BEN → `hr@hackclub.com`** | `my/payroll.html.erb`, `employees/show.html.erb` | Those forms carry a full SSN/ITIN. Payroll is live; this instructed a Fuime contractor (often a minor) to mail their tax identity to another company's HR inbox |
+| **Dispute intake → `forms.hackclub.com`** | `hcb_codes_controller#dispute` | Reachable from the transaction meatball menu; redirected with the founder's name, login email and transaction code prefilled. Now points at `support@fuime.com` until Fuime has its own intake |
+| **Receipt mailboxes on `hcb.gg`** | `MailboxAddress` | Every generated forwarding address ended in Hack Club's domain, so forwarded receipts reached their ingress, not ours |
+| OG card renderer | `events/transactions.html.erb` | Every share of a public venture sent the slug to `hcb-og.hackclub.com` and rendered *their* card for our page |
+| 2FA page icon, pay-stub logo | `users/generate_totp.html.erb`, `employee/payments/stub.pdf.erb` | Live fetches from `icons.`/`assets.hackclub.com` |
+
+### Category B — false statements about Fuime
+
+- **19 mailers and one pay stub PDF** asserted "*&lt;org&gt; is fiscally sponsored by
+  The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit (EIN:
+  81-2908499)*". Reimbursements and payroll are **not** disabled modules, so these
+  were live. On a pay stub it is a document a recipient may hand to a lender.
+  Removed, not reworded (BRAND_STRINGS category 3).
+- `events/landing/_footer` made the same claim on a **public** page
+  (`/donate/start/:event_name` is a plain GET), with the EIN written as ours.
+  Now renders `application/_status_disclosure`.
+- **`users/first`** — upstream's **FIRST Robotics** program, not "a user's first
+  venture". `/first/welcome` was public and headed "FIRST on Fuime — the ultimate
+  booster club for FRC, FTC and FLL teams", offering "501(c)(3) nonprofit status:
+  become part of Hack Club's legal entity". Its controller composed an advisor
+  email reading "*a nonprofit, Hack Club. They run a service called Fuime*" and
+  CC'd `hcb-raffles@hackclub.com`. Routes removed; `verify_email` and `sign_out`
+  stay because `_user_menu` renders them on every page.
+- `/mobile` sniffed the User-Agent and redirected to **"HCB by Hack Club" on the
+  App Store** / `com.hackclub.hcb` on Google Play. Route removed.
+
+### Category C — customer-visible, and none of it says "Hack Club"
+
+- `stripe_controller.js` declared `business: { name: 'HCB' }` on the Payment
+  Element. Stripe shows that to the **payer** — mandate text, Apple Pay and Link
+  sheets — so a customer buying from a teen's storefront was told they were
+  paying Hack Club. **This is on the live money-in path.**
+- The public API reference at `/docs/api/v3` was titled "The HCB API" and told
+  developers to reach us "in the #hcb channel on the Hack Club Slack".
+
+### The trap-page fix
+
+`Card grants` is in `DISABLED_CONTROLLER_PREFIXES`, but the settings nav entry
+carried no `module_prefix`, so the filter never saw it. The plan gate is not a
+substitute: `Standard#features` drops `card_grants`, but the legacy plans an
+inherited org can sit on do not. Fixed in both halves — `module_prefix` hides the
+link, and `EventsController#edit` now redirects any tab whose module is blocked,
+which closes the URL as well (and closes the Donations tab for the same reason).
+
+### Deliberately NOT changed
+
+- `User::SYSTEM_USER_EMAIL = "bank@hackclub.com"` — a **stored value** on an
+  existing row; `system_user?` compares against it. A code change here orphans
+  that row. Needs a data migration, not a string edit. It has no `full_name`, so
+  an automated comment renders as that address — worth fixing next, as data.
+- `Document` enum keys, `HACK CLUB FEE`, the memo-parsing regexes, `hcb-code`
+  CSS classes, `party(:hcb)`, `nickname`/`hcb_fee_id` in the API contract.
+- `grants/_activate_form` (501(c)(3) copy) and `users/_card_grant_conversion_callout`
+  — disabled module and an orphan partial respectively.
+
+| Change | Files |
+|---|---|
+| Nav/tab trap | `app/helpers/events_helper.rb`, `app/controllers/events_controller.rb` |
+| Document categories relabelled | `app/helpers/documents_helper.rb` (new), `documents/index`, `documents/_form` |
+| FIRST Robotics removed | `config/routes.rb`, `static_pages_controller`, `logins_controller`, `users_helper` |
+| Fiscal-sponsorship footnote | 19 mailers + `employee/payments/stub.pdf.erb` |
+| Mailbox domain | `MailboxAddress`, `mailbox_addresses_controller`, `receipt_bin_mailbox`, `my/inbox`, `my/reimbursements` |
+| Third-party calls | `events/transactions`, `users/generate_totp`, `my/feed`, `employee/payments/stub.pdf` |
+| Customer-visible names | `stripe_controller.js`, `1pass_controller.js`, `api/v3.rb`, `entities/hcb_fee.rb`, `api/directory.rb` |
+| Tax-document addresses | `my/payroll`, `employees/show` |
+| Misc copy | `sudo_mode/reauthenticate`, `contracts/_contract`, `events/settings/_details`, `exports/collect_email`, `organizer_position_invites/_form`, `layouts/docs`, `hcb_codes/transaction_types/_check_deposit`, `_donation` |
+
+### How to re-measure
+
+The count in BRAND_STRINGS is not the metric — comments legitimately say "Hack
+Club", and the severe items do not say it at all. Ask instead what leaves the
+machine or reaches a stranger:
+
+```bash
+# anything that resolves to Hack Club, on a surface that is not disabled
+grep -rnoE "https?://[a-zA-Z0-9.-]*(hackclub|hcb\.gg)[a-zA-Z0-9./-]*" app/ \
+  --include="*.erb" --include="*.rb" --include="*.js" | grep -v assets/builds
+
+# addresses handed to users
+grep -rnoE "[a-zA-Z0-9._+-]+@(hackclub\.com|hcb\.gg)" app/
+```
+
+---
+
+## 2026-09-13 (later) — FIRST Robotics, raffles, and HCB's tag taxonomy
+
+Follow-up to the brand sweep above, on a direct ask: no "made by teenagers",
+no FRC, no FIRST anywhere in the app or admin.
+
+### Raffles were Hack Club's FIRST Worlds 2026 giveaways
+
+`resources :raffles` was routed and `RafflesController` skipped
+`signed_in_user`, so `/raffles/new` was reachable by an **unverified** visitor.
+The three programmes are `first-worlds-2026-macbook`, `-printer` and `-airpods`,
+drawn at the FIRST Robotics World Championship, and `RaffleMailer` told the
+entrant to keep sharing their link "with your teammates and friends in FIRST
+robotics" over the signature **"The Fuime Team"**.
+
+The part that mattered most was not the route. `OrganizerPositionInvite::Request`
+enrols the requester in `first-worlds-2026-printer` on `approve` whenever
+`Event::Affiliation.first_affiliation_matches?` — a **live path inside a feature
+Fuime keeps**, still writing Raffle rows for a draw that is not ours. That call
+is removed; the route, controller, model, mailer and views remain (Rule 2).
+
+### Every event tag in the taxonomy is HCB's
+
+`EventTag::Tags::ALL` is Hack Club's programme and funder vocabulary end to end:
+their hackathon and FIRST programmes (`Hackathon`, `Robotics Team`), their
+partnerships (`Climate`, `128 Collective Funded`/`Recommended`, `Vermont-based`),
+their own orgs (`Hack Club`, `Organized by Hack Clubbers`), and `YSWS` (You Ship
+We Ship). It was offered in three admin pickers: `admin/event_new`,
+`contract/parties/show`, and the settings tags panel.
+
+`Organized by Teenagers` is wrong for a second reason worth writing down: on
+Fuime **every** venture is teen-run, so the tag distinguishes nothing.
+
+Fixed with the same lever as `Event::Plan.selectable?` — a new
+`EventTag::Tags::SELECTABLE`. The constants stay defined so existing
+`event_tags` rows keep resolving and `Event#hackathon?` / `Event.ysws` keep
+working (Rule 6: these are stored strings); they are simply no longer offered.
+`SELECTABLE` is **empty** rather than a guessed Fuime taxonomy, because
+inventing business categories is a product decision, not a rebrand. Free-form
+tag creation in `events/settings/_tags` is untouched.
+
+> **Not a code fix — check production data.** `events/settings/admin/_tags`
+> builds its picker from `EventTag.find_each`, i.e. **DB rows**, not the
+> constant. Dev has 0 rows so nothing leaks there, but if production was seeded
+> with HCB's tags those rows still appear in that picker and need a data
+> cleanup.
+
+### The public API called every Fuime venture a nonprofit
+
+`Api::Entities::Organization#category` defaulted to `"nonprofit"` and could
+report `robotics_team`, `hackathon`, `hack_club` or `hack_club_hq`. That is not
+off-brand, it is false about every row: a Fuime venture is a for-profit teen
+business. Default is now `"business"`; the legacy values still resolve for
+inherited rows, so a consumer reading historical data sees no change.
+
+### Deliberately NOT changed
+
+- **`teenager` as a Fuime domain concept** — `User#teenager`, the teen-led
+  branch of `Event::Application`, the Alpine `teenager` binding in
+  `applications/project_info`. Fuime is for teenagers; this is our vocabulary,
+  not HCB's. Only the *tag* was retired.
+- **Admin's "Active/New Teenagers Leaderboard"** (`Admin::Nav`) — HCB framing,
+  but teens genuinely are Fuime's users. Open question, not a defect.
+- `Event::Affiliation`'s FIRST/VEX leagues and `users/first`'s views: the model
+  is still read by `first_affiliation_matches?`, and the views are unreachable
+  now that the routes are gone.
+
+| Change | Files |
+|---|---|
+| Raffles disabled | `config/routes.rb`, `app/models/organizer_position_invite/request.rb` |
+| Tag taxonomy no longer offered | `app/models/event_tag.rb`, `admin/event_new`, `contract/parties/show` |
+| API category | `app/api/api/entities/organization.rb` |
+| Badge palette + default | `app/views/events/_event_card.html.erb` |
+
+### Specs touched, and one testing trap worth knowing
+
+Specs that pinned the removed behaviour were **inverted to pin the disabled
+state** (the `spec/requests/documents_letters_spec.rb` convention), not skipped:
+
+| Spec | Was |
+|---|---|
+| `requests/users/first_controller_spec.rb` | rewritten: the removed FIRST routes 404 / no longer reach `Users::FirstController`; the two kept actions still work |
+| `requests/users/first_request_org_invite_spec.rb` | deleted — its entire subject is gone, superseded by the above |
+| `requests/users/first_verify_email_spec.rb` | asserted a redirect to the removed welcome page; now the home page |
+| `models/organizer_position_invite/request_approve_raffle_spec.rb` | asserted the raffle IS created; now asserts it is not, and that approval still happens |
+| `models/unverified_users_no_organizer_position_spec.rb` | same, for an unverified requester |
+| `controllers/organizer_position_invite/requests_controller_approve_decoupling_spec.rb` | same, both cases |
+| `mailers/event_mailer_subevent_created_spec.rb` | subject copy: "sub-organization" → "sub-business" |
+
+**A regression the suite caught that review would not have.** `verify_email` is
+deliberately KEPT routed — `application/_user_menu` renders it on every page for
+an unverified visitor — but it still called `welcome_first_index_path` and
+`first_index_path`, both removed with the FIRST routes. It would have raised
+`NameError` on a live path. Fixed to `root_path`.
+
+**`/first` does not 404.** It now falls through to the event slug route
+(`events#show`, id `"first"`), because "first" is an ordinary venture slug. The
+specs therefore assert "no longer reaches `Users::FirstController`" rather than
+"unrouted", which is the claim that actually matters.
+
+#### SKIP_COVERAGE
+
+`spec/spec_helper.rb` now reads `require "simplecov" unless ENV["SKIP_COVERAGE"] == "1"`.
+Default is unchanged. Branch coverage over ~62k LOC is the largest memory
+consumer in a run and repeatedly OOM-killed the 7.7 GB `web` container mid-suite.
+**That failure mode is worth recognising: it looks exactly like a test failure.**
+Three times this session a "result" was really the container dying — a 29-failure
+run, a cascade of `EXIT=1` shards (`container is not running`), and a 29-byte log.
+A `spec/requests` failure attributed to this work did not reproduce once the
+memory pressure was gone: 431 examples, 0 failures.
+
+Baseline for this branch: **4 failures, all environmental** —
+`spec/mailboxes/receipt_bin_mailbox_spec.rb`, where `wkhtmltopdf` has no
+`debian_13_arm64` binary. Confirmed 4/4 identical with the work stashed.
+
+
+## 2026-09-14 — Where the buyer was, and the sweep nobody scheduled
+
+Two Fuime-only additions, both additive. **Neither has been executed** — see the
+SETUP_NOTES handoff for the same date; Docker was down and the pinned Ruby was
+not installed, so `db:migrate` and `rspec` did not run.
+
+**1. Buyer jurisdiction is now persisted.**
+`Fuime::PaymentLinkService` has set `billing_address_collection: "required"` on
+every merchant-of-record checkout since digital goods were allowed
+(`MOR_RISK_ACCEPTANCE.md` §7), on the stated grounds that nexus is measured on
+history and history cannot be backfilled. But `Fuime::PaymentWebhookHandler`
+persisted none of it — the address lived only in Stripe's records, so the comment
+at `operator_eligibility.rb:59-66` claiming the data "is already being captured"
+was true of Stripe and false of this database. Nothing in the app could compute a
+state economic-nexus threshold.
+
+- `db/migrate/20260914120000_create_fuime_sale_jurisdictions.rb` — new table,
+  keyed on the PaymentIntent id (the same key the ledger is idempotent on).
+  Country, state, postal code, amount, `occurred_at`. **Deliberately not** city
+  or street lines: nexus counting does not need them.
+- `app/models/fuime/sale_jurisdiction.rb` — create-or-**enrich**, because the two
+  success events carry different payloads for one sale and only
+  `checkout.session.completed` has `customer_details.address`. Enrichment fills
+  blanks and never overwrites. Every failure is swallowed and reported: a
+  compliance record must never take a founder's ledger line down with it.
+- `app/services/fuime/payment_webhook_handler.rb` — `#record_jurisdiction`, called
+  *before* the ledger idempotency early-return so the session event can still
+  enrich a row the PaymentIntent event created. `PaymentView` gains
+  `buyer_address`. Gated on `merchant_of_record?` — on the Connect path the nexus
+  is the seller's, not Fuime's.
+- `spec/models/fuime/sale_jurisdiction_spec.rb` — new.
+
+This closes the capture end only. `Fuime::NexusReportService`
+(`MOR_MIGRATION_PLAN.md:354`) still does not exist, and Fuime is still registered
+to collect and remit nowhere.
+
+**2. `Fuime::MissedMorPaymentSweep` is now scheduled.**
+The service existed, was documented as the recovery path for a dropped webhook
+(TEEN_GROWTH G10), and was reachable only by rake — so the failure it covers
+stayed silent by construction. `app/jobs/fuime/missed_mor_payment_sweep_job.rb`
+wraps it, gated on `merchant_of_record?` because it reads PaymentIntents on the
+platform account; `config/schedule.yml` runs it hourly at :20. Hourly rather than
+half-hourly: the sweep reads a 24-hour window, so a faster cadence re-reads the
+same page of Stripe results for no new information.
+
+**Correction to an existing doc:** `STRIPE_FEATURE_AUDIT.md:151` lists
+`ProvisionConnectAccountJob` as ungated under MoR. It is gated — the job returns
+early at `provision_connect_account_job.rb:46` and
+`ConnectOnboardingService#find_or_create_account!` raises as a second belt. No
+code change; the audit line is stale.
+
+**3. `mark_paid!` will no longer claim a payment happened without evidence.**
+`Fuime::PayoutBatchService#mark_paid!` posts the only ledger debit in the
+product — it is what zeroes a teenager's payable — and it sends no money: a human
+wires it from a bank outside this app (STRIPE_FEATURE_AUDIT.md §4.3). That
+division is a deliberate choice at this volume. Taking the human's word for it on
+a confirm dialog was not: a misclick produced a ledger reading "paid" against a
+transfer nobody made, with no record of what was meant to have been sent.
+
+- `db/migrate/20260914130000_add_transfer_reference_to_fuime_payout_batches.rb` —
+  nullable, because existing rows predate the requirement.
+- `payout_batch_service.rb` — `mark_paid!(batch:, paid_by:, transfer_reference:)`,
+  raising the new `MissingTransferReference` on blank. Stripped, not
+  format-validated: Fuime does not know any given institution's reference format,
+  and a shape rule teaches people to type around it. The trip to the bank is the
+  control.
+- `admin_controller.rb#payout_batch_mark_paid` passes it through; the existing
+  `rescue Error` already covers the new subclass.
+- `app/views/admin/payout_batch.html.erb` — the button becomes a form with a
+  required field. A paid run displays its reference, and a run paid before this
+  change says "No transfer reference was recorded" rather than rendering blank,
+  so an unevidenced run is visibly unevidenced.
+- Specs: eight existing call sites updated for the new signature (`spec/services/
+  fuime/payout_batch_service_spec.rb`, `spec/requests/fuime_full_business_flow_spec.rb`),
+  plus three new examples covering the refusal, that a refused run stays approved
+  with no ledger touched, and that the reference is stored stripped.
+
+**Still true after all three:** Fuime cannot actually pay a seller. `PLAID_ENV`
+is `sandbox` under live Stripe, so no seller can attach a bank account and the
+payout nav item is hidden. That is the next blocker, not this one.
+
+
+## 2026-09-14 — Recurring billing, and one flat price
+
+Two separate changes on the same day. Both green; see the SETUP_NOTES handoff.
+
+### 1. Operators can sell subscriptions
+
+`MOR_RISK_ACCEPTANCE.md` §8 recorded the absence deliberately — recurring was not
+attempted the night before a real-money launch. The driver then is the driver now:
+the archetypal founder vibecodes a tool and wants $9.99/month for it.
+
+- `20260914140000` + `20260914140001` — `fuime_offers.billing_interval`, NULL =
+  one-time, constrained to `month`/`year`. Added unvalidated then validated in a
+  second migration, per the Strong Migrations house rule.
+- `Fuime::Offer` — `#recurring?`, `#one_time?`, `#price_cadence`, and
+  `#price_sentence` now leads with the cadence and DISPLACES the unit label. "$9.99
+  per lawn per month" reads as a rate for a thing; the one fact a buyer must not
+  miss is that it repeats.
+- `Fuime::PaymentLinkService` — takes `offer:`, switches to `mode: "subscription"`
+  with a `recurring` price, and puts metadata in `subscription_data` rather than
+  `payment_intent_data` (Stripe gives a subscription no PaymentIntent to hang it on,
+  and that metadata is the only way a renewal months later can be attributed).
+- **`Fuime::PaymentWebhookHandler#record_subscription_invoice`, from `invoice.paid`.**
+  Neither existing path works for a renewal: `checkout.session.completed` is refused
+  for subscription mode and fires once anyway, and Stripe does not copy subscription
+  metadata onto the renewal's PaymentIntent — so renewals would have vanished
+  silently. The fee is RECOMPUTED per renewal rather than reusing the
+  `fuime_fee_cents` stamped at signup, which would bill a venture forever at the plan
+  it had the day a customer subscribed.
+
+**The collision this was built around.** Fuime bills its own family plan through
+Stripe Billing on the SAME platform account, and `Fuime::SubscriptionWebhookHandler`
+finds those rows by `fuime_event_id` — which an operator's subscription must also
+carry. Without a discriminator, a customer cancelling a teenager's $9.99 tool would
+have written that `canceled` status onto the venture's own plan row. Operator sales
+are now stamped `fuime_subscription_kind: "operator_sale"`
+(`PaymentLinkService::OPERATOR_SALE_KIND`) and the plan handler refuses anything
+stamped. Specced in both directions.
+
+⚠️ **Known gaps, both documented in code rather than left as surprises:**
+self-serve cancellation does not exist (the pay page directs buyers to
+support@fuime.com — an unclear cancellation path is what the FTC negative-option
+rules target, and under MoR the chargeback is Fuime's); and a dropped `invoice.paid`
+is not recoverable, because `MissedMorPaymentSweep` lists PaymentIntents and skips
+invoice-backed ones. A subscription-aware backfill has to list invoices.
+
+### 2. One flat price: 5% + 50¢, no monthly fee
+
+Founder's decision, matching the merchant-of-record market (Paddle, Lemon Squeezy and
+Polar's entry tier are all 5% + 50¢ and none charges a monthly fee). Anything outside
+the standard rate is a sales conversation.
+
+- `Event::Plan::Free::REVENUE_FEE` 0.07 → **0.05**. `MINIMUM_FEE_CENTS` was already 50¢.
+- **Nothing is gated.** `Free#features` no longer subtracts `api_keys`, and
+  `User#venture_slot_available?` always answers true. The one-venture blocker is gone
+  from `Event::Application#activation_blockers`, and
+  `_family_plan_banner.html.erb` renders nothing.
+- `Event::Plan.fuime_price_label` — the ONE public price, stated as rate + floor,
+  because a sale is charged `max(5%, 50¢)` and "5%" alone describes a price Fuime does
+  not charge (L8).
+- **`Event::Plan::Pro` is retired, not deleted** (Rule 2). Its rate already delegated
+  to Free so nobody on it is worse off. `#monthly_fee_cents` deliberately still reports
+  $19.99 — that is what STRIPE is billing until somebody cancels, and a plan reporting
+  $0 while a parent's card is charged would make the app lie about a real debit.
+- `Fuime::BillingController#subscribe` refuses, server-side. The button was never the
+  control: that route is reachable by a bookmark or a back-button re-post, which is the
+  hole the old duplicate-subscription guard was written for. `#portal` is untouched and
+  is now the only Stripe writer there — retiring a plan must not trap the families
+  still paying for it.
+
+⚠️ **OPERATIONAL, NOT CODE: every live `Fuime::Subscription` with no event is still
+billing $19.99.** Cancelling them is a Stripe action. The billing page now leads with
+"This subscription no longer gives you anything… please cancel it."
+
+**A factual error corrected while rewriting the site.** Every page said Stripe's
+2.9% + 30¢ "applies on top". Under merchant-of-record that is false — Fuime is the
+legal seller, so Stripe bills Ninth Street Labs and the fee comes out of Fuime's cut
+(`Event::Plan::Pro` header; `PayablesLedger#processing_fee_cents` is $0 on every MoR
+sale). The site had been overstating what sellers pay by roughly three points. Fixed
+across `site/{index,pricing,parents}.html`, `site/site.js`, `site/docs/BRIEF.md`.
+
+`spec/fuime_marketing_pricing_spec.rb` was rewritten to enforce the new contract:
+no page may quote 5% without the 50¢, none may advertise a second tier or a 7% rate,
+and every public price page must offer the sales route.
+
+
+## 2026-09-14 — What the business sold (Tier 2)
+
+`PADDLE_GAP_ANALYSIS.md` §3.7 recorded the absence: Fuime's seller-side reporting
+was balances plus *spend* breakdowns plus an income-tax estimate, and the only
+time-bucketed chart in the app was the admin waitlist sparkline. Nothing could
+answer what a founder actually sells.
+
+That was structural rather than an oversight. HCB's ledger aggregates by **memo
+prefix**, and `Fuime::Offer` had no association to the money it made — so "which
+product earns most" had nowhere to come from.
+
+- **`fuime_sale_jurisdictions` → `fuime_sales`** (`20260914150000`), plus
+  `fuime_offer_id`. Renamed the day after it was created: it was named for the
+  nexus problem it was built for, but what it holds is one row per MoR sale and
+  jurisdiction is a property OF a sale. A table called `sale_jurisdictions` is
+  one nobody thinks to join to. `safety_assured` on the rename is justified in
+  the migration — same-day table, never deployed, one writer, no rows; if any of
+  those stops being true that migration is wrong.
+- **`Fuime::SalesReport`** — revenue, count, average sale, revenue over time
+  (day/week/month), top offers, off-storefront revenue, revenue by jurisdiction.
+- **`/:event_slug/sales`** and a nav item. Authorised on `show?`, the same as
+  Taxes and the ledger — a guardian reads this class of information and there is
+  nothing here to write.
+
+**Deliberate refusals, all specced:**
+
+- **No refund rate.** Refunds are ledger reversals and are not written to
+  `fuime_sales`, so a refunded sale still counts as revenue. Half-answering it —
+  refunds from one source, sales from another — would produce a number that
+  disagrees with the payouts page for reasons nobody could explain. The service
+  carries `#caveats` and the view renders them, so no surface can show these
+  figures without saying what they are not.
+- **Nothing about buyers.** No repeat-purchase rate, no LTV, no cohorts. There
+  is no buyer entity — buyer identity lives in Stripe. Those need a customer
+  record first, not a cleverer query.
+- **Sparse vs filled series are separate methods.** Filling empty buckets is a
+  presentation decision (a chart wants zeroes, a table wants them omitted) and a
+  service that guesses gets it wrong half the time.
+
+⚠️ **Still uncomputable: checkout conversion.** `ahoy` is installed and genuinely
+used (~10 call sites in inherited HCB controllers), but nothing tracks the
+storefront or the payment page. Closing that means tracking visitors on pages
+minors visit, which is an L7 decision rather than a code change — not taken
+unilaterally.
+
+**Correction to an earlier note in this log:** an earlier research pass recorded
+"zero `ahoy.track` calls in `app/`". That was wrong — the matches were in
+compiled JS bundles and there are real call sites in HCB controllers. The
+conclusion it supported still holds: none of them are on the commerce path.
+
+
+## 2026-09-14 — Outbound webhooks (Tier 3)
+
+`PADDLE_GAP_ANALYSIS.md` §3.8 called this the first-order developer gap, and it
+was the starkest absence in the comparison: no table, no deliverer, no signer, no
+retry queue. A seller's server was never told a sale happened — the only "did I
+get paid" signal was polling the payment-links API. It is also what lets somebody
+build ON Fuime rather than merely use it.
+
+- `20260914160000`/`160001` — `fuime_webhook_endpoints` and
+  `fuime_webhook_deliveries`. Two tables, following the event/notification split
+  Paddle draws: one sale sent to three endpoints has three independent outcomes,
+  and a failing endpoint must not rewrite history for a sale that happened.
+- `20260914160002` — the secret column renamed to `secret_ciphertext`. Lockbox's
+  convention, which `Fuime::ApiKey` already followed; named `encrypted_secret`
+  first, which left the model with no writer.
+- `Fuime::WebhookEmitter` — one entry point, a deliberately small event
+  vocabulary (`sale.completed`, `sale.refunded`, `payout.paid`). Never raises:
+  every caller is on a money path and a founder's broken endpoint must not stop a
+  sale landing.
+- `Fuime::WebhookDeliverer`, `DeliverWebhookJob` (self-rescheduling),
+  `SweepWebhookDeliveriesJob` (10-minutely, for deliveries orphaned by a worker
+  restart).
+
+**The signature is deliberately Stripe-shaped** — `Fuime-Signature: t=…,v1=…`
+over `"#{t}.#{body}"`, SHA-256. Fuime's own receiver already verifies exactly
+this shape, every payment platform uses it, and the libraries exist. A novel
+envelope buys nothing and costs every integrator an afternoon.
+
+**Divergence from Paddle, deliberate:** they retry 60 times over 3 days. Fuime
+retries 5 times over ~24 hours. Paddle's receivers are companies running real
+infrastructure; Fuime's are a teenager's Vercel project or a Zapier hook, and an
+endpoint still down after a day is not coming back on its own. Revisit with real
+delivery data rather than by argument.
+
+### ⚠️ The security, which is most of the work here
+
+An outbound webhook is a server-side fetch to a user-supplied address — textbook
+SSRF. `169.254.169.254` is cloud instance metadata; `localhost:6379` is Redis.
+Fuime would make those requests from inside its own perimeter, on a user's
+instruction.
+
+- `WebhookEndpoint` validates HTTPS and rejects loopback/private/link-local. This
+  catches **literal IPs only** and exists to give a founder a readable error.
+- **The load-bearing control is in the deliverer**: DNS is re-resolved at request
+  time and the socket is **pinned** to the address just checked (`http.ipaddr`).
+  Without the pin, Net::HTTP resolves the name a second time and a DNS-rebinding
+  answer can differ from the validated one — the check would be decorative.
+- A blocked address is **not retried** and disables the endpoint. Retrying is how
+  an SSRF probe gets five attempts instead of one.
+- `MAX_ENDPOINTS_PER_EVENT = 5`. Unbounded fan-out of a minor's sale data to
+  arbitrary hosts is a data-egress surface, not a feature.
+
+**Not built:** no seller-facing UI to create endpoints yet (API/console only), no
+`sale.refunded` or `payout.paid` emission (the types exist; only
+`sale.completed` fires), and no delivery-log screen.
+
+---
+
+## 2026-09-14 — The marketing site opens, and its pricing stops disagreeing with the code
+
+**Files:** `site/server.js` · `site/site.js` · `site/fx/ledger-bus.js` · `site/fx/split.js` ·
+`site/style.css` · `site/sitemap.xml` · `site/robots.txt` · `site/package.json` ·
+`site/index.html` `site/pricing.html` `site/parents.html` `site/start.html`
+`site/start-scroll.html` · 17 new pages · `site/chrome/*` · `site/tools/sync-chrome.mjs` ·
+`site/test/{server.test.mjs,copy-guard.mjs}` · `site/docs/{BRIEF.md,AUTHORING.md}` ·
+`spec/fuime_marketing_{copy,pricing}_spec.rb`
+
+Not an upstream divergence — `site/` has no counterpart in hackclub/hcb — but recorded here
+because it changes what fuime.com asserts about the app, and L8 exists because that went
+wrong before.
+
+### The site was one page
+
+`server.js` carried a `CLOSED` set that 307'd `/home`, `/pricing` and `/parents` to `/`, and
+`/` served the dive (`start.html`). `index.html` — the landing page, 1,186 lines, written and
+styled — was unreachable, and `sitemap.xml` listed a single URL. `CLOSED` is now empty (kept,
+not deleted: closing again is a real operation and the three properties it needed are
+documented in place). `/` serves `index.html`; the dive keeps its frame ladder at `/dive`;
+`/home` and `/index` 308 to `/`.
+
+### The pricing on the page was not the pricing in the code
+
+PR "One price, and the site stops overcharging people on paper" (467798963) rewrote the
+comments and the summary string and left the arithmetic. Still live after it:
+
+- `site.js` and `fx/ledger-bus.js` both ran the retired take-rate with **no 50¢ floor**, and
+  both computed `lands = amount - stripe - fuime` — subtracting Stripe's fee from the seller,
+  which is the exact claim that commit says it corrected. Under MoR Stripe bills Ninth Street
+  Labs; `PayablesLedger#processing_fee_cents` is $0 on every MoR sale.
+- The worked example printed a fee labelled `5% + 50¢` whose value was the old rate, deducted
+  Stripe, and totalled `$360.10` on a $400 sale. Correct figure: **$380.00**.
+- All four `.split-mount` bars shipped `90/7/3`.
+
+Now `min(max(amount × 5%, 50¢), amount)` in all three places, with `lands = amount - fee`.
+The split bar is `95/2/3` and its three segments sum to the sale — `YOU $380.00 ·
+FUIME $8.10 · STRIPE $11.90` — so Stripe's cost is visible as a slice of fuime's cut rather
+than a deduction from the seller's.
+
+**The fee is a FLOOR, and the site described it as additive.** `5% + 50¢` is Paddle's shape;
+`min(max(...))` is fuime's, and it is never more than Paddle's at any sale size. Requoted as
+"5%, minimum 50¢" in 14 places.
+
+⚠️ **Open, app-side, not fixed here:** `Event::Plan.fuime_price_label` (`app/models/event/plan.rb:215`)
+returns `"5% + $0.50"` — additive, overstating fuime's own fee at every amount, and pinned by
+`spec/models/event/plan_pricing_spec.rb:32`. Left alone to avoid colliding with concurrent work
+in `app/`.
+
+### The guards asserted strings, not numbers
+
+Every suite passed throughout the above, because they check that "5%" and "50¢" appear.
+Acceptance criterion 14 in `BRIEF.md` is new and says to check the rendered figure.
+
+### Chrome is stamped, not copied
+
+`BRIEF.md` required byte-identical nav and footer "on all three pages". At 22 that is not
+keepable by hand, and the three shipped pages had already drifted (`index.html` carried a
+`.foot__status` row the others did not). Chrome now lives in `site/chrome/` and
+`tools/sync-chrome.mjs` writes it into every page; `npm test` fails if any page is stale. Still
+no build step — the pages in git contain the full markup and ship as they are.
+
+### Also closed
+
+- **`site/docs/` was publicly served.** `PUBLIC_DIRS` included `docs`, so
+  `https://fuime.com/docs/BRIEF.md` returned the internal contract — including the list of
+  claims the site may not make. Removed from the regex.
+- **The `.beta` chip said "Private beta"** on every page, and several pages said nothing is
+  billed "during the private beta" / "at launch the fee only applies". The product has been
+  live and charging since 2026-08-20. `BRIEF.md` already banned the claim.
+- **`fx/threshold.js`** teaches a monthly-fee threshold that no longer exists. Left loaded;
+  `ledger-bus` now publishes `over: false` so it renders nothing.
+
+### Positioning
+
+Founder's call, 2026-09-14: *"our target is not only teens, we just simply allow teens."*
+fuime is a general-purpose merchant of record; the guardian layer is a differentiator, not the
+frame. `PADDLE_GAP_ANALYSIS.md` §6 posed this and said it belonged to the founder. `BRIEF.md`
+carries the answer, with a bold caveat that positioning as a Paddle peer is not permission to
+claim Paddle's capabilities — fuime is USD only, US only, services and digital goods only,
+with tax registrations in zero jurisdictions.
+
+### Adding a page now touches five hardcoded lists
+
+`PUBLIC_FILES` (server.js — an allowlist; without it a page answers 308 → 404),
+`public_pages` (copy spec), `public_price_pages`/`marketing_files` (pricing spec),
+`PUBLIC_PAGES`/`PRICE_PAGES` (copy-guard.mjs), `PAGES` (server.test.mjs). Documented in
+`BRIEF.md` § "Adding a page — the five lists".
+
+`site/test/copy-guard.mjs` is new: an offline replica of the two rspec guards, because both
+need a Rails boot and a database and cannot run on a machine without the gem bundle — which is
+how a page ships unchecked.
+
+### Canonicals followed the pages
+
+Moving the front door left three `<link rel="canonical">` tags pointing at redirects —
+`index.html` at `/home` (now a 308), `start.html` at `/` (it is `/dive` now), and
+`start-scroll.html` at `/start`, which is a 307 to the app's sign-up on another origin.
+All three repointed, along with the in-body `/home#how` links on `pricing.html` and
+`parents.html`.
+
+**Verification:** chrome 22/22 in sync · copy-guard 22/22 clean · `server.test.mjs` 25/25 ·
+`waitlist.test.mjs` 18/18 · all 22 URLs answer 200 · every footer href resolves · no page
+references a missing image · FAQ JSON-LD matches its page verbatim (17 and 6 Q&A, 0 drift).
+`bundle exec rspec` could not be run here — `bundler: command not found: rspec`.
+
+
+## 2026-09-14 — Who bought
+
+The gap behind every analytics question Fuime could not answer — MRR, churn, LTV,
+cohorts, repeat purchase all need a customer before they need a query
+(`PADDLE_GAP_ANALYSIS.md` §3.5, §3.7) — and the founder-facing half is simpler
+than that: a teenager mowing a lawn needs to know whose lawn it is.
+
+**The data was already arriving and being dropped.** Stripe puts the buyer's
+email and name in `session.customer_details`, which the webhook handler already
+read for `.address` only. Same shape as the jurisdiction fix earlier today.
+
+- `20260914170000` — `fuime_customers`. `20260914170001` — `fuime_customer_id` on
+  `fuime_sales`, its own migration because indexing an existing table wants
+  `algorithm: :concurrently` and therefore its own `disable_ddl_transaction!`.
+  (Deliberately NOT a third `safety_assured`.)
+- `Fuime::Customer` — upsert on `(event_id, email)`, email normalised, first
+  purchase never moves, last purchase never moves backwards. Never raises.
+- `Fuime::SalesReport#customers`, `#repeat_customer_count`, `#top_customers`; the
+  dashboard shows a customer count with "N came back" and a named list with
+  emails and purchase counts.
+
+**Scoped per venture, on purpose.** One person buying from two ventures is two
+rows. That costs a little denormalisation and buys the property that venture A
+cannot learn its customer also buys from venture B — which a global customer
+table would make one JOIN away, on a platform whose operators are minors and
+whose buyers never agreed to be tracked across unrelated businesses (L7). A
+founder sees everything about their OWN customers.
+
+**A sale without a customer is still a sale.** A wallet payment can complete with
+no email, and a raw `payment_intent.succeeded` carries no `customer_details`. The
+customer write never blocks the ledger line; specced.
+
+`stripe_customer_id` is captured where Stripe supplies one. That is what a
+billing-portal session is opened against, so it is **the precondition for
+self-serve cancellation** — the FTC click-to-cancel gap recorded against the
+recurring-billing work. Now unblocked.
+
+⚠️ **DISCLOSURE, NOT CODE.** Fuime is the merchant of record, so Fuime collects
+this data and shares it with the operator who fulfils. The terms and the privacy
+policy have to say so. `Fuime::Customer`'s header notes it; a comment does not
+discharge the obligation. This is a copy change on `/terms` and the privacy page,
+and it is outstanding.
+
+**Still absent: churn and cohorts.** They need subscription STATE — who is
+currently active — and only completed sales are stored. Inferring churn from gaps
+between purchases produces a figure that disagrees with Stripe.

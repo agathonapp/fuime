@@ -351,6 +351,15 @@ class EventsController < ApplicationController
       return redirect_to edit_event_path(@event.slug, tab: "details")
     end
 
+    # Fuime: a settings tab for a module Fuime has turned off is a trap page.
+    # Hiding the nav entry (EventsHelper::NAV_ITEMS `module_prefix`) closes the
+    # link; this closes the URL, which is the half a founder reaches by going
+    # back in their history or following an old bookmark. Same predicate the nav
+    # filter uses, so the two cannot drift.
+    if helpers.fuime_module_hidden?(params[:tab])
+      return redirect_to edit_event_path(@event.slug, tab: "details")
+    end
+
     @settings_tab = params[:tab]
     @frame = params[:frame]
     @activities_before = params[:activities_before] || Time.now

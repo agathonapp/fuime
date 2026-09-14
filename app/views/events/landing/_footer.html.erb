@@ -1,14 +1,13 @@
 <footer data-behavior="hide_iframe">
-  <p class="muted max-w-96 mx-auto h5 mb1 text-balance center">
-    <% if @event.plan.is_a?(Event::Plan::HackClubAffiliate) %>
-      Hack Club is <span class="nowrap">a 501(c)(3)</span>&nbsp;nonprofit.<br>Our registered EIN is <span class="nowrap">81-2908499</span>.
-    <% else %>
-      <%= link_to_if @event.is_public?, @event.name, @event, target: "_blank" %>
-      is fiscally sponsored by
-      <%= link_to "Hack Club", "https://hackclub.com/hcb?ref=donation&utm_source=hcb&utm_medium=web&utm_campaign=hcb-donation&utm_content=footer", target: "_blank", class: "nowrap" %>,
-      <span class="nowrap">a 501(c)(3)</span>&nbsp;nonprofit. Our registered EIN is <span class="nowrap">81-2908499</span>.
-    <% end %>
-  </p>
+  <%# Fuime 2026-09-13: this footer asserted, on a PUBLIC page
+      (`/donate/start/:event_name` is a plain GET), that the venture "is fiscally
+      sponsored by Hack Club, a 501(c)(3) nonprofit. Our registered EIN is
+      81-2908499" — with the EIN written as Fuime's own. Both halves are false
+      about a Fuime venture, and the second claims another organisation's tax ID.
+      BRAND_STRINGS.md category 3: there is no true Fuime version of that
+      sentence, so it is replaced by the standing disclosure rather than
+      reworded. %>
+  <%= render "application/status_disclosure" %>
   <p class="muted h5 center">
     Questions? Get in touch at <%= help_email %>.
   </p>

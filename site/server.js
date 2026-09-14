@@ -100,53 +100,72 @@ const REDIRECTS = new Map([
 // the sign-up door in REDIRECTS above, which the handler checks before this
 // map, so an entry for it here would never be reached.)
 const INTERNAL_REDIRECTS = new Map([
-  ['/start.html', '/'],
+  // start.html is the dive, and the dive is no longer the front door.
+  ['/start.html', '/dive'],
+  // /home was index.html's address for as long as the site was closed. It is
+  // in Google's index and in sent mail, and index.html is now /.
+  ['/home', '/'],
+  ['/index', '/'],
 ])
 
-// The marketing site is not open yet. The front door is the only public page,
-// and until that changes every other page bounces to it.
+// The marketing site is open. This set is what closed it: while it had entries,
+// every page but the front door 307'd to /.
 //
-// Three properties this has to have:
+// It is kept, empty, rather than deleted, because closing the site again is a
+// real operation — a legal review, a pricing change mid-flight — and the three
+// properties it had to have are hard-won and worth not re-deriving:
 //
-//   307, not 308. These pages are coming back. A permanent redirect is a
-//   permanent entry in somebody's browser cache, and re-opening the site would
-//   not reach the people who had already visited it — the same reasoning the
-//   REDIRECTS map above is written against.
+//   307, not 308. These pages come back. A permanent redirect is a permanent
+//   entry in somebody's browser cache.
 //
-//   A redirect, not a 404. All three are in Google's index and have been linked
-//   from the app and from mail. A 404 on a URL that used to work reads as a
-//   broken site; a bounce to the front door reads as a site that has not opened
-//   yet, which is the true thing.
+//   A redirect, not a 404. The URLs are indexed and linked from mail. A 404 on
+//   a URL that used to work reads as a broken site.
 //
-//   Crawlable. They are out of sitemap.xml but deliberately NOT disallowed in
-//   robots.txt: a crawler that is blocked from fetching them never sees the
-//   redirect, and the URL can sit in the index as a bare link forever. Letting
-//   it follow the 307 is what consolidates them onto /.
-//
-// Re-opening the site is emptying this set. resolveFile() still knows how to
-// serve all three, and nothing else in this file depends on them being closed.
-const CLOSED = new Set([
-  '/home',
-  '/index',
-  '/index.html',
-  '/pricing',
-  '/pricing.html',
-  '/parents',
-  '/parents.html',
-])
+//   Crawlable. Deliberately NOT disallowed in robots.txt: a crawler blocked
+//   from fetching them never sees the redirect, and the URL sits in the index
+//   as a bare link forever.
+const CLOSED = new Set([])
 
 // Everything the public may fetch. The site root doubles as the deploy root on
 // Render, so package.json, server.js, .env and test/ all sit in the same
 // directory as index.html — serving the whole directory would publish them.
 // Allowlist rather than denylist: a new secret dropped in this folder should
 // be private by default, not private only if someone remembered to exclude it.
-const PUBLIC_DIRS = /^\/(img|vid|dive|dive-m|fx|fonts|docs)\//
+// `docs` was in this list until 2026-09-14, which published site/docs/BRIEF.md
+// — the internal build contract, including the list of claims the site may not
+// make — at https://fuime.com/docs/BRIEF.md. Nothing ever linked it; it was
+// reachable because the directory sat next to the pages. Removed.
+const PUBLIC_DIRS = /^\/(img|vid|dive|dive-m|fx|fonts)\//
 const PUBLIC_FILES = new Set([
+  // the spine
   '/index.html',
-  '/parents.html',
   '/pricing.html',
+  '/parents.html',
   '/start.html',
   '/start-scroll.html',
+  // product
+  '/payment-links.html',
+  '/subscriptions.html',
+  '/books.html',
+  '/taxes.html',
+  '/api.html',
+  // the money
+  '/merchant-of-record.html',
+  '/why-has-fuime-charged-me.html',
+  // who it's for
+  '/for/tutoring.html',
+  '/for/photo-video.html',
+  '/for/lawn-care.html',
+  '/for/schools.html',
+  // compare
+  '/compare.html',
+  '/compare/venmo.html',
+  '/compare/paddle.html',
+  '/compare/waiting.html',
+  // company
+  '/roadmap.html',
+  '/faq.html',
+  // assets served from the root
   '/style.css',
   '/site.js',
   '/favicon.ico',
@@ -179,14 +198,22 @@ async function resolveFile(pathname) {
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 
-  // The dive is the front door, and while CLOSED is non-empty it is the only
-  // page anyone reaches — the /home branch below is shadowed by that check and
-  // is kept, unreached, so re-opening the site is one edit in one place.
+  // index.html is the front door. It was built as the landing page — hero,
+  // worked example, the three steps, pricing, parents — and spent weeks
+  // unreachable at /home behind CLOSED while / served the dive.
+  //
+  // A cinematic scroll with no nav and no footer is a good first impression and
+  // a bad hub, and the site now has twenty pages that need reaching. So the
+  // dive keeps its frame ladder and its own URL at /dive (start.html), and the
+  // page with the argument on it gets the address people type.
+  //
+  // /dive and the /dive/ frame directory coexist: an extensionless request
+  // resolves <name>.html first, and the frames are matched by PUBLIC_DIRS.
   if (pathname === '/') {
-    return { path: join(ROOT, 'start.html'), ext: '.html' }
-  }
-  if (pathname === '/home') {
     return { path: join(ROOT, 'index.html'), ext: '.html' }
+  }
+  if (pathname === '/dive') {
+    return { path: join(ROOT, 'start.html'), ext: '.html' }
   }
 
   const ext = extname(abs)

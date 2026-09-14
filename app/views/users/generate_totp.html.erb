@@ -8,10 +8,13 @@
         contents="<%= @totp.provisioning_uri %>"
         class="bg-white rounded-lg w-fit h-fit border border-muted my-1"
         style="height: 130px; width: 130px; padding-left: 2px; padding-top: 2px">
-        <img
-          src="https://icons.hackclub.com/api/icons/black/private-outline"
-          class="h-8 -translate-x-[5px]"
-          slot="icon">
+        <%# Fuime: was https://icons.hackclub.com/api/icons/black/private-outline
+            — a request to Hack Club's icon service every time a founder set up
+            two-factor auth (Prime Directive 4). The same glyph ships with this
+            app, so it is rendered inline and locally. %>
+        <span slot="icon" class="h-8 -translate-x-[5px]">
+          <%= inline_icon "private-outline", size: 32 %>
+        </span>
       </qr-code>
     </div>
     <div class="relative block mt2" data-controller="clipboard" data-clipboard-text-value="<%= @totp.secret %>">

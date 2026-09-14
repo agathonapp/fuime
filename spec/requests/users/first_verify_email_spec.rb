@@ -45,10 +45,14 @@ RSpec.describe "Users::FirstController#verify_email", type: :request do
         }.not_to change(Login, :count)
       end
 
-      it "redirects to the welcome page" do
+      # FUIME-DISABLED: the FIRST Robotics welcome page this asserted was removed
+      # with that flow (config/routes.rb), so `welcome_first_index_path` no longer
+      # exists. The action itself stays live — `_user_menu` renders it for every
+      # unverified visitor — and now falls back to the Fuime home page.
+      it "redirects to the home page" do
         post "/first/verify_email"
 
-        expect(response).to redirect_to(welcome_first_index_path)
+        expect(response).to redirect_to(root_path)
       end
     end
 
@@ -66,10 +70,14 @@ RSpec.describe "Users::FirstController#verify_email", type: :request do
         }.not_to change(Login, :count)
       end
 
-      it "redirects to the welcome page" do
+      # FUIME-DISABLED: the FIRST Robotics welcome page this asserted was removed
+      # with that flow (config/routes.rb), so `welcome_first_index_path` no longer
+      # exists. The action itself stays live — `_user_menu` renders it for every
+      # unverified visitor — and now falls back to the Fuime home page.
+      it "redirects to the home page" do
         post "/first/verify_email"
 
-        expect(response).to redirect_to(welcome_first_index_path)
+        expect(response).to redirect_to(root_path)
       end
     end
   end

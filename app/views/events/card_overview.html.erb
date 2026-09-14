@@ -42,7 +42,7 @@
       <% title = control.balance_cents.zero? ? "You are not authorized to spend any money at the moment." : "You currently have a spending limit of #{render_money control.balance_cents}" %>
       <%= render "application/callout", type: control.balance_cents.zero? ? "warning" : "info", title: do %>
         <ul class="m0">
-          <li>Spending controls are enabled for this organization.</li>
+          <li>Spending controls are enabled for this business.</li>
           <li>Since you're a <%= @organizer_position.role %>, you must request allowances to spend money.</li>
           <li>Managers can issue allowances
             from <%= link_to "your spending controls page", event_organizer_position_spending_controls_path(organizer_position_id: @organizer_position) %>
@@ -63,7 +63,7 @@
         <% if organizer_signed_in? %>
           <%= blankslate "You don’t have any #{@status} cards yet" %>
         <% else %>
-          <%= blankslate "This organization doesn’t have any #{@status} cards" %>
+          <%= blankslate "This business doesn’t have any #{@status} cards" %>
         <% end %>
       <% end %>
 
@@ -95,7 +95,7 @@
       {
         icon: "card",
         title: "Order physical and virtual cards",
-        description: "Easily order physical and virtual cards for your organization to streamline spending and manage expenses."
+        description: "Easily order physical and virtual cards for your business to streamline spending and manage expenses."
       },
       {
         icon: "view",

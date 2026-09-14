@@ -646,30 +646,18 @@ class Event
                     "parent or guardian must accept the guardianship invite first (L2)"
       end
 
-      # Fuime: staff are exempt, which the guardian gate above already was and
-      # this one was not (2026-08-21).
+      # Fuime: the one-venture limit was REMOVED 2026-09-14, with the family plan.
       #
-      # The asymmetry is what broke activation for a superadmin. `staff?` covers
-      # `superadmin`, so the guardian gate let them through and this one did not,
-      # and there is no staff carve-out anywhere in `venture_slot_available?` —
-      # so a Fuime admin who had already stood up one demo venture could not
-      # activate a second one, and (before the fix above) learned that from a 500.
+      # It was a commercial rule about families on the free plan, lifted by a
+      # $19.99/mo upgrade. With one flat price there is nothing to sell, and the
+      # wall was the most expensive thing in the product: it stopped a founder at
+      # the exact moment they had just succeeded at something and wanted to do it
+      # again, and pointed them at a paywall to continue.
       #
-      # Justified rather than convenient: the one-venture limit is a COMMERCIAL
-      # rule about families on the free plan, and a staff account is not a family
-      # — nobody is going to sell them the family-plan upgrade. It is
-      # pretend-aware through `staff?`, so an admin who has switched on
-      # `pretend_is_not_admin` to test the real founder experience still hits the
-      # limit, which is the whole point of that switch.
-      #
-      # Deliberately applied HERE and not in `User#venture_slot_available?`: that
-      # predicate is also read by billing and by the family-plan banner, and
-      # widening it would quietly change what those two believe about a paid plan.
-      unless user.institutionally_vouched_for? || user.staff? || free_venture_slot_available?
-        blockers << "the free plan includes one venture and #{user.email} already " \
-                    "has one — the family plan (#{format('$%.2f', Event::Plan::Pro.new.monthly_fee_cents / 100.0)}/mo) " \
-                    "covers unlimited ventures and API keys"
-      end
+      # `User#venture_slot_available?` and `#free_venture_slot_available?` are
+      # kept and now answer true — they remain the single source of truth for
+      # this gate and its signage, so if a limit ever returns it returns in one
+      # place and the wall cannot disagree with what the page says about it.
 
       blockers
     end

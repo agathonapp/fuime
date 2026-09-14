@@ -172,6 +172,16 @@ Real third parties presented as Fuime's customers, team, or backers:
 
 ---
 
+> **Updated 2026-09-13.** Two entries below are stale and one is wrong about the
+> method. `static_pages/branding.html.erb` **has** been rewritten as Fuime's own
+> brand guidelines — the "needs content written" note no longer applies. And the
+> re-measure recipe at the bottom of this file (counting `Hack Club` occurrences)
+> found **none** of the worst items in the 2026-09-13 sweep, because they say
+> neither "Hack Club" nor "HCB": a Stripe `business.name` of `'HCB'` shown to
+> paying customers, `hr@hackclub.com` as the address for W-9s, an App Store
+> redirect, and `hcb.gg` receipt mailboxes. Count URLs and email addresses on
+> reachable surfaces instead — see UPSTREAM_DIVERGENCE.md, 2026-09-13.
+
 ## Still outstanding
 
 Honest list; none of it is a string swap.

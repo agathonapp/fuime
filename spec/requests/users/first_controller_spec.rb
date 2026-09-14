@@ -2,229 +2,104 @@
 
 require "rails_helper"
 
+# FUIME-DISABLED: the FIRST Robotics dashboard, its public landing page, and the
+# team-invite request flow.
+#
+# `app/views/users/first` is not "a user's first venture" — it is upstream HCB's
+# programme for FIRST Robotics (FRC/FTC/FLL) booster clubs, and none of it
+# describes anything Fuime does:
+#
+#   - `/first/welcome` was PUBLIC (`skip_before_action :signed_in_user`) and
+#     headed "FIRST on Fuime — the ultimate booster club for FRC, FTC and FLL
+#     teams" under the Fuime logo, offering "501(c)(3) nonprofit status: become
+#     part of Hack Club's legal entity". Fuime is a for-profit platform for teen
+#     businesses; it cannot confer 501(c)(3) status and has no relationship with
+#     FIRST or with Hack Club's legal entity.
+#   - `GET /first` composed an advisor email reading "a nonprofit, Hack Club.
+#     They run a service called Fuime", linked to
+#     hackclub.com/fiscal-sponsorship/first/, and CC'd hcb-raffles@hackclub.com.
+#   - It also surfaced three Hack Club "FIRST Worlds 2026" raffles.
+#
+# As with the fiscal sponsorship letters (spec/requests/documents_letters_spec.rb),
+# rebranding would turn a true statement about Hack Club into a false one about
+# Fuime, so the routes are removed while the controller, views and specs remain
+# (CLAUDE.md Rule 2). These examples pin the disabled state, so restoring a route
+# trips a red suite.
+#
+# Two actions deliberately stay routed and are exercised below:
+# `verify_email` and `sign_out` are generic account actions that merely happen to
+# live on this controller, and `application/_user_menu` renders both for
+# signed-out and unverified visitors on every page.
 RSpec.describe "Users::FirstController", type: :request do
-  let(:valid_form) do
-    {
-      user: {
-        email: "fresh-#{SecureRandom.hex(4)}@example.invalid",
-        full_name: "Probe Probe",
-        affiliations_attributes: {
-          "0" => {
-            name: "first",
-            league: "FRC",
-            team_number: "9999",
-            team_name: "Probe Team",
-            role: "student_member",
-          }
-        }
-      }
-    }
+  # The path helpers are gone, so these must be written as raw URLs. Request
+  # specs run the full middleware stack, which turns an unrecognised path into a
+  # 404 rather than letting ActionController::RoutingError escape — and asserting
+  # on the status is the better test anyway, since it is what a client receives.
+  def expect_no_route(verb, path)
+    public_send(verb, path)
+
+    expect(response).to have_http_status(:not_found)
+    expect { Rails.application.routes.recognize_path(path, method: verb) }
+      .to raise_error(ActionController::RoutingError)
   end
 
-  describe "POST /first" do
-    it "responds with a redirect when the supplied email already belongs to an existing user" do
-      existing = create(:user, verified: true)
-
-      params = valid_form.deep_dup
-      params[:user][:email] = existing.email.upcase
-
-      expect {
-        post "/first", params: params
-      }.not_to(change { User.count })
-
-      expect(response.status).to be < 500
-      expect(response.status).to eq(302)
+  describe "the removed FIRST Robotics routes" do
+    # `/first` and `/first/team` do not 404: they now fall through to the event
+    # slug route (`events#show` with id "first"), because "first" is a perfectly
+    # ordinary venture slug. So the meaningful assertion is that they no longer
+    # reach Users::FirstController, not that they are unrouted.
+    def expect_not_first_controller(verb, path)
+      recognized = Rails.application.routes.recognize_path(path, method: verb)
+      expect(recognized[:controller]).not_to eq("users/first")
+    rescue ActionController::RoutingError
+      :unrouted # also acceptable — the path resolves to nothing at all
     end
 
-    it "returns the same response code for taken and fresh emails so registration cannot be enumerated" do
-      existing = create(:user, verified: true)
-
-      taken = valid_form.deep_dup
-      taken[:user][:email] = existing.email
-      post "/first", params: taken
-      taken_status = response.status
-
-      fresh = valid_form.deep_dup
-      fresh[:user][:email] = "brand-new-#{SecureRandom.hex(4)}@example.invalid"
-      post "/first", params: fresh
-      fresh_status = response.status
-
-      expect(taken_status).to eq(fresh_status),
-                              "Existing-email branch returned #{taken_status} while new-email branch returned #{fresh_status}; " \
-                              "this discrepancy lets an attacker enumerate registered emails."
+    it "no longer serves the public FIRST landing page" do
+      expect_no_route(:get, "/first/welcome")
     end
 
-    context "when the visitor's session has Referral::Attribution rows from prior link clicks" do
-      let(:creator) { create(:user, verified: true) }
-      let(:program) do
-        Referral::Program.create!(
-          name: "FIRST referral test program",
-          redirect_to: "https://hcb.hackclub.com/first/welcome",
-          creator:
-        )
-      end
-      let(:link)       { program.links.create!(name: "Primary",   creator:) }
-      let(:other_link) { program.links.create!(name: "Secondary", creator:) }
-
-      it "associates a single click attribution with the new user" do
-        get "/referrals/#{link.slug}"
-        attribution = Referral::Attribution.find_by!(link:)
-        expect(attribution.user_id).to be_nil
-        expect(attribution.user_session_id).to be_present
-
-        post "/first", params: valid_form
-
-        new_user = User.find_by!(email: valid_form[:user][:email])
-        expect(attribution.reload.user_id).to eq(new_user.id)
-      end
-
-      it "associates every attribution accumulated on the session, across multiple links" do
-        get "/referrals/#{link.slug}"
-        get "/referrals/#{other_link.slug}"
-        expect(Referral::Attribution.where(link: [link, other_link]).pluck(:user_id)).to all(be_nil)
-
-        post "/first", params: valid_form
-
-        new_user = User.find_by!(email: valid_form[:user][:email])
-        expect(Referral::Attribution.where(link: [link, other_link]).pluck(:user_id)).to all(eq(new_user.id))
-      end
-
-      it "associates the click attribution with an existing user when the form is submitted with their email" do
-        existing = create(:user, verified: true)
-
-        get "/referrals/#{link.slug}"
-        attribution = Referral::Attribution.find_by!(link:)
-        expect(attribution.user_id).to be_nil
-
-        params = valid_form.deep_dup
-        params[:user][:email] = existing.email
-        post "/first", params: params
-
-        expect(attribution.reload.user_id).to eq(existing.id)
-      end
+    it "no longer serves the raffle QR code" do
+      expect_no_route(:get, "/first/macbook_qr_code")
     end
 
-    it "completes signup successfully when the visitor's session has no referral attributions" do
-      params = valid_form.deep_dup
-      params[:user][:email] = "no-referral-#{SecureRandom.hex(4)}@example.invalid"
-
-      expect { post "/first", params: params }.to change { User.count }.by(1)
-      expect(response.status).to eq(302)
+    it "no longer serves the FIRST dashboard" do
+      expect_not_first_controller(:get, "/first")
     end
 
+    it "no longer accepts a FIRST signup" do
+      expect_not_first_controller(:post, "/first")
+    end
+
+    it "no longer serves the team lookup page" do
+      expect_not_first_controller(:get, "/first/team")
+    end
+
+    it "no longer accepts an organization invite request" do
+      expect_no_route(:post, "/first/request_org_invite")
+    end
   end
 
-  describe "DELETE /first/sign_out" do
-    it "clears the session_token cookie" do
-      post "/first", params: valid_form
-      expect(cookies["session_token"]).to be_present, "expected signup to establish a session to sign out of"
+  describe "the account actions that remain" do
+    it "still routes POST /first/verify_email" do
+      expect(Rails.application.routes.recognize_path("/first/verify_email", method: :post))
+        .to include(controller: "users/first", action: "verify_email")
+    end
 
+    it "still routes DELETE /first/sign_out" do
+      expect(Rails.application.routes.recognize_path("/first/sign_out", method: :delete))
+        .to include(controller: "users/first", action: "sign_out")
+    end
+
+    # The original example signed a user up through `POST /first` to get a
+    # session to sign out of, which is exactly the route that is now gone. The
+    # cookie-clearing behaviour belongs to SessionsHelper#sign_out and is covered
+    # there; what matters here is that the action is still reachable and still
+    # sends the visitor somewhere sensible.
+    it "signs out and redirects to the sign-in page" do
       delete "/first/sign_out"
 
-      set_cookie_header = response.headers["Set-Cookie"].to_s
-      expect(set_cookie_header).to match(/session_token=;|session_token=\s*;/i),
-                                   "Expected Set-Cookie response to clear session_token, got: #{set_cookie_header.inspect}"
+      expect(response).to redirect_to(auth_users_path)
     end
-  end
-
-  describe "GET /first" do
-    let(:user) { create(:user, verified: true, full_name: "Riley Test") }
-    let(:affiliation_metadata) { { "league" => "frc", "team_number" => "9999" } }
-    let(:user_role) { "student_member" }
-
-    # The contest-window cards (AirPods raffle, Request to join, etc.) are
-    # gated by `Date.current < Date.new(2026, 5, 3)` in the view. Freeze time
-    # to inside the FIRST Worlds 2026 window so those cards still render.
-    before { travel_to(Date.new(2026, 4, 30)) }
-    after  { travel_back }
-
-    before do
-      user.affiliations.create!(name: "first", metadata: affiliation_metadata.merge("role" => user_role))
-
-      session = create(:user_session, user:, verified: true, expiration_at: 1.hour.from_now)
-      allow_any_instance_of(SessionsHelper).to receive(:find_current_session).and_return(session)
-    end
-
-    context "when the team org exists on Fuime" do
-      let!(:team_event) { create(:event) }
-      let!(:event_affiliation) do
-        Event::Affiliation.create!(affiliable: team_event, name: "first", metadata: affiliation_metadata)
-      end
-      let!(:teammate) { create(:user, verified: true, full_name: "Maya Patel") }
-      let!(:teammate_position) { create(:organizer_position, user: teammate, event: team_event) }
-
-      it "renders the page without error" do
-        get "/first"
-        expect(response).to have_http_status(:ok)
-      end
-    end
-
-    context "when the team org does not exist but teammates have signed up" do
-      let!(:teammate1) { create(:user, verified: true, full_name: "Maya Patel") }
-      let!(:teammate2) { create(:user, verified: false, full_name: "Eli Chen") }
-
-      before do
-        teammate1.affiliations.create!(name: "first", metadata: affiliation_metadata)
-        teammate2.affiliations.create!(name: "first", metadata: affiliation_metadata)
-      end
-
-      context "and the user is a student" do
-        it "renders teammate avatars inside the teammates card" do
-          get "/first"
-          expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Your teammates are interested in Fuime, too!")
-          expect(response.body).to include("Maya")
-          expect(response.body).to include("Eli")
-          expect(response.body).to include("FRC #9999")
-          expect(response.body).to include("are already interested in Fuime")
-        end
-
-        it "excludes the current user from the teammate list" do
-          # The current user's name always appears in the affiliation card at the top of /first,
-          # so we have to scope the assertion to the teammate sentence to prove self-exclusion.
-          user.update!(full_name: "Zorblax Probely")
-          get "/first"
-          sentence = response.body[/\b[\w,\s]+(?:is|are) already interested in Fuime/]
-          expect(sentence).not_to be_nil, "expected a teammate sentence in the rendered page"
-          expect(sentence).not_to include("Zorblax")
-        end
-
-        it "does not render the adults-only standalone card" do
-          get "/first"
-          expect(response.body).not_to include("Your students are interested")
-        end
-      end
-
-      context "and the user is a head_coach" do
-        let(:user_role) { "head_coach" }
-
-        it "renders the standalone teammate card with the start-organization CTA" do
-          get "/first"
-          expect(response).to have_http_status(:ok)
-          expect(response.body).to include("Your students are interested")
-          expect(response.body).to include("are already interested in Fuime")
-          expect(response.body).to include("Start your team&#39;s organization")
-        end
-      end
-
-      context "and the user is a mentor_advisor" do
-        let(:user_role) { "mentor_advisor" }
-
-        it "renders the standalone teammate card with the start-organization CTA" do
-          get "/first"
-          expect(response.body).to include("Your students are interested")
-          expect(response.body).to include("Start your team&#39;s organization")
-        end
-      end
-    end
-
-    context "when no teammates have signed up" do
-      it "does not render the teammate sentence" do
-        get "/first"
-        expect(response.body).not_to include("are already interested in Fuime")
-        expect(response.body).not_to include("Your students are interested")
-      end
-    end
-
   end
 end

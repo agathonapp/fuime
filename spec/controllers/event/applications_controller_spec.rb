@@ -105,70 +105,62 @@ RSpec.describe Event::ApplicationsController, type: :controller do
       end
     end
 
-    # The free plan includes one venture. Giving the founder one makes the
-    # second application unactivatable — the exact case that 500'd.
-    # `create(:organizer_position, ...)` is how the rest of the suite attaches a
-    # user to a venture, and it is what User#events reads through.
+    # ── The one-venture limit was removed 2026-09-14, with the family plan ────
+    #
+    # These examples used to pin the wall and its staff carve-out. What is worth
+    # keeping is the inverse: a second venture must now activate, because the
+    # wall stopped a founder at the exact moment they had just succeeded at
+    # something and wanted to do it again.
+    #
+    # The structural properties the old examples proved — that admin_activate
+    # reports a blocker instead of 500ing, and that #activation_blockers and
+    # #activate_event! never drift — are still pinned below, using a blocker
+    # that still exists (an application that already has a business).
     before { create(:organizer_position, event: create(:event), user: founder) }
 
-    it "reports the reason instead of raising" do
-      expect(application.activation_blockers).to contain_exactly(
-        a_string_matching(/free plan includes one venture/)
-      )
+    it "activates a second venture, because there is no limit to hit any more" do
+      expect(application.activation_blockers).to be_empty
+
+      expect {
+        post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
+      }.to change { Event.count }.by(1)
+    end
+
+    it "does not mention a plan, an upgrade or a venture limit anywhere" do
+      create(:organizer_position, event: create(:event), user: founder)
+
+      expect(application.activation_blockers.join(" "))
+        .not_to match(/free plan|one venture|family plan|\$19\.99|upgrade/i)
+    end
+
+    it "reports a real blocker instead of raising" do
+      application.update!(event: create(:event))
 
       expect {
         post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
       }.not_to raise_error
 
       expect(response).to redirect_to(submission_application_path(application))
-      expect(flash[:error]).to match(/free plan includes one venture/)
+      expect(flash[:error]).to match(/already has a business/)
     end
 
-    it "does not create a business" do
+    it "does not create a business when a real blocker applies" do
+      application.update!(event: create(:event))
+
       expect {
         post :admin_activate, params: { id: application.to_param, risk_level: "zero" }
       }.not_to(change { Event.count })
-
-      expect(application.reload.event).to be_nil
     end
 
     # The blocker list and the raise must not drift: the view promises a button
     # will work based on the first, and the second is what actually decides.
     it "keeps #activation_blockers and #activate_event! in agreement" do
+      application.update!(event: create(:event))
       expect(application.activation_blockers).to be_present
 
       expect {
         application.activate_event!(risk_level: 0, point_of_contact: admin)
-      }.to raise_error(ArgumentError, /free plan includes one venture/)
-    end
-
-    # Fuime: the asymmetry that actually broke activation for a superadmin.
-    # `staff?` covers superadmin and exempted them from the guardian gate, but
-    # nothing exempted them from the one-venture free-plan limit — a commercial
-    # rule about families that a Fuime admin is not subject to.
-    it "exempts a staff account from the free-plan venture limit" do
-      staff = create(:user, :make_admin)
-      create(:organizer_position, event: create(:event), user: staff)
-      expect(staff.venture_slot_available?).to be false
-
-      staff_app = create(:event_application, user: staff, teen_led: true, description: "Demo").tap do |app|
-        app.update!(aasm_state: :approved, address_country: "US")
-      end
-
-      expect(staff_app.activation_blockers).to be_empty
-    end
-
-    # ...but an admin who has asked to be treated as an ordinary user still is.
-    it "still applies the limit to an admin pretending not to be one" do
-      staff = create(:user, :make_admin)
-      create(:organizer_position, event: create(:event), user: staff)
-      staff.update!(pretend_is_not_admin: true)
-
-      pretending = create(:event_application, user: staff.reload, teen_led: true, description: "Demo").tap do |app|
-        app.update!(aasm_state: :approved, address_country: "US")
-      end
-
-      expect(pretending.activation_blockers).to include(a_string_matching(/free plan includes one venture/))
+      }.to raise_error(ArgumentError, /already has a business/)
     end
 
     # The mirror case, on a founder who has NOT used their free slot, so the

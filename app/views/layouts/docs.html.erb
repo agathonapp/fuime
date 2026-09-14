@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en" data-dark="<%= @is_dark %>">
-  <!-- come hack with us on hcb! <%= Rails.configuration.constants.hack_on_hcb_form_url %> -->
+  <%# Fuime: removed an HTML comment reading "come hack with us on hcb!" with a
+      recruiting form URL. It shipped to the browser on the PUBLIC API docs page,
+      and `constants.hack_on_hcb_form_url` is not defined here anyway, so it
+      rendered as a dangling Hack Club recruiting line. %>
   <head>
     <%= render "layouts/head" %>
   </head>

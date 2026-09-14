@@ -2,9 +2,24 @@
 
 require "rails_helper"
 
-# Fuime: the family-plan page — the paywall's face. The L2 line is the point:
-# a subscription is a contract, so only an adult can start or manage one, and
-# a minor is told WHO to ask rather than shown a dead button.
+# Fuime: the billing page.
+#
+# ── 2026-09-14: there is nothing to sell here any more ───────────────────────
+#
+# This page used to be the paywall's face, and most of this file tested the
+# upgrade funnel: who was allowed to enter a card (L2 — a subscription is a
+# contract, so only an adult), who was told whom to ask, and the guards against
+# selling the same family the plan twice.
+#
+# Fuime moved to one flat price with nothing gated, so the funnel is gone. What
+# replaces those examples is the inverse contract, and it is worth as much:
+#
+#   1. NOBODY can start a subscription any more — including the adults who used
+#      to be allowed to. Enforced in the controller, not by hiding a button, so
+#      a bookmarked POST cannot charge anyone for a plan that grants nothing.
+#   2. Families still being billed can still reach the portal to CANCEL. That is
+#      now the only Stripe writer on this controller, and breaking it would trap
+#      a parent in a subscription Fuime retired underneath them.
 RSpec.describe "billing page", type: :request do
   # The real login dance (proven in family_signup_flow_spec) — the
   # SessionSupport factory shortcut trips over 2FA state in request specs.
@@ -22,202 +37,73 @@ RSpec.describe "billing page", type: :request do
 
   before { Guardianship.create!(guardian:, minor: teen, status: :active) }
 
-  it "shows an adult the upgrade, and sends them to Stripe checkout" do
-    allow(Stripe::Customer).to receive(:create)
-      .and_return(Stripe::Customer.construct_from(id: "cus_bill_1"))
-    allow(Stripe::Price).to receive(:list)
-      .and_return(Stripe::ListObject.construct_from(data: []))
-    allow(Stripe::Price).to receive(:create)
-      .and_return(Stripe::Price.construct_from(id: "price_bill_1"))
-    allow(Stripe::Checkout::Session).to receive(:create)
-      .and_return(Stripe::Checkout::Session.construct_from(id: "cs_bill_1", url: "https://checkout.stripe.com/bill"))
-
-    login_as!(guardian)
-
-    get my_billing_path
-    expect(response.body).to include("Upgrade")
-    expect(response.body).to include("unlimited ventures")
-    expect(response.body).to include("API keys")
-    expect(response.body).to include("$19.99")
-    expect(response.body).to include("not a cheaper fee")
-    expect(response.body).not_to include("drops to")
-
-    post my_billing_subscribe_path
-    expect(response).to redirect_to("https://checkout.stripe.com/bill")
-  end
-
-  it "shows a teen who to ask, and refuses to bill them" do
-    login_as!(teen)
-
-    get my_billing_path
-    expect(response.body).to include("ask")
-    expect(response.body).not_to include("Upgrade —")
-
-    post my_billing_subscribe_path
-    expect(response).to redirect_to(my_billing_path)
-    expect(flash[:alert]).to include("parent or guardian")
-    expect(Fuime::Subscription.count).to eq(0)
-  end
-
-  # An invited parent who has not signed yet is not a known adult —
-  # `known_adult?` is set in exactly one place, the guardian accept — so this
-  # page read them as a minor and told them to "ask a parent". The ordering is
-  # right; it was never explained (ONBOARDING_PLAN §2 #11).
-  #
-  # Tagged because this is only reachable under merchant-of-record, which is the
-  # production posture: with the flag off, Fuime::GuardianshipEnforcement bounces
-  # an unknown-age user to /guardian/new before this controller runs at all.
-  it "tells an invited-but-unsigned guardian to accept first, and refuses to bill them yet", :merchant_of_record do
-    invited_parent = create(:user, :unknown_age, verified: true)
-    another_teen = create(:user, birthday: 14.years.ago.to_date, verified: true)
-    Guardianship.create!(guardian: invited_parent, minor: another_teen) # pending
-
-    login_as!(invited_parent)
-
-    get my_billing_path
-    expect(response.body).to include("once you've accepted a guardian invitation")
-    expect(response.body).to include("confirms you're the adult on the account")
-    expect(response.body).to include(guardianships_path)
-    expect(response.body).not_to include("Upgrade —")
-    expect(response.body).not_to include("ask them to upgrade")
-
-    post my_billing_subscribe_path
-    expect(response).to redirect_to(my_billing_path)
-    expect(flash[:alert]).to eq("You can upgrade once you've accepted a guardian invitation — that's what confirms you're the adult on the account.")
-    expect(Fuime::Subscription.count).to eq(0)
-  end
-
-  # Staff have no birthday on file, and the age check is fail-closed, so before
-  # User#staff? every Fuime admin was shown "ask your parent" on their own
-  # subscription page and could not buy the plan they sell.
-  it "lets staff buy the plan on their own account, birthday or not" do
-    admin = create(:user, :make_admin, :unknown_age, verified: true)
-
-    allow(Stripe::Customer).to receive(:create)
-      .and_return(Stripe::Customer.construct_from(id: "cus_bill_admin"))
-    allow(Stripe::Price).to receive(:list)
-      .and_return(Stripe::ListObject.construct_from(data: []))
-    allow(Stripe::Price).to receive(:create)
-      .and_return(Stripe::Price.construct_from(id: "price_bill_admin"))
-    allow(Stripe::Checkout::Session).to receive(:create)
-      .and_return(Stripe::Checkout::Session.construct_from(id: "cs_bill_admin", url: "https://checkout.stripe.com/admin"))
-
-    login_as!(admin)
-
-    get my_billing_path
-    expect(response.body).to include("Upgrade —")
-    expect(response.body).to include(admin.email) # whose card this is
-
-    post my_billing_subscribe_path
-    expect(response).to redirect_to("https://checkout.stripe.com/admin")
-  end
-
-  it "sends a subscribed adult to Stripe's portal for management" do
-    Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_port_1")
-    allow(Stripe::BillingPortal::Session).to receive(:create)
-      .and_return(Stripe::BillingPortal::Session.construct_from(url: "https://billing.stripe.com/p"))
-
-    login_as!(guardian)
-
-    get my_billing_path
-    expect(response.body).to include("family plan 🎉")
-
-    post my_billing_portal_path
-    expect(response).to redirect_to("https://billing.stripe.com/p")
-  end
-
-  # Fuime: the double-subscribe hole. Before the guard, a repeat POST here — a
-  # double submit, a back-button re-post — minted a SECOND Stripe subscription
-  # against the same customer. The webhook then overwrote stripe_subscription_id,
-  # so the first kept charging the card every month with nothing in Fuime able to
-  # see it.
-  it "refuses to sell the plan twice to the same family" do
-    Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_dupe")
-    expect(Stripe::Checkout::Session).not_to receive(:create)
-
-    login_as!(guardian)
-    post my_billing_subscribe_path
-
-    expect(response).to redirect_to(my_billing_path)
-    expect(flash[:alert]).to include("already on the family plan")
-  end
-
-  # past_due / unpaid are stripe_backed but not active. Guarding only #active?
-  # left the invisible-charge hole open: a second Checkout session, then the
-  # webhook overwrites stripe_subscription_id and the first keeps charging.
-  %w[past_due unpaid].each do |status|
-    it "refuses a second Checkout when the existing Stripe subscription is #{status}" do
-      Fuime::Subscription.create!(
-        billed_to: guardian,
-        status:,
-        stripe_customer_id: "cus_#{status}",
-        stripe_subscription_id: "sub_#{status}"
-      )
-      expect(Stripe::Checkout::Session).not_to receive(:create)
-      allow(Stripe::BillingPortal::Session).to receive(:create)
-        .and_return(Stripe::BillingPortal::Session.construct_from(url: "https://billing.stripe.com/#{status}"))
-
+  describe "with nothing to sell" do
+    it "states the one price to an adult, and offers no upgrade" do
       login_as!(guardian)
 
       get my_billing_path
-      expect(response.body).not_to include("Upgrade —")
-      expect(response.body).to include("Manage billing")
 
-      post my_billing_subscribe_path
-      expect(response).to redirect_to("https://billing.stripe.com/#{status}")
-    end
-  end
-
-  it "tells a comped family there is nothing to buy, and shows no card controls" do
-    admin = create(:user, :make_admin, verified: true)
-    Fuime::Subscription.grant_family_plan!(user: guardian, by: admin, notes: "school partner")
-    expect(Stripe::Checkout::Session).not_to receive(:create)
-
-    login_as!(guardian)
-
-    get my_billing_path
-    expect(response.body).to include("comped this plan")
-    expect(response.body).not_to include("Manage billing")
-
-    post my_billing_subscribe_path
-    expect(flash[:alert]).to include("comped by Fuime")
-  end
-
-  # ── The window between paying and the webhook ─────────────────────────────
-  #
-  # Stripe redirects the payer back to ?subscribed=1 immediately;
-  # `customer.subscription.created` writes the record a beat later. In that gap
-  # the page fell through to the Free-plan branch and rendered the green
-  # "Welcome to the family plan" callout directly above a live
-  # "Upgrade — $19.99/mo" button. The callout is exactly what invites a second
-  # press, and a second press opens a second Checkout: the parent pays twice.
-  #
-  # Every other double-subscription route was already guarded — #subscribe sends
-  # an existing stripe_backed record to the portal — but no record exists yet in
-  # this window, so nothing caught it.
-  describe "returning from Stripe Checkout before the webhook lands" do
-    before { login_as!(guardian) }
-
-    it "does not offer Upgrade again" do
-      get my_billing_path(subscribed: 1)
-
-      expect(response.body).to include("Confirming your payment")
-      expect(response.body).not_to match(/Upgrade —/)
+      expect(response.body).to include("5% + $0.50")
+      expect(response.body).not_to match(/Upgrade/)
     end
 
-    it "says plainly not to pay twice" do
-      get my_billing_path(subscribed: 1)
+    # The page used to branch three ways on who was allowed to enter a card.
+    # Nobody enters a card now, so a teen sees the same thing an adult does —
+    # and specifically is NOT told to go and ask someone for an upgrade that
+    # does not exist.
+    it "shows a teen the same price, and sends them to ask nobody" do
+      login_as!(teen)
 
-      expect(response.body).to include("charge you twice")
-    end
-
-    # And the escape hatch: a webhook that never arrives must not lock a family
-    # out of buying. Without the flag, the ordinary page comes back.
-    it "offers Upgrade again on an ordinary visit" do
       get my_billing_path
 
-      expect(response.body).to match(/Upgrade —/)
-      expect(response.body).not_to include("Confirming your payment")
+      expect(response.body).to include("5% + $0.50")
+      expect(response.body).not_to match(/Upgrade|ask your parent|to upgrade from their account/i)
+    end
+
+    # The control that matters: the button is gone, but this route has always
+    # been reachable by a bookmark or a back-button re-post. Selling a plan that
+    # grants nothing would be a recurring charge for a feature set every account
+    # already has.
+    it "refuses to start a subscription, even for an adult who used to be allowed" do
+      login_as!(guardian)
+
+      expect { post my_billing_subscribe_path }.not_to change(Fuime::Subscription, :count)
+
+      expect(response).to redirect_to(my_billing_path)
+      expect(flash[:alert]).to include("one flat price")
+      expect(flash[:alert]).to include("nothing to subscribe to")
+    end
+
+    it "refuses a minor too, without ever reaching Stripe" do
+      expect(Stripe::Checkout::Session).not_to receive(:create)
+      login_as!(teen)
+
+      post my_billing_subscribe_path
+
+      expect(response).to redirect_to(my_billing_path)
+    end
+  end
+
+  # Retiring a plan must not trap the families still paying for it.
+  describe "a family still being billed for the retired plan" do
+    before do
+      Fuime::Subscription.create!(billed_to: guardian, status: "active", stripe_customer_id: "cus_port_1")
+      allow(Stripe::BillingPortal::Session).to receive(:create)
+        .and_return(Stripe::BillingPortal::Session.construct_from(url: "https://billing.stripe.com/p"))
+      login_as!(guardian)
+    end
+
+    it "tells them plainly that it buys nothing and to cancel it" do
+      get my_billing_path
+
+      expect(response.body).to include("no longer gives you anything")
+      expect(response.body).to include("Cancel this subscription")
+    end
+
+    it "still sends them to Stripe's portal, which is how they cancel" do
+      post my_billing_portal_path
+
+      expect(response).to redirect_to("https://billing.stripe.com/p")
     end
   end
 end

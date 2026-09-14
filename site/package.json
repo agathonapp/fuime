@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node test/waitlist.test.mjs && node test/server.test.mjs"
+    "test": "node tools/sync-chrome.mjs --check && node test/copy-guard.mjs && node test/waitlist.test.mjs && node test/server.test.mjs",
+    "chrome": "node tools/sync-chrome.mjs"
   },
   "dependencies": {
     "ioredis": "^6.0.0"

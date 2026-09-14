@@ -19,6 +19,7 @@
 #  period_start         :date             not null
 #  reserve_basis_points :integer          not null
 #  reserve_window_days  :integer          not null
+#  transfer_reference   :string
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  approved_by_id       :bigint

@@ -38,8 +38,11 @@ RSpec.describe Fuime::CheckoutsController, type: :controller do
 
       post :create, params: { slug: event.slug, amount: "25.00", description: "Custom print" }
 
+      # `offer: nil` is the free-amount path — a customer who was told a price in
+      # person. The argument is always passed so the service does not have to
+      # guess which shape it is in.
       expect(Fuime::PaymentLinkService).to have_received(:new).with(
-        event:, amount_cents: 2500, description: "Custom print"
+        event:, amount_cents: 2500, description: "Custom print", offer: nil
       )
       expect(service).to have_received(:create_checkout_session)
       expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_123")

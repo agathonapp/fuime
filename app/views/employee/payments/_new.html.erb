@@ -5,7 +5,7 @@
     <% if defined?(employee) %>
       <%= form.hidden_field :employee_id, value: employee.id %>
     <% else %>
-      <%= form.label :employee_id, "Organization", class: "mt1 bold" %>
+      <%= form.label :employee_id, "Business", class: "mt1 bold" %>
       <%= form.select(:employee_id, jobs.onboarded.map{ |c| [c.event.name, c.id] }) %>
     <% end %>
     <%= form.label :title, "Title", class: "mt1 bold" %>

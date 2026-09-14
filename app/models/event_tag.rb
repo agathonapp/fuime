@@ -54,6 +54,26 @@ class EventTag < ApplicationRecord
       HACK_CLUB = "Hack Club",
       YSWS = "YSWS"
     ].to_set
+
+    # Fuime: which of the above an admin may still APPLY.
+    #
+    # Every member of ALL is one of Hack Club's: their hackathon and FIRST
+    # Robotics programmes ("Hackathon", "Robotics Team"), their funder
+    # partnerships ("Climate", "128 Collective Funded/Recommended",
+    # "Vermont-based"), their own orgs ("Hack Club", "Organized by Hack
+    # Clubbers"), and "YSWS" (You Ship We Ship). "Organized by Teenagers" is
+    # the odd one out and is still wrong here: on Fuime every venture is
+    # teen-run, so the tag distinguishes nothing.
+    #
+    # Same lever as `Event::Plan.selectable?` — the values stay defined so
+    # existing `event_tags` rows keep resolving and `Event#hackathon?` /
+    # `Event.ysws` keep working (CLAUDE.md Rule 2 and Rule 6: these are stored
+    # strings). They are simply no longer offered. Admins can still create
+    # free-form tags through events/settings/_tags.
+    #
+    # Empty rather than replaced with a guessed Fuime taxonomy: inventing
+    # business categories is a product decision, not a rebrand.
+    SELECTABLE = [].to_set
   end
 
 end

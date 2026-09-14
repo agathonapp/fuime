@@ -27,12 +27,13 @@
         <% if @contract.contractable.is_a?(Event::Application) %>
           <% if @contract.contractable.event.present? %>
             <p>This application has already been activated.</p>
-            <%= link_to "Go to organization", @contract.contractable.event, class: "btn w-full" %>
+            <%= link_to "Go to business", @contract.contractable.event, class: "btn w-full" %>
           <% else %>
             <%= form_with url: admin_activate_application_path(@contract.contractable), method: :post do |form| %>
               <div class="field">
                 <%= form.label "Tags" %>
-                <%= form.select :tags, options_for_select(EventTag::Tags::ALL, selected: @contract.contractable.default_tags), multiple: true, size: EventTag::Tags::ALL.size %>
+                <%# Fuime: SELECTABLE, not ALL — see EventTag. %>
+                <%= form.select :tags, options_for_select(EventTag::Tags::SELECTABLE, selected: @contract.contractable.default_tags), multiple: true, size: [EventTag::Tags::SELECTABLE.size, 1].max %>
               </div>
 
               <div class="field">
@@ -41,7 +42,7 @@
               </div>
 
               <% if @party.pending? %>
-                <p>Sign the contract before activating the organization</p>
+                <p>Sign the contract before activating the business</p>
               <% end %>
 
               <%= form.submit "Activate", class: "btn bg-success w-full", disabled: @party.pending?, data: { "contract-target": "button" } %>

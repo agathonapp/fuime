@@ -53,7 +53,7 @@
       <td><%= render_money @paypal_transfer.amount %></td>
     </tr>
     <tr>
-      <td style="text-align: right;">Organization balance:</td>
+      <td style="text-align: right;">Business balance:</td>
       <td>
         <%= render_money @paypal_transfer.event.balance_available_v2_cents %>
         <% if @paypal_transfer.event.balance_available_v2_cents < 0 %>
@@ -80,8 +80,8 @@
       <%= form.label "Reject with a comment", class: "bold mb1" %> <br>
       <%= form.text_area :comment, style: "width: 400px;", placeholder: "(Markdown supported)" %>
     </div>
-    <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the organizer about the reason why.", turbo_confirm_danger: true } %>
-    <small>(This requires you to communicate to the organizer about the reason why.)</small>
+    <%= form.submit "Reject", data: { turbo_confirm: "Mark as rejected? This requires you to communicate to the founder about the reason why.", turbo_confirm_danger: true } %>
+    <small>(This requires you to communicate to the founder about the reason why.)</small>
   <% end %>
 <% end %>
 

@@ -2,7 +2,7 @@
 
 <p>
   <%= @whodunnit.name %> <%= "(an #{@is_manager ? "organization manager" : "Fuime admin"})" unless @whodunnit == User.system_user %> has disabled transparency mode for <%= @event.name %>.
-  This means your organization is now private to unauthenticated users on Fuime.
+  This means your business is now private to unauthenticated users on Fuime.
   <% if @visible_pages.any? %>
     Your <%= @visible_pages.map { |page| link_to page[:name], page[:link] }.to_sentence.html_safe %> <%# erb_lint:disable ErbSafety %>
     <%= "is".pluralize(@visible_pages) %> still visible to the public.
@@ -11,7 +11,7 @@
 
 <% if @can_enable_transparency %>
 <p>
-  Managers can re-enable transparency mode at any time in <%= link_to "your organization settings", edit_event_url(@event) %>.
+  Managers can re-enable transparency mode at any time in <%= link_to "your business settings", edit_event_url(@event) %>.
 </p>
 <% end %>
 

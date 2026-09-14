@@ -6,6 +6,13 @@ class MailboxAddressesController < ApplicationController
 
     authorize @mailbox_address
 
+    # Fuime: no inbound mail domain, no address to hand out. The views hide the
+    # button; this refuses the request behind it.
+    unless MailboxAddress.configured?
+      redirect_back_or_to my_inbox_path,
+                          flash: { error: "Receipt forwarding addresses aren't available yet." } and return
+    end
+
     current_user.mailbox_addresses.previewed.destroy_all
 
     if @mailbox_address.save

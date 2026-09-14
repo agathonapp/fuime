@@ -3,6 +3,11 @@
 require "cgi"
 
 module HcbCodeHelper
+  # ⚠️ Fuime: DO NOT WIRE THIS UP. It builds a forms.hackclub.com URL with a
+  # Fuime user's name and email prefilled, i.e. it hands their identity to Hack
+  # Club (Prime Directive 4). Kept only because Rule 2 says disable rather than
+  # delete; it has no callers. Replace the host with Fuime's own intake before
+  # any view links to it again.
   def disputed_transactions_airtable_form_url(embed: false, hcb_code: nil, user: nil)
     # The airtable form is located within the Bank Promotions base
     form_id = "7dq8JWC4Fsus"

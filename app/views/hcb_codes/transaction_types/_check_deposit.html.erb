@@ -18,7 +18,12 @@
     <% elsif @hcb_code.check_deposit.rejection_reason == "incorrect_amount" %>
       <p class="mt1 mb0">Try <%= link_to "resubmitting", event_check_deposits_path(@event) %> with the correct deposit amount.</p>
     <% elsif @hcb_code.check_deposit.rejection_reason == "incorrect_recipient" %>
-      <p class="mt1 mb0">Make sure the check is made out to<br><strong>"The Hack Foundation"</strong> or <strong>"Hack Club"</strong>.</p>
+      <%# Fuime: named "The Hack Foundation" / "Hack Club" as the payee a founder
+          should write their check out to — Hack Club's legal entity, which would
+          have sent the money to them. Check deposits are a sponsor-banking
+          module and are disabled, so there is no Fuime payee to name here; the
+          reason is stated without one. %>
+      <p class="mt1 mb0">The check was made out to the wrong recipient.</p>
     <% end %>
   </div>
 <% end %>

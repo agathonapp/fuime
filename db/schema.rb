@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1324,6 +1324,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
 
   add_check_constraint "fuime_cohorts", "max_members > 0", name: "fuime_cohorts_capped", validate: false
 
+  create_table "fuime_customers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.bigint "event_id", null: false
+    t.datetime "first_purchased_at", null: false
+    t.datetime "last_purchased_at", null: false
+    t.string "name"
+    t.string "stripe_customer_id"
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "email"], name: "index_fuime_customers_on_event_id_and_email", unique: true
+    t.index ["event_id"], name: "index_fuime_customers_on_event_id"
+    t.index ["stripe_customer_id"], name: "index_fuime_customers_on_stripe_customer_id", where: "(stripe_customer_id IS NOT NULL)"
+  end
+
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
     t.datetime "created_at", null: false
@@ -1336,6 +1350,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.integer "position", default: 0, null: false
     t.integer "price_cents", null: false
     t.string "public_token"
+    t.string "recurring_interval"
     t.string "slug"
     t.string "unit_label"
     t.datetime "updated_at", null: false
@@ -1347,6 +1362,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
+    t.check_constraint "recurring_interval IS NULL OR (recurring_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[]))", name: "fuime_offers_recurring_interval_known"
   end
 
   add_check_constraint "fuime_offers", "created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL", name: "fuime_offers_api_offers_name_their_key", validate: false
@@ -1370,6 +1386,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.date "period_start", null: false
     t.integer "reserve_basis_points", null: false
     t.integer "reserve_window_days", null: false
+    t.string "transfer_reference"
     t.datetime "updated_at", null: false
     t.index ["aasm_state"], name: "index_fuime_payout_batches_on_aasm_state"
     t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
@@ -1403,6 +1420,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
   add_check_constraint "fuime_payout_methods", "last4 IS NULL OR length(last4::text) <= 4", name: "fuime_payout_methods_last4_is_last4", validate: false
   add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])", name: "fuime_payout_methods_provider_known", validate: false
 
+  create_table "fuime_sales", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.bigint "fuime_customer_id"
+    t.bigint "fuime_offer_id"
+    t.datetime "occurred_at", null: false
+    t.string "postal_code"
+    t.string "state"
+    t.string "stripe_payment_intent_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["country", "state", "occurred_at"], name: "index_fuime_sales_on_country_and_state_and_occurred_at"
+    t.index ["event_id"], name: "index_fuime_sales_on_event_id"
+    t.index ["fuime_customer_id"], name: "index_fuime_sales_on_fuime_customer_id"
+    t.index ["fuime_offer_id"], name: "index_fuime_sales_on_fuime_offer_id"
+    t.index ["stripe_payment_intent_id"], name: "index_fuime_sales_on_stripe_payment_intent_id", unique: true
+  end
+
   create_table "fuime_subscriptions", force: :cascade do |t|
     t.bigint "billed_to_id", null: false
     t.boolean "cancel_at_period_end", default: false, null: false
@@ -1421,6 +1457,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true, where: "(event_id IS NOT NULL)"
     t.index ["granted_by_id"], name: "index_fuime_subscriptions_on_granted_by_id"
     t.index ["stripe_subscription_id"], name: "index_fuime_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
+  end
+
+  create_table "fuime_webhook_deliveries", force: :cascade do |t|
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at"
+    t.string "event_id", null: false
+    t.string "event_type", null: false
+    t.bigint "fuime_webhook_endpoint_id", null: false
+    t.text "last_error"
+    t.datetime "next_attempt_at"
+    t.jsonb "payload", default: {}, null: false
+    t.integer "response_code"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fuime_webhook_endpoint_id", "event_id"], name: "index_fuime_deliveries_unique_per_endpoint", unique: true
+    t.index ["fuime_webhook_endpoint_id"], name: "index_fuime_deliveries_on_endpoint"
+    t.index ["status", "next_attempt_at"], name: "index_fuime_deliveries_on_status_and_due"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[])", name: "fuime_webhook_deliveries_status_known"
+  end
+
+  create_table "fuime_webhook_endpoints", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.datetime "disabled_at"
+    t.boolean "enabled", default: true, null: false
+    t.bigint "event_id", null: false
+    t.datetime "last_delivered_at"
+    t.text "secret_ciphertext", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index ["event_id"], name: "index_fuime_webhook_endpoints_on_event_id"
   end
 
   create_table "g_suite_accounts", force: :cascade do |t|
@@ -3480,15 +3548,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
   add_foreign_key "fuime_api_keys", "events", validate: false
   add_foreign_key "fuime_api_keys", "users", column: "created_by_id", validate: false
   add_foreign_key "fuime_cohorts", "users", column: "created_by_id", validate: false
+  add_foreign_key "fuime_customers", "events"
   add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_offers", "fuime_api_keys", validate: false
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_payout_methods", "events", validate: false
   add_foreign_key "fuime_payout_methods", "users", column: "added_by_id", validate: false
+  add_foreign_key "fuime_sales", "events"
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "fuime_subscriptions", "users", column: "granted_by_id", validate: false
+  add_foreign_key "fuime_webhook_deliveries", "fuime_webhook_endpoints"
+  add_foreign_key "fuime_webhook_endpoints", "events"
   add_foreign_key "g_suite_accounts", "g_suites"
   add_foreign_key "g_suite_accounts", "users", column: "creator_id"
   add_foreign_key "g_suite_aliases", "g_suite_accounts"

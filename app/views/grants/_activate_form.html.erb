@@ -17,7 +17,7 @@
         <%= form.radio_button :recipient_org_type, "501c3", required: true, "x-model" => "recipient_org_type" %>
         <%= form.label :recipient_org_type, class: "pointer justify-center", value: "501c3" do %>
           <%= inline_icon "payment-docs", size: 28 %>
-          <strong>Deposit into an existing <span class="nowrap">501(c)(3)</span> organization</strong>
+          <strong>Deposit into an existing <span class="nowrap">501(c)(3)</span> business</strong>
           <small>Available only in the US.</small>
         <% end %>
 
@@ -38,7 +38,7 @@
       </div>
     </li>
     <li x-cloak x-show="recipient_org_type && recipient_org_type != 'international'">
-      <h3>Organization details</h3>
+      <h3>Business details</h3>
 
       <div class="field" x-cloak x-show="recipient_org_type && recipient_org_type != 'international' && recipient_org_type != 'existing_hcb_account'">
         <%= form.label :recipient_organization, "Organization name", "x-text" => "recipient_org_type == '501c3' ? '501(c)(3) organization name' : 'Organization name'" %>
@@ -46,7 +46,7 @@
       </div>
 
       <div class="field" x-cloak x-show="recipient_org_type && recipient_org_type == 'existing_hcb_account'">
-        <%= form.label :event_id, "Fuime organization" %>
+        <%= form.label :event_id, "Fuime business" %>
         <%= form.collection_select :event_id, current_user.events.not_hidden.not_demo_mode, :id, :name, ":required": "recipient_org_type && recipient_org_type == 'existing_hcb_account'" %>
       </div>
 

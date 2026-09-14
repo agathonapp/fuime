@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>What we're building · fuime</title>
+    <meta
+      name="description"
+      content="Two lists, kept apart on purpose. What runs in fuime today, drawn only from what the app actually does, and what we know is missing: client-side subscription cancelling, sales analytics, outbound webhooks, sales tax, physical goods, other currencies, selling outside the US, a sandbox and SDKs, and identity verification. No dates and no order."
+    />
+    <link rel="canonical" href="https://fuime.com/roadmap" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/roadmap" />
+    <meta
+      property="og:title"
+      content="What runs today, and what doesn't."
+    />
+    <meta
+      property="og:description"
+      content="Two lists, kept apart on purpose: what fuime actually does today, and what we know is missing. No dates, no quarters, and no order that pretends to be a queue."
+    />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="What runs today, and what doesn't."
+    />
+    <meta
+      name="twitter:description"
+      content="Two lists, kept apart on purpose: what fuime actually does today, and what we know is missing. No dates, no quarters, and no order that pretends to be a queue."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- First paint, inline and above every script: the browser must never get a
+         chance to paint white before the loader's own background arrives. -->
+    <meta name="theme-color" content="#141420" />
+    <meta name="darkreader-lock" />
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. Must follow the stylesheet link to win on source
+         order, and must name `.rise > .rise-i` to match specificity. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+    <!-- Breadcrumb only. The second half of this page is deliberately not
+         marked up as anything: a schema type for planned work would give a
+         list that carries no dates and no order the shape of a commitment,
+         which is the exact confusion the page exists to undo. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "fuime",
+                "item": "https://fuime.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "What we're building",
+                "item": "https://fuime.com/roadmap"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      try {
+        if (sessionStorage.getItem('fuime.booted')) {
+          document.documentElement.classList.add('booted')
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── first-visit loader ───────────────────────────────────────────
+         The arch fills from the bottom as a progress meter. Suppressed for
+         the rest of the session by the sessionStorage guard above. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--over">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing">What it costs</a>
+          <a class="nav__link" href="/compare">Compare</a>
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="nav__link" href="/login">Log in</a>
+          <a class="btn btn--accent" href="/get-started">Start your business</a>
+        </nav>
+      </div>
+      <div
+        class="split-mount split-mount--dock"
+        data-fx-split="dock"
+        data-you="95.0"
+        data-fuime="2.0"
+        data-stripe="3.0"
+        aria-hidden="true"
+      ></div>
+    </header>
+
+    <main>
+
+      <!-- ── hero ──────────────────────────────────────────────────────── -->
+      <section class="hero hero--short">
+        <div class="grain"></div>
+
+        <div class="wrap hero__in">
+          <div class="hero__body">
+            <p class="beta">Live · payments processed by Stripe</p>
+            <h1>What runs today,<br />and what doesn't.</h1>
+            <p class="lead">
+              This site once described, in the present tense, a product that
+              did not exist yet. Later it did the reverse and told people to
+              wait for something that had already gone live. Both are the same
+              defect, and this page is the correction.
+            </p>
+            <p class="disclaimer">
+              The first list is drawn only from what the application actually
+              does. The second is what we know is missing, with no dates, no
+              quarters and no order. If something is on neither list, it is
+              safest to assume it is not there and to ask.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── running today ─────────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Running today</p>
+            <h2 class="h2">Twelve things you can use right now.</h2>
+            <p class="lead">
+              Every line here is something the app does, not something it is
+              meant to do. If a claim on this site is not backed by one of
+              these, the claim is the thing that is wrong.
+            </p>
+          </div>
+
+          <div class="rows mt-8">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path
+                  d="M9.5 12.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5l-1 1"
+                />
+                <path d="M12.5 9.5a3.5 3.5 0 0 0-5 0L5 12a3.5 3.5 0 0 0 5 5l1-1" />
+              </svg>
+              <h3 class="h4">Offers, payment pages and a storefront</h3>
+              <p>
+                You publish named offers at a set price between $1 and $10,000.
+                Each one gets its own payment page and the business gets a
+                public storefront page. Renaming an offer does not break a link
+                you have already sent. Checkout is hosted by Stripe.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 3v16" />
+                <path
+                  d="M14.75 6.5H9.25a2.75 2.75 0 0 0 0 5.5h3.5a2.75 2.75 0 0 1 0 5.5H7"
+                />
+              </svg>
+              <h3 class="h4">Name your own price, or let them</h3>
+              <p>
+                An offer can carry a fixed price, or it can ask the buyer to
+                choose the amount. Sales are in US dollars.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 9.5A6.5 6.5 0 0 1 16.5 7" />
+                <path d="M18 5.5V9h-3.5" />
+                <path d="M18 12.5A6.5 6.5 0 0 1 5.5 15" />
+                <path d="M4 16.5V13h3.5" />
+              </svg>
+              <h3 class="h4">Monthly and yearly billing</h3>
+              <p>
+                An offer can bill on a schedule, and renewals post to the ledger
+                by themselves. A buyer cannot cancel one on their own yet, so
+                they email support@fuime.com and a person stops it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="3" y="3.5" width="16" height="15" rx="1.5" />
+                <path d="M3 8h16M8.5 8v10.5" />
+              </svg>
+              <h3 class="h4">A real ledger, not a list of payouts</h3>
+              <p>
+                Every sale becomes a ledger line. fuime's fee posts as its own
+                visible negative line naming the rate that was actually charged,
+                so the deduction is on the page rather than in a footnote.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M5.5 2.75h7L17 7.25v12H5.5Z" />
+                <path d="M12.25 2.75v4.5H17M8.5 12h6M8.5 15.25h4" />
+              </svg>
+              <h3 class="h4">Receipts and comments on the line itself</h3>
+              <p>
+                Upload a receipt, email one in, or pair a loose receipt to the
+                transaction it belongs to. Threaded comments hang off the ledger
+                line, so the argument about a charge lives on the charge.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 9.5h9a4.5 4.5 0 0 1 0 9H7.5" />
+                <path d="m7.5 6-3.5 3.5L7.5 13" />
+              </svg>
+              <h3 class="h4">Refunds that unwind the fee too</h3>
+              <p>
+                A refund posts a reversal and rebates fuime's fee in proportion.
+                A partial refund books the increment rather than the running
+                total, so a sale refunded twice does not double-count.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 2.5 18 5.5v5.25c0 3.6-2.8 6.9-7 8.75" />
+                <path d="M11 2.5 4 5.5v5.25c0 3.6 2.8 6.9 7 8.75" />
+                <path d="M8.25 10.75 10.5 13l3.5-3.75" />
+              </svg>
+              <h3 class="h4">Merchant of record</h3>
+              <p>
+                Your client buys from Ninth Street Labs, LLC, doing business as
+                Fuime. Stripe processes the card and bills us for it out of our
+                own fee, so card processing is never added to your side of the
+                sale.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3.5 18.5h15" />
+                <path d="M6.5 15V9.5M11 15V4.5M15.5 15V8" />
+              </svg>
+              <h3 class="h4">An income tax estimate you can read in June</h3>
+              <p>
+                fuime totals income, expenses and net for the year against the
+                IRS $400 self-employment threshold, applying the 92.35% Schedule
+                SE multiplier, so the real trigger is $433.14 of net profit. A
+                tax packet can be downloaded. It estimates and it files nothing.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="8.5" cy="8" r="3" />
+                <path d="M3 18a5.5 5.5 0 0 1 11 0" />
+                <path d="M15 5.5a3 3 0 0 1 0 5M16.75 18a5.5 5.5 0 0 0-2-4.25" />
+              </svg>
+              <h3 class="h4">Guardianship, for sellers who are minors</h3>
+              <p>
+                A guardian accepts a versioned agreement and the signature IP,
+                user-agent, timestamp and document version are recorded. They
+                read the ledger and the payouts, are the legal payee, and can
+                revoke at any time. A minor cannot approve their own payout.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6v5.25l3.25 2" />
+              </svg>
+              <h3 class="h4">Payout runs a person signs off</h3>
+              <p>
+                Runs are generated weekly and approved by a human before
+                anything moves, then marked paid against a real reference. A
+                7-day hold, a 10% rolling reserve over 90 days, a $2,500 cap per
+                run, a $10 floor, and a stated reason on every skip.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.5 8.5 11 4.5l8.5 4L11 12.5Z" />
+                <path
+                  d="M6 10.75V15c0 1.2 2.24 2.25 5 2.25s5-1.05 5-2.25v-4.25"
+                />
+              </svg>
+              <h3 class="h4">Schools and cohorts</h3>
+              <p>
+                A school can hold a pooled account, fund a treasury and make
+                awards, settling per student. A school stands in loco parentis,
+                so no per-student guardian is needed for a class to sell.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="7" cy="12" r="3.5" />
+                <path d="M10.5 12H19M16 12v3M13 12v2.5" />
+              </svg>
+              <h3 class="h4">An API, included rather than sold</h3>
+              <p>
+                Three endpoints, keys shown once and encrypted at rest, 10 live
+                keys per business and 250 live links per key. No route or body
+                carries a business id, so a leaked key stays inside the business
+                it belongs to. It can ask for money; it cannot move money, read
+                the ledger, or see personal data.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── not built yet ─────────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Not built yet</p>
+            <h2 class="h2">Ten things we know are missing.</h2>
+            <p class="lead">
+              Not a queue and not a plan. Nothing here has a date, nothing here
+              has a position, and the order is alphabetical in spirit only.
+              Read every line as a gap, because that is what each one is.
+            </p>
+          </div>
+
+          <div class="rows mt-8">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 9.5A6.5 6.5 0 0 1 16.5 7" />
+                <path d="M18 5.5V9h-3.5" />
+                <path d="m8 11 6 6M14 11l-6 6" />
+              </svg>
+              <h3 class="h4">A client cancelling their own subscription</h3>
+              <p>
+                There is no self-service cancel for a buyer. They email
+                support@fuime.com and a person stops the billing. For a
+                recurring product that is a real hole and we are not going to
+                dress it up.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3.5 18.5h15" />
+                <path d="M6.5 15V9.5M11 15v-4M15.5 15v-6" />
+                <path d="m5 7 4.5 3L16 4" />
+              </svg>
+              <h3 class="h4">Sales analytics</h3>
+              <p>
+                Every sale is in the ledger and you can read it a line at a
+                time. There is no view that turns those lines into a trend, a
+                best-seller, a conversion rate or a chart of any kind.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 6h8.5a4 4 0 0 1 0 8H8" />
+                <path d="m11 11-3 3 3 3" />
+                <circle cx="4" cy="6" r="1.75" />
+              </svg>
+              <h3 class="h4">Outbound webhooks</h3>
+              <p>
+                The API can create a payment link. Nothing calls your server
+                back when that link is paid, refunded or renewed, so anything
+                you build on top has to come and look.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M5.5 2.75h7L17 7.25v12H5.5Z" />
+                <path d="M12.25 2.75v4.5H17" />
+                <path d="m9 15.5 4.5-5M9.25 11h.01M13.25 15h.01" />
+              </svg>
+              <h3 class="h4">Anything at all about sales tax</h3>
+              <p>
+                fuime is registered in zero jurisdictions. It calculates no
+                sales tax, collects none, remits none and files nothing. The tax
+                feature that does exist estimates income tax for the year and
+                that is the whole of it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M3 11h16" />
+                <path
+                  d="M11 3c2.2 2.2 3.25 5 3.25 8S13.2 16.8 11 19c-2.2-2.2-3.25-5-3.25-8S8.8 5.2 11 3Z"
+                />
+              </svg>
+              <h3 class="h4">Selling outside the United States</h3>
+              <p>
+                The product is US only and English only. There is no second
+                country, no localised checkout and no answer for a seller or a
+                buyer outside it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 3v16" />
+                <path
+                  d="M14.75 6.5H9.25a2.75 2.75 0 0 0 0 5.5h3.5a2.75 2.75 0 0 1 0 5.5H7"
+                />
+                <path d="M2.75 4.5h2.5M2.75 17.5h2.5" />
+              </svg>
+              <h3 class="h4">Any currency but the dollar</h3>
+              <p>
+                Sales are USD. There is no multi-currency pricing, no conversion
+                and no settlement in anything else, so a client who wants to pay
+                in their own currency cannot.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.75 7.5 11 3.75l8.25 3.75v7L11 18.25 2.75 14.25Z" />
+                <path d="M2.75 7.5 11 11.25l8.25-3.75M11 11.25v7" />
+              </svg>
+              <h3 class="h4">Physical goods</h3>
+              <p>
+                Categories are services and digital goods. There is no shipping
+                address, no inventory, no fulfilment and no postage anywhere in
+                the product, so nothing that has to arrive in a box can be sold
+                through it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="m7.5 7.5-4 3.5 4 3.5M14.5 7.5l4 3.5-4 3.5" />
+                <path d="m12.5 4.5-3 13" />
+              </svg>
+              <h3 class="h4">A sandbox, and client libraries</h3>
+              <p>
+                You get three endpoints and a key. There is no separate
+                environment to try calls against without real money, and no SDK
+                in any language, so the first call you make is a live one.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
+                <circle cx="8" cy="10" r="2.25" />
+                <path d="M4.75 15.25a3.5 3.5 0 0 1 6.5 0M13.5 9h4M13.5 12.5h4" />
+              </svg>
+              <h3 class="h4">Identity verification</h3>
+              <p>
+                Nobody's identity is verified. Age is a checkbox you tick
+                yourself. The only gate is a person at fuime reading a new
+                business's application before it can sell, and that is a review
+                of an application, not a check on a human being.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 18.5h14" />
+                <path d="M7.5 18.5V8.25L11 5.5l3.5 2.75V18.5" />
+                <path d="M10 18.5v-4h2v4" />
+              </svg>
+              <h3 class="h4">The handover at 18</h3>
+              <p>
+                When an operator who signed up as a minor turns 18, nothing
+                moves the account out of their guardian's name and into theirs.
+                The books and the client list stay put; the legal role does not
+                transfer.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── deliberate limits ─────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Where fuime stops on purpose</p>
+            <h2 class="h2">Six limits that are not gaps.</h2>
+            <p class="lead">
+              These are decisions rather than missing work, which is why they
+              are not on the list above. None of them is waiting on anything.
+            </p>
+          </div>
+
+          <div class="grid grid--2 mt-8">
+            <article class="card">
+              <h3 class="h4">fuime is not a bank and will not become one</h3>
+              <p>
+                It does not hold deposits and offers no FDIC-insured product.
+                What you see in the app is what fuime owes you, and that is a
+                different thing from money sitting somewhere in your name.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3 class="h4">Nobody under 13</h3>
+              <p>
+                Signup is refused under 13 and the age floor is clamped in the
+                code rather than asked politely in the copy. Between 13 and 17 a
+                guardian is the legal signer, which is the part nobody else
+                offers.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3 class="h4">Childcare, babysitting, coaching children</h3>
+              <p>
+                Excluded on purpose, along with food and crafts. They are not
+                categories we are waiting to add, and a business built on them
+                will not get through the review.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3 class="h4">fuime does not file anything</h3>
+              <p>
+                The tax feature estimates and flags a threshold. It is not
+                advice, it is not a return, and nothing in it is sent to anyone.
+                What gets filed is a question for someone qualified to answer
+                it.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3 class="h4">An API key can ask for money, never move it</h3>
+              <p>
+                A key can create and delete payment links. It cannot send a
+                payout, read the ledger or reach personal data, and no route or
+                body carries a business id, so a stolen key stays inside one
+                business.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3 class="h4">A minor never approves their own payout</h3>
+              <p>
+                The guardian is the legal payee and the approval is enforced
+                twice, in two places, because one check is a bug away from being
+                no check at all.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── how this page behaves ─────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">How this page stays honest</p>
+            <h2 class="h2">Three rules it is held to.</h2>
+          </div>
+
+          <div class="rows mt-8">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="3" y="4.5" width="16" height="14" rx="1.5" />
+                <path d="M3 8.5h16M7.5 2.5v4M14.5 2.5v4" />
+                <path d="m8.5 13 5 0" />
+              </svg>
+              <h3 class="h4">Nothing below the line gets a date</h3>
+              <p>
+                A quarter is a promise with the deniability built in. When
+                something ships it moves up into the first list and the first
+                list is the only claim we will defend.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4.5 6.5h13M4.5 11h13M4.5 15.5h13" />
+                <path d="m16 3.5 3 3-3 3" />
+              </svg>
+              <h3 class="h4">The second list is not in an order</h3>
+              <p>
+                Nothing in it is next, ranked or queued. If you read a sequence
+                into it you are reading something that is not there, and we
+                would rather say that than let the layout imply it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="2.5" y="5" width="17" height="12" rx="1.5" />
+                <path d="m2.9 6 8.1 6 8.1-6" />
+              </svg>
+              <h3 class="h4">If one of these is what blocks you, say so</h3>
+              <p>
+                Knowing which gap is costing someone an actual sale is worth
+                more than any amount of internal ranking. Write and tell us
+                which line you stopped on.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="mailto:support@fuime.com"
+              >support@fuime.com<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/payment-links">Payment links</a>
+              <a href="/subscriptions">Subscriptions</a>
+              <a href="/books">Books and receipts</a>
+              <a href="/taxes">Tax tracking</a>
+              <a href="/api">API</a>
+            </div>
+            <div class="foot__col">
+              <h4>The money</h4>
+              <a href="/pricing">What it costs</a>
+              <a href="/merchant-of-record">How you get paid</a>
+              <a href="/why-has-fuime-charged-me">Why has fuime charged me?</a>
+            </div>
+            <div class="foot__col">
+              <h4>Who it's for</h4>
+              <a href="/for/tutoring">Tutoring</a>
+              <a href="/for/photo-video">Photo and video</a>
+              <a href="/for/lawn-care">Lawn and yard care</a>
+              <a href="/for/schools">Schools and cohorts</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Compare</h4>
+              <a href="/compare">Every option, side by side</a>
+              <a href="/compare/venmo">fuime vs Venmo</a>
+              <a href="/compare/paddle">fuime vs Paddle</a>
+              <a href="/compare/waiting">fuime vs waiting until 18</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="/roadmap">What we're building</a>
+              <a href="/faq">Questions</a>
+              <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Ninth Street Labs, LLC, doing business as Fuime,
+          is the seller of record on purchases. Guardians are the legal payee on
+          operator payouts and must approve the destination before the first
+          payout; young founders run the venture day to day.
+        </p>
+        <div class="foot__bot">
+          <span>fuime · your client buys from us, and we pay you</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
