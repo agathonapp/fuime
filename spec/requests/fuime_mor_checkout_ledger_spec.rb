@@ -62,8 +62,10 @@ RSpec.describe "MoR Checkout → webhook → ledger", :merchant_of_record, type:
       },
       # The shape `billing_address_collection: "required"` produces. Only this
       # event carries it — see the jurisdiction examples at the bottom.
+      customer: "cus_test_buyer",
       customer_details: {
         email: "buyer@example.com",
+        name: "Ada Lovelace",
         address: {
           country: "US", state: "CA", postal_code: "94110",
           city: "San Francisco", line1: "1 Market St"
@@ -199,6 +201,43 @@ RSpec.describe "MoR Checkout → webhook → ledger", :merchant_of_record, type:
 
       expect(jurisdiction).to be_present
       expect(Fuime::Sale.unknown_jurisdiction).to include(jurisdiction)
+    end
+  end
+
+  # A founder cannot deliver what they sold without knowing who bought it. The
+  # email has been arriving on every Checkout session all along and was dropped.
+  describe "who bought" do
+    def customer = Fuime::Customer.find_by(event:, email: "buyer@example.com")
+
+    it "records the buyer from the session Stripe already sends" do
+      deliver(stripe_envelope("checkout.session.completed", session_object))
+
+      expect(customer).to have_attributes(name: "Ada Lovelace", stripe_customer_id: "cus_test_buyer")
+    end
+
+    it "points the sale at them, so revenue per customer is computable" do
+      deliver(stripe_envelope("checkout.session.completed", session_object))
+
+      expect(Fuime::Sale.find_by(stripe_payment_intent_id: intent_id).customer).to eq(customer)
+      expect(customer.total_spent_cents).to eq(amount_cents)
+    end
+
+    it "recognises the same buyer returning, rather than duplicating them" do
+      deliver(stripe_envelope("checkout.session.completed", session_object))
+      second = session_object.merge(id: "cs_second", payment_intent: "pi_second")
+      deliver(stripe_envelope("checkout.session.completed", second))
+
+      expect(Fuime::Customer.where(event:).count).to eq(1)
+      expect(customer.purchase_count).to eq(2)
+      expect(customer).to be_repeat
+    end
+
+    # A PaymentIntent carries no customer_details. The sale must still land.
+    it "still records a sale when Stripe sent no buyer at all" do
+      deliver(stripe_envelope("payment_intent.succeeded", intent_object))
+
+      expect(Fuime::Sale.find_by(stripe_payment_intent_id: intent_id)).to be_present
+      expect(Fuime::Customer.where(event:).count).to eq(0)
     end
   end
 

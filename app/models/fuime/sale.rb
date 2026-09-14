@@ -13,6 +13,7 @@
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  event_id                 :bigint           not null
+#  fuime_customer_id        :bigint
 #  fuime_offer_id           :bigint
 #  stripe_payment_intent_id :string           not null
 #
@@ -20,6 +21,7 @@
 #
 #  index_fuime_sales_on_country_and_state_and_occurred_at  (country,state,occurred_at)
 #  index_fuime_sales_on_event_id                           (event_id)
+#  index_fuime_sales_on_fuime_customer_id                  (fuime_customer_id)
 #  index_fuime_sales_on_fuime_offer_id                     (fuime_offer_id)
 #  index_fuime_sales_on_stripe_payment_intent_id           (stripe_payment_intent_id) UNIQUE
 #
@@ -65,6 +67,11 @@ module Fuime
     # its listing (it may be archived or renamed). Handing Offer an association
     # that could cascade or be counted from the edit screen invites exactly the
     # coupling this table was split out to avoid — reporting reads Sale.
+    # Optional: a sale can predate the customer record, and Stripe does not
+    # always return an email (a wallet payment may complete without one). A sale
+    # with no customer is still a sale.
+    belongs_to :customer, class_name: "Fuime::Customer", foreign_key: :fuime_customer_id,
+                          inverse_of: :sales, optional: true
     belongs_to :offer,
                class_name: "Fuime::Offer",
                foreign_key: :fuime_offer_id,
@@ -107,14 +114,16 @@ module Fuime
     # Enrichment only ever fills blanks. A jurisdiction already recorded is never
     # overwritten by a later event, because the first address Stripe gave for a
     # sale is the one the buyer actually entered.
-    def self.record!(payment_intent_id:, event:, amount_cents:, address:, occurred_at:, offer_id: nil)
+    def self.record!(payment_intent_id:, event:, amount_cents:, address:, occurred_at:,
+                     offer_id: nil, customer_id: nil)
       return nil if payment_intent_id.blank? || event.blank?
 
       attrs = {
         country: address&.try(:country).presence,
         state: address&.try(:state).presence,
         postal_code: address&.try(:postal_code).presence,
-        fuime_offer_id: offer_id.presence
+        fuime_offer_id: offer_id.presence,
+        fuime_customer_id: customer_id.presence
       }
 
       existing = find_by(stripe_payment_intent_id: payment_intent_id)

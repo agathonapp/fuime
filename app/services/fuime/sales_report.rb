@@ -28,9 +28,10 @@ module Fuime
   # one source, sales from another — would produce a number that disagrees with
   # the payouts page for reasons nobody could explain. See #caveats.
   #
-  # **Anything about buyers.** There is no buyer entity: buyer identity lives in
-  # Stripe. So no repeat-purchase rate, no LTV, no cohorts. Those need a customer
-  # record first, not a cleverer query.
+  # **Churn and cohorts.** Now possible in principle — Fuime::Customer exists —
+  # but a churn number needs subscription STATE (who is currently active), and
+  # only completed sales are stored. Guessing it from gaps between purchases
+  # produces a figure that disagrees with Stripe.
   class SalesReport
     INTERVALS = %w[day week month].freeze
 
@@ -134,6 +135,47 @@ module Fuime
            .transform_keys { |(country, state)| [country, state].compact.join("-") }
            .sort_by { |_, cents| -cents }
            .to_h
+    end
+
+    # ── Who bought ──────────────────────────────────────────────────────────
+    #
+    # A founder needs this to run the business: you cannot mow a lawn without
+    # knowing whose it is. See Fuime::Customer for whose customer this legally
+    # is under merchant-of-record, and what that obliges the terms to say.
+    def customers
+      ::Fuime::Customer.where(event: @event)
+                       .where(id: scope.select(:fuime_customer_id))
+    end
+
+    def customer_count = customers.count
+
+    # The single most useful thing a small business can know. Counted from sales
+    # in the window rather than from the customer row, so "repeat customers this
+    # year" means what it says.
+    def repeat_customer_count
+      scope.where.not(fuime_customer_id: nil)
+           .group(:fuime_customer_id)
+           .having("COUNT(*) > 1")
+           .count
+           .size
+    end
+
+    # [{customer:, revenue_cents:, purchase_count:}], biggest spender first.
+    def top_customers(limit: 5)
+      rows = scope.where.not(fuime_customer_id: nil)
+                  .group(:fuime_customer_id)
+                  .pluck(Arel.sql("fuime_customer_id, SUM(amount_cents), COUNT(*)"))
+
+      people = ::Fuime::Customer.where(id: rows.map(&:first)).index_by(&:id)
+
+      rows.sort_by { |(_, revenue, _)| -revenue }
+          .first(limit)
+          .filter_map do |customer_id, revenue, count|
+            person = people[customer_id]
+            next if person.blank?
+
+            { customer: person, revenue_cents: revenue, purchase_count: count }
+          end
     end
 
     # Said out loud on any surface that renders these numbers, because a figure a

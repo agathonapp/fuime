@@ -73,6 +73,49 @@ RSpec.describe "sales dashboard", :merchant_of_record, type: :request do
     expect(response.body).to match(/payouts page/i)
   end
 
+  # A founder cannot deliver what they sold without knowing who bought it, and
+  # cannot get repeat business without knowing who came back.
+  describe "customers" do
+    def buy(cents, email:, name: nil)
+      customer = Fuime::Customer.record!(event:, email:, name:)
+      Fuime::Sale.create!(stripe_payment_intent_id: "pi_#{SecureRandom.hex(6)}",
+                          event:, amount_cents: cents, occurred_at: Time.current,
+                          fuime_customer_id: customer.id, country: "US", state: "CA")
+    end
+
+    it "names them, with how to reach them" do
+      buy(40_00, email: "ada@example.com", name: "Ada Lovelace")
+      sign_in(founder)
+
+      get fuime_sales_path(event_slug: event.slug)
+
+      expect(response.body).to include("Ada Lovelace")
+      expect(response.body).to include("ada@example.com")
+    end
+
+    it "says who came back" do
+      buy(10_00, email: "ada@example.com")
+      buy(15_00, email: "ada@example.com")
+      buy(20_00, email: "grace@example.com")
+      sign_in(founder)
+
+      get fuime_sales_path(event_slug: event.slug)
+
+      expect(response.body).to include("2") # customers
+      expect(response.body).to match(/came back/)
+      expect(response.body).to match(/bought 2 times/)
+    end
+
+    it "shows no customer section before anyone has bought" do
+      sell(10_00)
+      sign_in(founder)
+
+      get fuime_sales_path(event_slug: event.slug)
+
+      expect(response.body).not_to include("Your customers")
+    end
+  end
+
   it "refuses a stranger, the same as the ledger does" do
     sell(10_00)
     sign_in(stranger)

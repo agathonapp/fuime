@@ -45,6 +45,18 @@
         <span class="muted text-sm block">Average sale</span>
         <span class="h3 mb0 block"><%= render_money @report.average_sale_cents %></span>
       </div>
+      <% if @customer_count.positive? %>
+        <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+          <span class="muted text-sm block">Customers</span>
+          <span class="h3 mb0 block"><%= number_with_delimiter @customer_count %></span>
+          <% if @repeat_customer_count.positive? %>
+            <%# The number a small business actually cares about: somebody came
+                back. Shown next to the count rather than as its own tile,
+                because it is only meaningful against it. %>
+            <span class="muted text-sm"><%= @repeat_customer_count %> came back</span>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <section class="mb-4">
@@ -110,6 +122,30 @@
               Another <%= render_money @report.unattributed_revenue_cents %> came from
               payment links where you set the price yourself, not from a listed product.
             </p>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <% if @top_customers.any? %>
+      <section class="mb-4">
+        <h2 class="h4 mt0 mb-2">Your customers</h2>
+        <div class="card">
+          <% @top_customers.each do |row| %>
+            <div class="flex justify-between items-baseline gap-2 mb-1 flex-wrap">
+              <span>
+                <%= row[:customer].display_name %>
+                <% if row[:purchase_count] > 1 %>
+                  <%# Said plainly rather than as a badge: "bought 3 times" is
+                      what a founder wants to know before they call someone. %>
+                  <span class="muted text-sm">· bought <%= row[:purchase_count] %> times</span>
+                <% end %>
+              </span>
+              <span class="text-sm"><%= render_money row[:revenue_cents] %></span>
+            </div>
+            <% if row[:customer].name.present? %>
+              <p class="muted text-sm mt0 mb-2"><%= row[:customer].email %></p>
+            <% end %>
           <% end %>
         </div>
       </section>

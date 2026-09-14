@@ -19,6 +19,9 @@ module Fuime
       @series = @report.revenue_series_filled(interval: @interval)
       @top_offers = @report.top_offers
       @by_jurisdiction = @report.revenue_by_jurisdiction
+      @top_customers = @report.top_customers
+      @customer_count = @report.customer_count
+      @repeat_customer_count = @report.repeat_customer_count
     end
 
     private

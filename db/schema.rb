@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_160002) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_170001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1324,6 +1324,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_160002) do
 
   add_check_constraint "fuime_cohorts", "max_members > 0", name: "fuime_cohorts_capped", validate: false
 
+  create_table "fuime_customers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.bigint "event_id", null: false
+    t.datetime "first_purchased_at", null: false
+    t.datetime "last_purchased_at", null: false
+    t.string "name"
+    t.string "stripe_customer_id"
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "email"], name: "index_fuime_customers_on_event_id_and_email", unique: true
+    t.index ["event_id"], name: "index_fuime_customers_on_event_id"
+    t.index ["stripe_customer_id"], name: "index_fuime_customers_on_stripe_customer_id", where: "(stripe_customer_id IS NOT NULL)"
+  end
+
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
     t.string "billing_interval"
@@ -1411,6 +1425,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_160002) do
     t.string "country"
     t.datetime "created_at", null: false
     t.bigint "event_id", null: false
+    t.bigint "fuime_customer_id"
     t.bigint "fuime_offer_id"
     t.datetime "occurred_at", null: false
     t.string "postal_code"
@@ -1419,6 +1434,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_160002) do
     t.datetime "updated_at", null: false
     t.index ["country", "state", "occurred_at"], name: "index_fuime_sales_on_country_and_state_and_occurred_at"
     t.index ["event_id"], name: "index_fuime_sales_on_event_id"
+    t.index ["fuime_customer_id"], name: "index_fuime_sales_on_fuime_customer_id"
     t.index ["fuime_offer_id"], name: "index_fuime_sales_on_fuime_offer_id"
     t.index ["stripe_payment_intent_id"], name: "index_fuime_sales_on_stripe_payment_intent_id", unique: true
   end
@@ -3532,6 +3548,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_160002) do
   add_foreign_key "fuime_api_keys", "events", validate: false
   add_foreign_key "fuime_api_keys", "users", column: "created_by_id", validate: false
   add_foreign_key "fuime_cohorts", "users", column: "created_by_id", validate: false
+  add_foreign_key "fuime_customers", "events"
   add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_offers", "fuime_api_keys", validate: false
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"

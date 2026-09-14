@@ -218,7 +218,8 @@ module Fuime
     # the intent, not the session, and still read metadata / description / created
     # the way they already do.
     PaymentView = Struct.new(
-      :id, :created, :description, :metadata, :amount_received, :buyer_address, keyword_init: true
+      :id, :created, :description, :metadata, :amount_received, :buyer_address,
+      :buyer_email, :buyer_name, :stripe_customer_id, keyword_init: true
     )
 
     def payment_view_from_checkout(session, intent_id:, amount_cents:)
@@ -231,8 +232,25 @@ module Fuime
         # The whole reason `billing_address_collection: "required"` is set on
         # every MoR checkout. This event is the only one of the two success
         # events that carries it — see Fuime::Sale.record!.
-        buyer_address: session.try(:customer_details).try(:address)
+        buyer_address: session.try(:customer_details).try(:address),
+        # Arriving on every Checkout session and, until now, dropped on the
+        # floor — the same shape as the address was. A founder who cannot
+        # contact a customer cannot deliver the thing they sold.
+        buyer_email: session.try(:customer_details).try(:email),
+        buyer_name: session.try(:customer_details).try(:name),
+        stripe_customer_id: stripe_customer_id_from(session)
       )
+    end
+
+    # A subscription always produces one; a one-time Checkout may not. Present
+    # or absent, it is what a billing-portal session is opened against — so it
+    # is the difference between a buyer cancelling a subscription themselves and
+    # having to email support.
+    def stripe_customer_id_from(object)
+      raw = object.try(:customer)
+      return raw if raw.is_a?(String)
+
+      raw.try(:id).presence
     end
 
     def record_payment(object:, amount_cents:)
@@ -255,7 +273,8 @@ module Fuime
       # would short-circuit as "already recorded" and the address would be lost
       # — on exactly the sales this record exists to count. Recording is
       # idempotent and enriching, so running it on both events is correct.
-      record_jurisdiction(object:, event:, amount_cents:)
+      customer = record_customer(object:, event:)
+      record_jurisdiction(object:, event:, amount_cents:, customer:)
 
       # Tell the founder's own server, if they asked to be told. Emitted here —
       # beside the jurisdiction record and before the ledger idempotency check —
@@ -462,7 +481,23 @@ module Fuime
     #
     # Only under MoR. On the Connect path the seller is the merchant and the
     # nexus is theirs, not Fuime's.
-    def record_jurisdiction(object:, event:, amount_cents:)
+    # Who bought. Written before the sale so the sale can point at it; a nil
+    # customer (a wallet payment with no email, or a write that failed) still
+    # produces a sale, because a sale is a fact about money and a customer
+    # record is not a precondition for it.
+    def record_customer(object:, event:)
+      return nil unless ::Fuime::Features.merchant_of_record?
+
+      ::Fuime::Customer.record!(
+        event:,
+        email: object.try(:buyer_email),
+        name: object.try(:buyer_name),
+        stripe_customer_id: object.try(:stripe_customer_id),
+        purchased_at: (Time.at(object.created) if object.created.present?)
+      )
+    end
+
+    def record_jurisdiction(object:, event:, amount_cents:, customer: nil)
       return unless ::Fuime::Features.merchant_of_record?
 
       ::Fuime::Sale.record!(
@@ -475,7 +510,8 @@ module Fuime
         # Stored rather than re-read from Stripe metadata at report time: that
         # would be a network call per row, and for a subscription the offer may
         # have been archived or renamed since.
-        offer_id: offer_id_from(object)
+        offer_id: offer_id_from(object),
+        customer_id: customer&.id
       )
     end
 

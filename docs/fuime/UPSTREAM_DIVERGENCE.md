@@ -7173,3 +7173,51 @@ All three repointed, along with the in-body `/home#how` links on `pricing.html` 
 `waitlist.test.mjs` 18/18 · all 22 URLs answer 200 · every footer href resolves · no page
 references a missing image · FAQ JSON-LD matches its page verbatim (17 and 6 Q&A, 0 drift).
 `bundle exec rspec` could not be run here — `bundler: command not found: rspec`.
+
+
+## 2026-09-14 — Who bought
+
+The gap behind every analytics question Fuime could not answer — MRR, churn, LTV,
+cohorts, repeat purchase all need a customer before they need a query
+(`PADDLE_GAP_ANALYSIS.md` §3.5, §3.7) — and the founder-facing half is simpler
+than that: a teenager mowing a lawn needs to know whose lawn it is.
+
+**The data was already arriving and being dropped.** Stripe puts the buyer's
+email and name in `session.customer_details`, which the webhook handler already
+read for `.address` only. Same shape as the jurisdiction fix earlier today.
+
+- `20260914170000` — `fuime_customers`. `20260914170001` — `fuime_customer_id` on
+  `fuime_sales`, its own migration because indexing an existing table wants
+  `algorithm: :concurrently` and therefore its own `disable_ddl_transaction!`.
+  (Deliberately NOT a third `safety_assured`.)
+- `Fuime::Customer` — upsert on `(event_id, email)`, email normalised, first
+  purchase never moves, last purchase never moves backwards. Never raises.
+- `Fuime::SalesReport#customers`, `#repeat_customer_count`, `#top_customers`; the
+  dashboard shows a customer count with "N came back" and a named list with
+  emails and purchase counts.
+
+**Scoped per venture, on purpose.** One person buying from two ventures is two
+rows. That costs a little denormalisation and buys the property that venture A
+cannot learn its customer also buys from venture B — which a global customer
+table would make one JOIN away, on a platform whose operators are minors and
+whose buyers never agreed to be tracked across unrelated businesses (L7). A
+founder sees everything about their OWN customers.
+
+**A sale without a customer is still a sale.** A wallet payment can complete with
+no email, and a raw `payment_intent.succeeded` carries no `customer_details`. The
+customer write never blocks the ledger line; specced.
+
+`stripe_customer_id` is captured where Stripe supplies one. That is what a
+billing-portal session is opened against, so it is **the precondition for
+self-serve cancellation** — the FTC click-to-cancel gap recorded against the
+recurring-billing work. Now unblocked.
+
+⚠️ **DISCLOSURE, NOT CODE.** Fuime is the merchant of record, so Fuime collects
+this data and shares it with the operator who fulfils. The terms and the privacy
+policy have to say so. `Fuime::Customer`'s header notes it; a comment does not
+discharge the obligation. This is a copy change on `/terms` and the privacy page,
+and it is outstanding.
+
+**Still absent: churn and cohorts.** They need subscription STATE — who is
+currently active — and only completed sales are stored. Inferring churn from gaps
+between purchases produces a figure that disagrees with Stripe.
