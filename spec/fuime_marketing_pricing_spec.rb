@@ -21,9 +21,44 @@ require "rails_helper"
 RSpec.describe "Fuime pricing truth (G3 / L8)" do
   # Methods, not constants: a constant defined inside a describe block leaks to
   # the top level.
-  def public_price_pages = %w[site/index.html site/pricing.html site/parents.html]
+  # Only pages that actually quote a price. Membership FORCES "5%" and "50¢"
+  # and a sales route to be present, which is the wrong demand to make of a
+  # page about receipts — so a page that never mentions money stays out, and
+  # rides the retired-tier checks below via `marketing_files` instead.
+  def public_price_pages = %w[
+    site/index.html
+    site/pricing.html
+    site/parents.html
+    site/merchant-of-record.html
+    site/compare/paddle.html
+    site/faq.html
+  ]
 
-  def marketing_files = public_price_pages + %w[site/site.js site/docs/BRIEF.md]
+  # Every page, plus the two files that describe the price to a machine or to
+  # the next author. site/site.js computes the fee the calculator renders, and
+  # site/docs/BRIEF.md is the contract every page is written from: a retired
+  # tier surviving in either of those puts it back on the site by hand.
+  def marketing_files = public_price_pages + %w[
+    site/payment-links.html
+    site/subscriptions.html
+    site/books.html
+    site/taxes.html
+    site/api.html
+    site/why-has-fuime-charged-me.html
+    site/for/tutoring.html
+    site/for/photo-video.html
+    site/for/lawn-care.html
+    site/for/schools.html
+    site/compare.html
+    site/compare/venmo.html
+    site/compare/waiting.html
+    site/roadmap.html
+    site/site.js
+    site/docs/BRIEF.md
+  ]
+  # NB: site/docs/AUTHORING.md is deliberately NOT here. It documents the
+  # regexes above so a writer can avoid them, which means it has to quote them
+  # — and `/\b7%/` matches its own explanation of what `/\b7%/` matches.
 
   def read(rel) = File.read(Rails.root.join(rel))
 

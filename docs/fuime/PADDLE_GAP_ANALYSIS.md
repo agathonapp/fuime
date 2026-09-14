@@ -11,8 +11,8 @@ from paddle.com, developer.paddle.com and the help centre the same day.**
 > | **Tier 0** — live-money defects | **Done bar one.** Payout rail decided (manual transfers, honest ledger) and `mark_paid!` now refuses without a bank reference. Jurisdiction capture, sweep scheduled. **Open: `PLAID_ENV=sandbox` — no seller can attach a bank, so there is still no destination to send to.** |
 > | **Tier 1** — recurring billing | **Done.** Month/year offers, subscription checkout, renewals posting from `invoice.paid`, operator/plan collision guarded. **Open: self-serve cancellation for buyers** (FTC click-to-cancel; the pay page points at support@fuime.com), and a subscription-aware backfill for a dropped `invoice.paid`. |
 > | **Pricing** (not in the original tiers) | **Done.** One flat 5% + 50¢, no monthly fee, nothing gated, Pro retired, site copy rewritten, L8 guard enforcing it. **Open, operational: live `Fuime::Subscription` rows with no event are still billing $19.99 in Stripe.** |
-> | **Tier 2** — sales analytics | **Not started. Next.** |
-> | **Tier 3** — outbound webhooks | Not started. |
+> | **Tier 2** — sales analytics | **Core done.** `Fuime::SalesReport` + `/:event_slug/sales`: revenue over time, top offers, average sale, revenue by jurisdiction. **Open: checkout conversion** — nothing tracks the storefront, and closing that means tracking visitors on pages minors visit (an L7 decision). **Also open: refund rate**, which needs refunds written to `fuime_sales` rather than inferred from the ledger. |
+> | **Tier 3** — outbound webhooks | **Core done.** Endpoints, signed delivery (Stripe-shaped signature), retry ladder, SSRF + DNS-rebinding guards, self-rescheduling job + sweeper. **Open: no seller-facing UI to create an endpoint, only `sale.completed` fires, no delivery-log screen.** |
 > | **Tier 4** — tax | Not started, and see §3.2 — the obligation accrues whether or not it is built. |
 >
 > §3's gap tables below are as-written on 2026-09-14 morning and have NOT been re-marked for

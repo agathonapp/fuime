@@ -5,15 +5,44 @@ it is a suggestion.
 
 ## What fuime is
 
-Invoicing and books for under-18 service businesses. A 13–17-year-old who
-already has paying clients — tutoring, lawn care, photo, video, web, DJ work —
-sends a real invoice and gets paid into a Stripe account their guardian legally
-owns and they operate day to day.
+**A merchant of record for small businesses selling services and digital work
+in the US.** A client buys from fuime; Stripe processes the payment; fuime pays
+the venture what it earned after fees, refunds and disputes. Invoicing, books,
+receipts, storefront, offers, recurring billing and a payment-links API sit on
+top of that.
+
+**fuime allows teenagers. It is not only for them.** Founder's instruction,
+2026-09-14: *"our target is not only teens, we just simply allow teens."* A
+seller aged 13 to 17 can run a venture with a parent or legal guardian as the
+account holder and legal signer — and fuime is the only merchant of record that
+will onboard them at all. That is a differentiator to state plainly in the
+places it matters. It is **not** the frame of every page, and copy that assumes
+the reader is a minor now excludes most of the audience.
+
+This section used to open *"Invoicing and books for under-18 service
+businesses."* That was true of the product and is no longer true of the market
+it is sold to. `PADDLE_GAP_ANALYSIS.md` §6 posed the audience question and said
+it belonged to the founder; this is the answer.
 
 **fuime is not a bank, does not hold deposits, and offers no FDIC-insured
-product.** That much is true today and always. The guardian owns the account;
-the young founder operates it. Copy that inverts that ownership — "your kid's
-account, with you on it" — is a defect, not a wording choice.
+product.** That much is true today and always. Where a guardian is involved
+they own the account and the young founder operates it. Copy that inverts that
+ownership — "your kid's account, with you on it" — is a defect, not a wording
+choice.
+
+### ⚠️ "Position like Paddle" is not permission to claim what Paddle does
+
+The founder wants fuime positioned as a peer of Paddle, and structurally it is
+one: same mechanism, same liability transfer. **Its capabilities are not
+comparable, and the gap is where this brief gets violated.** Verified in code,
+2026-09-14: USD only; US only; English only; services and digital goods only;
+**tax registrations in zero jurisdictions**; no multi-currency, no dunning, no
+discounts or coupons, no buyer portal, no outbound webhooks, no SDKs, no API
+sandbox. Physical goods, food and crafts are closed, and childcare, babysitting
+and coaching children are deliberately excluded.
+
+The honest peer claim is about structure, not features: *the same mechanism as
+Paddle, for a different kind of seller.*
 
 ### Shipped vs. roadmap — do not blur these
 
@@ -46,38 +75,68 @@ runs. Never quote a review-time SLA; there is none.
 These numbers must match `Event::Plan::Free` and `/billing`. There is **one
 price and no tiers** (2026-09-14) — do not invent a second one.
 
-**5% + 50¢** of collections. No monthly fee, and nothing at all until a sale.
-Unlimited businesses and API keys **included, not unlocked**. Founders 0% for the
-launch cohort, by invitation. Anything outside the standard rate is a
-conversation with sales, not a tier.
+**5% of collections, with a 50¢ minimum.** No monthly fee, and nothing at all
+until a sale. Unlimited businesses and API keys **included, not unlocked**.
+Founders 0% for the launch cohort, by invitation. Anything outside the standard
+rate is a conversation with sales, not a tier.
 
-**The 50¢ is part of the price and must be quoted with the 5%.** Under
-merchant-of-record a sale is charged `max(5%, 50¢)`, so a $5 sale pays 10%.
-Writing "5%" alone describes a price fuime does not charge (L8).
+**It is a FLOOR, not an additive fee, and the difference is not pedantry.**
+`Event#fuime_fee_cents_on` computes `min(max(amount × 5%, 50¢), amount)`. On a
+$400 sale that is **$20.00** — not $20.50. Writing it as "5% + 50¢" describes
+Paddle's price, which is additive, and overstates fuime's own at every amount
+above $10. Below $10 the floor binds and the effective rate is higher: a $5 sale
+pays 50¢, which is 10%.
+
+That difference is also the best honest thing fuime can say against a
+competitor publishing the same headline number, and the site threw it away for
+weeks by copying the shape of the number instead of the arithmetic.
+
+**The 50¢ must still be quoted with the 5%** — "5%" alone describes a price
+fuime does not charge (L8). Quote it as "5%, minimum 50¢", never as "5% + 50¢".
 
 **Card processing is NOT charged on top.** fuime is the merchant of record, so
-Stripe bills Ninth Street Labs, LLC — not the founder — and its ~2.9% + 30¢ comes
-out of fuime's 5%. What the founder is owed is the sale minus the fuime fee.
-Earlier copy said processing "applies on top"; that was wrong and overstated what
-a founder pays. Fees bill the **guardian**,
-never the minor: a minor's payment authorisation is voidable at the minor's
-option, the guardian's is not.
+Stripe bills Ninth Street Labs, LLC — not the seller — and its ~2.9% + 30¢ comes
+out of fuime's 5%. What the seller is owed is the sale minus the fuime fee, full
+stop. Fees bill the **guardian** where there is one, never the minor: a minor's
+payment authorisation is voidable at the minor's option, the guardian's is not.
 
-## Two readers
+#### The arithmetic lives in three places and they must agree
 
-1. **The kid.** Already working, tired of being paid in a group chat. Decides
-   to _want_ it.
-2. **The parent.** Has to accept the Guardian Agreement and become the legal
-   signer before anything is paid out. Decides whether it _happens_.
+`site/site.js` (the no-modules fallback), `site/fx/ledger-bus.js` (what the fx
+layer subscribes to), and `Event#fuime_fee_cents_on` in the app. On 2026-09-14
+all three disagreed: both site files still ran the retired rate with no floor
+**and subtracted Stripe's fee from the seller**, so the live calculator — the
+one artifact on the site whose whole point is that the pricing is not a claim —
+understated what a founder takes home by $19.90 on a $400 job, under a label
+reading "5% + 50¢". The guard specs passed throughout, because they check that
+the strings appear, not that the numbers are right. Change one, change all
+three, and check the rendered figure.
 
-The landing page converts the kid. `/parents` survives the parent's scrutiny.
-Different jobs, different pages.
+## Four readers
+
+1. **The seller.** Doing the work already and getting paid badly for it — late,
+   in cash, through an app that puts their business in with their rent. Decides
+   to _want_ it. The default reader of every page unless stated otherwise.
+2. **The buyer's cardholder.** Has just found `Fuime* <venture>` on a
+   statement and is deciding whether to call their bank. Owns
+   `/why-has-fuime-charged-me`, and that page is written for them and nobody
+   else. A chargeback is fuime's liability, so this reader is expensive.
+3. **The parent.** Where the seller is 13 to 17, has to accept the Guardian
+   Agreement and become the legal signer before anything is paid out. Decides
+   whether it _happens_. Owns `/parents`.
+4. **The teacher or programme lead.** Bringing a class or a closed cohort. Owns
+   `/for/schools`, and is the only reader the email capture form still exists
+   for.
+
+Different jobs, different pages. Do not write one page at two of them.
 
 ## Feel
 
 **Institutional, cinematic, unpatronising.** Nothing may read as a kids' app —
 no bright primaries, no rounded-everything, no mascots, no exclamation marks.
-The whole argument is "this is the real thing, and you're allowed to use it."
+That rule predates the audience change and survives it intact: it was written so
+a teenager would not be condescended to, and it is now also what lets the same
+pages be read by a thirty-year-old freelancer without a second design.
 
 ## The system (law)
 
@@ -126,35 +185,116 @@ is a build failure.** Use the variables:
 If a layout genuinely needs something that isn't here, add it to `style.css`
 built from tokens — never inline styles, never a hex literal.
 
-## Shared chrome — byte-identical on all three pages
+## Shared chrome — stamped, not copied
 
-Copy the `<nav>` and `<footer>` markup between pages verbatim. Only the
-`aria-current="page"` attribute changes.
+The nav and footer live **once**, in `chrome/nav.html` and `chrome/foot.html`,
+and `tools/sync-chrome.mjs` writes them into every page:
+
+```
+node tools/sync-chrome.mjs          # apply
+node tools/sync-chrome.mjs --check  # exit 1 if any page is out of date
+```
+
+This used to say "copy the markup between pages verbatim", which was a workable
+instruction for three pages and is not one for twenty-two: the footer is now a
+five-column sitemap, so every added link would be twenty-two edits. The three
+shipped pages had **already** drifted — `index.html` carried a `.foot__status`
+row the other two did not.
+
+It is a dev tool, not a build step. The pages in git still contain the full
+markup and still ship exactly as they are; nothing at runtime depends on it
+having been run. **Do not hand-edit a nav or footer in a page — it will be
+overwritten.** Edit `chrome/`, then run the tool.
+
+`aria-current="page"` is per-page and is re-applied by the tool from its own
+`CURRENT` map.
 
 Nav links: `How it works` → `/#how` · `What it costs` → `/pricing` ·
-`Parents` → `/parents` · `Log in` → `/login` · then a `.btn.btn--accent`
-"Start your business" → `/get-started`, the app's sign-up door. Never `/start`:
-it answered a cacheable 308 to the dive for weeks and browsers may still hold
-it. On `/pricing` and `/parents`, `How it works` still points at `/#how`.
+`Compare` → `/compare` · `Parents` → `/parents` · `Log in` → `/login` · then a
+`.btn.btn--accent` "Start your business" → `/get-started`, the app's sign-up
+door. Never `/start`: it answered a cacheable 308 to the dive for weeks and
+browsers may still hold it.
 
-Footer columns:
+Footer columns — **Product** · **The money** · **Who it's for** · **Compare** ·
+**Company**. Compare is deliberately a whole column: it is the positioning
+thesis, and Company is deliberately the smallest.
 
-- **Product** — How it works `/#how` · Pricing `/pricing` · For parents `/parents`
-- **Company** — Email `mailto:hi@fuime.com`
 - A `.foot__legal` paragraph above the bottom line, **verbatim on every page**:
   `fuime is a financial technology company, not a bank. fuime does not hold
   deposits and does not offer FDIC-insured products. Payments are processed by
-  Stripe. Venture accounts are opened and owned by a parent or legal guardian;
-  young founders operate them with guardian oversight.`
-- Bottom line: `fuime · invoicing for people who aren't 18 yet` and
-  `Live. Every new business is reviewed by hand before it can sell.`
-- A `.beta` chip above the headline in every hero, saying the product is live
-  and that Stripe processes payments (`Live · payments processed by Stripe`).
-  `/` and `/start-scroll` have no footer bar, so the standing disclosure goes in
-  a bare `.foot` / `.disclaimer` block below the dive — never inside the glass
-  panel, which is clipped on a phone.
+  Stripe. Ninth Street Labs, LLC, doing business as Fuime, is the seller of
+  record on purchases. Guardians are the legal payee on operator payouts and
+  must approve the destination before the first payout; young founders run the
+  venture day to day.`
+  The substring `financial technology company, not a bank` is asserted
+  **case-sensitively**, so it can never start a sentence.
+- Bottom line: `fuime · your client buys from us, and we pay you` and
+  `Live. Every new business is reviewed by hand before it can sell.` The first
+  was `invoicing for people who aren't 18 yet` until the audience change; it
+  explains merchant-of-record in eight words, which is the job of a tagline on
+  a site whose whole trust problem is that the buyer's statement says fuime.
+- A `.beta` chip above the headline in every hero saying the product is live and
+  that Stripe processes payments. **It must not say "beta"** — the claim is
+  banned and the chip said "Private beta" for weeks after the product went live.
+- `/start-scroll` has no footer bar, so its standing disclosure goes in a bare
+  `.foot` / `.disclaimer` block — never inside the glass panel, which is clipped
+  on a phone.
 
-**Every href must resolve.** No `#`, no dead anchors, no 404s.
+**Every href must resolve.** No `#`, no dead anchors, no 404s. This is now
+tested: `test/server.test.mjs` fetches every href in `chrome/foot.html` and
+fails on anything that does not answer 200.
+
+## The sitemap
+
+Twenty-two pages. `/` is `index.html` — the landing page, which spent weeks
+unreachable at `/home` behind `CLOSED` while `/` served the dive. The dive
+(`start.html`, the only page loading the 22MB frame ladder) keeps its own
+address at `/dive`.
+
+| Pillar | Pages |
+|---|---|
+| **Spine** | `/` · `/pricing` · `/parents` · `/dive` |
+| **Product** | `/payment-links` · `/subscriptions` · `/books` · `/taxes` · `/api` |
+| **The money** | `/merchant-of-record` · `/why-has-fuime-charged-me` |
+| **Who it's for** | `/for/tutoring` · `/for/photo-video` · `/for/lawn-care` · `/for/schools` |
+| **Compare** | `/compare` · `/compare/venmo` · `/compare/paddle` · `/compare/waiting` |
+| **Company** | `/roadmap` · `/faq` |
+
+An audience page (`/for/*`) sits one layer **above** the product pages and links
+**down** into them. Same component kit, different framing — it is a funnel
+layer, not a parallel one, and it must not become a second description of the
+product.
+
+`/merchant-of-record` is the trust page and the most important one in the set.
+`/why-has-fuime-charged-me` is chargeback deflection, not marketing: under MoR
+the buyer's statement reads `Fuime* <venture>`, and a chargeback is fuime's
+liability.
+
+`/roadmap` is the only page that may describe unshipped work, and it must keep
+the two halves visibly separate. No dates, no quarters, no "coming soon".
+
+## Adding a page — the five lists
+
+The site has no build step, so a new page is invisible to routing and to every
+copy guard until it is added by hand in five places. **A page missing from
+these may say "private beta", quote a retired rate, drop the not-a-bank
+disclosure and ship no sign-up CTA, and every suite stays green.**
+
+1. `site/server.js` → `PUBLIC_FILES`. The server is an **allowlist**. Without
+   this, `/foo` answers 308 → 404: a redirect into a dead end that reads as a
+   routing bug.
+2. `spec/fuime_marketing_copy_spec.rb` → `public_pages`.
+3. `spec/fuime_marketing_pricing_spec.rb` → `public_price_pages` **only if the
+   page quotes a price** (membership forces `5%`, `50¢` and a sales route to be
+   present), otherwise `marketing_files`.
+4. `site/test/copy-guard.mjs` → `PUBLIC_PAGES` / `PRICE_PAGES`. This replicates
+   the two rspec guards offline, because they need a Rails boot and a database
+   and cannot run on a machine without the gem bundle.
+5. `site/test/server.test.mjs` → `PAGES`.
+
+Then `site/sitemap.xml` — and only if the page is actually served, because a
+sitemap listing a redirect is worse than no sitemap. Every `<loc>` is fetched by
+the test suite.
 
 ## The email form — schools, teachers and cohorts only
 
@@ -267,13 +407,13 @@ Pricing on the page must match the Pricing section above. A flat monthly fee on
 a kid making $80 a month is a tax on starting, which is why there is none — but
 never quote the 5% without the 50¢, and never imply there is a tier to upgrade to.
 
-fuime     5% + 50¢ of what you collect. No monthly fee. Unlimited businesses and
-          API keys included. No fee on an invoice nobody pays.
+fuime     5% of what you collect, minimum 50¢. No monthly fee. Unlimited
+          businesses and API keys included. No fee on an invoice nobody pays.
 Scale     Custom pricing — a conversation, not a tier. support@fuime.com
 Founders  0% for the launch cohort, by invitation.
 Cards     ~2.9% + 30¢ a payment, paid by fuime out of its 5% — NOT charged to the
           founder on top, because fuime is the legal seller.
-Billed to the guardian who holds the account, never to the young founder.
+Where a guardian holds the account it is billed to them, never to the minor.
 
 For parents
 You sign once. You keep the controls.
@@ -301,15 +441,26 @@ hi@fuime.com
 ```
 Invoice 0014 · Maya R. · Photography · Due on receipt
 Senior portraits · 3 hr session      $400.00
-fuime fee · 5% + 50¢                 −$20.00
+fuime fee · 5%, minimum 50¢          −$20.00
 Left for the venture                 $380.00
 Paid Jun 14 · Visa ···· 4242
 ```
 
-Both fee lines are mandatory. A worked example that shows the platform fee and
-hides Stripe's is the FTC-deception shape this brief exists to prevent, and
-"lands in your account" is the ownership inversion it exists to prevent.
-```
+**One fee line, and Stripe is not one of them.** This previously said "both fee
+lines are mandatory", written when processing was charged on top of the platform
+fee. Under merchant-of-record it is not: Stripe bills fuime, so deducting it from
+the seller's total in a worked example is itself the deception the rule was
+written against. The page shipped for weeks with a `Stripe processing −$11.90`
+row and a total of `$360.10`, which is $19.90 less than the seller is owed.
+
+The concern behind the old rule stands — **an example that hides the processor
+is not honest** — and is met by the `.split-mount` bar directly beneath the
+invoice, which cuts the sale three ways and labels Stripe's slice with its
+amount: on $400, `YOU $380.00 · FUIME $8.10 · STRIPE $11.90`. That is where
+Stripe's cost belongs, because it comes out of fuime's cut and not the seller's.
+
+"lands in your account" remains the ownership inversion this brief exists to
+prevent.
 
 ## Claims that must not appear
 
@@ -369,27 +520,34 @@ The hero image is eager (`fetchpriority="high"`, no `loading="lazy"`);
 everything below the fold is lazy. Every `<img>` carries real `width`/`height`
 so nothing shifts on load.
 
-## Acceptance criteria — all 13, verbatim
+## Acceptance criteria — all 15, verbatim
 
-1. Three pages ship — `/`, `/pricing`, `/parents` — sharing one nav and one
-   footer. Every nav link, footer link and in-page anchor resolves to a real
-   target. Zero 404s, zero dead anchors.
+1. Twenty-two pages ship (see **The sitemap**), sharing one nav and one footer
+   stamped by `tools/sync-chrome.mjs`. Every nav link, footer link and in-page
+   anchor resolves to a real target. Zero 404s, zero dead anchors. Every page
+   appears in all five lists in **Adding a page**.
 2. Every colour, size, radius, and duration in the CSS comes from the token
    block. A grep for hex literals outside `:root` returns nothing.
 3. The measured system matches: display type renders at weight **480**; the
    dominant border-radius is 4px; the page alternates `#141420` and `#F4F1EC`
    bands; accent `#C2401F` appears on primary buttons and the wordmark's `i`
    and nowhere else.
-4. The hero is a fal-generated frame, cut at 21:9 (desktop) and 4:5 (mobile),
-   subject in the bottom third. **Measured** contrast between the headline and
-   the actual pixels behind it is ≥ 4.5:1 at 1440px and at 390px — sampled
-   from the rendered screenshot, not asserted from the CSS.
+4. Where a hero carries a photograph it is a fal-generated frame, cut at 21:9
+   (desktop) and 4:5 (mobile), subject in the bottom third. **Measured**
+   contrast between the headline and the actual pixels behind it is ≥ 4.5:1 at
+   1440px and at 390px — sampled from the rendered screenshot, not asserted
+   from the CSS. A page with no photograph is fine and normal; most of the
+   pages added in 2026-09 are argument, not atmosphere.
 5. Every raster image on the site is fal-generated; every icon is hand-built
    SVG. No stock, no placeholder greys, no emoji standing in for an icon.
-6. The waitlist form works on all three pages: a valid email POSTs to
+   **No page references an image file that does not exist** — a 404'd
+   `<picture>` is worse than no picture.
+6. The waitlist form works wherever it appears: a valid email POSTs to
    `/api/waitlist` and reaches the success state; an invalid one shows the
-   inline error without a request; a failed request shows the `hi@fuime.com`
-   fallback. `test/waitlist.test.mjs` passes unmodified.
+   inline error without a request; a failed request shows the mail fallback.
+   `test/waitlist.test.mjs` passes unmodified. It appears only on pages
+   addressing schools, teachers and cohorts — the app is open, and the primary
+   action everywhere else is `/get-started`.
 7. `/parents` states in plain language that the guardian is the account holder
    and the young founder the operator, that there is **no identity verification
    yet**, that fuime is the seller of record and Stripe processes the payment,
@@ -411,23 +569,51 @@ so nothing shifts on load.
     and as direct as the line it replaces. New copy matches that voice. Judged
     line-by-line against the old `index.html`, and the whole set passes
     `no-ai-slop`.
+14. **Every figure on the site matches the arithmetic in the code.** The fee is
+    `min(max(amount × 5%, 50¢), amount)` and Stripe's cost is never deducted
+    from the seller. Check the rendered number, not the label beside it: the
+    guards assert that "5%" and "50¢" appear, not that the total is right, and
+    a wrong total passed every suite for weeks.
+15. **No page claims a capability the code does not have.** In particular: no
+    identity or KYC check, no payout timing or rail, no cards, no sales tax, no
+    multi-currency, nothing outside the US, no buyer self-service, no
+    testimonials, user counts, launch dates or SLAs. `docs/AUTHORING.md` carries
+    the verified list of what is true.
 
 ## Files
 
 ```
 site/
-  index.html      landing
-  pricing.html    /pricing
-  parents.html    /parents
+  index.html          /          the landing page and the front door
+  start.html          /dive      the cinematic dive; the only page loading the
+                                 frame ladder in dive/ and dive-m/
+  start-scroll.html              a dive variant; public but unlinked
+  pricing.html        /pricing
+  parents.html        /parents
+  payment-links.html  subscriptions.html  books.html  taxes.html  api.html
+  merchant-of-record.html        why-has-fuime-charged-me.html
+  roadmap.html        faq.html   compare.html
+  for/                tutoring · photo-video · lawn-care · schools
+  compare/            venmo · paddle · waiting
+
+  chrome/         nav.html · foot.html · template.html — the shared chrome and
+                  the starting point for a new page. NOT served.
+  tools/          sync-chrome.mjs — stamps chrome/ into every page
   style.css       the whole system — DO NOT duplicate any of it into a page
-  site.js         nav, scroll-reveal, waitlist — DO NOT duplicate
-  vercel.json     cleanUrls
-  img/            fal-generated, pre-encoded AVIF + WebP
+  site.js         nav, scroll-reveal, waitlist, the fallback fee calculator
+  fx/             the effect modules; ledger-bus.js owns the fee arithmetic
+  server.js       static server, redirects, and the PUBLIC_FILES allowlist
+  img/ vid/       fal-generated, pre-encoded AVIF + WebP
+  dive/ dive-m/   the frame ladder, ~22MB, used only by start.html
   api/waitlist.js the capture path — not design/copy territory (see above)
-  test/           same
-  package.json    one dependency: ioredis, for the waitlist store
-  docs/BRIEF.md   this file
+  test/           server.test.mjs · waitlist.test.mjs · copy-guard.mjs
+  docs/           BRIEF.md (this file) · AUTHORING.md · ASCENT.md
 ```
+
+`docs/` was in `PUBLIC_DIRS` until 2026-09-14, which published this file at
+`https://fuime.com/docs/BRIEF.md` — the internal contract, including the list of
+claims the site may not make. Nothing linked it; it was reachable because the
+directory sat next to the pages. Do not put it back.
 
 The site is no longer strictly dependency-free: the waitlist store moved from an
 HTTP API to the Redis protocol, so the service runs `npm ci --omit=dev` at

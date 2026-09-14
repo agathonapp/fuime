@@ -3,17 +3,152 @@
      slash and no .html — server.js strips both. A sitemap that disagrees with
      the canonical tag is worse than no sitemap. /get-started, /start and
      /signup are deliberately absent: each 307s to the app's sign-up, and
-     listing a redirect is the disagreement this comment warns about.
+     listing a redirect is the disagreement this comment warns about. So is
+     /start-scroll, which nothing links and which canonicalises elsewhere.
 
-     Which is also why /home, /pricing and /parents left. The marketing site is
-     not open yet — server.js bounces all three to / (see CLOSED) — and a
-     sitemap is a list of pages you are asking to have indexed. They come back
-     here in the same commit that empties that set. -->
+     This file held exactly one entry — https://fuime.com/ — for as long as
+     server.js's CLOSED set bounced every other page to the front door. The
+     site opened on 2026-09-14 and they came back in the same commit that
+     emptied it, as the previous version of this comment promised they would.
+
+     test/server.test.mjs fetches every <loc> below and fails on anything that
+     does not answer 200, so this list cannot rot into pointing at a 404. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://fuime.com/</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-09-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+
+  <!-- the money: what it costs, how it reaches you, and the page a confused
+       cardholder lands on. -->
+  <url>
+    <loc>https://fuime.com/pricing</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/merchant-of-record</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/why-has-fuime-charged-me</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- product -->
+  <url>
+    <loc>https://fuime.com/payment-links</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/subscriptions</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/books</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/taxes</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/api</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- who it's for -->
+  <url>
+    <loc>https://fuime.com/parents</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/for/tutoring</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/for/photo-video</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/for/lawn-care</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/for/schools</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- compare -->
+  <url>
+    <loc>https://fuime.com/compare</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/compare/venmo</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/compare/paddle</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/compare/waiting</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- company -->
+  <url>
+    <loc>https://fuime.com/roadmap</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/faq</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://fuime.com/dive</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>

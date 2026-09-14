@@ -48,7 +48,7 @@
 #
 # Check Constraints
 #
-#  payout_requests_destination_known     (destination::text = ANY (ARRAY['account_owner_bank'::character varying::text, 'personal_transfer'::character varying::text, 'fuime_vendor_payment'::character varying::text]))
+#  payout_requests_destination_known     (destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying, 'fuime_vendor_payment'::character varying]::text[]))
 #  payout_requests_reserve_not_negative  (reserve_held_cents >= 0)
 #
 # Fuime: a teen's request to move money out of the venture, and the guardian's

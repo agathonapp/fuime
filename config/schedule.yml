@@ -292,6 +292,13 @@ fuime_missed_mor_payment_sweep_job:
   cron: "20 * * * *"
   class: "Fuime::MissedMorPaymentSweepJob"
 
+# Fuime: pick up outbound webhook deliveries whose scheduled retry never ran —
+# a worker restart between the failure and the enqueue. Ordinarily finds nothing;
+# see Fuime::SweepWebhookDeliveriesJob for why it exists anyway.
+fuime_sweep_webhook_deliveries_job:
+  cron: "*/10 * * * *"
+  class: "Fuime::SweepWebhookDeliveriesJob"
+
 # Fuime: day-3 / day-6 reminders for still-pending guardian invites (TEEN_GROWTH G5).
 # 13:00 UTC = 9am ET. The mail goes to the adult, not the minor (L7).
 fuime_guardian_invite_reminder_job:

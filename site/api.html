@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API · fuime</title>
+    <meta name="description" content="Three endpoints under /api/fuime/v1 for payment links. No route or body carries a business id, so a leaked key can only ever reach the one business it was minted for. Included for everyone, not unlocked by a plan." />
+    <link rel="canonical" href="https://fuime.com/api" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/api" />
+    <meta
+      property="og:title"
+      content="Three endpoints. No business id anywhere."
+    />
+    <meta
+      property="og:description"
+      content="Three endpoints under /api/fuime/v1 for payment links. No route or body carries a business id, so a leaked key can only ever reach the one business it was minted for. Included for everyone, not unlocked by a plan."
+    />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Three endpoints. No business id anywhere."
+    />
+    <meta
+      name="twitter:description"
+      content="Three endpoints under /api/fuime/v1 for payment links. No route or body carries a business id, so a leaked key can only ever reach the one business it was minted for. Included for everyone, not unlocked by a plan."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- First paint, inline and above every script: the browser must never get a
+         chance to paint white before the loader's own background arrives. -->
+    <meta name="theme-color" content="#141420" />
+    <meta name="darkreader-lock" />
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. Must follow the stylesheet link to win on source
+         order, and must name `.rise > .rise-i` to match specificity. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+    <!-- Breadcrumb only. The price here is a plan lineup of percentages of
+         collections plus one subscription tier, which is not a priced Product,
+         and saying otherwise in markup would be a claim the page itself does
+         not make — doubly so while nothing is billed at all. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "fuime",
+                "item": "https://fuime.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "API",
+                "item": "https://fuime.com/api"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      try {
+        if (sessionStorage.getItem('fuime.booted')) {
+          document.documentElement.classList.add('booted')
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── first-visit loader ───────────────────────────────────────────
+         The arch fills from the bottom as a progress meter. Suppressed for
+         the rest of the session by the sessionStorage guard above. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--over">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing">What it costs</a>
+          <a class="nav__link" href="/compare">Compare</a>
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="nav__link" href="/login">Log in</a>
+          <a class="btn btn--accent" href="/get-started">Start your business</a>
+        </nav>
+      </div>
+      <div
+        class="split-mount split-mount--dock"
+        data-fx-split="dock"
+        data-you="95.0"
+        data-fuime="2.0"
+        data-stripe="3.0"
+        aria-hidden="true"
+      ></div>
+    </header>
+
+    <main>
+      <!-- ══ PAGE BODY STARTS HERE ══════════════════════════════════════════
+           Replace everything between these two markers. Compose ONLY classes
+           that already exist in style.css. No inline <style>, no hex literal,
+           no CDN script, no framework, no emoji.
+           ═══════════════════════════════════════════════════════════════════ -->
+
+      <!-- ── hero ──────────────────────────────────────────────────────── -->
+      <section class="hero hero--short">
+        <div class="grain"></div>
+
+        <div class="wrap hero__in">
+          <div class="hero__body stack-lg">
+            <p class="beta">Live · payments processed by Stripe</p>
+            <h1>Three endpoints.<br />No business id anywhere.</h1>
+            <p class="lead">
+              If you can write code, your own site, bot or agent can ask a
+              customer for an exact amount and get back a URL that takes it.
+              Included for everyone who sells through fuime, not unlocked by a
+              plan.
+            </p>
+
+            <div class="hero__cta">
+              <a class="btn btn--accent" href="/get-started">Start your business</a>
+              <p class="hero__note">
+                Keys are minted in your venture's settings, under Developer.
+              </p>
+            </div>
+
+            <p class="disclaimer">
+              A key can ask for money. It cannot move money, read the ledger, or
+              read anything about a person. Payments are processed by Stripe,
+              with Ninth Street Labs, LLC, doing business as fuime, as the
+              seller of record.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── a request ─────────────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">A call, end to end</p>
+            <h2 class="h2">One POST, and a URL that takes $45.</h2>
+            <p class="lead">
+              JSON over HTTPS, authenticated with the key in an Authorization
+              header. The key alone, without the Bearer prefix, is accepted too,
+              because half the world writes it each way.
+            </p>
+          </div>
+
+          <div class="split mt-8">
+            <div>
+              <span class="artifact-label">What you send</span>
+              <div class="invoice">
+                <div class="invoice__head">
+                  <div>
+                    <strong>POST /api/fuime/v1/payment_links</strong>
+                    <div class="muted small">
+                      Authorization: Bearer fuime_sk_…
+                    </div>
+                  </div>
+                  <span class="tag">Request</span>
+                </div>
+                <div class="invoice__body">
+                  <div class="invoice__row">
+                    <span>name</span>
+                    <span class="num">"Saturday lesson"</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span>amount</span>
+                    <span class="num">"45.00"</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span>description</span>
+                    <span class="num">"One hour, in person"</span>
+                  </div>
+                  <div class="invoice__row invoice__row--total">
+                    <span>venture_id</span>
+                    <span>No such field</span>
+                  </div>
+                </div>
+                <div class="invoice__foot">
+                  <span class="small muted"
+                    >Dollars or amount_cents, $1 to $10,000, USD.</span
+                  >
+                  <span class="tag">JSON</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span class="artifact-label">What comes back</span>
+              <div class="invoice">
+                <div class="invoice__head">
+                  <div>
+                    <strong>201 Created</strong>
+                    <div class="muted small">application/json</div>
+                  </div>
+                  <span class="tag">Response</span>
+                </div>
+                <div class="invoice__body">
+                  <div class="invoice__row">
+                    <span>id</span>
+                    <span class="num">"k3n8qv2r"</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span>url</span>
+                    <span class="num">"…/pay/atlas/saturday-lesson"</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span>amount_cents</span>
+                    <span class="num">4500</span>
+                  </div>
+                  <div class="invoice__row">
+                    <span>currency</span>
+                    <span class="num">"usd"</span>
+                  </div>
+                  <div class="invoice__row invoice__row--total">
+                    <span>status</span>
+                    <span class="num">"published"</span>
+                  </div>
+                </div>
+                <div class="invoice__foot">
+                  <span class="small muted"
+                    >Unlisted: payable by its URL, absent from the
+                    storefront.</span
+                  >
+                  <span class="tag">Live</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── the blast radius ──────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The blast radius</p>
+            <h2 class="h2">A key cannot name a business.</h2>
+            <p class="lead">
+              Which business a request acts on is read off the key and nothing
+              else. There is no business id in any route or any body here, so
+              there is no request a stolen key can be talked into making against
+              somebody else's venture.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="7.75" cy="11" r="3.25" />
+                <path d="M11 11h8.5M16.25 11v2.75M18.75 11v2.25" />
+              </svg>
+              <h3 class="h4">The key is the business</h3>
+              <p>
+                There is no field to set and therefore no field to forge. The
+                limit is a property of the shape of the API rather than a
+                permission somebody remembered to switch off, which is why it
+                holds even when everything else has gone wrong.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M6.25 9.5V7.25a4.75 4.75 0 0 1 9.5 0V9.5" />
+                <rect x="4" y="9.5" width="14" height="9" rx="1.5" />
+              </svg>
+              <h3 class="h4">It asks for money. It cannot move money</h3>
+              <p>
+                A key creates payment links and takes them down. There is no
+                endpoint that pays anything out, sends anything anywhere, or
+                changes where a payout goes. Those live behind a human approval
+                that no key can reach.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3.5 5.5h15v13h-15Z" />
+                <path d="M3.5 9.5h15M7.5 13h7" />
+                <path d="M4.5 4 17.5 20" />
+              </svg>
+              <h3 class="h4">It cannot read the ledger</h3>
+              <p>
+                No transactions, no receipts, no year-to-date totals. A leaked
+                key tells whoever holds it what the business is called and
+                whether it can currently sell. It tells them nothing about what
+                the business has earned.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="8" r="3.25" />
+                <path d="M5 18.5a6 6 0 0 1 12 0" />
+                <path d="M4 4 18 18" />
+              </svg>
+              <h3 class="h4">It cannot see a person</h3>
+              <p>
+                No names, no email addresses, no ages, no guardian record.
+                The /me endpoint reports whether a venture can sell without
+                reporting why, because the program asking may be running on a
+                stranger's server.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/merchant-of-record"
+              >Who the buyer is actually buying from<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the endpoints ─────────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The whole surface</p>
+            <h2 class="h2">Three endpoints, and that is all of them.</h2>
+          </div>
+
+          <div class="matrix-scroll mt-8">
+            <table class="matrix">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <span class="visually-hidden">Path</span>
+                  </th>
+                  <th scope="col">Method</th>
+                  <th scope="col">What it does</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">/api/fuime/v1/me</th>
+                  <td>GET</td>
+                  <td>Whose key this is, and whether it can sell today</td>
+                </tr>
+                <tr>
+                  <th scope="row">/api/fuime/v1/payment_links</th>
+                  <td>GET</td>
+                  <td>The live links this key made, newest first</td>
+                </tr>
+                <tr>
+                  <th scope="row">/api/fuime/v1/payment_links</th>
+                  <td>POST</td>
+                  <td>Make one, $1 to $10,000, USD</td>
+                </tr>
+                <tr>
+                  <th scope="row">/api/fuime/v1/payment_links/:id</th>
+                  <td>DELETE</td>
+                  <td>Take one down</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="small muted mt-5">
+            A key only sees and only deletes the links it made itself, so one
+            key cannot take down another key's links or the storefront your
+            customers already have open. A misplaced decimal point on a create
+            is refused outright rather than clamped to the maximum. A deleted
+            link stops taking money and the record survives, because a sold link
+            is named on somebody's receipt.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── the numbers ───────────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The limits</p>
+            <h2 class="h2">Five numbers you will actually hit.</h2>
+            <p class="lead">
+              Keys cost nothing and are not a plan feature. The caps below are
+              safety, not billing: every one of them exists because of a failure
+              somebody has already had.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Every key starts with this prefix</h3>
+                <p>
+                  Prefixed the way Stripe and GitHub prefix theirs, so a secret
+                  scanner can match it. A key pasted into a public repository
+                  can be found and killed by machine before a person notices it
+                  is gone.
+                </p>
+              </div>
+              <p class="price__fig">fuime_sk_</p>
+            </article>
+
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Live keys per business</h3>
+                <p>
+                  Not a resource limit. Three integrations is already more than
+                  most businesses have, and an account collecting dozens is
+                  either confused or compromised. The cap makes the second case
+                  visible while it is still small.
+                </p>
+              </div>
+              <p class="price__fig">10</p>
+            </article>
+
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Live links per key</h3>
+                <p>
+                  The expected failure here is a program stuck in a retry loop,
+                  not an attacker. This is what stops one from filling a
+                  dashboard with ten thousand rows overnight. Take some down and
+                  you can make more.
+                </p>
+              </div>
+              <p class="price__fig">250</p>
+            </article>
+
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Requests a minute</h3>
+                <p>
+                  Per key, across all three endpoints. Enough for an agent
+                  answering customers in a conversation, and not enough for a
+                  loop nobody is watching.
+                </p>
+              </div>
+              <p class="price__fig">120</p>
+            </article>
+
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Times you will be shown the key</h3>
+                <p>
+                  The plaintext is never stored. It is encrypted at rest and
+                  indexed blind, so the only copy that has ever existed in
+                  readable form is the one on your screen when you mint it. Lose
+                  it and you mint another.
+                </p>
+              </div>
+              <p class="price__fig">Once</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── what is missing ───────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise stack-lg">
+          <div class="bhead">
+            <p class="eyebrow">What is missing</p>
+            <h2 class="h2">Four things this API does not have.</h2>
+            <p class="lead">
+              Paddle and Stripe both ship all four. fuime does not, and finding
+              that out from a page is cheaper than finding it out from a build.
+            </p>
+          </div>
+
+          <div class="rows" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 18.5V7.75L11 3.5l7 4.25V18.5Z" />
+                <path d="M8.5 18.5v-6h5v6" />
+              </svg>
+              <h3 class="h4">No separate practice environment</h3>
+              <p>
+                Every key is a live key and every link it makes is a real link
+                that will charge a real card. Make one for a dollar, look at it,
+                then delete it.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M7.75 6.5 3.5 11l4.25 4.5M14.25 6.5 18.5 11l-4.25 4.5" />
+              </svg>
+              <h3 class="h4">No client libraries</h3>
+              <p>
+                Nothing to install in any language. It is JSON over HTTPS and
+                whatever your language already does with that, which for three
+                endpoints is usually less work than a library would be.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M11 3.5v8.75" />
+                <path d="M7.5 8.75 11 12.25l3.5-3.5" />
+                <path d="M3.5 15v3.5h15V15" />
+                <path d="M5.5 4.5 16.5 17.5" />
+              </svg>
+              <h3 class="h4">Nothing calls your server back</h3>
+              <p>
+                There are no outbound webhooks, so nothing tells your code when
+                a link gets paid. You poll the list, or you watch the ledger in
+                the app. This is the gap we hear about most.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M5 3.5h8L17 7.5v11H5Z" />
+                <path d="M12.5 3.5v4.25H17" />
+                <path d="M8 15.5h6" />
+              </svg>
+              <h3 class="h4">No machine-readable spec</h3>
+              <p>
+                There is no OpenAPI document to generate a client from. This
+                page and the Developer section of your venture's settings are
+                the documentation, and the three routes above are the contract.
+              </p>
+            </article>
+          </div>
+
+          <p>
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ PAGE BODY ENDS HERE ════════════════════════════════════════════ -->
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/payment-links">Payment links</a>
+              <a href="/subscriptions">Subscriptions</a>
+              <a href="/books">Books and receipts</a>
+              <a href="/taxes">Tax tracking</a>
+              <a href="/api">API</a>
+            </div>
+            <div class="foot__col">
+              <h4>The money</h4>
+              <a href="/pricing">What it costs</a>
+              <a href="/merchant-of-record">How you get paid</a>
+              <a href="/why-has-fuime-charged-me">Why has fuime charged me?</a>
+            </div>
+            <div class="foot__col">
+              <h4>Who it's for</h4>
+              <a href="/for/tutoring">Tutoring</a>
+              <a href="/for/photo-video">Photo and video</a>
+              <a href="/for/lawn-care">Lawn and yard care</a>
+              <a href="/for/schools">Schools and cohorts</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Compare</h4>
+              <a href="/compare">Every option, side by side</a>
+              <a href="/compare/venmo">fuime vs Venmo</a>
+              <a href="/compare/paddle">fuime vs Paddle</a>
+              <a href="/compare/waiting">fuime vs waiting until 18</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="/roadmap">What we're building</a>
+              <a href="/faq">Questions</a>
+              <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Ninth Street Labs, LLC, doing business as Fuime,
+          is the seller of record on purchases. Guardians are the legal payee on
+          operator payouts and must approve the destination before the first
+          payout; young founders run the venture day to day.
+        </p>
+        <div class="foot__bot">
+          <span>fuime · your client buys from us, and we pay you</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

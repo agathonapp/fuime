@@ -373,14 +373,24 @@
   /* ── live fee calculator ─────────────────────────────────────────────── */
 
   // The one place on the site where the pricing is not a claim. Drag it and
-  // the invoice recomputes with the one arithmetic every business runs — 5%
-  // platform fee, with Stripe's own 2.9% + 30c shown as its own line because
-  // an all-in figure that hides the processor is a deceptive one. Pro does not
+  // the invoice recomputes with the one arithmetic every business runs.
+  //
   // There is no second tier and no monthly fee: unlimited businesses and API
-  // keys are included. Price list at the one 5% + 50¢ rate.
+  // keys are included. One rate, 5% with a 50c floor.
+  //
+  // Stripe's 2.9% + 30c is still shown, but NOT as a deduction from the
+  // venture. fuime is the merchant of record, so Stripe bills Ninth Street
+  // Labs and that cost comes out of fuime's 5% (L8). Subtracting it from the
+  // founder's total — which this function did until 2026-09-14 — understated
+  // what they take home by $19.90 on a $400 job.
+  //
+  // Must stay in step with fx/ledger-bus.js, which recomputes the same
+  // arithmetic for the fx layer, and with Event#fuime_fee_cents_on in the app.
   var STRIPE_PCT = 0.029
   var STRIPE_FIXED = 0.3
-  var FUIME_PCT = 0.07
+  var FUIME_PCT = 0.05
+  // A floor, not an additive fee: min(max(5%, 50c), amount).
+  var FUIME_MIN = 0.5
 
   var money = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -410,8 +420,8 @@
     var render = function (live) {
       var amount = Number(range.value)
       var stripe = amount * STRIPE_PCT + STRIPE_FIXED
-      var fuime = amount * FUIME_PCT
-      var lands = amount - stripe - fuime
+      var fuime = Math.min(Math.max(amount * FUIME_PCT, FUIME_MIN), amount)
+      var lands = amount - fuime
 
       set(out.charged, money.format(amount))
       set(out.stripe, '−' + money.format(stripe))

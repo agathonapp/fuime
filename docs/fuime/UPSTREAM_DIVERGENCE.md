@@ -6957,3 +6957,211 @@ across `site/{index,pricing,parents}.html`, `site/site.js`, `site/docs/BRIEF.md`
 `spec/fuime_marketing_pricing_spec.rb` was rewritten to enforce the new contract:
 no page may quote 5% without the 50¢, none may advertise a second tier or a 7% rate,
 and every public price page must offer the sales route.
+
+
+## 2026-09-14 — What the business sold (Tier 2)
+
+`PADDLE_GAP_ANALYSIS.md` §3.7 recorded the absence: Fuime's seller-side reporting
+was balances plus *spend* breakdowns plus an income-tax estimate, and the only
+time-bucketed chart in the app was the admin waitlist sparkline. Nothing could
+answer what a founder actually sells.
+
+That was structural rather than an oversight. HCB's ledger aggregates by **memo
+prefix**, and `Fuime::Offer` had no association to the money it made — so "which
+product earns most" had nowhere to come from.
+
+- **`fuime_sale_jurisdictions` → `fuime_sales`** (`20260914150000`), plus
+  `fuime_offer_id`. Renamed the day after it was created: it was named for the
+  nexus problem it was built for, but what it holds is one row per MoR sale and
+  jurisdiction is a property OF a sale. A table called `sale_jurisdictions` is
+  one nobody thinks to join to. `safety_assured` on the rename is justified in
+  the migration — same-day table, never deployed, one writer, no rows; if any of
+  those stops being true that migration is wrong.
+- **`Fuime::SalesReport`** — revenue, count, average sale, revenue over time
+  (day/week/month), top offers, off-storefront revenue, revenue by jurisdiction.
+- **`/:event_slug/sales`** and a nav item. Authorised on `show?`, the same as
+  Taxes and the ledger — a guardian reads this class of information and there is
+  nothing here to write.
+
+**Deliberate refusals, all specced:**
+
+- **No refund rate.** Refunds are ledger reversals and are not written to
+  `fuime_sales`, so a refunded sale still counts as revenue. Half-answering it —
+  refunds from one source, sales from another — would produce a number that
+  disagrees with the payouts page for reasons nobody could explain. The service
+  carries `#caveats` and the view renders them, so no surface can show these
+  figures without saying what they are not.
+- **Nothing about buyers.** No repeat-purchase rate, no LTV, no cohorts. There
+  is no buyer entity — buyer identity lives in Stripe. Those need a customer
+  record first, not a cleverer query.
+- **Sparse vs filled series are separate methods.** Filling empty buckets is a
+  presentation decision (a chart wants zeroes, a table wants them omitted) and a
+  service that guesses gets it wrong half the time.
+
+⚠️ **Still uncomputable: checkout conversion.** `ahoy` is installed and genuinely
+used (~10 call sites in inherited HCB controllers), but nothing tracks the
+storefront or the payment page. Closing that means tracking visitors on pages
+minors visit, which is an L7 decision rather than a code change — not taken
+unilaterally.
+
+**Correction to an earlier note in this log:** an earlier research pass recorded
+"zero `ahoy.track` calls in `app/`". That was wrong — the matches were in
+compiled JS bundles and there are real call sites in HCB controllers. The
+conclusion it supported still holds: none of them are on the commerce path.
+
+
+## 2026-09-14 — Outbound webhooks (Tier 3)
+
+`PADDLE_GAP_ANALYSIS.md` §3.8 called this the first-order developer gap, and it
+was the starkest absence in the comparison: no table, no deliverer, no signer, no
+retry queue. A seller's server was never told a sale happened — the only "did I
+get paid" signal was polling the payment-links API. It is also what lets somebody
+build ON Fuime rather than merely use it.
+
+- `20260914160000`/`160001` — `fuime_webhook_endpoints` and
+  `fuime_webhook_deliveries`. Two tables, following the event/notification split
+  Paddle draws: one sale sent to three endpoints has three independent outcomes,
+  and a failing endpoint must not rewrite history for a sale that happened.
+- `20260914160002` — the secret column renamed to `secret_ciphertext`. Lockbox's
+  convention, which `Fuime::ApiKey` already followed; named `encrypted_secret`
+  first, which left the model with no writer.
+- `Fuime::WebhookEmitter` — one entry point, a deliberately small event
+  vocabulary (`sale.completed`, `sale.refunded`, `payout.paid`). Never raises:
+  every caller is on a money path and a founder's broken endpoint must not stop a
+  sale landing.
+- `Fuime::WebhookDeliverer`, `DeliverWebhookJob` (self-rescheduling),
+  `SweepWebhookDeliveriesJob` (10-minutely, for deliveries orphaned by a worker
+  restart).
+
+**The signature is deliberately Stripe-shaped** — `Fuime-Signature: t=…,v1=…`
+over `"#{t}.#{body}"`, SHA-256. Fuime's own receiver already verifies exactly
+this shape, every payment platform uses it, and the libraries exist. A novel
+envelope buys nothing and costs every integrator an afternoon.
+
+**Divergence from Paddle, deliberate:** they retry 60 times over 3 days. Fuime
+retries 5 times over ~24 hours. Paddle's receivers are companies running real
+infrastructure; Fuime's are a teenager's Vercel project or a Zapier hook, and an
+endpoint still down after a day is not coming back on its own. Revisit with real
+delivery data rather than by argument.
+
+### ⚠️ The security, which is most of the work here
+
+An outbound webhook is a server-side fetch to a user-supplied address — textbook
+SSRF. `169.254.169.254` is cloud instance metadata; `localhost:6379` is Redis.
+Fuime would make those requests from inside its own perimeter, on a user's
+instruction.
+
+- `WebhookEndpoint` validates HTTPS and rejects loopback/private/link-local. This
+  catches **literal IPs only** and exists to give a founder a readable error.
+- **The load-bearing control is in the deliverer**: DNS is re-resolved at request
+  time and the socket is **pinned** to the address just checked (`http.ipaddr`).
+  Without the pin, Net::HTTP resolves the name a second time and a DNS-rebinding
+  answer can differ from the validated one — the check would be decorative.
+- A blocked address is **not retried** and disables the endpoint. Retrying is how
+  an SSRF probe gets five attempts instead of one.
+- `MAX_ENDPOINTS_PER_EVENT = 5`. Unbounded fan-out of a minor's sale data to
+  arbitrary hosts is a data-egress surface, not a feature.
+
+**Not built:** no seller-facing UI to create endpoints yet (API/console only), no
+`sale.refunded` or `payout.paid` emission (the types exist; only
+`sale.completed` fires), and no delivery-log screen.
+
+---
+
+## 2026-09-14 — The marketing site opens, and its pricing stops disagreeing with the code
+
+**Files:** `site/server.js` · `site/site.js` · `site/fx/ledger-bus.js` · `site/fx/split.js` ·
+`site/style.css` · `site/sitemap.xml` · `site/robots.txt` · `site/package.json` ·
+`site/index.html` `site/pricing.html` `site/parents.html` `site/start.html`
+`site/start-scroll.html` · 17 new pages · `site/chrome/*` · `site/tools/sync-chrome.mjs` ·
+`site/test/{server.test.mjs,copy-guard.mjs}` · `site/docs/{BRIEF.md,AUTHORING.md}` ·
+`spec/fuime_marketing_{copy,pricing}_spec.rb`
+
+Not an upstream divergence — `site/` has no counterpart in hackclub/hcb — but recorded here
+because it changes what fuime.com asserts about the app, and L8 exists because that went
+wrong before.
+
+### The site was one page
+
+`server.js` carried a `CLOSED` set that 307'd `/home`, `/pricing` and `/parents` to `/`, and
+`/` served the dive (`start.html`). `index.html` — the landing page, 1,186 lines, written and
+styled — was unreachable, and `sitemap.xml` listed a single URL. `CLOSED` is now empty (kept,
+not deleted: closing again is a real operation and the three properties it needed are
+documented in place). `/` serves `index.html`; the dive keeps its frame ladder at `/dive`;
+`/home` and `/index` 308 to `/`.
+
+### The pricing on the page was not the pricing in the code
+
+PR "One price, and the site stops overcharging people on paper" (467798963) rewrote the
+comments and the summary string and left the arithmetic. Still live after it:
+
+- `site.js` and `fx/ledger-bus.js` both ran the retired take-rate with **no 50¢ floor**, and
+  both computed `lands = amount - stripe - fuime` — subtracting Stripe's fee from the seller,
+  which is the exact claim that commit says it corrected. Under MoR Stripe bills Ninth Street
+  Labs; `PayablesLedger#processing_fee_cents` is $0 on every MoR sale.
+- The worked example printed a fee labelled `5% + 50¢` whose value was the old rate, deducted
+  Stripe, and totalled `$360.10` on a $400 sale. Correct figure: **$380.00**.
+- All four `.split-mount` bars shipped `90/7/3`.
+
+Now `min(max(amount × 5%, 50¢), amount)` in all three places, with `lands = amount - fee`.
+The split bar is `95/2/3` and its three segments sum to the sale — `YOU $380.00 ·
+FUIME $8.10 · STRIPE $11.90` — so Stripe's cost is visible as a slice of fuime's cut rather
+than a deduction from the seller's.
+
+**The fee is a FLOOR, and the site described it as additive.** `5% + 50¢` is Paddle's shape;
+`min(max(...))` is fuime's, and it is never more than Paddle's at any sale size. Requoted as
+"5%, minimum 50¢" in 14 places.
+
+⚠️ **Open, app-side, not fixed here:** `Event::Plan.fuime_price_label` (`app/models/event/plan.rb:215`)
+returns `"5% + $0.50"` — additive, overstating fuime's own fee at every amount, and pinned by
+`spec/models/event/plan_pricing_spec.rb:32`. Left alone to avoid colliding with concurrent work
+in `app/`.
+
+### The guards asserted strings, not numbers
+
+Every suite passed throughout the above, because they check that "5%" and "50¢" appear.
+Acceptance criterion 14 in `BRIEF.md` is new and says to check the rendered figure.
+
+### Chrome is stamped, not copied
+
+`BRIEF.md` required byte-identical nav and footer "on all three pages". At 22 that is not
+keepable by hand, and the three shipped pages had already drifted (`index.html` carried a
+`.foot__status` row the others did not). Chrome now lives in `site/chrome/` and
+`tools/sync-chrome.mjs` writes it into every page; `npm test` fails if any page is stale. Still
+no build step — the pages in git contain the full markup and ship as they are.
+
+### Also closed
+
+- **`site/docs/` was publicly served.** `PUBLIC_DIRS` included `docs`, so
+  `https://fuime.com/docs/BRIEF.md` returned the internal contract — including the list of
+  claims the site may not make. Removed from the regex.
+- **The `.beta` chip said "Private beta"** on every page, and several pages said nothing is
+  billed "during the private beta" / "at launch the fee only applies". The product has been
+  live and charging since 2026-08-20. `BRIEF.md` already banned the claim.
+- **`fx/threshold.js`** teaches a monthly-fee threshold that no longer exists. Left loaded;
+  `ledger-bus` now publishes `over: false` so it renders nothing.
+
+### Positioning
+
+Founder's call, 2026-09-14: *"our target is not only teens, we just simply allow teens."*
+fuime is a general-purpose merchant of record; the guardian layer is a differentiator, not the
+frame. `PADDLE_GAP_ANALYSIS.md` §6 posed this and said it belonged to the founder. `BRIEF.md`
+carries the answer, with a bold caveat that positioning as a Paddle peer is not permission to
+claim Paddle's capabilities — fuime is USD only, US only, services and digital goods only,
+with tax registrations in zero jurisdictions.
+
+### Adding a page now touches five hardcoded lists
+
+`PUBLIC_FILES` (server.js — an allowlist; without it a page answers 308 → 404),
+`public_pages` (copy spec), `public_price_pages`/`marketing_files` (pricing spec),
+`PUBLIC_PAGES`/`PRICE_PAGES` (copy-guard.mjs), `PAGES` (server.test.mjs). Documented in
+`BRIEF.md` § "Adding a page — the five lists".
+
+`site/test/copy-guard.mjs` is new: an offline replica of the two rspec guards, because both
+need a Rails boot and a database and cannot run on a machine without the gem bundle — which is
+how a page ships unchecked.
+
+**Verification:** chrome 22/22 in sync · copy-guard 22/22 clean · `server.test.mjs` 25/25 ·
+`waitlist.test.mjs` 18/18 · all 22 URLs answer 200 · every footer href resolves · no page
+references a missing image · FAQ JSON-LD matches its page verbatim (17 and 6 Q&A, 0 drift).
+`bundle exec rspec` could not be run here — `bundler: command not found: rspec`.

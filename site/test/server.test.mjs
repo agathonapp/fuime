@@ -57,69 +57,122 @@ async function run(name, fn) {
 
 const get = (p, init) => fetch(BASE + p, { redirect: 'manual', ...init })
 
+// Every page server.js serves. Hardcoded rather than globbed for the same
+// reason the rspec guards are: the list IS the guard, and a page missing from
+// it escapes every check below. Keep in step with PUBLIC_FILES in server.js,
+// `public_pages` in spec/fuime_marketing_copy_spec.rb, and PUBLIC_PAGES in
+// test/copy-guard.mjs.
+const PAGES = [
+  '/',
+  '/pricing',
+  '/parents',
+  '/dive',
+  '/start-scroll',
+  '/payment-links',
+  '/subscriptions',
+  '/books',
+  '/taxes',
+  '/api',
+  '/merchant-of-record',
+  '/why-has-fuime-charged-me',
+  '/for/tutoring',
+  '/for/photo-video',
+  '/for/lawn-care',
+  '/for/schools',
+  '/compare',
+  '/compare/venmo',
+  '/compare/paddle',
+  '/compare/waiting',
+  '/roadmap',
+  '/faq',
+]
+
 try {
   await waitForBoot()
 
-  await run('serves the dive at /', async () => {
+  await run('serves the landing page at /', async () => {
     const r = await get('/')
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /text\/html/)
     const body = await r.text()
-    // The dive, not the old marketing home: it preloads the frame track.
-    assert.match(body, /dive\/track\.json/, 'root should be start.html')
-    assert.match(body, /class="capture"/, 'root should carry the sign-up')
+    // index.html, not the dive: it carries the nav, the worked example and the
+    // footer sitemap. The dive is a good first impression and a bad hub, and
+    // the site has twenty pages that need reaching.
+    assert.match(body, /class="nav nav--over"/, 'root should be index.html')
+    assert.match(body, /class="foot"/, 'root should carry the footer sitemap')
   })
 
-  await run('the closed marketing pages bounce to the front door', async () => {
-    // The site is not open yet, so / is the only page anyone reaches. Every
-    // spelling of the other three goes there in ONE hop — /pricing.html must
-    // not bounce through /pricing on the way, which is why the CLOSED check
-    // sits above both the moved-page map and the .html canonicaliser.
-    for (const p of [
-      '/home',
-      '/index',
-      '/index.html',
-      '/pricing',
-      '/pricing.html',
-      '/parents',
-      '/parents.html',
-    ]) {
-      const r = await get(p)
-      // 307 and not 308: these pages are coming back, and a permanent redirect
-      // would outlive the decision in every browser cache that saw it.
-      assert.equal(r.status, 307, `${p} status`)
-      assert.equal(r.headers.get('location'), '/', `${p} -> /`)
+  await run('the dive keeps its own address', async () => {
+    const body = await (await get('/dive')).text()
+    // start.html is the only page that loads the frame ladder, so /dive is what
+    // keeps 22MB of pre-encoded frames from being dead weight.
+    assert.match(body, /dive\/track\.json/, '/dive should be start.html')
+  })
+
+  await run('every page in the footer sitemap is actually served', async () => {
+    // server.js serves from an ALLOWLIST, so a page that exists on disk but is
+    // missing from PUBLIC_FILES answers 308 -> 404: a redirect into a dead end
+    // that reads as a routing bug. Every href the shared chrome ships must
+    // resolve, which is the one thing BRIEF.md asks for and nothing tested.
+    const chrome = readFileSync(
+      fileURLToPath(new URL('../chrome/foot.html', import.meta.url)),
+      'utf8'
+    )
+    const hrefs = [...chrome.matchAll(/href="(\/[^"#]*)"/g)].map(m => m[1])
+    for (const h of new Set(hrefs)) {
+      const r = await get(h)
+      assert.ok(
+        r.status === 200,
+        `footer links ${h}, which answers ${r.status}`
+      )
     }
   })
 
-  await run('nothing on the front door leads off it except into the app', async () => {
-    // The whole point of the closure is undone by one stale href, and a link to
-    // a page that 307s back is a worse experience than no link at all. The two
-    // exits that ARE allowed are the ones the page exists to offer: the sign-up
-    // door (/get-started) and /login, both of which leave for the app.
+  await run('the old closed-era addresses still land somewhere', async () => {
+    // /home was index.html's address for as long as the site was closed, and it
+    // is in the index and in sent mail. 308 is right for these and 307 was
+    // right for the closure: the closure was reversible and this move is not.
+    for (const [p, to] of [['/home', '/'], ['/index', '/']]) {
+      const r = await get(p)
+      assert.equal(r.status, 308, `${p} status`)
+      assert.equal(r.headers.get('location'), to, `${p} -> ${to}`)
+    }
+  })
+
+  await run('the front door still offers both doors into the app', async () => {
+    // This used to assert the front door linked NOWHERE but the app, because
+    // the site was closed and a link to a page that 307s back is worse than no
+    // link. The site is open, so what is left of that rule is the part that was
+    // never about the closure: the two exits the page exists to offer.
     const body = await (await get('/')).text()
-    // <a> only. The head is full of hrefs that are not navigation — the
-    // canonical, the preconnects, the icons — and none of them are a way out.
     const hrefs = [...body.matchAll(/<a\s[^>]*href="([^"]+)"/g)].map(m => m[1])
-    const out = hrefs.filter(
-      h => /^\/(home|pricing|parents|index)\b/.test(h) || /^https?:/.test(h)
-    )
-    assert.deepEqual(out, [], `front door links out: ${out.join(', ')}`)
     assert.ok(hrefs.includes('/get-started'), 'front door has no sign-up door')
     assert.ok(hrefs.includes('/login'), 'front door has no Log in')
+    // Nothing on any page may point at /start: it answered a cacheable 308 for
+    // weeks and a browser that saw it may still hold it.
+    assert.ok(!hrefs.includes('/start'), 'front door links the cached /start')
   })
 
   await run('the sitemap lists only what is served', async () => {
+    // A sitemap that disagrees with the canonical tag is worse than no sitemap,
+    // so this checks every listed URL answers 200 rather than pinning a list
+    // that would need editing with every page. It held exactly one entry while
+    // the site was closed.
     const body = await (await get('/sitemap.xml')).text()
     const locs = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1])
-    assert.deepEqual(locs, ['https://fuime.com/'])
+    assert.ok(locs.length > 1, 'the sitemap is still the closed-site sitemap')
+    for (const loc of locs) {
+      const path = new URL(loc).pathname
+      const r = await get(path)
+      assert.equal(r.status, 200, `sitemap lists ${path}, which answers ${r.status}`)
+    }
   })
 
   await run('moved pages redirect in a single hop', async () => {
     // /start is no longer the dive's old address — it is the sign-up door,
     // asserted alongside /login below — so only the file spelling is a moved
     // page now.
-    for (const [from, to] of [['/start.html', '/']]) {
+    for (const [from, to] of [['/start.html', '/dive']]) {
       const r = await get(from)
       assert.equal(r.status, 308, `${from} status`)
       assert.equal(r.headers.get('location'), to, `${from} -> ${to}`)
@@ -188,22 +241,19 @@ try {
     // one page the CSS silently does nothing there, which is invisible in
     // review and obvious to a user.
     //
-    // Only / is served while the marketing site is closed, and the other three
-    // are read off disk rather than dropped: they are coming back, and a
-    // closure that quietly halves this file's coverage is how they come back
-    // broken. Swap these for fetches when CLOSED empties. start-scroll is
-    // public (PUBLIC_FILES) but not the front door, so it is read the same way.
-    const pages = [
-      ['/', await (await get('/')).text()],
-      ...['index', 'pricing', 'parents', 'start-scroll'].map(n => [
-        `${n}.html`,
-        readFileSync(fileURLToPath(new URL(`../${n}.html`, import.meta.url)), 'utf8'),
-      ]),
-    ]
-    for (const [p, body] of pages) {
+    // This asserted a confirmation block on EVERY page while the site was five
+    // pages and four of them carried a form. It is now parity, conditional on
+    // the page having a form at all: the app is open, so the primary action is
+    // the /get-started button and most of the twenty pages correctly carry no
+    // capture form. Demanding one would have put a waitlist back on pages that
+    // have no business showing one.
+    for (const p of PAGES) {
+      const body = await (await get(p)).text()
+      const forms = (body.match(/<form\s[^>]*class="capture/g) || []).length
       const dones = (body.match(/class="capture__done"/g) || []).length
       const planes = (body.match(/class="capture__plane"/g) || []).length
-      assert.ok(dones > 0, `${p} has no confirmation block`)
+      if (forms === 0) continue
+      assert.ok(dones > 0, `${p} has a capture form and no confirmation block`)
       assert.equal(planes, dones, `${p}: ${planes} planes for ${dones} forms`)
     }
   })
@@ -218,51 +268,48 @@ try {
     // founder sign-up (a teacher and a legacy teen signup would be
     // indistinguishable in the admin roster).
     //
-    // Read off disk, like the paper-plane check above, because CLOSED still
-    // bounces three of these to /. The dive at / (start.html) is the front
-    // door and is held to exactly the same bar.
-    for (const n of ['start', 'start-scroll', 'index', 'pricing', 'parents']) {
-      const body = readFileSync(
-        fileURLToPath(new URL(`../${n}.html`, import.meta.url)),
-        'utf8'
-      )
+    // Fetched over HTTP now that nothing is closed, so this checks what a
+    // visitor is actually served rather than what is on disk next to it.
+    for (const n of PAGES) {
+      const body = await (await get(n)).text()
       assert.match(
         body,
         /<a\s[^>]*href="\/get-started"[^>]*>\s*(Start your business|Have your teen start)\s*</,
-        `${n}.html has no primary CTA → /get-started`
+        `${n} has no primary CTA → /get-started`
       )
       assert.match(
         body,
         /<a\s[^>]*href="\/login"[^>]*>\s*Log in\s*</,
-        `${n}.html lost its Log in link`
+        `${n} lost its Log in link`
       )
       // /start is kept as a redirect for old links, never as a target: it has
       // a cached-308 history that /get-started does not.
-      assert.doesNotMatch(body, /href="\/start"/, `${n}.html still links to /start`)
-      assert.doesNotMatch(body, /early access/i, `${n}.html still says "early access"`)
-      assert.doesNotMatch(body, /your turn/i, `${n}.html still implies a queue`)
+      assert.doesNotMatch(body, /href="\/start"/, `${n} still links to /start`)
+      assert.doesNotMatch(body, /early access/i, `${n} still says "early access"`)
+      assert.doesNotMatch(body, /your turn/i, `${n} still implies a queue`)
       assert.doesNotMatch(
         body,
         /onboarding the first businesses/i,
-        `${n}.html still implies a queue`
+        `${n} still implies a queue`
       )
       assert.doesNotMatch(
         body,
         /href="#join"[^>]*>\s*Get early access/,
-        `${n}.html primary CTA still points at the waitlist`
+        `${n} primary CTA still points at the waitlist`
       )
       for (const m of body.matchAll(/<form\s[^>]*class="capture[^"]*"[^>]*data-source="([^"]+)"/g)) {
-        assert.match(m[1], /-cohort$/, `${n}.html form "${m[1]}" is not tagged as a cohort form`)
+        assert.match(m[1], /-cohort$/, `${n} form "${m[1]}" is not tagged as a cohort form`)
       }
     }
   })
 
-  await run('the front door says what the product is', async () => {
-    // / is a scroll-driven film, and a film is easy to keep polishing until the
-    // first screen is a mood with no nouns on it. That is the state this
-    // assertion exists to catch: a visitor who cannot tell what fuime is
-    // without scrolling does not scroll.
-    const body = await (await get('/')).text()
+  await run('the dive says what the product is', async () => {
+    // The dive is a scroll-driven film, and a film is easy to keep polishing
+    // until the first screen is a mood with no nouns on it. That is the state
+    // this assertion exists to catch: a visitor who cannot tell what fuime is
+    // without scrolling does not scroll. It moved from / to /dive when the
+    // landing page took the front door.
+    const body = await (await get('/dive')).text()
     assert.match(body, /class="dive__lede"/, 'no lede on the first screen')
     assert.match(body, /13 to 17/, 'the lede never says who this is for')
     // And a way past the flight for a thumb, landing on the composed sign-up.

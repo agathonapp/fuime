@@ -182,10 +182,9 @@
         </button>
 
         <nav class="nav__links" aria-label="Main">
-          <a class="nav__link" href="/home#how">How it works</a>
-          <a class="nav__link" href="/pricing" aria-current="page"
-            >What it costs</a
-          >
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing" aria-current="page">What it costs</a>
+          <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
           <a class="btn btn--accent" href="/get-started">Start your business</a>
@@ -194,8 +193,8 @@
       <div
         class="split-mount split-mount--dock"
         data-fx-split="dock"
-        data-you="90.0"
-        data-fuime="7.0"
+        data-you="95.0"
+        data-fuime="2.0"
         data-stripe="3.0"
         aria-hidden="true"
       ></div>
@@ -250,10 +249,10 @@
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <p class="beta">Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
+            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>Two plans you can pick.<br />$0 a month to start.</h1>
             <p class="disclaimer mt-6">
-              One price: 5% + 50¢ of what you collect, no monthly fee, and
+              One price: 5% of what you collect, minimum 50¢, no monthly fee, and
               nothing at all until you sell something. Unlimited businesses and
               API keys are included. Founders is 0% for the launch cohort, by
               invitation. Card processing comes out of our 5% rather than being
@@ -272,7 +271,7 @@
             <p class="eyebrow">Run it yourself</p>
             <h2 class="h2">Put a real job in it.</h2>
             <p class="lead">
-              The arithmetic every business runs at live launch — one 5% + 50¢
+              The arithmetic every business runs at live launch — one 5% rate, floored at 50¢,
               take-rate. Drag it to something you have actually charged for and
               read the bottom line.
             </p>
@@ -281,11 +280,11 @@
           <div class="calc split mt-8">
             <div>
               <p class="calc__label">What is left, after everything</p>
-              <p class="calc__figure num" data-out="lands">$360.10</p>
+              <p class="calc__figure num" data-out="lands">$380.00</p>
               <p class="calc__hint">
                 is left for the venture on a
-                <span class="num" data-out="charged">$400.00</span> job, on
-                Free or Pro.
+                <span class="num" data-out="charged">$400.00</span> job. There
+                is one rate and there is no monthly fee.
               </p>
 
               <div class="calc__slider">
@@ -305,7 +304,7 @@
               </div>
 
               <p class="calc__hint" data-out="monthly">
-                One price: 5% + 50¢, no monthly fee, unlimited businesses and
+                One price: 5%, minimum 50¢, no monthly fee, unlimited businesses and
                 API keys included. Stripe's 2.9% + 30¢ comes out of our 5%
                 applies on both.
               </p>
@@ -327,16 +326,12 @@
                     <span class="num" data-out="charged">$400.00</span>
                   </div>
                   <div class="invoice__row">
-                    <span class="muted">Stripe processing · 2.9% + 30¢</span>
-                    <span class="muted num" data-out="stripe">−$11.90</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">fuime fee · 5% + 50¢</span>
-                    <span class="muted num" data-out="fuime">−$28.00</span>
+                    <span class="muted">fuime fee · 5%, minimum 50¢</span>
+                    <span class="muted num" data-out="fuime">−$20.00</span>
                   </div>
                   <div class="invoice__row invoice__row--total">
                     <span>Left for the venture</span>
-                    <span class="num" data-out="lands">$360.10</span>
+                    <span class="num" data-out="lands">$380.00</span>
                   </div>
                 </div>
                 <div class="invoice__foot">
@@ -347,8 +342,8 @@
               <div
                 class="split-mount mt-5"
                 data-fx-split="full"
-                data-you="90.0"
-                data-fuime="7.0"
+                data-you="95.0"
+                data-fuime="2.0"
                 data-stripe="3.0"
               ></div>
             </div>
@@ -379,10 +374,9 @@
             <h2 class="h2">One price, and what it costs.</h2>
             <p class="lead">
               A flat monthly fee on a kid making $80 a month is a tax on
-              starting, so there isn't one. 5% + 50¢ of what you collect, and
+              starting, so there isn't one. 5% of what you collect, minimum 50¢, and
               nothing at all until you sell something. Card processing comes out
-              of our 5% rather than being added to your side of it. Nothing on
-              this list is billed during the private beta.
+              of our 5% rather than being added to your side of it.
             </p>
           </div>
 
@@ -391,13 +385,13 @@
               <div>
                 <h3 class="h4">Fuime · no monthly fee</h3>
                 <p>
-                  5% + 50¢ on what you collect, and nothing at all until you sell
+                  5% on what you collect, minimum 50¢, and nothing at all until you sell
                   something. Unlimited businesses and API keys included. No fee on
                   an invoice a client never pays. Stripe's 2.9% + 30¢ is not
                   charged on top — it comes out of our 5%.
                 </p>
               </div>
-              <p class="price__fig">5%<sub>+ 50¢</sub></p>
+              <p class="price__fig">5%<sub>min 50¢</sub></p>
             </article>
             <article class="card card--row card--fig">
               <div>
@@ -472,7 +466,7 @@
             <p class="eyebrow">What you are not charged for</p>
             <h2 class="h2">Six things that never turn into a bill.</h2>
             <p class="lead">
-              There is no second page to the pricing. If it isn't the 5% + 50¢,
+              There is no second page to the pricing. If it isn't that 5%,
               it isn't a fee.
             </p>
           </div>
@@ -525,7 +519,7 @@
           </div>
 
           <p class="mt-7">
-            <a class="tlink" href="/home#how"
+            <a class="tlink" href="/#how"
               >How the whole thing works<svg
                 class="arrow"
                 width="14"
@@ -564,7 +558,7 @@
             </details>
 
             <details>
-              <summary>Why 5% + 50¢, and not less?</summary>
+              <summary>Why 5%, and not less?</summary>
               <p class="faq__a">
                 Because there is nothing underneath it. No setup fee, no
                 per-invoice charge, no monthly bill, and no upgrade to buy —
@@ -676,12 +670,38 @@
           <div class="foot__nav">
             <div class="foot__col">
               <h4>Product</h4>
-              <a href="/home#how">How it works</a>
+              <a href="/#how">How it works</a>
+              <a href="/payment-links">Payment links</a>
+              <a href="/subscriptions">Subscriptions</a>
+              <a href="/books">Books and receipts</a>
+              <a href="/taxes">Tax tracking</a>
+              <a href="/api">API</a>
+            </div>
+            <div class="foot__col">
+              <h4>The money</h4>
               <a href="/pricing">What it costs</a>
+              <a href="/merchant-of-record">How you get paid</a>
+              <a href="/why-has-fuime-charged-me">Why has fuime charged me?</a>
+            </div>
+            <div class="foot__col">
+              <h4>Who it's for</h4>
+              <a href="/for/tutoring">Tutoring</a>
+              <a href="/for/photo-video">Photo and video</a>
+              <a href="/for/lawn-care">Lawn and yard care</a>
+              <a href="/for/schools">Schools and cohorts</a>
               <a href="/parents">Parents</a>
             </div>
             <div class="foot__col">
+              <h4>Compare</h4>
+              <a href="/compare">Every option, side by side</a>
+              <a href="/compare/venmo">fuime vs Venmo</a>
+              <a href="/compare/paddle">fuime vs Paddle</a>
+              <a href="/compare/waiting">fuime vs waiting until 18</a>
+            </div>
+            <div class="foot__col">
               <h4>Company</h4>
+              <a href="/roadmap">What we're building</a>
+              <a href="/faq">Questions</a>
               <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
             </div>
           </div>
@@ -695,8 +715,8 @@
           payout; young founders run the venture day to day.
         </p>
         <div class="foot__bot">
-          <span>fuime · invoicing for people who aren't 18 yet</span>
-          <span>Private beta · live payments. Ninth Street Labs, LLC (Fuime) is the seller of record.</span>
+          <span>fuime · your client buys from us, and we pay you</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
         </div>
       </div>
     </footer>

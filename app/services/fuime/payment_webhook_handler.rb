@@ -257,6 +257,14 @@ module Fuime
       # idempotent and enriching, so running it on both events is correct.
       record_jurisdiction(object:, event:, amount_cents:)
 
+      # Tell the founder's own server, if they asked to be told. Emitted here —
+      # beside the jurisdiction record and before the ledger idempotency check —
+      # rather than after the ledger write, so the emitter's own idempotency (one
+      # delivery row per event id per endpoint) is what prevents duplicates,
+      # not the accident of where this line sits. Never raises: see
+      # Fuime::WebhookEmitter.
+      emit_sale_webhook(object:, event:, amount_cents:)
+
       # One ledger line per Stripe object, no matter how often Stripe retries.
       transaction_key = ::Fuime::VentureLedger.payment_key(object.id)
 
@@ -424,6 +432,23 @@ module Fuime
       # An invoice paid out of band has no PaymentIntent. Its own id is then the
       # only stable key, and it is still unique per payment.
       id.to_s.presence || invoice.try(:id).to_s.presence
+    end
+
+    # Keyed on the PaymentIntent id, the same key the ledger dedupes on, so a
+    # replayed Stripe event produces no second delivery.
+    def emit_sale_webhook(object:, event:, amount_cents:)
+      ::Fuime::WebhookEmitter.emit(
+        event:,
+        event_type: ::Fuime::WebhookEmitter::SALE_COMPLETED,
+        idempotency_key: "evt_sale_#{object.id}",
+        data: {
+          payment_id: object.id,
+          amount_cents: amount_cents.to_i,
+          currency: "usd",
+          offer_id: offer_id_from(object),
+          description: memo_for(object, event)
+        }
+      )
     end
 
     # Fuime: where the buyer was, for the nexus report Fuime owes itself.

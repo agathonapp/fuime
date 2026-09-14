@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Questions · fuime</title>
+    <meta
+      name="description"
+      content="Seventeen questions about selling through fuime, answered from what the product actually does: one price of 5% with a 50c floor, who your client is legally buying from, what happens on a chargeback, whether anyone verifies who you are (nobody does), what you can and cannot sell, and how a seller under 18 works."
+    />
+    <link rel="canonical" href="https://fuime.com/faq" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/faq" />
+    <meta
+      property="og:title"
+      content="Questions, answered straight."
+    />
+    <meta
+      property="og:description"
+      content="One price of 5% with a 50c floor and no monthly fee. Who your client legally buys from, what a chargeback costs, whether anyone checks who you are, and what fuime still cannot do."
+    />
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Questions, answered straight."
+    />
+    <meta
+      name="twitter:description"
+      content="One price of 5% with a 50c floor and no monthly fee. Who your client legally buys from, what a chargeback costs, whether anyone checks who you are, and what fuime still cannot do."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- First paint, inline and above every script: the browser must never get a
+         chance to paint white before the loader's own background arrives. -->
+    <meta name="theme-color" content="#141420" />
+    <meta name="darkreader-lock" />
+    <style>
+      html {
+        background: #141420;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        gap: 22px;
+        background: #141420;
+      }
+      #boot[hidden] {
+        display: none;
+      }
+    </style>
+    <noscript
+      ><style>
+        #boot {
+          display: none;
+        }
+      </style></noscript
+    >
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Undo the .rise reveal when nothing will ever fire it — see the long
+         note on index.html. It costs more here than almost anywhere: with
+         scripting off this page is nothing but the answers. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+    <!-- Breadcrumb, plus every answer on the page copied verbatim out of the
+         <details> blocks below by tools-side extraction. Verbatim is the
+         requirement, not a nicety: markup that paraphrases the page is a
+         structured-data violation, and this page's answers are the ones most
+         likely to be read in a search result instead of on the site. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "fuime",
+                "item": "https://fuime.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Questions",
+                "item": "https://fuime.com/faq"
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://fuime.com/faq#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Who can use fuime?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Anyone in the United States selling a service or digital work. Sales are in US dollars and the product is English only. If you are between 13 and 17 you can use it as well, which almost nothing else allows, as long as a parent or legal guardian accepts the Guardian Agreement."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What can I sell, and what can't I?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Services and digital goods. Tutoring, photo and video, web work, design, DJ sets, lawn and yard care, a file somebody downloads. Not physical goods, not food, not crafts, and not childcare, babysitting or coaching children. Those are excluded on purpose rather than pending."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does a client actually pay me?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You publish a named offer at a set price between $1 and $10,000. It gets its own payment page, and the business gets a public storefront page you can send people to. Checkout is hosted by Stripe. You can also ask the buyer to choose the amount instead of setting one, and renaming an offer later does not break a link you have already sent."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is there anything to install, or to wait for?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Nothing to install. You sign up, name the business, and a person at fuime reads the application before it can sell. We are not going to tell you how long that takes, because there is no promise sitting behind the number. A seller under 18 also needs a guardian to accept the agreement before anything is paid out."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I run more than one business?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, as many as you want, and as many API keys as you want with them. Both are included in the price rather than sold as an upgrade, so a second business costs exactly what the first one did: nothing until it sells something."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What does fuime take?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "5% of what you collect, with a 50¢ floor. It is a floor and not an addition: on a $400 sale the fee is $20.00, not $20.50. On a small sale the floor is the part that bites, so a $5 sale pays 50¢, which works out at 10%. The fee never comes to more than the sale itself."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is there a monthly fee, or anything before I sell?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. No monthly fee, no setup fee, no per-invoice charge and no minimum to clear. Nothing is billed until money actually arrives, and an invoice a client never pays costs you nothing at all."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does card processing cost extra on top?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No, and this is the part most platforms get to be vague about. fuime is the merchant of record, so Stripe bills Ninth Street Labs, LLC for its roughly 2.9% + 30¢ and that comes out of fuime's own 5%. What you are owed is the sale minus the fuime fee. There is no second deduction underneath it."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What if the standard rate doesn't fit what I sell?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Then it is a conversation rather than a tier. There is one price and nothing to upgrade to, so real volume or an unusual shape of sale means custom pricing worked out with a person. Email support@fuime.com. There is also a founders cohort at 0%, by invitation."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I bill someone every month?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. An offer can bill monthly or yearly and renewals post to the ledger by themselves. One thing to know before you sell one: a buyer cannot cancel a fuime subscription themselves. They email support@fuime.com and a person stops it. That is a gap, and it is on the roadmap as one."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I owe tax on this?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Probably, and fuime tells you when it starts to matter. It totals income, expenses and net for the year against the IRS $400 self-employment threshold, and because Schedule SE applies a 92.35% multiplier the real trigger is $433.14 of net profit. A tax packet can be downloaded. It is an estimator for income tax: it calculates no sales tax, it files nothing, and it is not advice."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Who is my client actually buying from?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Ninth Street Labs, LLC, doing business as Fuime. fuime is the merchant of record, which means it is the legal seller on the sale and its name is the one on your client's card statement, as Fuime* followed by your business name. What you hold is a claim on fuime for what you have earned, and fuime pays it out."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does anyone check who I am?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. There is no identity verification of anyone, anywhere in fuime. Your age is a checkbox you tick yourself. The only gate is a person reading a new business's application before it can sell, and that is a review of an application and nothing more. We would rather write that down than let you assume a system exists that does not."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I use fuime if I am under 18?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, from 13, and it is the part almost nothing else allows. A parent or legal guardian accepts a versioned Guardian Agreement and becomes the legal payee; you operate the business day to day. You can set everything up and you can sell while you wait, but nothing is paid out until they have accepted, and a minor can never approve their own payout. Under 13 is refused at signup."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What happens if a client charges back?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The money comes back out, and fuime's fee comes back with it in proportion. The dispute itself is decided by your client's card issuer, not by us. Where the seller is a minor, the guardian is the legal payee and the clawback obligor, so it lands with them. That is the trade for being able to take a card at all, and it is better weighed now than discovered later."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What if a client never pays?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You owe nothing. The fee is charged on money that arrives, so an unpaid invoice costs you the chasing and nothing else. fuime keeps it in the books as outstanding rather than as income, so the year-end total stays honest."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What happens when I turn 18?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Nothing resets. Your clients, your ledger and your books stay where they are and the price stays the same. What has not been built is moving the account itself out of a guardian's name and into yours. It is listed as missing rather than as done, and it will move when the code does."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      try {
+        if (sessionStorage.getItem('fuime.booted')) {
+          document.documentElement.classList.add('booted')
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── first-visit loader ───────────────────────────────────────────
+         The arch fills from the bottom as a progress meter. Suppressed for
+         the rest of the session by the sessionStorage guard above. -->
+    <div id="boot" role="status" aria-label="Loading fuime">
+      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
+        <defs>
+          <clipPath id="boot-fill">
+            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
+          </clipPath>
+        </defs>
+        <use href="#arch" class="boot__ghost" />
+        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
+      </svg>
+      <span class="boot__word">fu<i>i</i>me</span>
+    </div>
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--over">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing">What it costs</a>
+          <a class="nav__link" href="/compare">Compare</a>
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="nav__link" href="/login">Log in</a>
+          <a class="btn btn--accent" href="/get-started">Start your business</a>
+        </nav>
+      </div>
+      <div
+        class="split-mount split-mount--dock"
+        data-fx-split="dock"
+        data-you="95.0"
+        data-fuime="2.0"
+        data-stripe="3.0"
+        aria-hidden="true"
+      ></div>
+    </header>
+
+    <main>
+
+      <!-- ── hero ──────────────────────────────────────────────────────── -->
+      <section class="hero hero--short">
+        <div class="grain"></div>
+
+        <div class="wrap hero__in">
+          <div class="hero__body">
+            <p class="beta">Live · payments processed by Stripe</p>
+            <h1>Questions,<br />answered straight.</h1>
+            <p class="lead">
+              Grouped the way you would work through them: whether you can use
+              this, what it costs, and what happens when something goes wrong.
+              The uncomfortable ones are in here too, with the same answer we
+              would give you by email.
+            </p>
+            <p class="disclaimer">
+              One price: 5% of what you collect with a 50¢ floor, no monthly
+              fee, and nothing at all until you sell something. Card processing
+              comes out of that 5% rather than being charged on top, because
+              Ninth Street Labs, LLC, doing business as Fuime, is the legal
+              seller. Anything outside the standard rate is custom pricing,
+              worked out with a person.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── getting started ───────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Getting started</p>
+            <h2 class="h2">Whether this is for you at all.</h2>
+            <p class="lead">
+              fuime is a merchant of record for small businesses selling
+              services and digital work. It also takes sellers aged 13 to 17,
+              which is the part almost nothing else does.
+            </p>
+          </div>
+
+          <div class="faq mt-8">
+            <details>
+              <summary>Who can use fuime?</summary>
+              <p class="faq__a">
+                Anyone in the United States selling a service or digital work.
+                Sales are in US dollars and the product is English only. If you
+                are between 13 and 17 you can use it as well, which almost
+                nothing else allows, as long as a parent or legal guardian
+                accepts the Guardian Agreement.
+              </p>
+            </details>
+
+            <details>
+              <summary>What can I sell, and what can't I?</summary>
+              <p class="faq__a">
+                Services and digital goods. Tutoring, photo and video, web work,
+                design, DJ sets, lawn and yard care, a file somebody downloads.
+                Not physical goods, not food, not crafts, and not childcare,
+                babysitting or coaching children. Those are excluded on purpose
+                rather than pending.
+              </p>
+            </details>
+
+            <details>
+              <summary>How does a client actually pay me?</summary>
+              <p class="faq__a">
+                You publish a named offer at a set price between $1 and $10,000.
+                It gets its own payment page, and the business gets a public
+                storefront page you can send people to. Checkout is hosted by
+                Stripe. You can also ask the buyer to choose the amount instead
+                of setting one, and renaming an offer later does not break a
+                link you have already sent.
+              </p>
+            </details>
+
+            <details>
+              <summary>Is there anything to install, or to wait for?</summary>
+              <p class="faq__a">
+                Nothing to install. You sign up, name the business, and a person
+                at fuime reads the application before it can sell. We are not
+                going to tell you how long that takes, because there is no
+                promise sitting behind the number. A seller under 18 also needs
+                a guardian to accept the agreement before anything is paid out.
+              </p>
+            </details>
+
+            <details>
+              <summary>Can I run more than one business?</summary>
+              <p class="faq__a">
+                Yes, as many as you want, and as many API keys as you want with
+                them. Both are included in the price rather than sold as an
+                upgrade, so a second business costs exactly what the first one
+                did: nothing until it sells something.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── money and fees ────────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Money and fees</p>
+            <h2 class="h2">One price, and where every cent of it goes.</h2>
+            <p class="lead">
+              There is one rate and there is no tier above it. The only numbers
+              on this site are the ones the billing code actually uses.
+            </p>
+          </div>
+
+          <div class="faq mt-8">
+            <details>
+              <summary>What does fuime take?</summary>
+              <p class="faq__a">
+                5% of what you collect, with a 50¢ floor. It is a floor and not
+                an addition: on a $400 sale the fee is $20.00, not $20.50. On a
+                small sale the floor is the part that bites, so a $5 sale pays
+                50¢, which works out at 10%. The fee never comes to more than
+                the sale itself.
+              </p>
+            </details>
+
+            <details>
+              <summary>Is there a monthly fee, or anything before I sell?</summary>
+              <p class="faq__a">
+                No. No monthly fee, no setup fee, no per-invoice charge and no
+                minimum to clear. Nothing is billed until money actually
+                arrives, and an invoice a client never pays costs you nothing at
+                all.
+              </p>
+            </details>
+
+            <details>
+              <summary>Does card processing cost extra on top?</summary>
+              <p class="faq__a">
+                No, and this is the part most platforms get to be vague about.
+                fuime is the merchant of record, so Stripe bills Ninth Street
+                Labs, LLC for its roughly 2.9% + 30¢ and that comes out of
+                fuime's own 5%. What you are owed is the sale minus the fuime
+                fee. There is no second deduction underneath it.
+              </p>
+            </details>
+
+            <details>
+              <summary>What if the standard rate doesn't fit what I sell?</summary>
+              <p class="faq__a">
+                Then it is a conversation rather than a tier. There is one price
+                and nothing to upgrade to, so real volume or an unusual shape of
+                sale means custom pricing worked out with a person. Email
+                support@fuime.com. There is also a founders cohort at 0%, by
+                invitation.
+              </p>
+            </details>
+
+            <details>
+              <summary>Can I bill someone every month?</summary>
+              <p class="faq__a">
+                Yes. An offer can bill monthly or yearly and renewals post to
+                the ledger by themselves. One thing to know before you sell one:
+                a buyer cannot cancel a fuime subscription themselves. They
+                email support@fuime.com and a person stops it. That is a gap,
+                and it is on the roadmap as one.
+              </p>
+            </details>
+
+            <details>
+              <summary>Do I owe tax on this?</summary>
+              <p class="faq__a">
+                Probably, and fuime tells you when it starts to matter. It
+                totals income, expenses and net for the year against the IRS
+                $400 self-employment threshold, and because Schedule SE applies
+                a 92.35% multiplier the real trigger is $433.14 of net profit. A
+                tax packet can be downloaded. It is an estimator for income tax:
+                it calculates no sales tax, it files nothing, and it is not
+                advice.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── the legal shape, and when it goes wrong ───────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">When it goes wrong</p>
+            <h2 class="h2">The answers people put off asking.</h2>
+            <p class="lead">
+              Who your client is buying from, who carries the risk, and what
+              nobody at fuime checks. These are the ones worth reading before
+              you send your first link.
+            </p>
+          </div>
+
+          <div class="faq mt-8">
+            <details>
+              <summary>Who is my client actually buying from?</summary>
+              <p class="faq__a">
+                Ninth Street Labs, LLC, doing business as Fuime. fuime is the
+                merchant of record, which means it is the legal seller on the
+                sale and its name is the one on your client's card statement, as
+                Fuime* followed by your business name. What you hold is a claim
+                on fuime for what you have earned, and fuime pays it out.
+              </p>
+            </details>
+
+            <details>
+              <summary>Does anyone check who I am?</summary>
+              <p class="faq__a">
+                No. There is no identity verification of anyone, anywhere in
+                fuime. Your age is a checkbox you tick yourself. The only gate
+                is a person reading a new business's application before it can
+                sell, and that is a review of an application and nothing more.
+                We would rather write that down than let you assume a system
+                exists that does not.
+              </p>
+            </details>
+
+            <details>
+              <summary>Can I use fuime if I am under 18?</summary>
+              <p class="faq__a">
+                Yes, from 13, and it is the part almost nothing else allows. A
+                parent or legal guardian accepts a versioned Guardian Agreement
+                and becomes the legal payee; you operate the business day to
+                day. You can set everything up and you can sell while you wait,
+                but nothing is paid out until they have accepted, and a minor
+                can never approve their own payout. Under 13 is refused at
+                signup.
+              </p>
+            </details>
+
+            <details>
+              <summary>What happens if a client charges back?</summary>
+              <p class="faq__a">
+                The money comes back out, and fuime's fee comes back with it in
+                proportion. The dispute itself is decided by your client's card
+                issuer, not by us. Where the seller is a minor, the guardian is
+                the legal payee and the clawback obligor, so it lands with them.
+                That is the trade for being able to take a card at all, and it
+                is better weighed now than discovered later.
+              </p>
+            </details>
+
+            <details>
+              <summary>What if a client never pays?</summary>
+              <p class="faq__a">
+                You owe nothing. The fee is charged on money that arrives, so an
+                unpaid invoice costs you the chasing and nothing else. fuime
+                keeps it in the books as outstanding rather than as income, so
+                the year-end total stays honest.
+              </p>
+            </details>
+
+            <details>
+              <summary>What happens when I turn 18?</summary>
+              <p class="faq__a">
+                Nothing resets. Your clients, your ledger and your books stay
+                where they are and the price stays the same. What has not been
+                built is moving the account itself out of a guardian's name and
+                into yours. It is listed as missing rather than as done, and it
+                will move when the code does.
+              </p>
+            </details>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/roadmap"
+              >What runs today, and what doesn't<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── where it stops ────────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Where fuime stops</p>
+            <h2 class="h2">Four things it does not do.</h2>
+            <p class="lead">
+              If one of these is what you need, fuime is the wrong tool today
+              and we would rather you find that out here than after your first
+              sale.
+            </p>
+          </div>
+
+          <div class="grid grid--2 mt-8">
+            <article class="card">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.75 8.5 11 4.5l8.25 4" />
+                <path d="M4.5 8.5v8M9 8.5v8M13 8.5v8M17.5 8.5v8" />
+                <path d="M2.75 18.5h16.5" />
+                <path d="m4 4 14 14" />
+              </svg>
+              <h3 class="h4">It is not a bank</h3>
+              <p>
+                fuime is a financial technology company, not a bank. It holds no
+                deposits and offers no FDIC-insured product. The number you see
+                is what fuime owes you, which is a different thing from money
+                sitting somewhere in your name.
+              </p>
+            </article>
+
+            <article class="card">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M5.5 2.75h7L17 7.25v12H5.5Z" />
+                <path d="M12.25 2.75v4.5H17" />
+                <path d="m9 15.5 4.5-5M9.25 11h.01M13.25 15h.01" />
+              </svg>
+              <h3 class="h4">It does not touch sales tax</h3>
+              <p>
+                fuime is registered in zero jurisdictions. It calculates no
+                sales tax, collects none, remits none and files nothing. The tax
+                feature that exists estimates your income tax for the year and
+                stops there.
+              </p>
+            </article>
+
+            <article class="card">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M3 11h16" />
+                <path
+                  d="M11 3c2.2 2.2 3.25 5 3.25 8S13.2 16.8 11 19c-2.2-2.2-3.25-5-3.25-8S8.8 5.2 11 3Z"
+                />
+              </svg>
+              <h3 class="h4">It is US only, in dollars only</h3>
+              <p>
+                No second country, no localised checkout, no multi-currency
+                pricing and no settlement in anything but the dollar. A client
+                who wants to pay in their own currency cannot.
+              </p>
+            </article>
+
+            <article class="card">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.75 7.5 11 3.75l8.25 3.75v7L11 18.25 2.75 14.25Z" />
+                <path d="M2.75 7.5 11 11.25l8.25-3.75M11 11.25v7" />
+              </svg>
+              <h3 class="h4">Nothing ships</h3>
+              <p>
+                Services and digital goods only. There is no shipping address,
+                no inventory and no fulfilment anywhere in the product, so
+                anything that has to arrive in a box cannot be sold through it.
+              </p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="mailto:support@fuime.com"
+              >A question this page didn't answer<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/payment-links">Payment links</a>
+              <a href="/subscriptions">Subscriptions</a>
+              <a href="/books">Books and receipts</a>
+              <a href="/taxes">Tax tracking</a>
+              <a href="/api">API</a>
+            </div>
+            <div class="foot__col">
+              <h4>The money</h4>
+              <a href="/pricing">What it costs</a>
+              <a href="/merchant-of-record">How you get paid</a>
+              <a href="/why-has-fuime-charged-me">Why has fuime charged me?</a>
+            </div>
+            <div class="foot__col">
+              <h4>Who it's for</h4>
+              <a href="/for/tutoring">Tutoring</a>
+              <a href="/for/photo-video">Photo and video</a>
+              <a href="/for/lawn-care">Lawn and yard care</a>
+              <a href="/for/schools">Schools and cohorts</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Compare</h4>
+              <a href="/compare">Every option, side by side</a>
+              <a href="/compare/venmo">fuime vs Venmo</a>
+              <a href="/compare/paddle">fuime vs Paddle</a>
+              <a href="/compare/waiting">fuime vs waiting until 18</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="/roadmap">What we're building</a>
+              <a href="/faq">Questions</a>
+              <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Ninth Street Labs, LLC, doing business as Fuime,
+          is the seller of record on purchases. Guardians are the legal payee on
+          operator payouts and must approve the destination before the first
+          payout; young founders run the venture day to day.
+        </p>
+        <div class="foot__bot">
+          <span>fuime · your client buys from us, and we pay you</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

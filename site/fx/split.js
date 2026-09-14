@@ -487,8 +487,16 @@ export function initSplit(target, config) {
     const charge = num(detail && detail.charge)
     if (charge === null || charge <= 0) return null
 
+    // `fuimeNet` is what fuime KEEPS — its fee less the Stripe cost it pays out
+    // of that fee. It is the right slice for this bar, because YOU + FUIME +
+    // STRIPE must sum to the sale. `detail.fuime` is the seller-facing fee and
+    // already contains Stripe's share, so using it here would draw Stripe's cut
+    // twice and shrink YOU below what the venture is actually owed. Falls back
+    // to `fuime` so a detail published by an older ledger-bus still renders.
+    const fuimeSlice =
+      detail.fuimeNet !== undefined ? detail.fuimeNet : detail.fuime
     let stripe = ((num(detail.stripe) || 0) / charge) * 100
-    let fuime = ((num(detail.fuime) || 0) / charge) * 100
+    let fuime = ((num(fuimeSlice) || 0) / charge) * 100
     if (!Number.isFinite(stripe) || stripe < 0) stripe = 0
     if (!Number.isFinite(fuime) || fuime < 0) fuime = 0
     stripe = Math.min(stripe, 100)
@@ -506,9 +514,11 @@ export function initSplit(target, config) {
     const recovered = landsPct !== null && Math.abs(landsPct - you) > 0.1
 
     // The figures are amounts, not proportions, and each label carries its own.
+    // The label under FUIME carries what fuime keeps, to match the segment it
+    // sits beneath. The seller-facing fee is the invoice's job, not this bar's.
     const amounts = {
       you: lands,
-      fuime: num(detail.fuime),
+      fuime: num(fuimeSlice),
       stripe: num(detail.stripe),
     }
     const figures = {}

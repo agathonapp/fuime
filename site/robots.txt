@@ -1,8 +1,8 @@
-# fuime — invoicing for people who aren't 18 yet
-# One page while the marketing site is closed: / is the front door and the rest
-# 307 to it. Deliberately no Disallow on /home, /pricing or /parents — a
-# crawler that cannot fetch them never sees the redirect, and the URL sits in
-# the index as a bare link instead of consolidating onto /.
+# fuime — your client buys from us, and we pay you
+#
+# The site was closed to one page for several weeks: / was the front door and
+# /home, /pricing and /parents 307'd to it. It opened on 2026-09-14, and the
+# sitemap below is the list of pages we are asking to have indexed.
 
 User-agent: *
 Allow: /
