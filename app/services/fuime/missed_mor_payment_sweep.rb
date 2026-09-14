@@ -13,8 +13,17 @@
 # `payment_intent.succeeded` had just been delivered. The handler is idempotent
 # on the intent id, so a sale that already landed is a no-op.
 #
-# Skips invoice-backed intents — those are Stripe Billing (family plan), not
-# a storefront sale.
+# Skips invoice-backed intents. Those are Stripe Billing, and both kinds of
+# Billing invoice are already covered elsewhere: Fuime's own family plan is not a
+# venture sale at all, and an operator's subscription renewal is posted from
+# `invoice.paid` by PaymentWebhookHandler — where the subscription's metadata
+# actually is. Stripe does not copy that metadata onto the invoice's
+# PaymentIntent, so an intent swept up here would arrive with no venture to
+# attribute it to and be dropped anyway.
+#
+# ⚠️ This means a DROPPED `invoice.paid` is not recovered by this sweep. A
+# subscription-aware backfill has to list invoices, not PaymentIntents, and does
+# not exist yet.
 #
 # Does not talk to connected accounts. Production money-in is merchant-of-record
 # (`render.yaml`); Connect recovery is a different job.
@@ -77,6 +86,8 @@ module Fuime
 
     def postable?(intent)
       return false unless intent.status.to_s == "succeeded"
+      # See the class header: invoice-backed intents belong to Stripe Billing and
+      # are posted from `invoice.paid`, not from here.
       return false if intent.try(:invoice).present?
 
       metadata = intent.metadata

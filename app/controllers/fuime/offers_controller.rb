@@ -457,7 +457,16 @@ module Fuime
     # numericality message on the field they are looking at.
     def offer_params
       permitted = params.require(:fuime_offer)
-                        .permit(:name, :description, :unit_label, :position, :slug)
+                        .permit(:name, :description, :unit_label, :position, :slug,
+                                :billing_interval)
+
+      # A blank select means one-time. Without this the empty string reaches the
+      # inclusion validation, which rejects it — so an operator who switched an
+      # offer back to one-time would be told "billing interval is not included in
+      # the list" and have no way to comply.
+      if permitted.key?(:billing_interval) && permitted[:billing_interval].blank?
+        permitted[:billing_interval] = nil
+      end
 
       return permitted unless params[:fuime_offer].key?(:price)
 

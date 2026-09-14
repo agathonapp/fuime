@@ -1183,7 +1183,9 @@ class AdminController < Admin::BaseController
 
   def payout_batch_mark_paid
     batch = Fuime::PayoutBatch.find(params[:id])
-    payout_batch_service.mark_paid!(batch:, paid_by: current_user)
+    payout_batch_service.mark_paid!(
+      batch:, paid_by: current_user, transfer_reference: params[:transfer_reference]
+    )
 
     redirect_to payout_batch_admin_index_path(id: batch.id),
                 flash: { success: "Recorded as paid. #{batch.operator_count} operator ledger(s) debited." }

@@ -40,10 +40,30 @@ module Fuime
     # venture, see Event#billing_plan; this is for prose only.
     FUIME_PLATFORM_FEE_PERCENT = (Event::Plan::FALLBACK_REVENUE_FEE * 100).round
 
-    def initialize(event:, amount_cents:, description:)
+    # ── Why operator subscriptions carry a `kind`, and must ──────────────────
+    #
+    # Fuime bills its OWN family plan through Stripe Billing on the SAME platform
+    # account, and `Fuime::SubscriptionWebhookHandler` finds those rows by
+    # `fuime_event_id`. An operator's customer subscription carries that key too
+    # — it has to, or the ledger cannot attribute the renewal — so without a
+    # discriminator a buyer's `customer.subscription.updated` would be applied to
+    # the venture's own Fuime plan row. A customer cancelling a $9.99 tool would
+    # silently cancel that venture's Fuime subscription.
+    #
+    # So every operator sale is stamped, and the plan handler refuses anything
+    # stamped. The two now say which they are rather than being told apart by
+    # what they happen to lack.
+    OPERATOR_SALE_KIND = "operator_sale"
+
+    # `offer:` is optional because the free-amount path has no offer — a customer
+    # who was told a price in person is still a one-time sale. When one is given
+    # it decides whether this is a subscription, and its id travels in metadata
+    # so a renewal arriving months later can still be attributed.
+    def initialize(event:, amount_cents:, description:, offer: nil)
       @event = event
       @amount_cents = amount_cents
       @description = description
+      @offer = offer
     end
 
     # Fuime: under merchant-of-record the charge is on FUIME's own account.
@@ -76,7 +96,7 @@ module Fuime
 
       Stripe::Checkout::Session.create(
         {
-          mode: "payment",
+          mode: recurring? ? "subscription" : "payment",
           line_items: [
             {
               price_data: {
@@ -90,15 +110,21 @@ module Fuime
                   description: "#{@event.name} — sold by #{Rails.configuration.constants.legal_entity_name}",
                 },
                 unit_amount: @amount_cents,
+                # Absent on a one-time sale. Stripe rejects `recurring` in
+                # `mode: "payment"`, so this cannot be set unconditionally.
+                **(recurring? ? { recurring: { interval: @offer.billing_interval } } : {}),
               },
               quantity: 1,
             },
           ],
           metadata: metadata,
-          payment_intent_data: {
-            metadata: metadata,
-            statement_descriptor_suffix: statement_descriptor,
-          },
+          # Two different places, because Stripe gives a subscription no
+          # PaymentIntent to hang metadata on. `subscription_data` is what
+          # reaches the Subscription object, and from there every renewal
+          # invoice — which is the only way a charge arriving next month can be
+          # attributed to this venture. A one-time sale keeps using
+          # `payment_intent_data`, which is what PaymentWebhookHandler reads.
+          **payment_or_subscription_data,
           # Phase 8 groundwork, and the reason it is collected from day one: all
           # operator sales aggregate under ONE entity, so Fuime crosses state
           # economic-nexus thresholds far faster than any individual teen would.
@@ -217,12 +243,38 @@ module Fuime
       @fee_cents ||= @event.fuime_fee_cents_on(@amount_cents)
     end
 
+    def recurring? = @offer&.recurring?
+
     def metadata
-      {
+      base = {
         fuime_event_id: @event.id,
         fuime_event_name: @event.name,
         fuime_fee_cents: fee_cents,
       }
+      return base if @offer.blank?
+
+      base.merge(
+        fuime_offer_id: @offer.id,
+        # Carried rather than looked up, so a renewal's ledger memo names what
+        # the buyer actually signed up for even if the offer is renamed or
+        # archived later — which it will be, because the subscription outlives
+        # the listing.
+        fuime_offer_name: @offer.name,
+        fuime_subscription_kind: (OPERATOR_SALE_KIND if recurring?)
+      ).compact
+    end
+
+    def payment_or_subscription_data
+      if recurring?
+        { subscription_data: { metadata: metadata } }
+      else
+        {
+          payment_intent_data: {
+            metadata: metadata,
+            statement_descriptor_suffix: statement_descriptor,
+          },
+        }
+      end
     end
 
     # What the buyer's card statement says next to the charge.

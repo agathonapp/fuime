@@ -285,6 +285,13 @@ fuime_generate_payout_batch_job:
   cron: "0 14 * * WED"
   class: "Fuime::GeneratePayoutBatchJob"
 
+# Fuime: recover MoR sales whose webhook never arrived. Hourly — the sweep reads a
+# 24-hour window of platform PaymentIntents, so a faster cadence re-reads the same
+# page for no new information. See Fuime::MissedMorPaymentSweepJob.
+fuime_missed_mor_payment_sweep_job:
+  cron: "20 * * * *"
+  class: "Fuime::MissedMorPaymentSweepJob"
+
 # Fuime: day-3 / day-6 reminders for still-pending guardian invites (TEEN_GROWTH G5).
 # 13:00 UTC = 9am ET. The mail goes to the adult, not the minor (L7).
 fuime_guardian_invite_reminder_job:

@@ -44,6 +44,7 @@ module Fuime
       checkout.session.async_payment_succeeded
       charge.refunded
       charge.dispute.created
+      invoice.paid
     ].freeze
 
     def initialize(event:)
@@ -71,6 +72,11 @@ module Fuime
       # The failure half of the lifecycle. Without these, a refunded or disputed
       # payment stays on a teen's ledger as income and inflates the tax number
       # Fuime shows their family.
+      # Every payment of an operator's SUBSCRIPTION — the first one and every
+      # renewal after it. See #record_subscription_invoice for why this is the
+      # entry point rather than the Checkout Session or the PaymentIntent.
+      when "invoice.paid"
+        record_subscription_invoice(@stripe_event.data.object)
       when "charge.refunded"
         record_reversal(
           object: @stripe_event.data.object,
@@ -211,7 +217,9 @@ module Fuime
     # Thin PI-shaped object so #record_payment and #record_platform_fee key on
     # the intent, not the session, and still read metadata / description / created
     # the way they already do.
-    PaymentView = Struct.new(:id, :created, :description, :metadata, :amount_received, keyword_init: true)
+    PaymentView = Struct.new(
+      :id, :created, :description, :metadata, :amount_received, :buyer_address, keyword_init: true
+    )
 
     def payment_view_from_checkout(session, intent_id:, amount_cents:)
       PaymentView.new(
@@ -219,7 +227,11 @@ module Fuime
         created: session.created,
         description: session.try(:description),
         metadata: session.metadata,
-        amount_received: amount_cents
+        amount_received: amount_cents,
+        # The whole reason `billing_address_collection: "required"` is set on
+        # every MoR checkout. This event is the only one of the two success
+        # events that carries it — see Fuime::Sale.record!.
+        buyer_address: session.try(:customer_details).try(:address)
       )
     end
 
@@ -234,6 +246,16 @@ module Fuime
         Rails.logger.warn("[Fuime] Webhook references unknown event_id=#{event_id}")
         return nil
       end
+
+      # Before the idempotency check below, deliberately.
+      #
+      # The same sale arrives as two events and only `checkout.session.completed`
+      # carries the buyer's address. If this sat after the early return, then
+      # every time `payment_intent.succeeded` arrived first the session event
+      # would short-circuit as "already recorded" and the address would be lost
+      # — on exactly the sales this record exists to count. Recording is
+      # idempotent and enriching, so running it on both events is correct.
+      record_jurisdiction(object:, event:, amount_cents:)
 
       # One ledger line per Stripe object, no matter how often Stripe retries.
       transaction_key = ::Fuime::VentureLedger.payment_key(object.id)
@@ -291,6 +313,164 @@ module Fuime
           raw
         end
       end
+    end
+
+    # An operator's subscription got paid — for the first time, or again.
+    #
+    # ── Why the invoice, and not the events that already work ────────────────
+    #
+    # A one-time sale is posted from `payment_intent.succeeded` or
+    # `checkout.session.completed`, and neither serves a subscription:
+    #
+    #   * `checkout.session.completed` is explicitly refused for
+    #     `mode: "subscription"` (#checkout_session_payable?), and in any case it
+    #     fires once at signup and never again — a renewal twelve months later
+    #     has no session.
+    #   * `payment_intent.succeeded` does fire for each renewal, but Stripe does
+    #     not copy the Subscription's metadata onto the invoice's PaymentIntent,
+    #     so the intent arrives with no `fuime_event_id` and #record_payment
+    #     drops it. That is why renewals would otherwise vanish silently rather
+    #     than land on the wrong ledger.
+    #
+    # `invoice.paid` is the one event that fires for every payment of the
+    # subscription's life AND carries the subscription's metadata. So one path
+    # handles signup and renewal identically, which is also the reason a
+    # founder's month-two revenue cannot behave differently from month one.
+    #
+    # Keyed on the invoice's PaymentIntent where there is one, so the ledger key
+    # stays a PaymentIntent id exactly as it is for every other sale.
+    def record_subscription_invoice(invoice)
+      metadata = subscription_metadata_from(invoice)
+      unless operator_sale?(metadata)
+        # Fuime's own family-plan invoices land here too. They are Fuime billing
+        # a parent for software, not a venture earning revenue, and posting them
+        # to a ledger would credit a founder with money Fuime charged them.
+        Rails.logger.info("[Fuime] invoice.paid #{invoice.try(:id)} is not an operator sale; ignoring")
+        return nil
+      end
+
+      amount_cents = invoice.try(:amount_paid).to_i
+      # A $0 invoice is a real thing — a fully discounted period, a trial
+      # converting. It is not revenue, and #record_payment would refuse it
+      # anyway; saying so here keeps the reason readable.
+      return nil if amount_cents <= 0
+
+      key = invoice_payment_key(invoice)
+      return nil if key.blank?
+
+      record_payment(
+        object: PaymentView.new(
+          id: key,
+          created: invoice.try(:created) || Time.current.to_i,
+          description: invoice_memo(invoice, metadata),
+          # `fuime_fee_cents` is deliberately NOT carried over from the
+          # subscription. It was stamped at signup, and #platform_fee_cents
+          # prefers metadata precisely so a one-time sale matches what the payer
+          # was quoted. A renewal is a new sale months or years later, and the
+          # venture's plan may have changed since — freezing the signup rate
+          # would bill a Founders-plan venture at the rate it had when it
+          # signed up. Omitting it makes #platform_fee_cents recompute from the
+          # plan the money actually came from.
+          metadata: metadata.except("fuime_fee_cents", :fuime_fee_cents),
+          amount_received: amount_cents,
+          # Subscriptions do not go through Checkout on renewal, so there is no
+          # `customer_details` here. The jurisdiction was captured at signup and
+          # #record_jurisdiction records the renewal with whatever it can find.
+          buyer_address: invoice.try(:customer_address)
+        ),
+        amount_cents:
+      )
+    end
+
+    # Stripe puts the Subscription's metadata in different places depending on
+    # API version and how the invoice was produced. Checked in order of how
+    # specific each one is to this subscription.
+    def subscription_metadata_from(invoice)
+      candidates = [
+        invoice.try(:subscription_details).try(:metadata),
+        invoice.try(:lines).try(:data)&.first.try(:metadata),
+        invoice.try(:metadata)
+      ]
+
+      found = candidates.compact.find { |m| operator_sale?(m) }
+      (found || {}).to_h.transform_keys(&:to_s)
+    end
+
+    def operator_sale?(metadata)
+      return false if metadata.blank?
+
+      kind = metadata.try(:[], "fuime_subscription_kind") ||
+             metadata.try(:[], :fuime_subscription_kind)
+      kind.to_s == ::Fuime::PaymentLinkService::OPERATOR_SALE_KIND
+    end
+
+    # A renewal that reads "Payment to Sunset Lawn" for the twelfth time is not
+    # a ledger a founder can reconcile, so the memo says which period this was.
+    def invoice_memo(invoice, metadata)
+      base = metadata["fuime_offer_name"].presence ||
+             invoice.try(:lines).try(:data)&.first.try(:description).presence
+      period_end = invoice.try(:period_end)
+      return base if period_end.blank?
+
+      [base, "— billing period ending #{Time.at(period_end).to_date.strftime('%-d %b %Y')}"]
+        .compact.join(" ").presence
+    end
+
+    def invoice_payment_key(invoice)
+      raw = invoice.try(:payment_intent)
+      id = raw.is_a?(String) ? raw : raw.try(:id)
+      id = raw[:id] || raw["id"] if id.blank? && raw.respond_to?(:[]) && !raw.is_a?(String)
+
+      # An invoice paid out of band has no PaymentIntent. Its own id is then the
+      # only stable key, and it is still unique per payment.
+      id.to_s.presence || invoice.try(:id).to_s.presence
+    end
+
+    # Fuime: where the buyer was, for the nexus report Fuime owes itself.
+    #
+    # Under merchant-of-record every operator's sales aggregate under ONE legal
+    # entity, so economic nexus accrues against Fuime rather than against each
+    # teenager (MOR_RISK_ACCEPTANCE.md §7). Nexus is measured on history, and
+    # history cannot be backfilled once Stripe's records age out — so the
+    # capture belongs here, at the moment the sale is known, rather than in the
+    # report that will eventually read it.
+    #
+    # Only under MoR. On the Connect path the seller is the merchant and the
+    # nexus is theirs, not Fuime's.
+    def record_jurisdiction(object:, event:, amount_cents:)
+      return unless ::Fuime::Features.merchant_of_record?
+
+      ::Fuime::Sale.record!(
+        payment_intent_id: object.id,
+        event:,
+        amount_cents: amount_cents.to_i,
+        address: buyer_address_from(object),
+        occurred_at: (Time.at(object.created) if object.created.present?),
+        # Stamped by Fuime::PaymentLinkService on every sale that has one.
+        # Stored rather than re-read from Stripe metadata at report time: that
+        # would be a network call per row, and for a subscription the offer may
+        # have been archived or renamed since.
+        offer_id: offer_id_from(object)
+      )
+    end
+
+    # `buyer_address` is set on the PaymentView built from a Checkout Session.
+    # A raw PaymentIntent carries no `customer_details`; `shipping` is the only
+    # address it may have, and it is usually absent too. An unknown jurisdiction
+    # is recorded as such rather than guessed at — Fuime::Sale has a
+    # scope for exactly those rows, because a sale Fuime cannot place is a thing
+    # the nexus report must be able to see.
+    def offer_id_from(object)
+      metadata = object.try(:metadata)
+      return nil if metadata.blank?
+
+      (metadata["fuime_offer_id"] || metadata[:fuime_offer_id]).presence
+    end
+
+    def buyer_address_from(object)
+      object.try(:buyer_address) ||
+        object.try(:customer_details).try(:address) ||
+        object.try(:shipping).try(:address)
     end
 
     # Fuime's cut, posted as its own negative ledger line.

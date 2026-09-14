@@ -170,7 +170,7 @@ RSpec.describe "the full business flow", type: :request do
 
       # Approval releases; only marking paid moves the ledger.
       Fuime::PayoutBatchService.new.approve!(batch:, approver: admin)
-      expect { Fuime::PayoutBatchService.new.mark_paid!(batch:, paid_by: admin) }
+      expect { Fuime::PayoutBatchService.new.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1") }
         .to change { Fuime::PayablesLedger.new(event: venture.reload).net_payable_cents }
         .by(-29_05)
     end

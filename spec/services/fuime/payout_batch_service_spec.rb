@@ -171,12 +171,12 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
     end
 
     it "debits each operator's ledger for exactly what was paid" do
-      expect { service.mark_paid!(batch:, paid_by: admin) }
+      expect { service.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1") }
         .to change { Fuime::PayablesLedger.new(event:).paid_out_cents }.by(90_00)
     end
 
     it "keeps the payables breakdown reconciling after a run" do
-      service.mark_paid!(batch:, paid_by: admin)
+      service.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1")
 
       payables = Fuime::PayablesLedger.new(event: event.reload)
       reconciled = payables.gross_sales_cents -
@@ -192,7 +192,7 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
     end
 
     it "marks every line paid and records who asserted it" do
-      service.mark_paid!(batch:, paid_by: admin)
+      service.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1")
 
       expect(batch.reload).to be_paid
       expect(batch.paid_by).to eq(admin)
@@ -203,12 +203,12 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
     # failure and retry would exercise it: the state change is rolled back, the
     # ledger keys are not, and re-running must not debit twice.
     it "does not double-debit when the ledger has already been posted" do
-      service.mark_paid!(batch:, paid_by: admin)
+      service.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1")
       before = Fuime::PayablesLedger.new(event: event.reload).paid_out_cents
 
       batch.payout_requests.each { |r| r.update_columns(aasm_state: "approved") }
       batch.update_columns(aasm_state: "approved")
-      service.mark_paid!(batch: batch.reload, paid_by: admin)
+      service.mark_paid!(batch: batch.reload, paid_by: admin, transfer_reference: "WIRE-TEST-1")
 
       expect(Fuime::PayablesLedger.new(event: event.reload).paid_out_cents).to eq(before)
     end
@@ -216,13 +216,37 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
     it "refuses a run that was never approved" do
       draft = service.generate!(period_end: period_end - 7)
 
-      expect { service.mark_paid!(batch: draft, paid_by: admin) }
+      expect { service.mark_paid!(batch: draft, paid_by: admin, transfer_reference: "WIRE-TEST-1") }
         .to raise_error(described_class::WrongState)
     end
 
     it "refuses a non-admin" do
-      expect { service.mark_paid!(batch:, paid_by: create(:user)) }
+      expect { service.mark_paid!(batch:, paid_by: create(:user), transfer_reference: "WIRE-TEST-1") }
         .to raise_error(described_class::NotPermitted)
+    end
+
+    # Fuime sends this money by hand — there is no Stripe::Payout or ACH
+    # originator behind mark_paid!. The debit it posts is what zeroes a
+    # teenager's payable, so it must not be producible by a misclick.
+    it "refuses to debit anyone without a reference for the transfer that paid them" do
+      expect { service.mark_paid!(batch:, paid_by: admin, transfer_reference: "  ") }
+        .to raise_error(described_class::MissingTransferReference)
+    end
+
+    it "leaves the run approved and every ledger untouched when the reference is missing" do
+      expect {
+        expect { service.mark_paid!(batch:, paid_by: admin, transfer_reference: nil) }
+          .to raise_error(described_class::MissingTransferReference)
+      }.not_to(change { batch.reload.aasm_state })
+
+      expect(batch.reload).to be_approved
+    end
+
+    it "records the reference, so a paid run says what paid it" do
+      service.mark_paid!(batch:, paid_by: admin, transfer_reference: "  ACH-99812  ")
+
+      # Stripped: a reference with stray whitespace is the same reference.
+      expect(batch.reload.transfer_reference).to eq("ACH-99812")
     end
   end
 
@@ -258,7 +282,7 @@ RSpec.describe Fuime::PayoutBatchService, :merchant_of_record do
 
     it "refuses to cancel a run that has already paid" do
       service.approve!(batch:, approver: admin)
-      service.mark_paid!(batch:, paid_by: admin)
+      service.mark_paid!(batch:, paid_by: admin, transfer_reference: "WIRE-TEST-1")
 
       expect { service.cancel!(batch:, cancelled_by: admin) }
         .to raise_error(described_class::WrongState)

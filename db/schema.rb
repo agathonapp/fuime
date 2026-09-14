@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1326,6 +1326,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
 
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
+    t.string "billing_interval"
     t.datetime "created_at", null: false
     t.string "created_via", default: "operator", null: false
     t.text "description"
@@ -1346,6 +1347,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.index ["fuime_api_key_id"], name: "index_fuime_offers_on_fuime_api_key_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
     t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
+    t.check_constraint "billing_interval IS NULL OR (billing_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[]))", name: "fuime_offers_billing_interval_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
   end
 
@@ -1370,6 +1372,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
     t.date "period_start", null: false
     t.integer "reserve_basis_points", null: false
     t.integer "reserve_window_days", null: false
+    t.string "transfer_reference"
     t.datetime "updated_at", null: false
     t.index ["aasm_state"], name: "index_fuime_payout_batches_on_aasm_state"
     t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
@@ -1402,6 +1405,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
   add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'failed'::character varying, 'removed'::character varying]::text[])", name: "fuime_payout_methods_state_known", validate: false
   add_check_constraint "fuime_payout_methods", "last4 IS NULL OR length(last4::text) <= 4", name: "fuime_payout_methods_last4_is_last4", validate: false
   add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])", name: "fuime_payout_methods_provider_known", validate: false
+
+  create_table "fuime_sales", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.bigint "fuime_offer_id"
+    t.datetime "occurred_at", null: false
+    t.string "postal_code"
+    t.string "state"
+    t.string "stripe_payment_intent_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["country", "state", "occurred_at"], name: "index_fuime_sales_on_country_and_state_and_occurred_at"
+    t.index ["event_id"], name: "index_fuime_sales_on_event_id"
+    t.index ["fuime_offer_id"], name: "index_fuime_sales_on_fuime_offer_id"
+    t.index ["stripe_payment_intent_id"], name: "index_fuime_sales_on_stripe_payment_intent_id", unique: true
+  end
 
   create_table "fuime_subscriptions", force: :cascade do |t|
     t.bigint "billed_to_id", null: false
@@ -3486,6 +3506,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_12_140000) do
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_payout_methods", "events", validate: false
   add_foreign_key "fuime_payout_methods", "users", column: "added_by_id", validate: false
+  add_foreign_key "fuime_sales", "events"
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "fuime_subscriptions", "users", column: "granted_by_id", validate: false

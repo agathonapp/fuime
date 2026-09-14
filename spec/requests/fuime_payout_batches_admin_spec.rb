@@ -103,8 +103,31 @@ RSpec.describe "admin payout batches", type: :request do
     it "debits the operator only when the run is marked paid" do
       post payout_batch_approve_admin_index_path(id: batch.id)
 
+      expect {
+        post payout_batch_mark_paid_admin_index_path(id: batch.id),
+             params: { transfer_reference: "ACH-4417" }
+      }.to change { Fuime::PayablesLedger.new(event: event.reload).net_payable_cents }.by(-90_00)
+    end
+
+    # Fuime sends this money by hand — mark_paid! posts the debit but no
+    # Stripe::Payout or ACH transfer exists behind it. Asserted at the request
+    # level as well as the service, because the admin form is the only way a
+    # human reaches it and a missing field must not cost a founder their payable.
+    it "refuses to debit anyone when no transfer reference is given" do
+      post payout_batch_approve_admin_index_path(id: batch.id)
+
       expect { post payout_batch_mark_paid_admin_index_path(id: batch.id) }
-        .to change { Fuime::PayablesLedger.new(event: event.reload).net_payable_cents }.by(-90_00)
+        .not_to(change { Fuime::PayablesLedger.new(event: event.reload).net_payable_cents })
+
+      expect(batch.reload).to be_approved
+    end
+
+    it "records what paid them, so a paid run can be reconciled against the bank" do
+      post payout_batch_approve_admin_index_path(id: batch.id)
+      post payout_batch_mark_paid_admin_index_path(id: batch.id),
+           params: { transfer_reference: "ACH-4417" }
+
+      expect(batch.reload.transfer_reference).to eq("ACH-4417")
     end
   end
 end

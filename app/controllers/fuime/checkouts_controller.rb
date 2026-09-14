@@ -94,7 +94,10 @@ module Fuime
       session = ::Fuime::PaymentLinkService.new(
         event:,
         amount_cents:,
-        description: offer&.payment_description || payment_description(event)
+        description: offer&.payment_description || payment_description(event),
+        # Decides one-time vs subscription, and carries the offer's identity into
+        # metadata so a renewal arriving next year can still be attributed.
+        offer:
       ).create_checkout_session(
         success_url: return_url(event, offer, paid: true),
         cancel_url: return_url(event, offer)
