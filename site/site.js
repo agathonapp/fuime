@@ -185,7 +185,10 @@
       heroEnd = hero ? hero.offsetHeight - 90 : 40
       navH = nav.offsetHeight || 72
       darkRanges = []
-      var dark = document.querySelectorAll('.hero, .band--night, .foot')
+      // .hero left this list on 2026-09-14: the hero is a light, warm ground
+      // now, not a dark photograph, so counting it as dark turned the bar dark
+      // over a cream page and hid the wordmark.
+      var dark = document.querySelectorAll('.band--night, .foot, [data-surface="dark"]')
       for (var i = 0; i < dark.length; i++) {
         var top = dark[i].getBoundingClientRect().top + window.scrollY
         darkRanges.push([top, top + dark[i].offsetHeight])

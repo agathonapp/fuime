@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -124,13 +100,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -142,24 +111,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -183,29 +137,18 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>Bring a class.<br />Every student runs a real business.</h1>
             <p class="lead">
               A school stands in loco parentis, so you do not have to collect a
@@ -222,13 +165,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              fuime is a financial technology company, not a bank. Ninth Street
-              Labs, LLC, doing business as Fuime, is the seller of record on
-              every sale a student makes. What the app shows is what fuime
-              owes, and a person approves every payout run before anything
-              moves.
-            </p>
           </div>
         </div>
       </section>

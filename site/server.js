@@ -49,8 +49,8 @@ const TYPES = {
 
 // Was the "headers" block in vercel.json.
 //
-// CSP is report-only, matching the Rails app. The dive injects <style>
-// tags (fx/roll.js) and the pages ship an inline importmap, so enforcing
+// CSP is report-only, matching the Rails app. The fx modules inject <style>
+// tags and the pages ship an inline importmap, so enforcing
 // script-src/style-src without those allowances would blank the front door.
 // Fontshare is the only third party the HTML actually preconnects to.
 const MARKETING_CSP = [
@@ -94,14 +94,15 @@ const REDIRECTS = new Map([
   ['/signup', `${APP_ORIGIN}/users/auth?signup=true`],
 ])
 
-// The dive moved to /, so start.html no longer sits where the generic .html
-// rule below would put it. The old file URL still works; it just lands on the
-// one canonical address. (/start itself is no longer the dive's address: it is
-// the sign-up door in REDIRECTS above, which the handler checks before this
-// map, so an entry for it here would never be reached.)
+// Old page addresses, kept so links in the wild still land somewhere. The dive
+// was deleted on 2026-09-14 — 5,069px of scroll animation on the front door and
+// 22MB of frames, carrying no information — so its two files now resolve to the
+// landing page rather than to themselves.
 const INTERNAL_REDIRECTS = new Map([
-  // start.html is the dive, and the dive is no longer the front door.
-  ['/start.html', '/dive'],
+  ['/start.html', '/'],
+  ['/start-scroll.html', '/'],
+  ['/start-scroll', '/'],
+  ['/dive', '/'],
   // /home was index.html's address for as long as the site was closed. It is
   // in Google's index and in sent mail, and index.html is now /.
   ['/home', '/'],
@@ -135,14 +136,12 @@ const CLOSED = new Set([])
 // — the internal build contract, including the list of claims the site may not
 // make — at https://fuime.com/docs/BRIEF.md. Nothing ever linked it; it was
 // reachable because the directory sat next to the pages. Removed.
-const PUBLIC_DIRS = /^\/(img|vid|dive|dive-m|fx|fonts)\//
+const PUBLIC_DIRS = /^\/(img|vid|fx|fonts)\//
 const PUBLIC_FILES = new Set([
   // the spine
   '/index.html',
   '/pricing.html',
   '/parents.html',
-  '/start.html',
-  '/start-scroll.html',
   // product
   '/payment-links.html',
   '/subscriptions.html',
@@ -198,22 +197,11 @@ async function resolveFile(pathname) {
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 
-  // index.html is the front door. It was built as the landing page — hero,
-  // worked example, the three steps, pricing, parents — and spent weeks
-  // unreachable at /home behind CLOSED while / served the dive.
-  //
-  // A cinematic scroll with no nav and no footer is a good first impression and
-  // a bad hub, and the site now has twenty pages that need reaching. So the
-  // dive keeps its frame ladder and its own URL at /dive (start.html), and the
-  // page with the argument on it gets the address people type.
-  //
-  // /dive and the /dive/ frame directory coexist: an extensionless request
-  // resolves <name>.html first, and the frames are matched by PUBLIC_DIRS.
+  // index.html is the front door and the only landing page. It spent weeks
+  // unreachable at /home behind CLOSED while / served the dive; the dive is
+  // now deleted outright.
   if (pathname === '/') {
     return { path: join(ROOT, 'index.html'), ext: '.html' }
-  }
-  if (pathname === '/dive') {
-    return { path: join(ROOT, 'start.html'), ext: '.html' }
   }
 
   const ext = extname(abs)
@@ -348,7 +336,7 @@ const server = createServer(async (req, res) => {
   // Hashless filenames, so HTML must revalidate or a deploy goes unseen.
   // Frames and imagery are content-addressed by directory and never edited in
   // place, which is what earns them the immutable year.
-  const longLived = /^\/(img|vid|dive|dive-m|fonts)\//.test(pathname)
+  const longLived = /^\/(img|vid|fonts)\//.test(pathname)
   res.setHeader(
     'Cache-Control',
     longLived ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate'

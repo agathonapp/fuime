@@ -50,7 +50,7 @@
       name="twitter:image:alt"
       content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
     />
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
     <link rel="preconnect" href="https://api.fontshare.com" />
@@ -59,31 +59,7 @@
     <!-- First paint. Inline and above every script, or the browser paints its
          own white for one frame and the whole thing reads as a strobe. These
          values are the literal night tokens; style.css must agree with them. -->
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
     <!-- Without JS nothing would ever lift the overlay off the page. -->
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- style.css parks every .rise block at opacity 0 and site.js adding
          .is-in is the only thing that ever puts it back. With scripting off the
@@ -146,13 +122,6 @@
 
   <body>
     <!-- The loader is a first-visit event, not a toll booth on every click. -->
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
       <symbol id="arch" viewBox="0 0 474 387">
@@ -167,21 +136,9 @@
          The arch is the progress bar. It fills from the bottom against the
          real manifest — fonts, then the hero photograph, then window load — so
          the motion means something instead of counting down a timer. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -205,75 +162,17 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero">
-        <div class="hero__media">
-          <picture>
-            <source
-              media="(max-width: 900px)"
-              type="image/avif"
-              srcset="/img/hero-m-700.avif 700w, /img/hero-m-1000.avif 1000w"
-              sizes="100vw"
-            />
-            <source
-              media="(max-width: 900px)"
-              type="image/webp"
-              srcset="/img/hero-m-700.webp 700w, /img/hero-m-1000.webp 1000w"
-              sizes="100vw"
-            />
-            <source
-              type="image/avif"
-              srcset="/img/hero-1600.avif 1600w, /img/hero-2400.avif 2400w"
-              sizes="100vw"
-            />
-            <source
-              type="image/webp"
-              srcset="/img/hero-1600.webp 1600w, /img/hero-2400.webp 2400w"
-              sizes="100vw"
-            />
-            <img
-              src="/img/hero-1600.webp"
-              alt="A teenager's bedroom at night, a desk pushed up to a wide window with a laptop open on it, a hoodie over the chair, and a town spread out in the dark below."
-              width="2400"
-              height="1029"
-              fetchpriority="high"
-              decoding="async"
-            />
-          </picture>
-          <!-- preload="none" so nothing is fetched until site.js decides the
-               connection and the reader's motion preference can afford it. -->
-          <video
-            class="hero__live"
-            muted
-            playsinline
-            preload="none"
-            aria-hidden="true"
-            tabindex="-1"
-          >
-            <source src="/vid/hero-live-web.webm" type="video/webm" />
-            <source src="/vid/hero-live-web.mp4" type="video/mp4" />
-          </video>
-        </div>
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>You're already working.<br />Start billing.</h1>
             <p class="lead">
               Write a real invoice, keep books that hold up, and know what you
@@ -285,285 +184,15 @@
               <a class="btn btn--accent" href="/get-started">Start your business</a>
               <a class="btn btn--ghost" href="/parents">Parents: what you'll be asked to sign</a>
               <p class="hero__note">
-                Free to start, and nothing at all until you sell something.
-                Under 18? You can do this too — a parent or guardian signs once
-                and is the account holder.
-              </p>
-              <p class="hero__note">
-                Built for tutoring, lawn care, photo, video, web, and DJ work.
+                Free to start. Nothing at all until you sell something.
               </p>
             </div>
           </div>
         </div>
 
-        <div class="wrap hero__disclaimer">
-          <p class="disclaimer">
-            fuime is a financial technology company, not a bank. When a client
-            pays, they buy from Ninth Street Labs, LLC as seller of record.
-            Fuime keeps its fee and owes the rest to your venture as a payable,
-            paid out on a stated schedule after your guardian approves the payout
-            destination. Fuime is not a bank and does not offer FDIC-insured
-            deposits.
-          </p>
-        </div>
       </section>
 
-      <!-- ── the dive ──────────────────────────────────────────────────────
-           Scroll flies into the laptop on that desk and lands inside the app.
-           What ships in the markup is the last frame of it — a still of the app
-           open on the screen — and fx/dive.js replaces that with the scrubbed
-           sequence only once it has the frames. The panel below is a real DOM
-           copy of the UI baked into those frames: it takes over from the pixels
-           at the end of the dolly, which is why the app is sharp at full size
-           and stays sharp on a retina display. It is decorative, so it is one
-           role="img" with a label and carries nothing focusable. -->
-      <section class="dive" data-fx-dive>
-        <div class="dive__track">
-          <div class="dive__stage">
-            <canvas class="dive__canvas" aria-hidden="true"></canvas>
-            <img
-              class="dive__still"
-              src="/img/dive-end.webp"
-              width="1920"
-              height="1080"
-              loading="lazy"
-              decoding="async"
-              alt="The same laptop, close up: fuime open on it at 11:48pm, showing $2,140.75 in the venture's ledger, $312.40 set aside for taxes, and a list of invoices with what each job actually paid."
-            />
-            <div
-              class="dive__app"
-              role="img"
-              aria-label="The fuime app: $2,140.75 in the venture's ledger, $312.40 set aside for taxes, and a list of invoices with the amount charged beside the amount kept."
-            >
-              <div class="dv-rail">
-                <div class="dv-brand">
-                  <span class="dv-brand__mark"></span>
-                  <span class="dv-brand__name">fuime</span>
-                </div>
-
-                <div class="dv-nav">
-                  <div class="dv-nav__label">Work</div>
-                  <span class="dv-nav__item is-on"
-                    >Money <span class="dv-nav__dot"></span
-                  ></span>
-                  <span class="dv-nav__item"
-                    >Invoices <span class="dv-nav__count">12</span></span
-                  >
-                  <span class="dv-nav__item"
-                    >Clients <span class="dv-nav__count">9</span></span
-                  >
-                  <span class="dv-nav__item">Jobs</span>
-                </div>
-
-                <div class="dv-nav">
-                  <div class="dv-nav__label">Keeping straight</div>
-                  <span class="dv-nav__item">Taxes</span>
-                  <span class="dv-nav__item">Guardian</span>
-                  <span class="dv-nav__item">Statements</span>
-                </div>
-
-                <div class="dv-rail__foot">
-                  <span class="dv-avatar"></span>
-                  <span class="dv-who"
-                    >Wren Delgado<span>Delgado Photo</span></span
-                  >
-                </div>
-              </div>
-
-              <div class="dv-main">
-                <div class="dv-top">
-                  <p class="dv-top__day">Tuesday, <em>11:48pm</em></p>
-                  <div class="dv-top__acts">
-                    <span class="dv-btn">Add a client</span>
-                    <span class="dv-btn dv-btn--accent">New invoice</span>
-                  </div>
-                </div>
-
-                <div class="dv-grid">
-                  <div class="dv-card">
-                    <div class="dv-card__hd">
-                      <span>In the ledger</span><span>Last 30 days</span>
-                    </div>
-                    <p class="dv-figure">$2,140<sup>75</sup></p>
-                    <p class="dv-sub">
-                      <b>+ $325.00</b> landed two minutes ago — Marisol R.
-                    </p>
-                    <svg
-                      class="dv-spark"
-                      viewBox="0 0 560 92"
-                      preserveAspectRatio="none"
-                      aria-hidden="true"
-                    >
-                      <defs>
-                        <linearGradient
-                          id="dv-spark-fill"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0"
-                            stop-color="var(--accent-lit)"
-                            stop-opacity="0.34"
-                          />
-                          <stop
-                            offset="1"
-                            stop-color="var(--accent-lit)"
-                            stop-opacity="0"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8 L560 92 L0 92 Z"
-                        fill="url(#dv-spark-fill)"
-                      />
-                      <path
-                        d="M0 74 L46 70 L92 72 L138 58 L184 61 L230 44 L276 49 L322 38 L368 41 L414 26 L460 30 L506 16 L560 8"
-                        fill="none"
-                        stroke="var(--accent-lit)"
-                        stroke-width="2"
-                        stroke-linejoin="round"
-                      />
-                      <circle cx="560" cy="8" r="4" fill="var(--accent-lit)" />
-                    </svg>
-                  </div>
-
-                  <div class="dv-card dv-aside">
-                    <div>
-                      <div class="dv-card__hd">
-                        <span>Set aside for taxes</span>
-                      </div>
-                      <p class="dv-figure dv-figure--sm">$312<sup>40</sup></p>
-                      <div class="dv-bar"><i></i></div>
-                      <div class="dv-legend">
-                        <span>of $504 estimated</span><span>62%</span>
-                      </div>
-                    </div>
-                    <p class="dv-sub">
-                      You cross the $400 filing line in November at this pace.
-                    </p>
-                  </div>
-                </div>
-
-                <div class="dv-card dv-ledger">
-                  <div class="dv-card__hd">
-                    <span>Invoices</span><span>All clients</span>
-                  </div>
-                  <table class="dv-rows">
-                    <thead>
-                      <tr>
-                        <th>Client</th>
-                        <th>Work</th>
-                        <th>Status</th>
-                        <th class="dv-num">Amount</th>
-                        <th class="dv-num">You keep</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">MR</span
-                            ><span
-                              >Marisol R.<span>Invoice 0031</span></span
-                            ></span
-                          >
-                        </td>
-                        <td class="dv-mu">Senior portraits</td>
-                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
-                        <td class="dv-num">$325.00</td>
-                        <td class="dv-num">$292.33</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">TH</span
-                            ><span>Theo H.<span>Invoice 0030</span></span></span
-                          >
-                        </td>
-                        <td class="dv-mu">Wedding highlight reel</td>
-                        <td><span class="dv-chip dv-chip--sent">Sent</span></td>
-                        <td class="dv-num">$680.00</td>
-                        <td class="dv-num">$612.68</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">CP</span
-                            ><span
-                              >Cedar Park HS<span>Invoice 0029</span></span
-                            ></span
-                          >
-                        </td>
-                        <td class="dv-mu">Team photos, fall</td>
-                        <td>
-                          <span class="dv-chip dv-chip--due">Due Friday</span>
-                        </td>
-                        <td class="dv-num">$240.00</td>
-                        <td class="dv-num">$215.68</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">JV</span
-                            ><span>June V.<span>Invoice 0028</span></span></span
-                          >
-                        </td>
-                        <td class="dv-mu">Headshots, two hours</td>
-                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
-                        <td class="dv-num">$180.00</td>
-                        <td class="dv-num">$161.06</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">AO</span
-                            ><span
-                              >Amara O.<span>Invoice 0027</span></span
-                            ></span
-                          >
-                        </td>
-                        <td class="dv-mu">Quinceañera, four hours</td>
-                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
-                        <td class="dv-num">$450.00</td>
-                        <td class="dv-num">$405.35</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">BK</span
-                            ><span
-                              >Bell &amp; Kline<span>Invoice 0026</span></span
-                            ></span
-                          >
-                        </td>
-                        <td class="dv-mu">Storefront photos</td>
-                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
-                        <td class="dv-num">$275.00</td>
-                        <td class="dv-num">$247.28</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <span class="dv-cli"
-                            ><span class="dv-cli__ini">DM</span
-                            ><span>Dov M.<span>Invoice 0025</span></span></span
-                          >
-                        </td>
-                        <td class="dv-mu">Band promo, half day</td>
-                        <td><span class="dv-chip dv-chip--paid">Paid</span></td>
-                        <td class="dv-num">$320.00</td>
-                        <td class="dv-num">$287.90</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      
       <!-- ── the work ──────────────────────────────────────────────────── -->
       <div class="band band--night" style="padding-block: 0">
         <div class="strip">

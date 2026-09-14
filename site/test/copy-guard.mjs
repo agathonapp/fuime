@@ -23,8 +23,6 @@ export const PUBLIC_PAGES = [
   'site/index.html',
   'site/pricing.html',
   'site/parents.html',
-  'site/start.html',
-  'site/start-scroll.html',
   'site/payment-links.html',
   'site/subscriptions.html',
   'site/books.html',

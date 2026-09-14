@@ -49,32 +49,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -128,13 +104,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" aria-hidden="true">
@@ -146,24 +115,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -187,40 +141,24 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>What runs today,<br />and what doesn't.</h1>
             <p class="lead">
               This site once described, in the present tense, a product that
               did not exist yet. Later it did the reverse and told people to
               wait for something that had already gone live. Both are the same
               defect, and this page is the correction.
-            </p>
-            <p class="disclaimer">
-              The first list is drawn only from what the application actually
-              does. The second is what we know is missing, with no dates, no
-              quarters and no order. If something is on neither list, it is
-              safest to assume it is not there and to ask.
             </p>
           </div>
         </div>

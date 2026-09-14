@@ -26,8 +26,6 @@ RSpec.describe "Fuime marketing copy truth (L8)" do
   # site/test/server.test.mjs. Four lists, one fact — the marketing site has no
   # build step, so there is nowhere better to put it.
   public_pages = %w[
-    site/start.html
-    site/start-scroll.html
     site/index.html
     site/parents.html
     site/pricing.html

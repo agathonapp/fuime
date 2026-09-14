@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. This is the page it costs the most: 10.2k
@@ -178,13 +154,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. The
          reset makes every svg display:block, so a 0x0 box occupies no room
@@ -198,24 +167,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -239,17 +193,9 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents" aria-current="page">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
@@ -257,53 +203,9 @@
       <section class="hero hero--short">
         <!-- One photograph at every width. The 21:9 parents crop is the only
              hero this page has, and it is the one the alt text describes. -->
-        <div class="hero__media">
-          <picture>
-            <source
-              type="image/avif"
-              srcset="
-                /img/parents-hero-900.avif   900w,
-                /img/parents-hero-1600.avif 1600w
-              "
-              sizes="100vw"
-            />
-            <source
-              type="image/webp"
-              srcset="
-                /img/parents-hero-900.webp   900w,
-                /img/parents-hero-1600.webp 1600w
-              "
-              sizes="100vw"
-            />
-            <img
-              src="/img/parents-hero-1600.webp"
-              alt="A kitchen table at night with two chairs pulled out, a phone lying face down and a mug beside it, the lights of a town in the valley through the window behind."
-              width="1600"
-              height="686"
-              fetchpriority="high"
-              decoding="async"
-            />
-          </picture>
-          <!-- preload="none" so nothing is fetched until site.js decides the
-               connection and the reader's motion preference can afford it. -->
-          <video
-            class="hero__live"
-            muted
-            playsinline
-            preload="none"
-            aria-hidden="true"
-            tabindex="-1"
-          >
-            <source src="/vid/parents-live-web.webm" type="video/webm" />
-            <source src="/vid/parents-live-web.mp4" type="video/mp4" />
-          </video>
-        </div>
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>You sign once.<br />You keep the controls.</h1>
             <p class="lead">
               Your kid is going to keep taking money for work either way. This
@@ -317,13 +219,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              fuime is a financial technology company, not a bank. Ninth Street
-              Labs, LLC, doing business as Fuime, is the seller of record. You
-              are the legal payee and clawback obligor, and you must approve the
-              payout destination before the first payout. Your kid runs the
-              venture day to day.
-            </p>
           </div>
         </div>
       </section>
