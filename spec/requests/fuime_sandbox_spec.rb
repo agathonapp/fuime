@@ -38,6 +38,20 @@ RSpec.describe "Sandbox Mode", :merchant_of_record, type: :request do
   end
   let!(:offer) { create(:fuime_offer, :published, event:, price_cents: 35_00) }
 
+  # CI provides NO Stripe credentials (.github/workflows/ci.yml sets none), so
+  # StripeService.sandbox_available? is false there and every rehearsal falls
+  # through to the real payment path. Locally it is true only because
+  # docker-compose loads .env.development — which is exactly the local/CI
+  # divergence that makes a green run here mean nothing there.
+  #
+  # Stubbed so these examples test the FEATURE rather than whether the machine
+  # running them happens to hold a test key. The one example that asserts the
+  # behaviour when no key is configured overrides this itself.
+  before do
+    allow(StripeService).to receive(:sandbox_available?).and_return(true)
+    allow(StripeService).to receive(:sandbox_secret_key).and_return("sk_test_forspecs")
+  end
+
   describe "turning it on and off" do
     it "starts off" do
       expect(create(:event).sandbox_mode).to be(false)
@@ -273,6 +287,45 @@ RSpec.describe "Sandbox Mode", :merchant_of_record, type: :request do
       }.not_to change(Fuime::TestSale, :count)
 
       expect(Fuime::PaymentLinkService).to have_received(:new)
+    end
+  end
+
+  # The condition CI exposed: an environment holding no Stripe test key at all.
+  # It must fail CLOSED — no rehearsal, and no Buy button opened on a venture
+  # that cannot take real money, because a button opened by the sandbox helper
+  # and then not diverted by the checkout is a real charge on a page that just
+  # said "test".
+  describe "when no Stripe test key is configured" do
+    let(:stripe_session) { double("Stripe::Checkout::Session", url: "https://checkout.stripe.com/c/pay/cs_live") }
+    let(:payment_link) { instance_double(Fuime::PaymentLinkService, create_checkout_session: stripe_session) }
+
+    before do
+      allow(StripeService).to receive(:sandbox_available?).and_return(false)
+      # Stubbed because the fall-through is the POINT of these examples: with no
+      # test key the click reaches the real payment path, and without this the
+      # example would die on WebMock instead of asserting what happened.
+      allow(Fuime::PaymentLinkService).to receive(:new).and_return(payment_link)
+      sign_in(founder)
+    end
+
+    it "does not record a rehearsal, and the click reaches the real path" do
+      expect {
+        post fuime_storefront_pay_path(slug: event.slug), params: { amount: "20" }
+      }.not_to change(Fuime::TestSale, :count)
+
+      expect(Fuime::PaymentLinkService).to have_received(:new)
+    end
+
+    it "does not tell the operator they are rehearsing" do
+      get fuime_storefront_path(slug: event.slug)
+
+      expect(response.body).not_to match(/this is a rehearsal/i)
+    end
+
+    it "says so on the sandbox page instead of offering a broken button" do
+      get fuime_sandbox_path(event_slug: event.slug)
+
+      expect(response.body).to match(/isn't available right now/i)
     end
   end
 
