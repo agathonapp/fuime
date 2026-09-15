@@ -37,16 +37,16 @@
         <span class="muted text-sm block">Revenue</span>
         <span class="h3 mb0 block"><%= render_money @report.total_revenue_cents %></span>
       </div>
-      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid rgba(128,128,128,.25);">
         <span class="muted text-sm block">Sales</span>
         <span class="h3 mb0 block"><%= number_with_delimiter @report.sale_count %></span>
       </div>
-      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+      <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid rgba(128,128,128,.25);">
         <span class="muted text-sm block">Average sale</span>
         <span class="h3 mb0 block"><%= render_money @report.average_sale_cents %></span>
       </div>
       <% if @customer_count.positive? %>
-        <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid var(--smoke);">
+        <div class="flex-1 p-3" style="min-width: 8rem; border-left: 1px solid rgba(128,128,128,.25);">
           <span class="muted text-sm block">Customers</span>
           <span class="h3 mb0 block"><%= number_with_delimiter @customer_count %></span>
           <% if @repeat_customer_count.positive? %>
@@ -81,7 +81,7 @@
             <span class="muted text-sm" style="min-width: 7rem;">
               <%= @interval == "month" ? bucket.strftime("%b %Y") : bucket.strftime("%-d %b %Y") %>
             </span>
-            <span style="flex: 1; background: var(--smoke); border-radius: 4px; height: 1.25rem; overflow: hidden;">
+            <span style="flex: 1; background: rgba(128,128,128,.15); border-radius: 4px; height: 1.25rem; overflow: hidden;">
               <span style="display: block; height: 100%; border-radius: 4px; background: var(--info);
                            width: <%= peak.positive? ? ((cents.to_f / peak) * 100).round(1) : 0 %>%;"></span>
             </span>
@@ -102,8 +102,11 @@
             <div class="flex items-center gap-2 mb-1">
               <%# In-cell bar: the row is its own chart, at no extra height. %>
               <span style="flex: 1; position: relative; padding: .35rem .5rem; border-radius: 4px; overflow: hidden;">
+                <%# Translucent neutral, not `--smoke`: that token is a FIXED light value and
+                    is not redefined in dark mode, so a light fill sat behind light text.
+                    A grey at low alpha darkens a light page and lightens a dark one. %>
                 <span style="position: absolute; inset: 0; width: <%= ((row[:revenue_cents].to_f / best) * 100).round(1) %>%;
-                             background: var(--smoke); border-radius: 4px;"></span>
+                             background: rgba(128,128,128,.18); border-radius: 4px;"></span>
                 <span style="position: relative;">
                   <%= row[:offer_name] %>
                   <span class="muted text-sm">· <%= pluralize row[:sale_count], "sale" %></span>

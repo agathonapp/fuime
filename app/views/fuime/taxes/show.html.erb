@@ -14,19 +14,19 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <div class="p-4 bg-snow rounded-lg">
+      <div class="p-4 rounded-lg" style="background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.2);">
         <p class="muted m-0 mb-1 text-sm">Total Income</p>
         <p class="m-0 text-2xl font-bold text-success">
           $<%= render_money_amount(@tax_tracker.income_cents) %>
         </p>
       </div>
-      <div class="p-4 bg-snow rounded-lg">
+      <div class="p-4 rounded-lg" style="background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.2);">
         <p class="muted m-0 mb-1 text-sm">Total Expenses</p>
         <p class="m-0 text-2xl font-bold text-error">
           $<%= render_money_amount(@tax_tracker.expenses_cents) %>
         </p>
       </div>
-      <div class="p-4 bg-snow rounded-lg">
+      <div class="p-4 rounded-lg" style="background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.2);">
         <p class="muted m-0 mb-1 text-sm">Net Income</p>
         <p class="m-0 text-2xl font-bold <%= @tax_tracker.net_income_cents >= 0 ? "text-success" : "text-error" %>">
           $<%= render_money_amount(@tax_tracker.net_income_cents.abs) %>
@@ -91,7 +91,7 @@
     </div>
   </div>
 
-  <div class="card bg-snow">
+  <div class="card">
     <h4 class="m-0 mb-2">What is the $400 threshold?</h4>
     <p class="muted m-0">
       The IRS requires you to file a tax return and potentially pay self-employment tax if your
