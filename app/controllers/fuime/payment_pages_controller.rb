@@ -61,25 +61,19 @@ module Fuime
         end
       @paid = params[:paid] == "1"
 
-      # ── FUIME: the founder looking at their own pay page ─────────────────
+      # FUIME-DISABLED (2026-09-15): the founder's own-page preview.
       #
-      # A founder could publish a product and then never see what they had
-      # made. Pressing Buy on their own page bounced them with "Checkout is
-      # billed to an adult" — a message about somebody else's purchase, on
-      # their own storefront, which reads as "your page is broken".
+      # This replaced the Buy button with a "this is your pay page" card for any
+      # signed-in operator we could not confirm was an adult, because pressing Buy
+      # would have hit the checkout's adult-only rule and bounced them off their
+      # own storefront. That rule is gone (see Fuime::CheckoutsController
+      # #refuse_minor_buyer — it protected nobody and blocked teen-to-teen sales),
+      # so the preview has nothing left to soften: the founder now sees and can
+      # press the same button a customer does.
       #
-      # The refusal itself is right and stays: a minor reaching Stripe could
-      # actually complete a payment, and a minor's payment authorisation is
-      # voidable (L2). Letting the founder through to checkout to "just look"
-      # would be letting a minor transact.
-      #
-      # So this is a preview instead of a refusal. Same page the customer sees,
-      # with the button replaced by a plain statement of what goes there. No
-      # Stripe session is created, nothing is charged, and the founder can
-      # finally see their own product.
-      @previewing_own_page = current_user.present? &&
-                             !current_user.known_adult? &&
-                             @event.users.exists?(id: current_user.id)
+      # `@previewing_own_page` is kept assigned as false rather than removed so a
+      # stale reference in a template renders nothing instead of raising.
+      @previewing_own_page = false
     end
 
     private

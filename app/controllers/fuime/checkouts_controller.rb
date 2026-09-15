@@ -10,20 +10,21 @@
 # Public and unauthenticated by design: the payer is a customer, not a Fuime
 # user. The business is identified by slug, exactly as the storefront is.
 #
-# A signed-in buyer is a different case. Fuime already treats unknown age as
-# minor (User#known_adult?). If we know the session belongs to a minor, we
-# refuse to open a Stripe session — same predicate as BillingController#adult?.
-# Guests (no session) still check out; the pay link a teen texts to a customer
-# they know must keep working without a Fuime account.
+# Anyone may buy, signed in or not. The pay link a teen texts to a customer has
+# always worked without a Fuime account, and as of 2026-09-15 a signed-in buyer
+# is treated no differently — see #refuse_minor_buyer for why the old
+# adult-only rule protected nobody while blocking teen-to-teen sales.
 module Fuime
   class CheckoutsController < ApplicationController
     skip_before_action :signed_in_user
     skip_after_action :verify_authorized
     # Checkout is a customer action, not operating a business. Without this, a
-    # parked teen's POST is swallowed by the guardian-invite redirect and never
-    # reaches the buyer-age rule below.
+    # parked teen's POST is swallowed by the guardian-invite redirect — so a
+    # teenager who has not yet invited a guardian cannot buy from anyone.
     skip_before_action :enforce_guardianship_requirement
-    before_action :refuse_minor_buyer
+    # FUIME-DISABLED (2026-09-15): `before_action :refuse_minor_buyer`.
+    # The rule and the full reasoning are on the method itself. Restoring it is
+    # this one line.
 
     # Guardrails on a public, unauthenticated endpoint that talks to Stripe.
     MINIMUM_AMOUNT_CENTS = 1_00
@@ -132,10 +133,37 @@ module Fuime
 
     private
 
-    # Same rule as BillingController#adult?: a signed-in buyer may open a
-    # Stripe session only if we positively know they are an adult, or they
-    # are staff. Unknown age is fail-closed (User#known_adult?). Guests skip
-    # this — there is no session to judge.
+    # FUIME-DISABLED (2026-09-15): the signed-in buyer age rule.
+    #
+    # It refused a Stripe session to any signed-in user we could not positively
+    # confirm was an adult. Removed, for three reasons — the first of which is
+    # that it never actually prevented anything:
+    #
+    #   1. **It was bypassable by design, and said so.** Its own refusal read
+    #      "Sign out to pay as a guest." Guests have always been able to check
+    #      out — the pay link a teen texts a customer has to work without a
+    #      Fuime account. So a minor determined to buy opened a private window
+    #      and bought. The rule stopped no minor from paying; it only stopped
+    #      the ones honest enough to be signed in.
+    #   2. **It blocked teen-to-teen sales**, which are a core Fuime case, not an
+    #      edge one. A teenager buying from another teenager's storefront is the
+    #      product working.
+    #   3. **Unknown age failed closed, and unknown is the common case.**
+    #      `User#is_minor?` is `age&.<(18)` — nil when no birthday is on record —
+    #      so `known_adult?` fell through to an attestation most accounts have
+    #      never made. Every signed-in user without a date of birth, adult or
+    #      not, was refused.
+    #
+    # Not a legal requirement. LEGAL_RESEARCH.md carries no constraint on who
+    # may BUY; L2 governs the operator's account and ToS — guardian as principal
+    # obligor — not the customer. The doctrine the rule invoked cuts the other
+    # way in that document's own words (§205): "minors *can* sign; contracts are
+    # voidable." Voidable is a chargeback risk Fuime already carries on every
+    # guest sale, and a signed-in buyer is the better-evidenced version of it.
+    #
+    # Kept as a method rather than deleted (Rule 2) so restoring the rule is one
+    # line — put `before_action :refuse_minor_buyer` back and drop the early
+    # return. #refuse_minor and #adult? stay for the same reason.
     def refuse_minor_buyer
       return unless current_user
       return if adult?

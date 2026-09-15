@@ -9,12 +9,15 @@ require "rails_helper"
 # page carrying an explanation in `flash[:alert]`, and all three arrived
 # invisible:
 #
-#   * `#refuse_minor_buyer` — "Checkout is billed to an adult." Signup collects
-#     no date of birth, so `User#known_adult?` is false for the entire teen user
-#     base, and the first person to meet this refusal is the operator testing
-#     their own payment link.
 #   * the `Stripe::StripeError` rescue — "We couldn't start that payment."
-#   * a closed or unpublished offer.
+#   * a closed or unpublished offer — "That isn't for sale right now."
+#
+# A third path, `#refuse_minor_buyer` ("Checkout is billed to an adult"), was the
+# original vehicle for this example. That rule was removed on 2026-09-15 — it
+# refused the entire signed-in teen user base, which is precisely why it was the
+# easiest refusal to reach here. The example now uses a closed offer instead: the
+# invariant under test was never the age rule, it was that a refusal returning to
+# THIS layout is visible at all.
 #
 # What the buyer saw was the page reloading unchanged. The teenager hears about
 # that as a sale that did not happen, with no reason attached.
@@ -51,31 +54,18 @@ RSpec.describe "what a buyer is told when checkout refuses", :merchant_of_record
     end
   end
 
-  describe "a signed-in minor pressing Buy" do
-    before { sign_in_as!(teen) }
-
-    it "is told why, on the page it sends them back to" do
-      # `offer_token` is the parameter the pay page's form posts
-      # (fuime/payment_pages/show.html.erb:69); `offer` is the URL segment on the
-      # GET. Getting it wrong here would silently exercise the storefront
-      # redirect instead.
-      post fuime_storefront_pay_path(slug: event.slug), params: { offer_token: offer.to_param }
-
-      expect(response).to be_redirect
-      expect(flash[:alert]).to include("billed to an adult")
-
-      # Asserted explicitly: the refusal sends them back to the PAY page when an
-      # offer was named (Fuime::CheckoutsController#return_url), which is the
-      # layout that rendered no flash. Without this the example would still pass
-      # if the redirect fell through to the storefront, whose layout has always
-      # rendered one — and would then prove nothing about the fix.
-      expect(response.headers["Location"])
-        .to eq(fuime_payment_page_url(event_slug: event.slug, offer: offer.to_param))
-
-      follow_redirect!
-
-      expect(response.body).to include("flash-container")
-      expect(response.body).to include("billed to an adult")
-    end
-  end
+  # FUIME (2026-09-15): the second example here is deliberately gone, not ported.
+  #
+  # It pressed Buy as a signed-in minor and asserted the refusal was VISIBLE on
+  # the pay page it returned to. That was the only refusal which returned to this
+  # layout — #refuse_minor used #refuse_destination (→ #return_url → the pay page)
+  # while every other refusal in Fuime::CheckoutsController#create redirects to
+  # the storefront, whose layout has always rendered a flash. With the buyer-age
+  # rule removed, no refusal routes here any more, so there is nothing left to
+  # press that would prove the layout carries a flash.
+  #
+  # The example above still does the load-bearing work: it asserts the pay page
+  # renders `flash-container` at all, which is the fix this file was written for
+  # and is what any FUTURE refusal returning here will depend on. Re-add a
+  # press-and-follow example the day a refusal points back at this page again.
 end

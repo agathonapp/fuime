@@ -68,6 +68,14 @@ RSpec.describe "the parent flow and the founder's own pay page", :merchant_of_re
   # A founder could publish a product and never see what they had made: pressing
   # Buy on their own page bounced them with a message about somebody else's
   # purchase, which reads as "your page is broken".
+  #
+  # FUIME (2026-09-15): first fixed with a preview card ("This is your pay
+  # page… you can't buy from yourself"), which was the right shape only while the
+  # buyer-age rule existed to bounce them. That rule is gone — see
+  # Fuime::CheckoutsController#refuse_minor_buyer — so the founder now gets the
+  # real button on their own page, and these examples assert that instead. The
+  # `does not give them a way to actually pay` example is deliberately inverted
+  # rather than deleted: it is now the assertion that they DO have one.
   describe "a founder looking at their own pay page" do
     # `Fuime::Offer#publish!` refuses while the venture cannot sell, so a
     # `:published` offer silently stays a draft unless the venture is actually
@@ -83,28 +91,34 @@ RSpec.describe "the parent flow and the founder's own pay page", :merchant_of_re
                            aasm_state: :published)
     end
 
-    it "shows them what their customers see, rather than a refusal" do
+    it "shows them exactly what their customers see" do
       sign_in(teen)
 
       get fuime_payment_page_path(event_slug: venture.slug, offer: offer.to_param)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("This is your pay page")
       expect(response.body).to include("Pay $25.00")
+      # No preview card standing in for the button any more.
+      expect(response.body).not_to include("This is your pay page")
+      expect(response.body).not_to match(/can't buy from yourself/i)
     end
 
-    # The refusal itself is right and stays — a minor reaching Stripe could
-    # complete a payment, and a minor's authorisation is voidable (L2).
-    it "still does not give them a way to actually pay" do
+    # Inverted on 2026-09-15. The founder gets a working form, posting to the
+    # same endpoint a customer's does — which is the whole point of letting them
+    # see their own page.
+    it "gives them a real, working pay form" do
       sign_in(teen)
 
       get fuime_payment_page_path(event_slug: venture.slug, offer: offer.to_param)
 
-      expect(response.body).not_to include("checkout.stripe.com")
-      expect(response.body).to match(/can't buy from yourself/i)
+      expect(response.body).to include(fuime_storefront_pay_path(slug: venture.slug))
+      # The price is still the operator's, carried by the offer token rather than
+      # an amount field the buyer could edit.
+      expect(response.body).to include(offer.to_param)
+      expect(response.body).not_to include("name=\"amount\"")
     end
 
-    it "still shows a real customer the real button" do
+    it "shows a signed-out customer the same button" do
       get fuime_payment_page_path(event_slug: venture.slug, offer: offer.to_param)
 
       expect(response.body).not_to include("This is your pay page")
