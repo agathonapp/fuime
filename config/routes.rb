@@ -263,6 +263,11 @@ Rails.application.routes.draw do
 
   # Fuime: the keys a venture issues to its own software, and the links those
   # keys have made. See Fuime::ApiKeysController.
+  # Fuime: outbound webhooks — a founder's own server hearing about their sales.
+  get "/:event_slug/developer/webhooks", to: "fuime/webhook_endpoints#index", as: :fuime_webhooks
+  post "/:event_slug/developer/webhooks", to: "fuime/webhook_endpoints#create", as: :fuime_webhooks_create
+  delete "/:event_slug/developer/webhooks/:id", to: "fuime/webhook_endpoints#destroy", as: :fuime_webhook_disable
+
   get "/:event_slug/developer", to: "fuime/api_keys#index", as: :fuime_api_keys
   post "/:event_slug/developer", to: "fuime/api_keys#create", as: :fuime_api_keys_create
   delete "/:event_slug/developer/:id", to: "fuime/api_keys#destroy", as: :fuime_api_key_revoke

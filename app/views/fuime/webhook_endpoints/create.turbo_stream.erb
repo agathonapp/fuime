@@ -1,0 +1,7 @@
+<%# Turbo is why this exists — see Fuime::ApiKeysController#create. A form_with
+    POST sends Accept: text/vnd.turbo-stream.html first, and a plain HTML 200 is
+    not a stream Turbo will apply: the endpoint would be created, the page would
+    stay stale, and the one-time secret would be gone on reload. %>
+<%= turbo_stream.replace "webhooks_page" do %>
+  <div id="webhooks_page"><%= render template: "fuime/webhook_endpoints/index" %></div>
+<% end %>

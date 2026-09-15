@@ -928,11 +928,18 @@ class User < ApplicationRecord
   # Scoped to the teams of active wards only — a guardian is entitled to see the
   # ventures of the minors they signed for, and nothing else. Ordered so the
   # dashboard is stable between requests.
+  # A subquery rather than joins + distinct, and the difference is not stylistic:
+  # `SELECT DISTINCT ... ORDER BY events.name` is invalid in Postgres whenever
+  # the ordering column is not in the select list, so the previous version
+  # raised PG::InvalidColumnReference as soon as anything narrowed the select —
+  # `.pluck`, a `count`, a `select`. It had no callers, so nothing ever found
+  # out. A subquery is DISTINCT by construction and orders freely.
   def overseen_events
     Event
-      .joins(:organizer_positions)
-      .where(organizer_positions: { user_id: guardianships_as_guardian.active.select(:minor_id), deleted_at: nil })
-      .distinct
+      .where(
+        id: OrganizerPosition.where(user_id: guardianships_as_guardian.active.select(:minor_id),
+                                    deleted_at: nil).select(:event_id)
+      )
       .order(:name)
   end
 

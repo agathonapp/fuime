@@ -14,6 +14,27 @@ module StaticPageService
       @current_user.events.reorder("organizer_positions.sort_index ASC", "events.id ASC").includes(:stripe_cards, organizer_positions: :user)
     end
 
+    # Fuime: the ventures this user oversees as a guardian.
+    #
+    # Separate from #events, and deliberately not merged into it. #events reads
+    # through organizer_positions, and a guardian has NO position by design —
+    # see Guardianship.overseeing_event: a position is org membership that a
+    # manager (the minor) can delete, which would make the one guarantee the
+    # guardian is asked to rely on revocable by exactly the person it exists to
+    # be independent of.
+    #
+    # The consequence nobody noticed: a parent signed the agreement and their
+    # home page said "Your businesses" and listed nothing. The venture existed,
+    # they were entitled to see it, and the only route to it was the
+    # guardianships page they had no reason to look for.
+    #
+    # Kept as its own list rather than folded into "Your businesses" because it
+    # is not their business — they oversee it. The distinction is the legal
+    # framing of the whole product (L2) and the page should not blur it.
+    def overseen_events
+      @current_user.overseen_events.includes(organizer_positions: :user)
+    end
+
     def organizer_positions
       @current_user.organizer_positions.includes(:event).order(sort_index: :asc, event_id: :asc)
     end

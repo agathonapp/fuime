@@ -186,6 +186,31 @@
     </div>
   <% end %>
 
+  <%# ------------------------------------------------------------------
+      FUIME: businesses this user OVERSEES as a parent or guardian.
+
+      A guardian has no organizer position by design (see
+      Guardianship.overseeing_event — a position is org membership the minor
+      could delete, which would make the guardian's one guarantee revocable by
+      the person it exists to be independent of). The consequence nobody
+      noticed: a parent signed the agreement and this page listed nothing at
+      all. They were entitled to see the venture and had no route to it.
+
+      Its own section rather than folded into "Your businesses", because it is
+      not their business — they oversee it. That distinction is the legal
+      framing of the whole product (L2) and this page should not blur it.
+      ------------------------------------------------------------------ %>
+  <% if @overseen_events.present? && @overseen_events.any? %>
+    <h2 class="user-home-section mb-2 mt-4">Businesses you oversee</h2>
+    <p class="muted mt0 mb-2">
+      You signed for these as a parent or guardian. You can see everything;
+      the young founder runs them.
+    </p>
+    <ul class="grid grid--medium-narrow text-left w-100 mt-2">
+      <%= render partial: "events/event_card", collection: @overseen_events, as: :event %>
+    </ul>
+  <% end %>
+
   <% if @events.hidden.any? %>
     <details class="w-full text-left mt-4">
       <summary class="cursor-pointer muted">Hidden businesses</summary>
