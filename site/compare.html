@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -125,13 +101,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -143,24 +112,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -184,131 +138,78 @@
           <a class="nav__link" href="/compare" aria-current="page">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>Every way to get paid.<br />Side by side.</h1>
             <p class="lead">
               fuime is a merchant of record for small businesses selling
-              services and digital work in the US. This page sets it against
-              the other platforms that do the same job, and against the way
-              most people selling work are actually being paid right now.
+              services and digital work in the US. Here it is against
+              everything else you could do instead.
             </p>
 
             <div class="hero__cta">
               <a class="btn btn--light" href="#table">Go to the table</a>
               <p class="hero__note">
-                Seven ways to take money, four things worth comparing.
+                Seven ways, four things worth comparing.
               </p>
             </div>
 
-            <p class="disclaimer">
-              Anything here about another company is sourced or it is left out.
-              Where a number is theirs to publish, read it from them rather
-              than from us.
-            </p>
           </div>
         </div>
       </section>
 
-      <!-- ── platforms that do the same job ────────────────────────────── -->
+      <!-- ── what the alternatives win ─────────────────────────────────── -->
       <section class="band band--cream">
         <div class="wrap rise stack-lg">
           <div class="bhead">
-            <p class="eyebrow">The same job, three ways</p>
-            <h2 class="h2">Platforms built to take the payment.</h2>
-            <p class="lead">
-              If you are shopping for software, this is the short list. Two of
-              the three put a company between you and the card network. The
-              third puts you there yourself, which is the part that decides
-              most of what follows.
-            </p>
+            <p class="eyebrow">What they win</p>
+            <h2 class="h2">Most of the competition is not software.</h2>
           </div>
 
-          <div class="rows mt-8" data-fx-rows="plain">
+          <div class="rows" data-fx-rows="plain">
             <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M11 2.5 18 5.5v5.25c0 3.6-2.8 6.9-7 8.75" />
-                <path d="M11 2.5 4 5.5v5.25c0 3.6 2.8 6.9 7 8.75" />
+                <rect x="2" y="5.5" width="18" height="11" rx="1.5" />
+                <circle cx="11" cy="11" r="2.75" />
               </svg>
-              <h3 class="h4">A merchant of record, like Paddle</h3>
+              <h3 class="h4">Cash</h3>
+              <p>Instant, free, and nobody signs anything.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="6.5" y="2.5" width="9" height="17" rx="1.5" />
+                <path d="M9.5 16.5h3" />
+              </svg>
+              <h3 class="h4">A transfer app</h3>
               <p>
-                The platform is the legal seller. It takes the payment in its
-                own name, carries the dispute, and keeps a cut. Paddle is the
-                large one: it sells into many countries and currencies and
-                holds tax registrations in its own name, which fuime has in
-                none.
+                Already on your client's phone. Nothing to name, nothing to
+                sign, no review.
               </p>
             </article>
 
             <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2.5" y="5.5" width="17" height="11" rx="1.5" />
-                <path d="M2.5 9.25h17M5.5 13h3" />
+                <path d="M3.5 8h13M13 4.5 16.5 8 13 11.5" />
+                <path d="M18.5 14h-13M9 10.5 5.5 14 9 17.5" />
               </svg>
-              <h3 class="h4">A processor account in your own name</h3>
+              <h3 class="h4">Nobody in the middle</h3>
               <p>
-                You are the seller, so you keep the whole relationship and all
-                of it: the refunds, the disputes, the filings. It also needs a
-                business in a legal name, which is the wall a seller under 18
-                hits first.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M5.5 2.75h7l4 4v12.5h-11Z" />
-                <path d="M12.5 2.75v4h4" />
-                <path d="M8 11.5h6M8 15h4" />
-              </svg>
-              <h3 class="h4">fuime</h3>
-              <p>
-                Also a merchant of record. A client buys from Ninth Street
-                Labs, LLC, Stripe processes the payment, and fuime pays the
-                venture what it earned after the fee. Smaller by every measure
-                that can be counted: US only, USD only, services and digital
-                work.
+                An app moves money between two people and stops. fuime charges
+                for standing there.
               </p>
             </article>
           </div>
-
-          <p>
-            <a class="tlink" href="/compare/paddle"
-              >fuime against Paddle, with the arithmetic<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
-          </p>
         </div>
       </section>
 
@@ -317,7 +218,12 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Side by side</p>
-            <h2 class="h2">Seven ways to take money.</h2>
+            <h2 class="h2">What each one leaves behind.</h2>
+            <p class="lead">
+              Two cells say to read someone else's terms, because we have not
+              read them for you. An age rule belongs to the company that wrote
+              it.
+            </p>
           </div>
 
           <div class="matrix-scroll mt-8">
@@ -325,12 +231,12 @@
               <thead>
                 <tr>
                   <th scope="col">
-                    <span class="visually-hidden">How you take the money</span>
+                    <span class="visually-hidden">Method</span>
                   </th>
-                  <th scope="col">Invoice and receipt</th>
-                  <th scope="col">Record at year end</th>
-                  <th scope="col">Whose name it is in</th>
-                  <th scope="col">Needs to be 18</th>
+                  <th scope="col">Invoice, receipt</th>
+                  <th scope="col">Year-end record</th>
+                  <th scope="col">Whose name</th>
+                  <th scope="col">Must be 18</th>
                 </tr>
               </thead>
               <tbody>
@@ -342,21 +248,21 @@
                   <td>Read their terms</td>
                 </tr>
                 <tr>
-                  <th scope="row">A processor account in your name</th>
+                  <th scope="row">A processor in your name</th>
                   <td>Yes</td>
                   <td>Yes</td>
                   <td>Yours</td>
                   <td>Yes, in practice</td>
                 </tr>
                 <tr>
-                  <th scope="row">A transfer app, through a parent</th>
+                  <th scope="row">A transfer app, a parent's</th>
                   <td>No</td>
-                  <td>In her feed</td>
+                  <td>Her feed</td>
                   <td>Hers</td>
                   <td>No</td>
                 </tr>
                 <tr>
-                  <th scope="row">A transfer app, your own account</th>
+                  <th scope="row">A transfer app, your own</th>
                   <td>No</td>
                   <td>In with everything else</td>
                   <td>Yours, personally</td>
@@ -379,85 +285,12 @@
                 <tr data-row="fuime">
                   <th scope="row">fuime</th>
                   <td>Yes</td>
-                  <td>Yes</td>
+                  <td>Every sale, itemised</td>
                   <td>Ninth Street Labs, LLC</td>
                   <td>No</td>
                 </tr>
               </tbody>
             </table>
-          </div>
-
-          <p class="small muted mt-5">
-            Two of the cells say to read someone else's terms, and they say it
-            because we have not read them for you. An age requirement and a
-            rule about business use belong to the company that wrote them.
-          </p>
-
-          <details class="reasoning mt-6">
-            <summary>Why &ldquo;needs to be 18&rdquo; is not a law</summary>
-            <p class="faq__a">
-              A minor can sign a contract. It is voidable at the minor's
-              option, which is why a processor or an account provider will not
-              rely on one. That is a risk decision on their side, not a
-              prohibition on yours. fuime's answer is to put a parent or legal
-              guardian on the agreement as the legal signer and legal payee,
-              with the young founder operating the venture day to day. Under
-              13, fuime refuses at signup, and the age floor is clamped at 13.
-            </p>
-          </details>
-        </div>
-      </section>
-
-      <!-- ── how people actually get paid ──────────────────────────────── -->
-      <section class="band band--cream">
-        <div class="wrap rise stack-lg">
-          <div class="bhead">
-            <p class="eyebrow">How it works today</p>
-            <h2 class="h2">Most of the competition is not software.</h2>
-            <p class="lead">
-              Before anyone compares platforms they compare against what they
-              already do, which is usually a phone, somebody's personal
-              account, and a promise.
-            </p>
-          </div>
-
-          <div class="grid grid--2">
-            <article class="card">
-              <h3 class="h4">A transfer app, through somebody else</h3>
-              <p>
-                It's her account, her name, her transaction history. You ask
-                her for your own money. It works right until the week she
-                forgets, or the year somebody has to explain where it all came
-                from.
-              </p>
-            </article>
-
-            <article class="card">
-              <h3 class="h4">A transfer app, your own personal account</h3>
-              <p>
-                Now it is your name, which is better. It is also the same feed
-                as splitting a dinner bill, and there is still no invoice to
-                send and nothing to hand a client who asks for a receipt.
-              </p>
-            </article>
-
-            <article class="card">
-              <h3 class="h4">Cash</h3>
-              <p>
-                No record. Nothing to show a client who wants a receipt, or the
-                IRS if you clear $400. Fast, and completely unprovable the
-                moment anyone asks a question about it.
-              </p>
-            </article>
-
-            <article class="card">
-              <h3 class="h4">&ldquo;I'll get you next week&rdquo;</h3>
-              <p>
-                You have no invoice to point at, so following up feels like
-                begging. It is the only option on this page that can cost you
-                the money itself rather than just the paperwork.
-              </p>
-            </article>
           </div>
         </div>
       </section>
@@ -468,48 +301,51 @@
           <div class="bhead">
             <p class="eyebrow">Where fuime stops</p>
             <h2 class="h2">The rows fuime does not win.</h2>
-            <p class="lead">
-              Every option above has a reason somebody picks it. These are the
-              ones where fuime is the wrong answer, and no roadmap sentence
-              changes that today.
-            </p>
           </div>
 
-          <div class="grid grid--2">
-            <article class="card">
-              <h3 class="h4">Anywhere outside the US</h3>
-              <p>
-                USD only, English only, US only. If your clients pay in another
-                currency, fuime is not the tool, and a platform with real
-                international coverage is a better answer than waiting for one.
-              </p>
+          <div class="rows" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8.25" />
+                <path d="M2.75 11h16.5" />
+              </svg>
+              <h3 class="h4">Outside the US</h3>
+              <p>USD, English, US only. A client paying in another currency is out.</p>
             </article>
 
-            <article class="card">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3.25 19h15.5M4.75 19V8.5M9.25 19V8.5M12.75 19V8.5M17.25 19V8.5" />
+                <path d="M11 2.75 19 8.5H3Z" />
+              </svg>
               <h3 class="h4">Tax, in any jurisdiction</h3>
               <p>
-                fuime is registered in zero jurisdictions and files nothing. It
-                estimates a young founder's own income tax against the IRS $400
-                self-employment threshold. That is a teaching tool, not a
-                compliance product.
+                Registered in zero jurisdictions, files nothing. It estimates
+                income tax against the IRS $400 threshold.
               </p>
             </article>
 
-            <article class="card">
-              <h3 class="h4">Anything you ship or hand over</h3>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3.5 7.5 11 3.5l7.5 4v7L11 18.5 3.5 14.5Z" />
+                <path d="M3.5 7.5 11 11.5l7.5-4M11 11.5v7" />
+              </svg>
+              <h3 class="h4">Anything you hand over</h3>
               <p>
-                Services and digital goods only. Not physical goods, not food,
-                not crafts. Childcare, babysitting and coaching children are
-                excluded deliberately, not by oversight.
+                Services and digital goods only. Not physical goods, food,
+                crafts, childcare or babysitting.
               </p>
             </article>
 
-            <article class="card">
-              <h3 class="h4">Speed on a twenty-dollar job</h3>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.25V11l3.25 1.75" />
+              </svg>
+              <h3 class="h4">Speed on a $20 job</h3>
               <p>
-                A transfer app will beat fuime every time for getting $20 from
-                somebody standing in front of you. fuime is for the client who
-                wants an invoice and the year-end that follows it.
+                A transfer app beats fuime every time for money handed over
+                in person.
               </p>
             </article>
           </div>
@@ -524,7 +360,7 @@
             <h2 class="h2">Read the one that matches you.</h2>
           </div>
 
-          <div class="rows mt-8" data-fx-rows="plain">
+          <div class="rows" data-fx-rows="plain">
             <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
                 <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
@@ -534,9 +370,8 @@
                 <a class="tlink" href="/compare/paddle">fuime vs Paddle</a>
               </h3>
               <p>
-                Two merchants of record with the same published headline rate
-                and two different shapes of fee. The arithmetic is on the page,
-                including the sale sizes where fuime is the dearer of the two.
+                Same headline number, two shapes of fee, and the sale sizes
+                where fuime is dearer.
               </p>
             </article>
 
@@ -549,9 +384,8 @@
                 <a class="tlink" href="/compare/venmo">fuime vs Venmo</a>
               </h3>
               <p>
-                The comparison most people are actually making. Venmo is
-                faster, and fuime does not beat it on speed. What it has
-                instead is an invoice, a receipt and a record.
+                The comparison most people are really making. Venmo is faster.
+                fuime leaves a record.
               </p>
             </article>
 
@@ -561,14 +395,11 @@
                 <path d="M11 6.25V11l3.25 1.75" />
               </svg>
               <h3 class="h4">
-                <a class="tlink" href="/compare/waiting"
-                  >fuime vs waiting until 18</a
-                >
+                <a class="tlink" href="/compare/waiting">fuime vs waiting</a>
               </h3>
               <p>
-                For the under-18 case only. What two years of not billing
-                costs, and what fuime adds in exchange: a guardian's signature,
-                a review, a hold, and a fee.
+                For the under-18 case. What two years of not billing costs, and
+                what fuime adds instead.
               </p>
             </article>
           </div>
@@ -580,11 +411,10 @@
         <div class="wrap rise stack-lg">
           <div class="bhead">
             <p class="eyebrow">Start</p>
-            <h2 class="h2">Pick the row you want and go.</h2>
+            <h2 class="h2">Pick the row you want.</h2>
             <p class="lead">
-              The work is real and the client is real. One price: 5% of what
-              you collect, minimum 50¢, no monthly fee, and nothing at all
-              until something sells.
+              5% of what you collect, minimum 50¢. No monthly fee, and nothing
+              at all until something sells.
             </p>
           </div>
 
@@ -595,18 +425,12 @@
           </p>
 
           <p class="small muted">
-            Doing this in a particular line of work:
-            <a class="tlink" href="/for/tutoring">tutoring</a>,
+            By trade: <a class="tlink" href="/for/tutoring">tutoring</a>,
             <a class="tlink" href="/for/photo-video">photo and video</a>,
-            <a class="tlink" href="/for/lawn-care">lawn and yard care</a>,
-            <a class="tlink" href="/for/schools">schools and cohorts</a>. If a
-            parent is the one deciding, <a class="tlink" href="/parents">the
-            parents page</a> is written for them.
-          </p>
-
-          <p class="small muted">
-            Something this page didn't answer:
-            <a class="tlink" href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            <a class="tlink" href="/for/lawn-care">lawn care</a>,
+            <a class="tlink" href="/for/schools">schools</a>. The
+            <a class="tlink" href="/parents">parents page</a> is written for a
+            parent deciding.
           </p>
         </div>
       </section>

@@ -27,6 +27,10 @@ class StaticPagesController < ApplicationController
     @service = StaticPageService::Index.new(current_user:)
 
     @events = @service.events
+    # Fuime: ventures this user oversees as a guardian. A parent has no
+    # organizer position by design, so without this their home page listed
+    # nothing at all — see StaticPageService::Index#overseen_events.
+    @overseen_events = @service.overseen_events
 
     featured_event_ids = %w[org_MpJurQ org_Y0zun7 org_Y1ZuDz org_DyuReR org_Jounxy org_0zuXDP org_1Zu4Jr org_5Gu7Lo org_E1uGdn org_G3uq7b]
 

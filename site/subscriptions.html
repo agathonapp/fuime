@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -125,13 +101,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -143,24 +112,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -184,34 +138,22 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>Bill it once. It bills<br />itself after that.</h1>
             <p class="lead">
-              Any offer can renew monthly or yearly. The charge goes out on its
-              own and posts to your books on its own, so a standing arrangement
-              stops being a conversation about money every four weeks.
+              Any offer can renew monthly or yearly. The charge goes out and
+              posts to your books on its own.
             </p>
 
             <div class="hero__cta">
@@ -221,12 +163,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              Ninth Street Labs, LLC, doing business as Fuime, is the seller of
-              record on every renewal. One limit you should read before you sell
-              a subscription: a client cannot cancel it themselves yet. They
-              email support@fuime.com and a person cancels it.
-            </p>
           </div>
         </div>
       </section>
@@ -236,11 +172,10 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Who this is for</p>
-            <h2 class="h2">Work that repeats should not need a new ask.</h2>
+            <h2 class="h2">Work that repeats should not need an ask.</h2>
             <p class="lead">
-              A weekly student. A monthly retainer. A plan a client agreed to in
-              March and has not thought about since. The re-asking is the part
-              that costs you the client, not the price.
+              A weekly student. A monthly retainer. A plan a client agreed to
+              in March and has not thought about since.
             </p>
           </div>
 
@@ -252,11 +187,7 @@
                 <path d="M7.5 13h2M12.5 13h2" />
               </svg>
               <h3 class="h4">The weekly student</h3>
-              <p>
-                Same hour every Tuesday, same number at the end of every month.
-                Set it once and the charge arrives without a message that opens
-                with an apology for bringing it up.
-              </p>
+              <p>Same hour every Tuesday, same number at the end of every month.</p>
             </article>
 
             <article class="card card--row">
@@ -266,11 +197,7 @@
                 <path d="M11 11.5v3.5" />
               </svg>
               <h3 class="h4">The retainer</h3>
-              <p>
-                A fixed amount for being available. Billing that by hand is the
-                month you find out exactly how much you dislike invoicing, and
-                the month a client notices you forgot.
-              </p>
+              <p>A fixed amount for being available. Bill it by hand and that is the month you forget.</p>
             </article>
 
             <article class="card card--row">
@@ -279,11 +206,7 @@
                 <path d="M18.5 3.25V8h-4.75" />
               </svg>
               <h3 class="h4">The thing you keep running</h3>
-              <p>
-                A site you maintain, a mix you keep current, a plan you keep up
-                to date. The work does not stop and start, so the billing
-                should not either.
-              </p>
+              <p>A site you maintain, or a mix you keep current. The work never stops.</p>
             </article>
 
             <article class="card card--row">
@@ -293,11 +216,7 @@
                 <path d="M2.75 11h2M17.25 11h2" />
               </svg>
               <h3 class="h4">The yearly version</h3>
-              <p>
-                An offer can renew once a year instead of once a month, for a
-                client who would rather settle the whole thing in one go and
-                then not think about it again.
-              </p>
+              <p>An offer can renew once a year, for a client who would rather settle at once.</p>
             </article>
           </div>
         </div>
@@ -308,26 +227,21 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Each renewal</p>
-            <h2 class="h2">The charge posts itself, and so does the record.</h2>
+            <h2 class="h2">The charge posts itself. So does the record.</h2>
             <p class="lead">
-              You do not re-send anything and you do not re-enter anything. A
-              renewal is a sale like any other sale, with the same ledger line
-              and the same fee shown on the face of it.
+              You do not re-send anything. A renewal is a sale like any other,
+              with the same ledger line and the same visible fee.
             </p>
           </div>
 
-          <div class="grid grid--2 mt-8">
+          <div class="grid grid--3 mt-8">
             <article class="card">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <rect x="2.5" y="5" width="17" height="12" rx="1.5" />
                 <path d="M2.5 9h17M6 13.25h3.5" />
               </svg>
               <h3 class="h4">It charges on schedule</h3>
-              <p>
-                On the same date each month, or each year, at the price the
-                offer was published at. You do not send anything, and the client
-                does not have to do anything either.
-              </p>
+              <p>On the same date each month or year, at the price the offer was published at.</p>
             </article>
 
             <article class="card">
@@ -337,11 +251,7 @@
                 <path d="M7.5 11h7M7.5 14.5h4" />
               </svg>
               <h3 class="h4">It posts to the books</h3>
-              <p>
-                The renewal becomes a ledger line as it settles, with fuime's
-                fee on its own negative line naming the rate that was actually
-                charged on that renewal.
-              </p>
+              <p>A ledger line as it settles, with fuime's fee on its own negative line.</p>
             </article>
 
             <article class="card">
@@ -349,12 +259,8 @@
                 <path d="M3.25 5h15.5v9.5h-8.75L5.5 18.5V14.5H3.25Z" />
                 <path d="M7 8.5h8M7 11.25h5" />
               </svg>
-              <h3 class="h4">It behaves like a normal transaction</h3>
-              <p>
-                Attach a receipt to it, pair one that arrived by email, or argue
-                about it in the comment thread. Nothing about a renewal is a
-                second-class line in the ledger.
-              </p>
+              <h3 class="h4">It is a normal transaction</h3>
+              <p>Attach a receipt, pair one that arrived by email, or argue in the comments.</p>
             </article>
 
             <article class="card">
@@ -363,11 +269,7 @@
                 <path d="M11 6.75v4.75h4.5" />
               </svg>
               <h3 class="h4">Nothing is owed on money that never came</h3>
-              <p>
-                The fee comes out of what actually collects. A period that
-                collects nothing is not a bill from us, and there is no monthly
-                charge sitting underneath any of this.
-              </p>
+              <p>The fee comes out of what collects. There is no monthly charge.</p>
             </article>
           </div>
 
@@ -392,71 +294,16 @@
       </section>
 
       <!-- ── the limit ─────────────────────────────────────────────────── -->
-      <section class="band band--cream">
+      <section class="band band--paper">
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">What it cannot do yet</p>
             <h2 class="h2">Your client cannot cancel this themselves.</h2>
             <p class="lead">
-              There is no buyer-facing cancel button today. A client who wants
-              out emails support@fuime.com and a person stops the subscription.
-              Read that before you sell one, and tell the client before they buy
-              one.
+              No buyer portal, no cancel link. A client who wants out emails
+              support@fuime.com and a person stops it. Say that when you sell
+              it.
             </p>
-          </div>
-
-          <div class="grid grid--2 mt-8">
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <rect x="2.5" y="5" width="17" height="12" rx="1.5" />
-                <path d="m2.5 6.5 8.5 6 8.5-6" />
-              </svg>
-              <h3 class="h4">How a client stops it</h3>
-              <p>
-                They email support@fuime.com and we cancel it. There is no
-                portal for them to log into, and no cancel link in the renewal
-                that does it without a person reading the message.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <path d="M11 2.75 19 6v5.5c0 3.75-3 7.2-8 8.75-5-1.55-8-5-8-8.75V6Z" />
-                <path d="M8.25 10.75 10.5 13l3.5-3.75" />
-              </svg>
-              <h3 class="h4">Say it when you sell it</h3>
-              <p>
-                A client who cannot find the exit reads the next renewal as a
-                charge nobody agreed to. That is how a conversation becomes a
-                card dispute, and a dispute is the expensive version.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <path d="M4 9.75h10a4.5 4.5 0 0 1 0 9H8.5" />
-                <path d="M7.5 6.25 4 9.75l3.5 3.5" />
-              </svg>
-              <h3 class="h4">A renewal can be undone in the books</h3>
-              <p>
-                A refund posts a reversal and rebates fuime's fee in proportion,
-                so an unwanted renewal comes off the ledger as its own event
-                rather than being quietly edited away.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M7.5 7.5 14.5 14.5M14.5 7.5 7.5 14.5" />
-              </svg>
-              <h3 class="h4">What does not exist</h3>
-              <p>
-                No buyer portal, no self-service cancel link, no reminder before
-                a renewal, and no automatic retry sequence on a failed charge.
-                None of that is built, so none of it is described here.
-              </p>
-            </article>
           </div>
 
           <p class="mt-7">
@@ -479,142 +326,58 @@
         </div>
       </section>
 
-      <!-- ── questions ─────────────────────────────────────────────────── -->
-      <section class="band band--paper">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">Questions</p>
-            <h2 class="h2">The ones worth asking before you sell one.</h2>
-          </div>
-
-          <div class="faq mt-8">
-            <details>
-              <summary>Can a client cancel a subscription themselves?</summary>
-              <p class="faq__a">
-                Not yet. They email support@fuime.com and a person cancels it.
-                There is no buyer portal and no cancel link in the renewal, and
-                we would rather you read that here than have a client find it
-                out at the wrong moment.
-              </p>
-            </details>
-
-            <details>
-              <summary>How does a subscription stop, then?</summary>
-              <p class="faq__a">
-                Through support@fuime.com. Every cancellation goes through that
-                address today, whoever asks for it, and it is handled by a
-                person rather than a button.
-              </p>
-            </details>
-
-            <details>
-              <summary>Monthly or yearly?</summary>
-              <p class="faq__a">
-                Either. An offer bills on one cadence or the other, at the price
-                it was published at, in US dollars. There is no weekly option
-                and no custom interval.
-              </p>
-            </details>
-
-            <details>
-              <summary>Does a renewal show up in my books on its own?</summary>
-              <p class="faq__a">
-                Yes. Each renewal posts as its own ledger line as it settles,
-                with fuime's fee on its own negative line naming the rate
-                charged. You can attach a receipt and comment on it like any
-                other transaction.
-              </p>
-            </details>
-
-            <details>
-              <summary>What happens if I refund a renewal?</summary>
-              <p class="faq__a">
-                A reversal posts to the ledger and fuime's fee is rebated in
-                proportion. A partial refund books the increment rather than a
-                recalculated running total, so the history stays readable
-                afterwards.
-              </p>
-            </details>
-
-            <details>
-              <summary>Does recurring cost more than a one-off sale?</summary>
-              <p class="faq__a">
-                No. A renewal is priced exactly like any other sale: 5% of what
-                you collect, minimum 50¢, no monthly fee, and Stripe's 2.9% +
-                30¢ comes out of that rather than being charged to you on top.
-              </p>
-            </details>
-          </div>
-
-          <p class="mt-7">
-            <a class="tlink" href="/pricing"
-              >The whole price, with the arithmetic<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
-          </p>
-        </div>
-      </section>
-
-      <!-- ── the three cadences ────────────────────────────────────────── -->
+      <!-- ── where it stops ────────────────────────────────────────────── -->
       <section class="band band--night">
-        <div class="wrap rise">
+        <div class="wrap rise stack-lg">
           <div class="bhead">
-            <p class="eyebrow">The three cadences</p>
-            <h2 class="h2">How each one charges, and how it ends.</h2>
+            <p class="eyebrow">Where it stops</p>
+            <h2 class="h2">Four things recurring does not have.</h2>
+            <p class="lead">
+              None of this is built, so none of it is described here.
+            </p>
           </div>
 
-          <div class="matrix-scroll mt-8">
-            <table class="matrix">
-              <thead>
-                <tr>
-                  <th scope="col"><span class="visually-hidden">Offer type</span></th>
-                  <th scope="col">Charges</th>
-                  <th scope="col">Posts</th>
-                  <th scope="col">Price</th>
-                  <th scope="col">How it ends</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">One-off</th>
-                  <td>When the client pays</td>
-                  <td>One ledger line</td>
-                  <td>$1 to $10,000</td>
-                  <td>It is already over</td>
-                </tr>
-                <tr>
-                  <th scope="row">Monthly</th>
-                  <td>Same date each month</td>
-                  <td>A line per renewal</td>
-                  <td>$1 to $10,000</td>
-                  <td>support@fuime.com</td>
-                </tr>
-                <tr>
-                  <th scope="row">Yearly</th>
-                  <td>Same date each year</td>
-                  <td>A line per renewal</td>
-                  <td>$1 to $10,000</td>
-                  <td>support@fuime.com</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="rows" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M11 2.75 19 6v5.5c0 3.75-3 7.2-8 8.75-5-1.55-8-5-8-8.75V6Z" />
+                <path d="M8.25 10.75 10.5 13l3.5-3.75" />
+              </svg>
+              <h3 class="h4">No reminder</h3>
+              <p>Nothing warns a client before a renewal goes out.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M7.5 7.5 14.5 14.5M14.5 7.5 7.5 14.5" />
+              </svg>
+              <h3 class="h4">No retries</h3>
+              <p>A failed charge is not retried on a schedule.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.5V11l3.5 2" />
+                <path d="M2.75 11h2M17.25 11h2" />
+              </svg>
+              <h3 class="h4">No weekly option</h3>
+              <p>Monthly or yearly, in US dollars, at the published price.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M4 9.75h10a4.5 4.5 0 0 1 0 9H8.5" />
+                <path d="M7.5 6.25 4 9.75l3.5 3.5" />
+              </svg>
+              <h3 class="h4">Refunds post</h3>
+              <p>A reversal, and fuime's fee rebated in proportion. A partial refund books the increment.</p>
+            </article>
           </div>
 
-          <p class="small muted mt-5">
-            Anyone in the US selling services or digital work can sell on any of
-            these. If you are 13 to 17, a parent or legal guardian signs once and
-            is the legal account holder while you run the business day to day.
+          <p>
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
           </p>
         </div>
       </section>

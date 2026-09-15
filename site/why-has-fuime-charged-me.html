@@ -49,32 +49,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -129,26 +105,26 @@
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "I have never heard of fuime. What is it?",
+                "name": "What is fuime?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "fuime is the software small businesses use to sell, invoice and keep books. Ninth Street Labs, LLC, doing business as Fuime, is the merchant of record on those sales, which means it is the legal seller on your purchase. That is the whole reason its name reached your statement instead of theirs."
+                  "text": "Software small businesses use to sell and keep books. Ninth Street Labs, LLC, doing business as Fuime, is the legal seller."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Why isn't the name of the person I dealt with on the statement?",
+                "name": "Why isn't the business's name on it?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Because they are not the legal seller. You bought from Ninth Street Labs, LLC, and it pays the business what it has earned after fees. The name after Fuime* is the business you actually dealt with, and it is put there for exactly this moment."
+                  "text": "Because they are not the legal seller. You bought from Ninth Street Labs, LLC, which pays the business what it earned."
                 }
               },
               {
                 "@type": "Question",
-                "name": "How do I work out which purchase this was?",
+                "name": "Which purchase was this?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Read the words after Fuime* first, then match the date and the amount against what you booked or bought. Checkout sends a receipt by email at the time of the sale, so searching your inbox for the business name or the amount will usually turn it up."
+                  "text": "Read the words after Fuime*, then match the date and amount. Checkout emails a receipt at the time of the sale."
                 }
               },
               {
@@ -156,47 +132,47 @@
                 "name": "I want a refund. Who do I ask?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Ask the business you bought from first. They know the work, and a refund on a fuime sale reverses the payment and gives back fuime's fee in proportion, so it costs them nothing to do it properly. If you cannot reach them, email support@fuime.com with the date, the amount and the name after Fuime*. We are not going to put a date on a refund here, because we do not have one to give you."
+                  "text": "The business you bought from. A refund reverses the payment and gives back fuime's fee in proportion, so it costs them nothing."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Will this charge come back next month?",
+                "name": "Will this charge come back?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Only if what you bought was a monthly or yearly plan. fuime can bill on a schedule, and a renewal charges the same card under the same name. A buyer cannot cancel a fuime subscription themselves, so email support@fuime.com to have it stopped, and tell the business too."
+                  "text": "Only if you bought a monthly or yearly plan. A renewal charges the same card. You cannot cancel it yourself: email support@fuime.com."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Did fuime add a fee to what I paid?",
+                "name": "Did fuime add a fee?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No. You paid the price the business set and nothing was added to your side of it. fuime takes its fee out of the business's share of the sale, and it pays the card processing out of that same fee rather than charging it to you or to them."
+                  "text": "No. You paid the price the business set, with nothing added on top. fuime's fee comes out of the business's share."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Who actually processed my card?",
+                "name": "Who processed my card?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Stripe. Checkout is hosted by Stripe and the card details go to Stripe, not to the business and not to the person who did the work. Sales are in US dollars."
+                  "text": "Stripe. Checkout is hosted by Stripe, so the card details went to Stripe, not to the business."
                 }
               },
               {
                 "@type": "Question",
-                "name": "I do not recognise this at all.",
+                "name": "I do not recognise this.",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Start with whoever else uses the card, because a tutoring session, a shoot or a yard job booked by someone in your household is the common answer. If that is not it, email support@fuime.com with the date, the amount and the name after Fuime* and we will look at the sale. If you are confident the card was used without permission, tell your card issuer as well."
+                  "text": "Start with whoever else uses the card. If that is not it, email support@fuime.com with the date and the amount."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Should I just dispute it with my card issuer?",
+                "name": "Should I just dispute it?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "That is your right and nobody here will talk you out of it. It is worth knowing that a dispute takes the money back out of a small business while it is decided, and that asking the business, or us, costs you nothing and does not tie the payment up. If you have already opened one, tell the business so they are not arguing with you in the dark."
+                  "text": "That is your right. A dispute takes the money out of a small business while it is decided; asking them, or us, does not."
                 }
               }
             ]
@@ -207,13 +183,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" aria-hidden="true">
@@ -225,24 +194,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -266,128 +220,34 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero: the answer, above everything ────────────────────────── -->
       <section class="hero hero--short">
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>Why has fuime charged me?</h1>
             <p class="lead">
-              Because you bought something from a small business that sells
-              through fuime. The charge reads <strong>Fuime* [business
-              name]</strong>, and fuime is there instead of the name you
-              expected because fuime is the legal seller on that purchase.
+              You bought from a small business that sells through fuime. The
+              charge reads <strong>Fuime* [business name]</strong>, because
+              fuime is the legal seller.
             </p>
-            <p class="disclaimer">
-              fuime is the merchant of record, the legal seller, for small
-              businesses selling services and digital work. Ninth Street Labs,
-              LLC, doing business as Fuime, is the seller of record on your
-              purchase, and Stripe processed the card. Anything this page does not answer:
-              <a class="tlink" href="mailto:support@fuime.com"
-                >support@fuime.com</a
-              >.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── anatomy of the line ───────────────────────────────────────── -->
-      <section class="band band--cream">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">The line on your statement</p>
-            <h2 class="h2">fuime, then the name of the business.</h2>
-            <p class="lead">
-              A card statement shows the legal seller, and on these purchases
-              that is fuime. The words after the asterisk are the business you
-              actually dealt with, put there so this is answerable.
-            </p>
-          </div>
-
-          <div class="grid grid--2 mt-8">
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2.5" y="5" width="17" height="12" rx="1.5" />
-                <path d="M2.5 9h17M5.5 13h4" />
-              </svg>
-              <h3 class="h4">What the charge looks like</h3>
-              <p>
-                Fuime* and then the business name, sometimes shortened by your
-                card issuer to fit. If the second half looks like a person's
-                initials or a trade, that is the business.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M5.5 2.75h7L17 7.25v12H5.5Z" />
-                <path d="M12.25 2.75v4.5H17M8.5 12h6M8.5 15.25h4" />
-              </svg>
-              <h3 class="h4">Who the seller is</h3>
-              <p>
-                Ninth Street Labs, LLC, doing business as Fuime. It is the
-                merchant of record on the sale, which is the legal reason its
-                name is on your statement rather than theirs.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
-                <path d="M2.5 8.75h17M6 12.75h3.5" />
-                <path d="M15.5 13.5v-2" />
-              </svg>
-              <h3 class="h4">Who ran the card</h3>
-              <p>
-                Stripe. Checkout is hosted by Stripe, so your card details went
-                to Stripe and not to the business or to the person who did the
-                work. Sales are in US dollars.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <circle cx="9.75" cy="9.75" r="6" />
-                <path d="m14.25 14.25 4.5 4.5" />
-              </svg>
-              <h3 class="h4">What you bought</h3>
-              <p>
-                A service or a digital product. Tutoring, a photo or video
-                shoot, a lawn job, a website, a DJ set. Physical goods and food
-                are not sold through fuime at all.
-              </p>
-            </article>
           </div>
         </div>
       </section>
 
       <!-- ── identifying the purchase ──────────────────────────────────── -->
-      <section class="band band--night">
+      <section class="band band--cream">
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Which purchase was it</p>
             <h2 class="h2">Four things, in this order.</h2>
-            <p class="lead">
-              Most of these charges are identified at the first step, because
-              the business's own name is sitting in the descriptor.
-            </p>
           </div>
 
           <div class="rows mt-8">
@@ -397,10 +257,7 @@
                 <path d="M6 13h10" />
               </svg>
               <h3 class="h4">Read past the asterisk</h3>
-              <p>
-                Everything after Fuime* is the business. If you recognise it,
-                you are finished and nothing is wrong.
-              </p>
+              <p>Everything after Fuime* is the business. Recognise it and you are done.</p>
             </article>
 
             <article class="card card--row">
@@ -408,12 +265,8 @@
                 <rect x="3" y="4.5" width="16" height="14" rx="1.5" />
                 <path d="M3 8.5h16M7.5 2.5v4M14.5 2.5v4" />
               </svg>
-              <h3 class="h4">Match the date and the amount</h3>
-              <p>
-                The charge is dated when the payment went through, which is
-                usually the day it was booked rather than the day the work
-                happened.
-              </p>
+              <h3 class="h4">Match the date and amount</h3>
+              <p>The charge is dated when the payment went through, not the work.</p>
             </article>
 
             <article class="card card--row">
@@ -422,10 +275,7 @@
                 <path d="m2.9 6 8.1 6 8.1-6" />
               </svg>
               <h3 class="h4">Search your email</h3>
-              <p>
-                Checkout emails a receipt at the time of the sale. Search your
-                inbox for the business name, or for the exact amount.
-              </p>
+              <p>Checkout emails a receipt. Search for the business name, or the amount.</p>
             </article>
 
             <article class="card card--row">
@@ -435,11 +285,7 @@
                 />
               </svg>
               <h3 class="h4">Ask whoever booked it</h3>
-              <p>
-                A session, a shoot or a job booked by someone else in your
-                household is the most common answer of all, and the fastest one
-                to check.
-              </p>
+              <p>A job booked by someone else in your household is the usual answer.</p>
             </article>
           </div>
         </div>
@@ -450,109 +296,80 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Questions</p>
-            <h2 class="h2">The ones people ask at this point.</h2>
+            <h2 class="h2">The ones people ask next.</h2>
           </div>
 
           <div class="faq mt-8">
             <details>
-              <summary>I have never heard of fuime. What is it?</summary>
+              <summary>What is fuime?</summary>
               <p class="faq__a">
-                fuime is the software small businesses use to sell, invoice and
-                keep books. Ninth Street Labs, LLC,
-                doing business as Fuime, is the merchant of record on those
-                sales, which means it is the legal seller on your purchase. That
-                is the whole reason its name reached your statement instead of
-                theirs.
+                Software small businesses use to sell and keep books. Ninth
+                Street Labs, LLC, doing business as Fuime, is the legal seller.
               </p>
             </details>
 
             <details>
-              <summary>
-                Why isn't the name of the person I dealt with on the statement?
-              </summary>
+              <summary>Why isn't the business's name on it?</summary>
               <p class="faq__a">
                 Because they are not the legal seller. You bought from Ninth
-                Street Labs, LLC, and it pays the business what it has earned
-                after fees. The name after Fuime* is the business you actually
-                dealt with, and it is put there for exactly this moment.
+                Street Labs, LLC, which pays the business what it earned.
               </p>
             </details>
 
             <details>
-              <summary>How do I work out which purchase this was?</summary>
+              <summary>Which purchase was this?</summary>
               <p class="faq__a">
-                Read the words after Fuime* first, then match the date and the
-                amount against what you booked or bought. Checkout sends a
-                receipt by email at the time of the sale, so searching your
-                inbox for the business name or the amount will usually turn it
-                up.
+                Read the words after Fuime*, then match the date and amount.
+                Checkout emails a receipt at the time of the sale.
               </p>
             </details>
 
             <details>
               <summary>I want a refund. Who do I ask?</summary>
               <p class="faq__a">
-                Ask the business you bought from first. They know the work, and
-                a refund on a fuime sale reverses the payment and gives back
-                fuime's fee in proportion, so it costs them nothing to do it
-                properly. If you cannot reach them, email support@fuime.com with
-                the date, the amount and the name after Fuime*. We are not going
-                to put a date on a refund here, because we do not have one to
-                give you.
+                The business you bought from. A refund reverses the payment and
+                gives back fuime's fee in proportion, so it costs them nothing.
               </p>
             </details>
 
             <details>
-              <summary>Will this charge come back next month?</summary>
+              <summary>Will this charge come back?</summary>
               <p class="faq__a">
-                Only if what you bought was a monthly or yearly plan. fuime can
-                bill on a schedule, and a renewal charges the same card under
-                the same name. A buyer cannot cancel a fuime subscription
-                themselves, so email support@fuime.com to have it stopped, and
-                tell the business too.
+                Only if you bought a monthly or yearly plan. A renewal charges
+                the same card. You cannot cancel it yourself: email
+                support@fuime.com.
               </p>
             </details>
 
             <details>
-              <summary>Did fuime add a fee to what I paid?</summary>
+              <summary>Did fuime add a fee?</summary>
               <p class="faq__a">
-                No. You paid the price the business set and nothing was added to
-                your side of it. fuime takes its fee out of the business's share
-                of the sale, and it pays the card processing out of that same
-                fee rather than charging it to you or to them.
+                No. You paid the price the business set, with nothing added on
+                top. fuime's fee comes out of the business's share.
               </p>
             </details>
 
             <details>
-              <summary>Who actually processed my card?</summary>
+              <summary>Who processed my card?</summary>
               <p class="faq__a">
-                Stripe. Checkout is hosted by Stripe and the card details go to
-                Stripe, not to the business and not to the person who did the
-                work. Sales are in US dollars.
+                Stripe. Checkout is hosted by Stripe, so the card details went
+                to Stripe, not to the business.
               </p>
             </details>
 
             <details>
-              <summary>I do not recognise this at all.</summary>
+              <summary>I do not recognise this.</summary>
               <p class="faq__a">
-                Start with whoever else uses the card, because a tutoring
-                session, a shoot or a yard job booked by someone in your
-                household is the common answer. If that is not it, email
-                support@fuime.com with the date, the amount and the name after
-                Fuime* and we will look at the sale. If you are confident the
-                card was used without permission, tell your card issuer as well.
+                Start with whoever else uses the card. If that is not it, email
+                support@fuime.com with the date and the amount.
               </p>
             </details>
 
             <details>
-              <summary>Should I just dispute it with my card issuer?</summary>
+              <summary>Should I just dispute it?</summary>
               <p class="faq__a">
-                That is your right and nobody here will talk you out of it. It
-                is worth knowing that a dispute takes the money back out of a
-                small business while it is decided, and that asking the
-                business, or us, costs you nothing and does not tie the payment
-                up. If you have already opened one, tell the business so they
-                are not arguing with you in the dark.
+                That is your right. A dispute takes the money out of a
+                small business while it is decided; asking them, or us, does not.
               </p>
             </details>
           </div>
@@ -564,11 +381,7 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">If that did not help</p>
-            <h2 class="h2">Three routes, and one honest limit.</h2>
-            <p class="lead">
-              Whichever one you take, quote the date, the amount and the name
-              after Fuime*. Those three things identify a sale on their own.
-            </p>
+            <h2 class="h2">Three routes, and one limit.</h2>
           </div>
 
           <div class="grid grid--2 mt-8">
@@ -579,9 +392,7 @@
               </svg>
               <h3 class="h4">Ask the business first</h3>
               <p>
-                They can refund the sale, and the refund gives them back fuime's
-                fee in proportion, so there is no reason for them to stall you.
-                They are also the only ones who know what was agreed.
+                They can refund it, and the refund gives them back fuime's fee.
               </p>
             </article>
 
@@ -592,9 +403,8 @@
               </svg>
               <h3 class="h4">If you cannot reach them</h3>
               <p>
-                Email support@fuime.com. Give the date, the amount and the name
-                after Fuime*, and say what you have already tried. A person
-                reads it.
+                Email support@fuime.com with the date, the amount and the name
+                after Fuime*.
               </p>
             </article>
 
@@ -605,9 +415,7 @@
               </svg>
               <h3 class="h4">If the card was used without permission</h3>
               <p>
-                Tell your card issuer, and tell us at support@fuime.com so the
-                sale can be looked at from this side. Those are two different
-                jobs and both are worth doing.
+                Tell your card issuer, and tell us at support@fuime.com.
               </p>
             </article>
 
@@ -616,19 +424,16 @@
                 <circle cx="11" cy="11" r="8" />
                 <path d="m7.5 7.5 7 7M14.5 7.5l-7 7" />
               </svg>
-              <h3 class="h4">What we cannot do for you</h3>
+              <h3 class="h4">What we cannot do</h3>
               <p>
-                We cannot vouch for the work, and we do not verify anyone's
-                identity. A person at fuime reads every business's application
-                before it can sell, and that is a review of an application, not
-                a background check on a human being.
+                We cannot vouch for the work. Nobody's identity is verified.
               </p>
             </article>
           </div>
 
           <p class="mt-7">
             <a class="tlink" href="/merchant-of-record"
-              >Why fuime is the seller and not the business<svg
+              >Why fuime is the seller<svg
                 class="arrow"
                 width="14"
                 height="14"

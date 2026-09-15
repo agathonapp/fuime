@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -125,13 +101,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -143,24 +112,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -184,34 +138,22 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>A link you can<br />put on a flyer.</h1>
             <p class="lead">
               Name what you sell, set the price, and that offer gets its own
-              page. Send the link in a text, print it, paste it under your
-              signature. The client pays on a checkout page hosted by Stripe.
+              page. Your client pays on a Stripe-hosted checkout.
             </p>
 
             <div class="hero__cta">
@@ -221,11 +163,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              Ninth Street Labs, LLC, doing business as Fuime, is the seller of
-              record on every purchase. Sales are in US dollars, for services
-              and digital work. Offers are priced between $1 and $10,000.
-            </p>
           </div>
         </div>
       </section>
@@ -235,12 +172,10 @@
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">What a link replaces</p>
-            <h2 class="h2">A request in a chat app is not a price.</h2>
+            <h2 class="h2">A chat request is not a price.</h2>
             <p class="lead">
-              A payment request carries your name, your phone number, and
-              nothing at all about the work. A link carries the offer, the
-              amount, and a checkout page that belongs to the business rather
-              than to you personally.
+              A payment request carries your name and your phone number, and
+              nothing at all about the work.
             </p>
           </div>
 
@@ -252,9 +187,8 @@
               </svg>
               <h3 class="h4">It has an address</h3>
               <p>
-                The offer lives at a fixed URL. That is something you can text,
-                print, or read out over the phone, and nobody has to know your
-                number to pay it.
+                The offer lives at a fixed URL. Text it, print it, or read it
+                out.
               </p>
             </article>
 
@@ -265,23 +199,19 @@
               </svg>
               <h3 class="h4">It says what it is</h3>
               <p>
-                A named offer at a set price, anywhere from $1 to $10,000. The
-                client reads the name of the work and the number before a card
-                comes anywhere near it.
+                A named offer at a set price, anywhere from $1 to $10,000.
               </p>
             </article>
 
             <article class="card">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <path d="M6.5 8.25V2.5h9v5.75" />
-                <rect x="2.75" y="8.25" width="16.5" height="6.5" rx="1.5" />
-                <path d="M6.5 12.5h9v7h-9Z" />
+                <path d="M14.25 3.25 18.75 7.75 8.5 18H4v-4.5Z" />
+                <path d="M12.5 5 17 9.5" />
               </svg>
               <h3 class="h4">It survives a rename</h3>
               <p>
-                Change what the offer is called and the link keeps working. The
-                flyer you printed in March still goes to the right page in
-                September.
+                Rename the offer and the link keeps working. March's flyer
+                still works in September.
               </p>
             </article>
 
@@ -292,11 +222,77 @@
               </svg>
               <h3 class="h4">Somebody else handles the card</h3>
               <p>
-                Checkout is a Stripe-hosted page. fuime never builds its own
-                card form, and the purchase is made from Ninth Street Labs,
-                LLC, as the seller of record.
+                Checkout is a Stripe-hosted page. The purchase is from Ninth
+                Street Labs, LLC.
               </p>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── the two addresses ─────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The two addresses</p>
+            <h2 class="h2">One page per offer, one for the business.</h2>
+            <p class="lead">
+              Each offer gets a page of its own. The business gets a storefront
+              that lists them, so a single link can carry everything you sell.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
+                <path d="M2.5 8h17M5.75 12h6.5" />
+              </svg>
+              <h3 class="h4">/pay/&lt;venture&gt;/&lt;offer&gt;</h3>
+              <p>
+                The page for one thing you sell, at the price you set.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M3 8.5 4.5 4h13L19 8.5" />
+                <path d="M3 8.5h16v10.5H3Z" />
+                <path d="M8.5 19v-5.5h5V19" />
+              </svg>
+              <h3 class="h4">/b/&lt;venture&gt;</h3>
+              <p>
+                A public storefront listing what the business offers. One
+                address for a bio or a business card.
+              </p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.5v9M8.5 8.75h4a1.75 1.75 0 0 1 0 3.5h-3a1.75 1.75 0 0 0 0 3.5h4" />
+              </svg>
+              <h3 class="h4">Or let them name it</h3>
+              <p>
+                The buyer chooses what they pay: a tip, or a job that ran
+                long.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── what it costs ─────────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What it costs</p>
+            <h2 class="h2">Nothing to publish. A cut when it sells.</h2>
+            <p class="lead">
+              5% of what you collect, minimum 50¢. No monthly fee and nothing
+              until a sale. Stripe's 2.9% + 30¢ comes out of that, not out of
+              you.
+            </p>
           </div>
 
           <p class="mt-7">
@@ -319,296 +315,60 @@
         </div>
       </section>
 
-      <!-- ── the two addresses ─────────────────────────────────────────── -->
-      <section class="band band--night">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">The two addresses</p>
-            <h2 class="h2">One page per offer, one page for the business.</h2>
-            <p class="lead">
-              Each offer gets a page of its own. The business gets a public
-              storefront that lists them, so a single link can carry everything
-              you sell instead of one thing at a time.
-            </p>
-          </div>
-
-          <div class="rows mt-8" data-fx-rows="plain">
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
-                <path d="M2.5 8h17M5.75 12h6.5" />
-              </svg>
-              <h3 class="h4">/pay/&lt;venture&gt;/&lt;offer&gt;</h3>
-              <p>
-                The page for one thing you sell, at the price you set. This is
-                the link you send to a client who already knows what they are
-                buying and just needs somewhere to pay for it.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <path d="M3 8.5 4.5 4h13L19 8.5" />
-                <path d="M3 8.5h16v10.5H3Z" />
-                <path d="M8.5 19v-5.5h5V19" />
-              </svg>
-              <h3 class="h4">/b/&lt;venture&gt;</h3>
-              <p>
-                A public storefront listing what the business offers. One
-                address for a bio, a business card, or a client who has not
-                worked out yet which thing they want.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <path d="M14.25 3.25 18.75 7.75 8.5 18H4v-4.5Z" />
-                <path d="M12.5 5 17 9.5" />
-              </svg>
-              <h3 class="h4">Renaming does not break it</h3>
-              <p>
-                Rename the offer and the old link still resolves. Anything
-                already printed, forwarded or bookmarked keeps working, which
-                is the difference between a link and a screenshot.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M11 6.5v9M8.5 8.75h4a1.75 1.75 0 0 1 0 3.5h-3a1.75 1.75 0 0 0 0 3.5h4" />
-              </svg>
-              <h3 class="h4">Or let them name the amount</h3>
-              <p>
-                An offer can ask the buyer to choose what they pay instead of
-                fixing it. Useful for a tip, a top-up on a job that ran long,
-                or work you priced in conversation.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── making one ────────────────────────────────────────────────── -->
-      <section class="band band--cream">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">Making one</p>
-            <h2 class="h2">Name it, price it, send it.</h2>
-            <p class="lead">
-              There is no page builder and no template to fill in. An offer is
-              a name, a price, and a category, and the page exists as soon as
-              those three do.
-            </p>
-          </div>
-
-          <div class="grid grid--3 mt-8">
-            <article class="step">
-              <p class="step__n">01</p>
-              <h3>Name the offer</h3>
-              <p>
-                Whatever you would call it on the phone. Services and digital
-                work only, so a two-hour session or a finished edit, not
-                something that ships in a box.
-              </p>
-            </article>
-
-            <article class="step">
-              <p class="step__n">02</p>
-              <h3>Set the price</h3>
-              <p>
-                Anything from $1 to $10,000, in US dollars. Or leave it open
-                and let the buyer enter the number themselves when they get to
-                the page.
-              </p>
-            </article>
-
-            <article class="step">
-              <p class="step__n">03</p>
-              <h3>Send the link</h3>
-              <p>
-                Once your business has been reviewed by hand, the page takes
-                payments. Text the link, print it, or point people at the
-                storefront and let them pick.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── questions ─────────────────────────────────────────────────── -->
-      <section class="band band--paper">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">Questions</p>
-            <h2 class="h2">The ones people ask before publishing one.</h2>
-          </div>
-
-          <div class="faq mt-8">
-            <details>
-              <summary>Do I need a website first?</summary>
-              <p class="faq__a">
-                No. The storefront at /b/&lt;venture&gt; is a public page you
-                do not have to build, and a single offer page works on its own
-                if one thing is all you sell. Plenty of businesses never send
-                anyone anywhere else.
-              </p>
-            </details>
-
-            <details>
-              <summary>What happens if I rename an offer?</summary>
-              <p class="faq__a">
-                The link keeps working. Renaming changes what the page says,
-                not where it lives, so a printed flyer, an old email, and a
-                client who bookmarked it all still land in the right place.
-              </p>
-            </details>
-
-            <details>
-              <summary>Can the client choose what they pay?</summary>
-              <p class="faq__a">
-                Yes. An offer can ask for a free-chosen amount instead of a
-                fixed price, which is how you handle a tip, a part payment, or
-                a number you agreed on a call.
-              </p>
-            </details>
-
-            <details>
-              <summary>Who is the client actually buying from?</summary>
-              <p class="faq__a">
-                Ninth Street Labs, LLC, doing business as Fuime, is the seller
-                of record, and Stripe processes the card. What you are owed is
-                the sale minus the fuime fee. There is a whole page on what
-                that means at /merchant-of-record.
-              </p>
-            </details>
-
-            <details>
-              <summary>What can I sell through a link?</summary>
-              <p class="faq__a">
-                Services and digital work, priced in US dollars. Physical
-                goods, food and crafts are out, and so is childcare,
-                babysitting, and coaching children. Those are deliberate
-                exclusions, not an oversight.
-              </p>
-            </details>
-
-            <details>
-              <summary>What does it cost to send a link?</summary>
-              <p class="faq__a">
-                Nothing to publish an offer, nothing to send the link, and no
-                monthly fee. fuime takes 5% of what you collect, minimum
-                50¢, and Stripe's 2.9% + 30¢ comes out of that rather than
-                being charged to you on top.
-              </p>
-            </details>
-          </div>
-
-          <p class="mt-7">
-            <a class="tlink" href="/pricing"
-              >The whole price, with the arithmetic<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
-          </p>
-        </div>
-      </section>
-
       <!-- ── where it stops ────────────────────────────────────────────── -->
       <section class="band band--night">
-        <div class="wrap rise">
+        <div class="wrap rise stack-lg">
           <div class="bhead">
             <p class="eyebrow">Where it stops</p>
             <h2 class="h2">Four things a payment link will not do.</h2>
             <p class="lead">
-              Worth knowing before you build a business on one, because every
-              limit here is a decision rather than a gap we are hoping you do
+              Every limit here is a decision, not a gap we are hoping you do
               not notice.
             </p>
           </div>
 
-          <div class="grid grid--2 mt-8">
-            <article class="card">
+          <div class="rows" data-fx-rows="plain">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M11 6.75v4.5l2.75 2" />
               </svg>
               <h3 class="h4">US dollars, and only US dollars</h3>
-              <p>
-                Every offer is priced and charged in USD. There is no second
-                currency, no country selector, and no conversion happening
-                quietly behind the checkout page.
-              </p>
+              <p>Every offer is priced and charged in USD. No country selector, no conversion.</p>
             </article>
 
-            <article class="card">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M3.5 7.5 11 3.5l7.5 4v7L11 18.5 3.5 14.5Z" />
                 <path d="m3.5 7.5 7.5 4 7.5-4M11 11.5v7" />
               </svg>
               <h3 class="h4">Services and digital work only</h3>
-              <p>
-                If it ships in a box, this is the wrong tool. Physical goods,
-                food and crafts are excluded, and so is anything involving the
-                care or coaching of children.
-              </p>
+              <p>Physical goods, food and crafts are out. So is childcare, babysitting and coaching children.</p>
             </article>
 
-            <article class="card">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M4.5 2.5h9l4 4v13h-13Z" />
                 <path d="M13.5 2.5V6.5h4" />
                 <path d="M7.5 15.5 14 9" />
               </svg>
               <h3 class="h4">No sales tax, anywhere</h3>
-              <p>
-                fuime does not calculate, collect, or file sales tax, and is
-                registered in no jurisdiction to do it. What you owe is between
-                you and whoever you file with.
-              </p>
+              <p>fuime does not calculate, collect or file it, and is registered in zero jurisdictions.</p>
             </article>
 
-            <article class="card">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <circle cx="8.25" cy="7" r="3.25" />
                 <path d="M2.5 18.25a5.75 5.75 0 0 1 11.5 0" />
                 <path d="M15.25 8.5h4.25M15.25 12h4.25" />
               </svg>
               <h3 class="h4">Who is allowed to sell</h3>
-              <p>
-                Anyone in the US selling services or digital work. If you are
-                13 to 17, a parent or legal guardian signs once and is the
-                legal account holder while you run the business day to day.
-              </p>
+              <p>Anyone in the US. At 13 to 17, a parent or guardian owns the account.</p>
             </article>
           </div>
 
-          <p class="mt-7">
-            <a class="tlink" href="/books"
-              >What happens after the money arrives<svg
-                class="arrow"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-            ></a>
+          <p>
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
           </p>
         </div>
       </section>

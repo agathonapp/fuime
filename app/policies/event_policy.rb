@@ -671,6 +671,24 @@ class EventPolicy < ApplicationPolicy
     member? && permitted_to_operate_business?
   end
 
+  # Fuime: Sandbox Mode — rehearsing a purchase against your own storefront.
+  #
+  # Reading is `offers?`, so a guardian watching over a teenager's shoulder sees
+  # the same page and the same rehearsals. Nothing here is sensitive: a test
+  # purchase is a thing that did not happen.
+  def sandbox?
+    offers?
+  end
+
+  # Writing is `manage_offers?`, which is the gate that already decides who may
+  # set a price and publish a listing. Rehearsing a sale is the same act as
+  # listing one — and it must stay narrower than `offers?`, because this is the
+  # predicate Fuime::CheckoutsController consults to decide whether a Buy click
+  # is a rehearsal or a real customer's payment.
+  def manage_sandbox?
+    manage_offers?
+  end
+
   # Fuime: cards. Four predicates rather than one, because the interesting design here
   # is that they do NOT all belong to the same person.
   #

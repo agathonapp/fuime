@@ -59,12 +59,19 @@ module Fuime
     # who was told a price in person is still a one-time sale. When one is given
     # it decides whether this is a subscription, and its id travels in metadata
     # so a renewal arriving months later can still be attributed.
-    def initialize(event:, amount_cents:, description:, offer: nil)
+    # `sandbox:` makes this a REHEARSAL — a real Stripe Checkout session created
+    # with the test-mode key, so the founder gets Stripe's own hosted page and
+    # its Test Mode banner, pays with 4242 4242 4242 4242, and nothing anywhere
+    # moves. See Fuime::SandboxCheckout for what happens when they come back.
+    def initialize(event:, amount_cents:, description:, offer: nil, sandbox: false)
       @event = event
       @amount_cents = amount_cents
       @description = description
       @offer = offer
+      @sandbox = sandbox
     end
+
+    def sandbox? = @sandbox
 
     # Fuime: under merchant-of-record the charge is on FUIME's own account.
     #
@@ -87,10 +94,17 @@ module Fuime
     # this would be the pooled model L1 forbids.
     def create_mor_checkout_session(success_url:, cancel_url:)
       Fuime::Features.merchant_of_record!
-      @event.selling_blockers.then do |blockers|
-        if blockers.any?
-          raise NotAcceptingPayments,
-                "Event #{@event.id} is not eligible to sell under Fuime: #{blockers.join('; ')}"
+      # Skipped for a rehearsal, deliberately. `selling_blockers` is the list of
+      # reasons this venture may not take REAL money — a guardian mid-onboarding,
+      # vetting not yet approved — and every one of them is a reason the founder
+      # especially wants to see their checkout work before it matters. A test-mode
+      # session cannot take money from anyone, so there is nothing here to protect.
+      unless sandbox?
+        @event.selling_blockers.then do |blockers|
+          if blockers.any?
+            raise NotAcceptingPayments,
+                  "Event #{@event.id} is not eligible to sell under Fuime: #{blockers.join('; ')}"
+          end
         end
       end
 
@@ -134,8 +148,17 @@ module Fuime
           success_url: success_url,
           cancel_url: cancel_url,
         },
-        { api_key: StripeService.secret_key }
+        { api_key: checkout_api_key }
       )
+    end
+
+    # Test-mode key for a rehearsal, the configured one otherwise. Explicit per
+    # call rather than via the global `Stripe.api_key` for the reason already
+    # documented below on the Connect path: the global is derived from Rails.env,
+    # not from STRIPE_MODE, so in production it is the LIVE key — which is
+    # precisely the key a rehearsal must not touch.
+    def checkout_api_key
+      sandbox? ? StripeService.sandbox_secret_key : StripeService.secret_key
     end
 
     def create_checkout_session(success_url:, cancel_url:)
@@ -250,6 +273,11 @@ module Fuime
         fuime_event_id: @event.id,
         fuime_event_name: @event.name,
         fuime_fee_cents: fee_cents,
+        # Belt to `livemode`'s braces. Stripe's own `livemode: false` is the
+        # authoritative signal that no money moved and is what the ledger gate
+        # reads; this is here so a human reading the Stripe dashboard can see at
+        # a glance which sessions were rehearsals.
+        **(sandbox? ? { fuime_sandbox: "true" } : {}),
       }
       return base if @offer.blank?
 

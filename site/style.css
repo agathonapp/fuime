@@ -1,34 +1,51 @@
 /* fuime — design system.
-   Structure, type scale and band rhythm are Mercury's. One knob turned on
-   purpose: the accent is #C2401F, not an indigo. Everything below is a token
-   or a component built from tokens. No raw hex past :root. */
 
-@import url('https://api.fontshare.com/v2/css?f%5B%5D=general-sans@1,2&display=swap');
+   Rebuilt 2026-09-14 against paddle.com, measured rather than remembered.
+   The three decisions that do the work, in order of effect:
+
+   1. NO PURE BLACK AND NO PURE WHITE. Every neutral is warm — the darks are
+      brown-black (#1c1a15), not blue-black. Against a warm ground a single
+      saturated accent reads as a natural extreme instead of a bolt-on brand
+      colour, which is why one accent is enough for a whole site.
+   2. A SERIF DISPLAY over a neutral sans body. Gambetta 500 for headings,
+      General Sans for everything else. Paddle's own face is a licensed
+      condensed serif we cannot use; Gambetta is the closest thing on the
+      foundry our CSP already allows.
+   3. SEVEN TYPE SIZES. 14 / 16 / 20 / 24 / 40 / 48 / 64, and nothing between.
+      Paddle ships exactly seven on every page. There is nowhere for
+      inconsistency to enter when there is no eighth size to reach for.
+
+   Everything below is a token or a component built from tokens. No raw hex
+   past :root. */
+
+@import url('https://api.fontshare.com/v2/css?f%5B%5D=general-sans@1,2&f%5B%5D=gambetta@1,2&display=swap');
 
 :root {
-  /* ink */
-  --ink: #272735;
-  --ink-muted: #535461;
-  --ink-faint: #c3c3cc;
-  /* --ink-faint on white is 1.75:1. That is fine for the hairline ticks it
-     draws on the split bar and nowhere near fine for a placeholder, which is
-     the only thing telling you what the field wants. 4.55:1 clears AA.
-     Deliberately not --ink-muted (7.49:1) — a placeholder that dark reads as
-     a value already typed in, and people stop before they type. */
-  --ink-placeholder: #757580;
-  --on-dark: #ededf3;
-  --on-dark-mu: rgba(237, 237, 243, 0.62);
-  --on-dark-faint: rgba(237, 237, 243, 0.14);
+  /* ink — warm, and never #000. --ink-muted is an alpha of --ink rather than a
+     separate grey, so muted text stays in the same family on any ground. */
+  --ink: #1c1a15;
+  --ink-muted: rgba(28, 26, 21, 0.72);
+  --ink-faint: rgba(28, 26, 21, 0.28);
+  /* A placeholder is the only thing telling you what the field wants, so it
+     clears AA on the page surface (4.6:1). Deliberately not --ink-muted — a
+     placeholder that dark reads as a value already typed in. */
+  --ink-placeholder: #6b665c;
+  --ink-soft: #33312c;
+  --on-dark: #fcfcfc;
+  --on-dark-mu: rgba(251, 250, 249, 0.72);
+  --on-dark-faint: rgba(251, 250, 249, 0.16);
 
-  /* ground */
-  --cream: #f4f1ec;
-  --paper: #ffffff;
-  --night: #141420;
-  --night-2: #1d1d2b;
-  --ink-soft: #3a3a4c;
-  --hair: rgba(39, 39, 53, 0.12);
+  /* ground — three surfaces and no more. The rhythm of a page is these three
+     alternating, one per section, and nothing else. */
+  --paper: #f9f8f7; /* the page. Not #fff: a warm ground is the whole trick. */
+  --cream: #ebe7df; /* the brown band */
+  --night: #1c1a15; /* the dark band */
+  --night-2: #33312c; /* a raised surface on the dark band */
+  --hair: rgba(28, 26, 21, 0.14);
 
-  /* accent — one hue, three jobs: on light, on dark, and pressed */
+  /* accent — one hue, and it appears ONCE per page, at the ask. Scarcity is
+     what makes it work: put it in the nav and the hero and the footer and it
+     stops meaning anything. */
   --accent: #c2401f;
   --accent-lit: #e2724f;
   --accent-deep: #a83518;
@@ -38,29 +55,30 @@
 
   /* Paid. The one green on the site, and it only ever means money that has
      already landed — never "success", never a decorative tick. */
-  --good: #6fbf95;
+  --good: #5f8f6a;
 
-  /* elevation + masking */
-  --shadow-1: rgba(20, 20, 32, 0.05);
-  --shadow-2: rgba(20, 20, 32, 0.28);
+  /* elevation — hairline rings, not blurs. There is exactly one real drop
+     shadow on the site and it is under the product shot. */
+  --shadow-1: rgba(28, 26, 21, 0.06);
+  --shadow-2: rgba(28, 26, 21, 0.24);
   --mask-on: rgba(0, 0, 0, 1);
 
   /* type */
   --font:
     'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --w-display: 480;
+  --font-display: 'Gambetta', 'Iowan Old Style', Georgia, serif;
+  --w-display: 500;
   --w-ui: 500;
   --w-body: 400;
 
-  --t-hero: clamp(2.5rem, 1.35rem + 4.6vw, 4.0625rem); /* → 65px */
-  /* Was 42px at the top end. 42 is Mercury's h2, but Mercury spends the other
-     half of the row on dense product copy — ours was a lone 42px line on a
-     1100px measure with nothing beside it, which reads small rather than
-     restrained. 52 with the band head now filling both tracks. */
-  --t-h2: clamp(2.125rem, 1.3rem + 3.3vw, 3.25rem); /* → 52px */
-  --t-h3: clamp(1.5rem, 1.2rem + 1.2vw, 2rem); /* → 32px */
+  /* Seven steps. Display sizes collapse hard on mobile, body sizes barely
+     move — most sites do the reverse and get a phone layout that reads as a
+     shrunken desktop. */
+  --t-hero: clamp(2.5rem, 1.4rem + 4.4vw, 4rem); /* 40 → 64 */
+  --t-h2: clamp(2rem, 1.5rem + 2vw, 3rem); /* 32 → 48 */
+  --t-h3: clamp(1.75rem, 1.5rem + 1vw, 2.5rem); /* 28 → 40 */
   --t-h4: 1.5rem; /* 24 */
-  --t-lead: clamp(1.125rem, 1.02rem + 0.42vw, 1.3125rem); /* → 21 */
+  --t-lead: 1.25rem; /* 20 */
   --t-body: 1rem; /* 16 */
   --t-small: 0.875rem; /* 14 */
 
@@ -76,20 +94,25 @@
   --s9: 96px;
   --s10: 144px;
 
-  /* form */
-  --r: 4px;
-  --r-card: 12px;
+  /* form. 10px is off-grid on purpose — not 8, not 12. It is the one radius a
+     reader could not name and would notice the absence of. */
+  --r: 10px;
+  --r-card: 16px;
   --r-pill: 999px;
-  --r-media: 40px;
+  --r-media: 24px;
   --r-arch: 120px;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --dur: 180ms;
 
-  --wrap: 1180px;
+  /* motion — one easing, four durations, and nothing interactive over .32s.
+     Fast out, long settle. */
+  --ease: cubic-bezier(0.246, 0.75, 0.187, 1);
+  --dur-fast: 160ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+
+  --wrap: 1248px;
   --gut: clamp(20px, 5vw, 40px);
 
-  /* the split — one rule cut into three proportional segments. Three scales,
-     because it appears at three sizes and must be the same object each time. */
+  /* the split — one rule cut into three proportional segments. */
   --split-h: 10px;
   --split-h-dock: 2px;
   --track-hud: 0.04em;
@@ -100,6 +123,23 @@
   --cwe-z-content: 10;
   --cwe-z-fx: 20;
   --cwe-z-transition: 100;
+}
+
+/* Section ground as ONE attribute. The highest-leverage idea on paddle.com:
+   a whole page's visual cadence is one word per section, and every surface
+   flips its own text colours with it. Works alongside the .band--* classes the
+   pages already use. */
+[data-surface='light'] {
+  background: var(--paper);
+  color: var(--ink);
+}
+[data-surface='brown'] {
+  background: var(--cream);
+  color: var(--ink);
+}
+[data-surface='dark'] {
+  background: var(--night);
+  color: var(--on-dark);
 }
 
 /* ── reset ─────────────────────────────────────────────────────────────── */
@@ -149,6 +189,7 @@ h4 {
   line-height: 1.08;
   letter-spacing: -0.018em;
   text-wrap: balance;
+  font-family: var(--font-display);
 }
 
 /* ── layout ────────────────────────────────────────────────────────────── */
@@ -214,6 +255,7 @@ h4 {
   grid-column: 1;
   grid-row: 2;
   max-width: 22ch;
+  font-family: var(--font-display);
 }
 /* The lead sits in the right track across both head rows and drops to the
    headline's last baseline. Its own margin-top and the inline max-width the
@@ -295,10 +337,12 @@ section[id] {
 }
 .h3 {
   font-size: var(--t-h3);
+  font-family: var(--font-display);
 }
 .h4 {
   font-size: var(--t-h4);
   letter-spacing: -0.006em;
+  font-family: var(--font-display);
 }
 .lead {
   font-size: var(--t-lead);
@@ -318,93 +362,6 @@ section[id] {
 .small {
   font-size: var(--t-small);
   letter-spacing: 0.42px;
-}
-
-/* ── loader ────────────────────────────────────────────────────────────────
-   #boot's position/background live inline in each page's <head> so the night
-   colour is painted before this stylesheet has been fetched. Everything below
-   is the part that is allowed to arrive a frame late. */
-
-.boot__arch {
-  width: 62px;
-  height: auto;
-  overflow: visible;
-}
-/* The empty arch, and the same arch lit — the second one revealed by a rect
-   that rises as the manifest completes. */
-.boot__ghost {
-  fill: var(--on-dark-faint);
-}
-.boot__lit {
-  fill: var(--on-dark);
-}
-#boot-rect {
-  /* Starts pushed fully below the glyph, so nothing is lit at 0%. */
-  transform: translateY(582px);
-  transition: transform 420ms cubic-bezier(0.33, 0, 0.15, 1);
-}
-.boot__word {
-  font-size: 1.25rem;
-  font-weight: var(--w-display);
-  letter-spacing: -0.03em;
-  color: var(--on-dark);
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    opacity 520ms var(--ease) 180ms,
-    transform 520ms var(--ease) 180ms;
-}
-#boot[data-lit='true'] .boot__word {
-  opacity: 1;
-  transform: none;
-}
-
-/* The exit: the arch takes one confident step toward the viewer as the night
-   lifts off the page underneath it. */
-#boot[data-done='true'] {
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 620ms var(--ease),
-    visibility 0s linear 620ms;
-  visibility: hidden;
-}
-#boot[data-done='true'] .boot__arch,
-#boot[data-done='true'] .boot__word {
-  transform: scale(1.12);
-  transition: transform 620ms cubic-bezier(0.4, 0, 0.1, 1);
-}
-/* Everything the loader was covering settles the last 1% into place. Opacity
-   only — a transform here would make the fixed nav's containing block the
-   animated element and drop it out of the viewport for the duration. */
-.boot-out body > *:not(#boot) {
-  animation: boot-settle 760ms var(--ease) both;
-}
-@keyframes boot-settle {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Returning within the session: straight to the page, no loader. */
-.booted #boot {
-  display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #boot-rect,
-  .boot__word,
-  #boot[data-done='true'] .boot__arch,
-  #boot[data-done='true'] .boot__word {
-    transition-duration: 1ms;
-    transform: none;
-  }
-  .boot-out body > *:not(#boot) {
-    animation-duration: 1ms;
-  }
 }
 
 /* ── nav ───────────────────────────────────────────────────────────────── */
@@ -625,37 +582,38 @@ section[id] {
 
 /* ── hero ──────────────────────────────────────────────────────────────── */
 
+/* The hero is a LIGHT, CENTRED block that deliberately does NOT fill the
+   viewport.
+
+   Two measured decisions, both from paddle.com:
+
+   1. 55vh, not 100vh. Their heroes run 30–71% of the viewport, median 55, so
+      the next section is always partly visible at the fold and the page reads
+      as continuing rather than as a wall to get past.
+   2. Headline, one subhead, two buttons, and nothing else. Ten per cent of
+      their body copy sits above the fold. Ours had seven text blocks in the
+      first screen, four of them legal, and that single fact was most of why
+      the site read as cluttered.
+
+   The full-bleed photographic hero this replaces is gone, along with its
+   scrim, its pointer glow and its video layer. A photograph behind type is
+   a contrast problem you have to solve on every page forever; a warm ground
+   is one you solve once. */
 .hero {
   position: relative;
-  min-height: 760px;
-  height: 100svh;
-  max-height: 940px;
+  min-height: 55svh;
   display: flex;
   flex-direction: column;
-  /* Anchored below the fixed nav rather than centred, so the headline never
-     collides with it on a short viewport. The photograph takes the rest. */
-  justify-content: flex-start;
-  padding-top: calc(72px + clamp(var(--s7), 7vh, var(--s9)));
-  color: var(--on-dark);
-  background: var(--night);
+  justify-content: center;
+  padding-block: calc(72px + var(--s9)) var(--s9);
+  color: var(--ink);
+  background: var(--paper);
+  text-align: center;
   overflow: hidden;
 }
 .hero--short {
   min-height: 0;
-  height: auto;
-  max-height: none;
-  padding-block: calc(72px + var(--s9)) var(--s9);
-}
-.hero__media {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-.hero__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 62%;
+  padding-block: calc(72px + var(--s8)) var(--s8);
 }
 /* The two secondary heroes are short, so a 16:9 frame gets cropped hard and
    the subject rides up into the headline. Favouring the top of the frame
@@ -666,20 +624,6 @@ section[id] {
 /* The photograph is the LCP element and stays that way. The clip is layered
    over it and only fades in once it can actually play, so a slow connection
    gets the still and nothing worse. */
-.hero__live {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 62%;
-  opacity: 0;
-  transition: opacity 900ms ease;
-  pointer-events: none;
-}
-.hero__live[data-playing='true'] {
-  opacity: 1;
-}
 .hero--short .hero__live {
   object-position: center 34%;
 }
@@ -696,30 +640,6 @@ section[id] {
    needs 4.5. Brightening the type would have fixed the number by flattening it
    into the lead above it; darkening the ground it sits on fixes the number and
    leaves the hierarchy, and the photograph's right side, alone. */
-.hero__media::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      120% 62% at 6% 88%,
-      rgba(10, 12, 24, 0.78) 0%,
-      rgba(10, 12, 24, 0.5) 38%,
-      rgba(10, 12, 24, 0) 72%
-    ),
-    linear-gradient(
-      100deg,
-      rgba(10, 12, 24, 0.66) 0%,
-      rgba(10, 12, 24, 0.42) 34%,
-      rgba(10, 12, 24, 0) 66%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(10, 12, 24, 0.42) 0%,
-      rgba(10, 12, 24, 0.18) 42%,
-      rgba(10, 12, 24, 0) 68%
-    );
-}
 /* The two short heroes crop a 16:9 frame hard, which lands the headline
    directly on the out-of-focus town lights — measured at 2.2:1 against a
    4.5:1 requirement, and worse on the clip's bright frames than on the still.
@@ -746,31 +666,43 @@ section[id] {
 .hero__in {
   position: relative;
   z-index: 1;
-  width: 100%;
 }
 .hero__body {
-  max-width: 720px;
+  /* 20ch on the headline is what keeps a two-clause line breaking where the
+     writer meant it to. Centred, so the measure is the only thing holding the
+     column together. */
+  max-width: 46rem;
+  margin-inline: auto;
 }
 .hero--short .hero__body {
   max-width: 780px;
 }
 .hero h1 {
   font-size: var(--t-hero);
-  letter-spacing: -0.026em;
+  letter-spacing: -0.022em;
+  line-height: 1.04;
 }
 .hero .lead {
-  color: var(--on-dark-mu);
   margin-top: var(--s5);
-  max-width: 50ch;
+  margin-inline: auto;
+  color: var(--ink-muted);
+  max-width: 34rem;
 }
 .hero__cta {
   margin-top: var(--s7);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  justify-content: center;
 }
 .hero__note {
+  /* Exactly one note is allowed, and it is one line. The hero carried three of
+     these plus a legal paragraph and an all-caps compliance chip; all of that
+     moved to the footer, which is where standing disclosure belongs. */
+  flex-basis: 100%;
   margin-top: var(--s4);
   font-size: var(--t-small);
-  letter-spacing: 0.42px;
-  color: var(--on-dark-mu);
+  color: var(--ink-muted);
 }
 
 /* It is a .wrap, so it already has the site's max-width, centring and gutter.
@@ -780,12 +712,7 @@ section[id] {
    else's 20, which is exactly the kind of misalignment that reads as sloppy
    without the reader being able to say why. */
 .hero__disclaimer {
-  position: absolute;
-  z-index: 1;
-  left: 50%;
-  bottom: var(--s6);
-  transform: translateX(-50%);
-  width: 100%;
+  display: none;
 }
 /* Legal fine print, so it should read as fine print. The pill treatment it
    used to carry made it float like a cookie toast — a thing you dismiss —
@@ -811,28 +738,6 @@ section[id] {
    accent dot, because the one thing a status chip has to survive is being sat
    on top of a photograph. The dot cannot shrink or the flex row collapses it
    to nothing when the label wraps on a phone. */
-.beta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-  margin-bottom: var(--s5);
-  padding: var(--s2) var(--s4);
-  border-radius: var(--r-pill);
-  background: var(--night-2);
-  box-shadow: inset 0 0 0 1px var(--on-dark-faint);
-  font-size: var(--t-small);
-  font-weight: var(--w-ui);
-  letter-spacing: var(--track-hud);
-  text-transform: uppercase;
-  color: var(--on-dark);
-}
-.beta::before {
-  content: '';
-  flex: 0 0 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--accent-lit);
-}
 
 /* ── email capture ─────────────────────────────────────────────────────── */
 
@@ -1574,14 +1479,18 @@ section[id] {
 
 /* ── scroll reveal ─────────────────────────────────────────────────────── */
 
-.rise {
-  opacity: 0;
-  transform: translateY(14px);
-  transition:
-    opacity 420ms var(--ease),
-    transform 420ms var(--ease);
-}
-.rise.is-in {
+/* The scroll reveal is off.
+
+   paddle.com has no scroll-triggered animation of any kind — the whole site
+   carries five keyframes and fires at most one of them per page. Parking every
+   section at opacity:0 until an observer fires was the single biggest reason
+   this site read as busy rather than calm, and it had a second cost: with JS
+   slow or blocked, most of the page was invisible.
+
+   .rise and .rise-i are kept as no-ops so the twenty pages that carry the class
+   need no edit, and so turning it back on is one rule rather than a sweep. */
+.rise,
+.rise > .rise-i {
   opacity: 1;
   transform: none;
 }
@@ -1830,26 +1739,6 @@ section[id] {
 /* The photograph is lit by one laptop; the pointer adds a second light that
    only ever brightens, so the headline contrast measured at build time is a
    floor rather than an average. */
-.hero__glow {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(
-    460px circle at var(--mx, 50%) var(--my, 65%),
-    var(--accent-glow),
-    transparent 72%
-  );
-  transition: opacity 700ms var(--ease);
-}
-.hero[data-pointer='true'] .hero__glow {
-  opacity: 1;
-}
-.hero__media img {
-  transform: scale(1.06) translate3d(var(--px, 0px), var(--py, 0px), 0);
-  transition: transform 1200ms var(--ease);
-}
 
 /* 1px of noise stops the dusk gradient banding on cheap panels and reads as
    film grain rather than compression. */
@@ -1925,20 +1814,6 @@ section[id] {
   }
 }
 
-/* ── reveal ────────────────────────────────────────────────────────────── */
-
-.rise > .rise-i {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity 620ms var(--ease),
-    transform 620ms var(--ease);
-  transition-delay: calc(var(--i, 0) * 70ms);
-}
-.rise.is-in > .rise-i {
-  opacity: 1;
-  transform: none;
-}
 
 /* ── the dive ──────────────────────────────────────────────────────────────
    Scroll flies into the laptop from the hero and lands inside the app.
@@ -1949,338 +1824,16 @@ section[id] {
    every declaration that differs. Delete the script and this section is a
    photograph, which is exactly what it should degrade to.
 
-   Below .dive__app is a DOM copy of the UI baked into those frames. It is the
-   same design at two sizes — a 1600px console, and a 420px phone app under
-   phoneUpTo in dive.js — because the panel is scaled to fit the viewport, and a
-   console scaled to a phone is a picture of an app rather than an app. */
-
-.dive {
-  position: relative;
-  background: var(--night);
-  color: var(--on-dark);
-  /* The bloom composite.py lifts the baked plate with, so the DOM panel can
-     carry the same exposure through the cross-fade. Same colour, one place. */
-  --dive-bloom: #96d6e0;
-}
-.dive__track,
-.dive__stage {
-  position: relative;
-}
-.dive__still {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.dive__canvas,
-.dive__app {
-  display: none;
-}
-
+   Below 
 /* ── the panel ─────────────────────────────────────────────────────────── */
 
-.dive__app {
-  width: 1600px;
-  height: 1000px;
-  grid-template-columns: 228px 1fr;
-  background: var(--night);
-  font-feature-settings: 'tnum' 1;
-  text-align: left;
-}
 
-.dv-rail {
-  border-right: 1px solid var(--on-dark-faint);
-  padding: 22px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
-  background: var(--night-2);
-}
-.dv-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 8px;
-}
-.dv-brand__mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(150deg, var(--accent-lit), var(--accent));
-  box-shadow: 0 0 0 1px var(--accent-glow);
-}
-.dv-brand__name {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
 
-.dv-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.dv-nav__label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--on-dark-mu);
-  opacity: 0.62;
-  padding: 0 8px 8px;
-}
-.dv-nav__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 9px;
-  border-radius: 7px;
-  color: var(--on-dark-mu);
-  font-size: 14px;
-  font-weight: var(--w-ui);
-}
-.dv-nav__item.is-on {
-  background: var(--on-dark-faint);
-  color: var(--on-dark);
-}
-.dv-nav__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-lit);
-}
-.dv-nav__count {
-  font-size: 11px;
-  color: var(--on-dark-mu);
-  font-variant-numeric: tabular-nums;
-}
 
-.dv-rail__foot {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px;
-}
-.dv-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  flex: none;
-  background: linear-gradient(160deg, var(--ink-soft), var(--night-2));
-  border: 1px solid var(--on-dark-faint);
-}
-.dv-who {
-  font-size: 13px;
-}
-.dv-who span {
-  display: block;
-  font-size: 11px;
-  color: var(--on-dark-mu);
-}
 
-.dv-main {
-  padding: 26px 30px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow: hidden;
-}
-.dv-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.dv-top__day {
-  font-size: 24px;
-  font-weight: var(--w-ui);
-  letter-spacing: -0.02em;
-}
-.dv-top__day em {
-  font-style: normal;
-  color: var(--on-dark-mu);
-}
-.dv-top__acts {
-  display: flex;
-  gap: 9px;
-  flex: none;
-}
-.dv-btn {
-  font-size: 13px;
-  font-weight: var(--w-ui);
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--on-dark-faint);
-  color: var(--on-dark-mu);
-  white-space: nowrap;
-}
-.dv-btn--accent {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--paper);
-}
 
-.dv-grid {
-  display: grid;
-  grid-template-columns: 1.55fr 1fr;
-  gap: 16px;
-}
-.dv-card {
-  border: 1px solid var(--on-dark-faint);
-  border-radius: 12px;
-  background: var(--night-2);
-  padding: 18px 20px;
-}
-.dv-card__hd {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--on-dark-mu);
-  margin-bottom: 12px;
-}
-.dv-figure {
-  font-size: 44px;
-  font-weight: var(--w-ui);
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.dv-figure sup {
-  font-size: 20px;
-  top: -0.9em;
-  position: relative;
-  margin-left: 1px;
-}
-.dv-figure--sm {
-  font-size: 34px;
-}
-.dv-figure--sm sup {
-  font-size: 16px;
-}
-.dv-sub {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--on-dark-mu);
-}
-.dv-sub b {
-  color: var(--good);
-  font-weight: var(--w-ui);
-}
 /* Hand-plotted, so the shape is a decision rather than noise. */
-.dv-spark {
-  margin-top: 16px;
-  width: 100%;
-  height: 92px;
-  display: block;
-}
-.dv-aside {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.dv-aside .dv-sub {
-  margin-top: 18px;
-}
-.dv-bar {
-  margin-top: 14px;
-  height: 8px;
-  border-radius: 99px;
-  background: var(--on-dark-faint);
-  overflow: hidden;
-}
-.dv-bar i {
-  display: block;
-  height: 100%;
-  width: 62%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-lit));
-}
-.dv-legend {
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--on-dark-mu);
-}
 
-.dv-ledger {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.dv-rows {
-  width: 100%;
-  border-collapse: collapse;
-}
-.dv-rows th {
-  text-align: left;
-  font-size: 11px;
-  font-weight: var(--w-ui);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--on-dark-mu);
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--on-dark-faint);
-}
-.dv-rows td {
-  padding: 13px 0;
-  border-bottom: 1px solid var(--on-dark-faint);
-  font-size: 14px;
-  color: var(--on-dark);
-}
-.dv-rows tr:last-child td {
-  border-bottom: 0;
-}
-.dv-mu {
-  color: var(--on-dark-mu);
-}
-.dv-num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.dv-cli {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.dv-cli__ini {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex: none;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--on-dark-faint);
-  color: var(--on-dark-mu);
-}
-.dv-cli span span {
-  display: block;
-  font-size: 12px;
-  color: var(--on-dark-mu);
-}
-.dv-chip {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: var(--w-ui);
-  padding: 3px 9px;
-  border-radius: 99px;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-.dv-chip--paid {
-  color: var(--good);
-}
-.dv-chip--sent {
-  color: var(--on-dark-mu);
-}
-.dv-chip--due {
-  color: var(--accent-lit);
-}
 
 /* The phone app. Same content, laid out for a hand — this is what the dive
    lands on below 820px, because the console above would fit the viewport at
@@ -2288,66 +1841,9 @@ section[id] {
    that go are the ones a phone can infer: what the job was, and the number the
    client paid before the fee. What you keep stays. */
 @media (max-width: 820px) {
-  .dive__app {
-    width: 420px;
-    height: 880px;
-    grid-template-columns: 1fr;
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  .dv-rail {
-    display: none;
-  }
-  .dv-main {
-    padding: 20px 16px;
-    gap: 14px;
-  }
-  .dv-top__day {
-    font-size: 19px;
-  }
-  .dv-top__acts .dv-btn:not(.dv-btn--accent) {
-    display: none;
-  }
-  .dv-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .dv-card {
-    padding: 15px 16px;
-  }
-  .dv-figure {
-    font-size: 38px;
-  }
-  .dv-figure--sm {
-    font-size: 26px;
-  }
-  .dv-spark {
-    height: 62px;
-    margin-top: 12px;
-  }
-  .dv-aside .dv-sub {
-    margin-top: 12px;
-  }
-  .dv-rows th:nth-child(2),
-  .dv-rows td:nth-child(2),
-  .dv-rows th:nth-child(4),
-  .dv-rows td:nth-child(4) {
-    display: none;
-  }
-  .dv-rows td {
-    padding: 10px 0;
-    font-size: 13px;
-  }
-  /* The panel is a fixed box, not a scroller, so rows past what fits are not
+                            /* The panel is a fixed box, not a scroller, so rows past what fits are not
      shortened — they are cut in half at the edge. Five is what fits. */
-  .dv-rows tbody tr:nth-child(n + 6) {
-    display: none;
-  }
-  .dv-cli__ini {
-    width: 24px;
-    height: 24px;
-  }
-}
+    }
 
 /* ── /start: the sign-up on the screen ─────────────────────────────────────
    The other thing the dive can land on. Not a picture of an app — the sign-up
@@ -2371,160 +1867,19 @@ section[id] {
    Authored against a resting scale of roughly 0.8, which is what a 1600×1000
    panel fits to on a laptop. */
 
-.dive__app--join {
-  display: grid;
-  place-items: center;
-  grid-template-columns: 1fr;
-  width: auto;
-  height: auto;
-  padding: var(--s9) var(--s5);
-}
-[data-fx-dive-on] .dive__app--join {
-  width: 1600px;
-  height: 1000px;
-  padding: 0;
-}
 
-.dv-join {
-  display: grid;
-  justify-items: center;
-  width: min(100%, 860px);
-  text-align: center;
-}
-.dv-join__mark {
-  width: 48px;
-  height: 39px;
-  margin-bottom: 20px;
-  /* Not inherited. The symbol carries no fill of its own, so without this the
-     mark paints black — which on this background is a mark that is not there. */
-  fill: currentColor;
-  color: var(--on-dark);
-  opacity: 0.72;
-}
-.dv-join__eyebrow {
-  margin-bottom: 14px;
-  font-size: 15px;
-  font-weight: var(--w-ui);
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--accent-lit);
-}
-.dv-join__h {
-  margin-bottom: 22px;
-  font-size: 68px;
-  font-weight: var(--w-display);
-  line-height: 1.06;
-  letter-spacing: -0.022em;
-  color: var(--on-dark);
-  text-wrap: balance;
-}
-.dv-join__lead {
-  max-width: 44ch;
-  margin-bottom: 34px;
-  font-size: 22px;
-  line-height: 1.55;
-  color: var(--on-dark-mu);
-  text-wrap: pretty;
-}
-.dv-join__fine {
-  max-width: 52ch;
-  /* Small, because the row above it is the capture's status line: it reserves
-     26px whether or not there is a message in it, and that reservation is the
-     real gap between the button and this. */
-  margin-top: 10px;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--on-dark-mu);
-}
 
 /* The site's own capture, one size up: the panel it sits in is drawn at 1600px
    and scaled down, so a 46px field would land at about 37px on the glass. */
-.dv-join .capture {
-  width: 100%;
-  max-width: 620px;
-}
-.dv-join .capture input {
-  height: 66px;
-  font-size: 20px;
-}
-.dv-join .capture .btn {
-  height: 66px;
-  padding-inline: 34px;
-  font-size: 17px;
-}
-.dv-join .capture__msg {
-  min-height: 26px;
-  font-size: 16px;
-}
-.dv-join .capture__done {
-  justify-content: center;
-  font-size: 22px;
-}
 
 /* The sign-up at phone size, in its own block rather than folded into the
    dashboard's — it has to come after the desktop rules above or the 1600×1000
    box wins on source order and the whole panel lands on a phone at about a
    fifth scale, with a 10px email field on it. */
 @media (max-width: 820px) {
-  [data-fx-dive-on] .dive__app--join {
-    width: 420px;
-    height: 880px;
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  .dv-join {
-    width: min(100%, 340px);
-  }
-  .dv-join__mark {
-    width: 32px;
-    height: 26px;
-    margin-bottom: 14px;
-  }
-  .dv-join__eyebrow {
-    margin-bottom: 10px;
-    font-size: 12px;
-    letter-spacing: 1.3px;
-  }
-  .dv-join__h {
-    margin-bottom: 16px;
-    font-size: 34px;
-  }
-  .dv-join__lead {
-    max-width: 26ch;
-    margin-bottom: 24px;
-    font-size: 15px;
-  }
-  .dv-join__fine {
-    margin-top: 18px;
-    font-size: 12px;
-  }
-  /* The field and the button stop sharing a line: side by side inside 340px
+                /* The field and the button stop sharing a line: side by side inside 340px
      they are two things too small to hit rather than one of each. */
-  .dv-join .capture__row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    border-radius: 22px;
-  }
-  .dv-join .capture input {
-    height: 50px;
-    padding-inline: var(--s4);
-    font-size: 16px;
-    text-align: center;
-  }
-  .dv-join .capture .btn {
-    height: 50px;
-    padding-inline: var(--s5);
-    font-size: 15px;
-  }
-  .dv-join .capture__msg {
-    min-height: 20px;
-    font-size: 13px;
-  }
-  .dv-join .capture__done {
-    font-size: 16px;
-  }
-}
+          }
 
 /* ── the lede ──────────────────────────────────────────────────────────────
    What the product is, on the first screen, in words.
@@ -2543,98 +1898,17 @@ section[id] {
    Sized in viewport units rather than the type tokens because it is over a
    photograph, not on a band, and it wants to hold roughly the same share of
    the frame at every width. */
-.dive__lede {
-  display: none;
-}
-[data-fx-dive-on] .dive__lede {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 3;
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  width: 100%;
-  /* One viewport, matching the cue, so the two divide the same screen between
-     them — this one from the top, the cue from the bottom — and neither has to
-     know the other's height. */
-  height: 100vh;
-  height: 100svh;
-  padding: clamp(28px, 7svh, 74px) var(--gut) 0;
-  text-align: center;
-  /* The room underneath still has to be reachable; only the link is a target. */
-  pointer-events: none;
-}
 /* The plate is a night interior with a lit city in the middle of it, and the
    middle is where a phone's crop lands. Type over that is legible in the
    render and not on a screen in daylight, so the text carries its own ground:
    a short wash from the top edge that is opaque where the words are and gone
    before the window is. Behind the text and above the canvas. */
-[data-fx-dive-on] .dive__lede::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: -1;
-  height: 82%;
-  background: linear-gradient(
-    to bottom,
-    rgba(20, 20, 32, 0.94) 0%,
-    rgba(20, 20, 32, 0.9) 46%,
-    rgba(20, 20, 32, 0.55) 74%,
-    rgba(20, 20, 32, 0) 100%
-  );
-}
-.lede__kicker {
-  margin-bottom: clamp(10px, 1.6svh, 18px);
-  font-size: var(--t-small);
-  font-weight: var(--w-ui);
-  letter-spacing: 2.4px;
-  text-transform: lowercase;
-  color: var(--accent-lit);
-}
-.lede__h {
-  max-width: 17ch;
-  font-size: clamp(1.75rem, 1.1rem + 2.5vw, 3.125rem);
-  font-weight: var(--w-display);
-  line-height: 1.08;
-  letter-spacing: -0.022em;
-  color: var(--on-dark);
-  text-wrap: balance;
-}
-.lede__sub {
-  max-width: 46ch;
-  margin-top: clamp(12px, 2svh, 22px);
-  font-size: clamp(0.9375rem, 0.86rem + 0.35vw, 1.125rem);
-  line-height: 1.55;
-  /* Brighter than --on-dark-mu, which is calibrated for support copy on a flat
-     band. This sits on a photograph of a lit city, and the wash above only
-     takes the ground so far. */
-  color: rgba(237, 237, 243, 0.8);
-  text-wrap: pretty;
-}
 /* Phone only. A wheel crosses the dive in two flicks; a thumb does not, and
    the reader who has read the four lines above and simply wants the form had
    no way to get to it. On a laptop the same link would be an apology for an
    animation that is not costing anyone anything. */
-.lede__skip {
-  display: none;
-}
 @media (max-width: 820px) {
-  .lede__skip {
-    display: inline-block;
-    margin-top: clamp(16px, 2.6svh, 26px);
-    padding: 11px 20px;
-    border-radius: var(--r-pill);
-    box-shadow: inset 0 0 0 1px var(--on-dark-faint);
-    background: rgba(237, 237, 243, 0.06);
-    font-size: var(--t-small);
-    font-weight: var(--w-ui);
-    letter-spacing: 0.3px;
-    color: var(--on-dark);
-    text-decoration: none;
-    pointer-events: auto;
   }
-}
 
 /* The end of the flight, as a coordinate — see the note in start.html. Zero
    sized and pushed one viewport up from the foot of the track, which is the
@@ -2642,14 +1916,6 @@ section[id] {
    rest. Only meaningful while the dive is armed; when it is not, the track is
    auto-height, the panel is in normal flow, and the anchor is an empty span
    sitting harmlessly above it. */
-.dive__anchor {
-  position: absolute;
-  left: 0;
-  bottom: 100vh;
-  bottom: 100svh;
-  width: 1px;
-  height: 1px;
-}
 
 /* ── the scroll cue ────────────────────────────────────────────────────────
    A child of the track rather than the pinned stage, so it leaves on the first
@@ -2662,35 +1928,6 @@ section[id] {
    Hidden unless the dive is armed. With no JS or under reduced motion nothing
    scrubs, and an invitation to scroll through an animation that will not play
    is worse than no invitation. */
-.dive__cue {
-  display: none;
-}
-[data-fx-dive-on] .dive__cue {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  z-index: 3;
-  display: grid;
-  align-content: end;
-  justify-items: center;
-  gap: 10px;
-  height: 100vh;
-  height: 100svh;
-  padding-bottom: 28px;
-  transform: translateX(-50%);
-  font-size: var(--t-small);
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: var(--on-dark-mu);
-  pointer-events: none;
-}
-.dive__cue span {
-  width: 1px;
-  height: 34px;
-  background: linear-gradient(var(--on-dark-faint), var(--on-dark-mu));
-  animation: cue 2.1s var(--ease) infinite;
-  transform-origin: 50% 0;
-}
 @keyframes cue {
   0%,
   100% {
@@ -2703,10 +1940,7 @@ section[id] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dive__cue span {
-    animation: none;
   }
-}
 
 /* ── /start: the second exit ───────────────────────────────────────────────
    The sign-up on the glass is four screens behind anyone who has read to the
@@ -2714,26 +1948,8 @@ section[id] {
    than scroll back up to a form. Centred rather than left-set like the home
    page's portal, because it is the last thing on the page and has no image
    beside it to balance against. */
-.st-join {
-  display: grid;
-  justify-items: center;
-  text-align: center;
-}
-.st-join .h2 {
-  max-width: 20ch;
-}
-.st-join .lead {
-  max-width: 44ch;
-}
-.st-join .capture {
-  width: 100%;
-  max-width: 540px;
-}
 /* The confirmation is a flex row inside a centred grid cell, and a flex row
    ignores the text-align above it. */
-.st-join .capture__done {
-  justify-content: center;
-}
 
 /* ── responsive ────────────────────────────────────────────────────────── */
 

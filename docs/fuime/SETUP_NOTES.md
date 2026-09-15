@@ -2,6 +2,36 @@
 
 ## Handoff (most recent first)
 
+**2026-09-14 (c) — Sandbox Mode: a founder can rehearse a sale on their own
+storefront, against real Stripe test mode. 4204 examples, 4 failures (the
+standing Apple-Silicon baseline); the feature's own file is 24/24.**
+1. **What it is.** Test mode on a venture's REAL storefront. The founder presses
+   Buy and gets **Stripe's own hosted Checkout in test mode** — real page, Test
+   Mode banner, `4242 4242 4242 4242`. Needed no new credential: `render.yaml`
+   already provisions `STRIPE__TEST__SECRET_KEY` on the live services, and
+   `StripeService.sandbox_secret_key` fetches `:test` explicitly (the one place
+   in the app that deliberately ignores `STRIPE_MODE`).
+2. **Test money never becomes canonical.** Balance is
+   `canonical_transactions.sum(:amount_cents)`, unfiltered, and every payable and
+   payout descends from it — so a rehearsal writes a `Fuime::TestSale` and
+   nothing else. `Fuime::SandboxCheckout` records one only after Stripe reports
+   `livemode == false`, which is the processor's own assertion that no money
+   moved and is stronger than any flag of ours.
+3. **The invariant to not break:** `FuimeHelper#sandbox_rehearsal?` and
+   `Fuime::CheckoutsController#sandbox_checkout?` must agree condition for
+   condition. The helper opens the Buy button on a venture that cannot take real
+   money, so a disagreement sends the founder's click to the LIVE path — a real
+   charge on a page that just said "test".
+4. **No webhook, on purpose** (test-mode events need their own endpoint and
+   signing secret; `FUIME_STRIPE_WEBHOOK_SECRET` is mode-agnostic). The success
+   URL carries `{CHECKOUT_SESSION_ID}` and the return leg retrieves the session.
+   Idempotent on a unique index.
+5. **Not committed at handoff time**, and the tree also carries unrelated
+   in-progress work (webhook-endpoints UI, static pages) from a parallel session
+   — separate before committing. Two new testing gotchas (concurrent runners
+   corrupting `db/schema.rb`; the silently-failing `:published` offer trait) are
+   written up in `known-failures.md`.
+
 **2026-09-14 (b) — Subscriptions for operators, and one flat price. All green.**
 Everything below from the earlier 2026-09-14 note has now RUN: both migrations
 applied, full suite exercised. Two features on top.

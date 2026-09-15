@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. This is the page it costs the most: 10.2k
@@ -178,13 +154,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. The
          reset makes every svg display:block, so a 0x0 box occupies no room
@@ -198,24 +167,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -239,17 +193,9 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents" aria-current="page">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
@@ -257,53 +203,9 @@
       <section class="hero hero--short">
         <!-- One photograph at every width. The 21:9 parents crop is the only
              hero this page has, and it is the one the alt text describes. -->
-        <div class="hero__media">
-          <picture>
-            <source
-              type="image/avif"
-              srcset="
-                /img/parents-hero-900.avif   900w,
-                /img/parents-hero-1600.avif 1600w
-              "
-              sizes="100vw"
-            />
-            <source
-              type="image/webp"
-              srcset="
-                /img/parents-hero-900.webp   900w,
-                /img/parents-hero-1600.webp 1600w
-              "
-              sizes="100vw"
-            />
-            <img
-              src="/img/parents-hero-1600.webp"
-              alt="A kitchen table at night with two chairs pulled out, a phone lying face down and a mug beside it, the lights of a town in the valley through the window behind."
-              width="1600"
-              height="686"
-              fetchpriority="high"
-              decoding="async"
-            />
-          </picture>
-          <!-- preload="none" so nothing is fetched until site.js decides the
-               connection and the reader's motion preference can afford it. -->
-          <video
-            class="hero__live"
-            muted
-            playsinline
-            preload="none"
-            aria-hidden="true"
-            tabindex="-1"
-          >
-            <source src="/vid/parents-live-web.webm" type="video/webm" />
-            <source src="/vid/parents-live-web.mp4" type="video/mp4" />
-          </video>
-        </div>
-        <div class="hero__glow"></div>
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record.</p>
             <h1>You sign once.<br />You keep the controls.</h1>
             <p class="lead">
               Your kid is going to keep taking money for work either way. This
@@ -317,13 +219,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              fuime is a financial technology company, not a bank. Ninth Street
-              Labs, LLC, doing business as Fuime, is the seller of record. You
-              are the legal payee and clawback obligor, and you must approve the
-              payout destination before the first payout. Your kid runs the
-              venture day to day.
-            </p>
           </div>
         </div>
       </section>
@@ -336,16 +231,17 @@
               <p class="eyebrow">What you're signing</p>
               <h2 class="h2">An agreement that makes you the legal payee.</h2>
             </div>
-            <p class="lead">
-              We email you the Guardian Agreement. You accept it, and from then
-              on you are the legal payee and clawback obligor for your kid's
-              venture and they run it day to day.
-            </p>
-            <div class="lrow--boxed" style="display: grid; gap: var(--s3)">
+
+            <div class="grid lrow--boxed">
               <div class="lrow">
                 <span>Legal payee</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
                 <span class="lrow__val">You</span>
+              </div>
+              <div class="lrow">
+                <span>Who operates it</span>
+                <span class="lrow__lead" aria-hidden="true"></span>
+                <span class="lrow__val">Your kid</span>
               </div>
               <div class="lrow">
                 <span>How you accept</span>
@@ -360,44 +256,9 @@
               <div class="lrow">
                 <span>What the app shows</span>
                 <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">A payable, not a bank balance</span>
-              </div>
-              <div class="lrow">
-                <span>Payouts</span>
-                <span class="lrow__lead" aria-hidden="true"></span>
-                <span class="lrow__val">Destination you approve</span>
+                <span class="lrow__val">A payable, not a balance</span>
               </div>
             </div>
-            <p>
-              Your kid gets an operator login. They write the invoices, send
-              them, and chase the ones that go unpaid. You do not have to be in
-              the loop for any of that, and you can read all of it whenever you
-              want.
-            </p>
-            <p>
-              fuime is the software: the invoice, the books, the guardianship
-              record, the receipts. When a client pays, they buy from Ninth
-              Street Labs, LLC as seller of record. Fuime keeps its fee and owes
-              the rest to the venture as a payable, paid out after you approve
-              the destination.
-            </p>
-            <p>
-              <a class="tlink" href="/#how"
-                >The three steps, in order<svg
-                  class="arrow"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-              ></a>
-            </p>
           </div>
 
           <div class="arch arch--portrait">
@@ -432,10 +293,9 @@
       </section>
 
       <!-- ── the comparison ────────────────────────────────────────────── -->
-      <section class="band band--paper">
+      <section class="band band--night">
         <div class="wrap rise">
           <div class="bhead">
-            <p class="eyebrow">Against the alternatives</p>
             <h2 class="h2">The four things you are actually checking.</h2>
           </div>
 
@@ -468,13 +328,6 @@
                   <td>No</td>
                 </tr>
                 <tr>
-                  <th scope="row">&ldquo;I'll get you next week&rdquo;</th>
-                  <td>None</td>
-                  <td>No</td>
-                  <td>Nobody's</td>
-                  <td>No</td>
-                </tr>
-                <tr>
                   <th scope="row">A business account</th>
                   <td>Full</td>
                   <td>Yes</td>
@@ -492,109 +345,52 @@
             </table>
           </div>
 
-          <p class="small muted mt-5">
-            The fuime row is what the product looks like: a paper trail, a
-            receipt, and a named legal payee — without waiting until 18.
-          </p>
-
           <details class="reasoning mt-6">
             <summary>Why those four and not price</summary>
             <p class="faq__a">
               Price is the easiest column to win and the least useful one to
               read. Cash is free and leaves you with nothing to show a client
-              who disputes the work or an accountant who asks where the $2,000
-              came from. These four are the ones that decide whether the money
-              is provable, whose problem it is if something goes wrong, and
-              whether your kid has to wait two years to start.
+              who disputes the work, or an accountant who asks where the $2,000
+              came from.
             </p>
           </details>
         </div>
       </section>
 
       <!-- ── what you are agreeing to ──────────────────────────────────── -->
-      <section class="band band--night">
+      <section class="band band--cream">
         <div class="wrap rise stack-lg">
           <div class="bhead">
             <p class="eyebrow">The honest version</p>
             <h2 class="h2">What you are agreeing to.</h2>
-            <p class="lead">
-              Read this part twice. It is the part with your name on it.
-            </p>
           </div>
 
-          <div class="grid grid--2">
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M11 2.5 18 5.5v5.25c0 3.6-2.8 6.9-7 8.75" />
-                <path d="M11 2.5 4 5.5v5.25c0 3.6 2.8 6.9 7 8.75" />
-                <path d="M8.25 10.75 10.5 13l3.5-3.75" />
-              </svg>
-              <h3 class="h4">You are the legal payee</h3>
-              <p>
-                You accept the agreement, so you are the legal payee and
-                clawback obligor, and your kid operates the venture day to day.
-                That split is the only reason any of this works before they turn
-                18. Ninth Street Labs, LLC is the seller of record on purchases.
-              </p>
-            </article>
-
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
-                <circle cx="8" cy="10" r="2.25" />
-                <path
-                  d="M4.75 15.25a3.5 3.5 0 0 1 6.5 0M13.5 9h4M13.5 12.5h4"
-                />
-              </svg>
-              <h3 class="h4">Nobody checks your ID yet</h3>
-              <p>
-                There is no identity verification in fuime today. You accept the
-                Guardian Agreement by email and we record that you did — that is
-                the whole of it, and you should read it as exactly that much.
-                If a later step needs identity details for a payout destination,
-                Stripe is the party that collects them, and we will not ask you
-                for a document we do not need.
-              </p>
-            </article>
-
-            <article class="card">
+          <div class="rows" data-fx-rows="plain">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
                 <path d="M11 3.25 19.5 18.25H2.5L11 3.25Z" />
                 <path d="M11 8.75v4M11 15.5h.01" />
               </svg>
-              <h3 class="h4">You will carry the legal payee's risk</h3>
+              <h3 class="h4">You are the legal payee</h3>
               <p>
-                Chargebacks, refunds, a clawback, a client who disputes a
-                payment — you are the legal payee and clawback obligor. Ninth
-                Street Labs, LLC is the seller of record on the purchase. That
-                is the trade for a 15-year-old being able to accept a card at
-                all.
+                Your kid operates it. Chargebacks, refunds and clawbacks land with
+                you.
               </p>
             </article>
 
-            <article class="card">
+            <article class="card card--row">
               <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
                 <rect x="2.5" y="5.5" width="17" height="11" rx="1.5" />
                 <path d="M2.5 9.25h17M5.5 13h3" />
               </svg>
               <h3 class="h4">The fees are billed to you</h3>
-              <p>
-                One price: 5% of what gets collected, minimum 50¢, no monthly fee, and
-                nothing until something sells. Included rather than unlocked:
-                unlimited businesses, and API keys included. Founders is 0% for the launch
-                cohort, and if your kid ever outgrows the standard rate that is a
-                conversation about custom pricing, not a tier they get pushed
-                into. Card processing comes out of that 5% rather than being
-                charged on top — fuime is the legal seller, so Stripe bills us.
-                Every fuime fee is billed to you as the legal payee, never to
-                your kid.
-              </p>
+              <p>5% of a sale, minimum 50¢, and never to your kid.</p>
             </article>
           </div>
 
           <p>
             <a class="tlink" href="/pricing"
-              >The worked example<svg
+              >The price list, or talk to us<svg
                 class="arrow"
                 width="14"
                 height="14"
@@ -613,152 +409,152 @@
       </section>
 
       <!-- ── what you keep ─────────────────────────────────────────────── -->
-      <section class="band band--cream">
+      <section class="band band--night">
         <div class="wrap rise stack-lg">
           <div class="bhead">
-            <p class="eyebrow">What you keep</p>
             <h2 class="h2">Read-only on everything, and an off switch.</h2>
-            <p class="lead">You are not signing up to be surprised later.</p>
           </div>
 
           <div class="grid grid--2">
             <article class="card">
               <h3 class="h4">Every invoice, every payment</h3>
-              <p>
-                A read-only view of the account: what was billed, what was paid,
-                what each payment cost in fees, and what is still outstanding.
-                You do not have to ask them for it.
-              </p>
+              <p>What was billed, what was paid, and what each one cost in fees.</p>
             </article>
 
             <article class="card">
               <h3 class="h4">The off switch</h3>
-              <p>
-                You can revoke the guardianship from your own login, which stops
-                the venture being operated. You do not need our permission and
-                you do not need theirs.
-              </p>
+              <p>Revoke the guardianship from your own login and it stops.</p>
             </article>
 
             <article class="card">
               <h3 class="h4">Where payouts go</h3>
-              <p>
-                Payouts go to a destination you approve — that can be a parent,
-                joint, or teen bank account, depending on what you set up. What
-                you see in the app is a payable owed to the venture, not a bank
-                balance.
-              </p>
+              <p>A destination you approve: parent, joint, or teen account.</p>
             </article>
 
             <article class="card">
-              <h3 class="h4">Your own accounts stay out of it</h3>
-              <p>
-                Your Venmo, your cards, your own everyday accounts: none of it is
-                connected to this and none of it is visible to them. The only
-                thing you will ever link is the payout account you pick.
-              </p>
+              <h3 class="h4">Your own accounts</h3>
+              <p>Your own Venmo and cards stay out of it.</p>
             </article>
           </div>
         </div>
       </section>
 
       <!-- ── tax ───────────────────────────────────────────────────────── -->
-      <section class="band band--night">
+      <section class="band band--cream">
         <div class="wrap split rise">
-          <div class="stack-lg">
-            <div>
-              <p class="eyebrow">Tax time</p>
-              <h2 class="h2">Income, expenses, net, and tax-prep flags.</h2>
-            </div>
-            <p class="lead">
-              Nobody should have to reconstruct a year of a teenager's payment
-              history in April.
-            </p>
+          <div>
+            <p class="eyebrow">Tax time</p>
+            <h2 class="h2">Income, expenses, net, and tax-prep flags.</h2>
           </div>
 
           <div class="grid">
             <article class="card">
               <h3 class="h4">What fuime tracks</h3>
-              <p>
-                Every invoice, every fee, and every expense they log, totalled
-                into income, expenses and net for the year. Tax-prep milestones
-                are flagged as they come up, instead of the following spring.
-              </p>
+              <p>Every invoice, fee and expense they log, totalled for the year.</p>
+            </article>
+            <article class="card">
+              <h3 class="h4">$433.14 of net profit</h3>
+              <p>Where the IRS expects a return. fuime flags it as you go.</p>
             </article>
             <article class="card">
               <h3 class="h4">Where fuime stops</h3>
-              <p>
-                fuime is not a tax advisor and nothing on this page is tax
-                advice. We show you the numbers and we flag the milestones. What
-                gets filed, and by whom, is a question for someone qualified to
-                answer it.
-              </p>
+              <p>Not a tax advisor. It estimates, and it files nothing.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <!-- ── faq ───────────────────────────────────────────────────────── -->
+      <!-- ── where this stops ──────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">Where this stops</p>
+            <h2 class="h2">Five limits, before you sign.</h2>
+          </div>
+
+          <div class="grid lrow--boxed mt-8">
+            <div class="lrow">
+              <span>Identity checks</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">None, of anyone</span>
+            </div>
+            <div class="lrow">
+              <span>Payout dates</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">A person approves every run</span>
+            </div>
+            <div class="lrow">
+              <span>At 18</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">No handover of the payee role yet</span>
+            </div>
+            <div class="lrow">
+              <span>Tax</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">Estimated, never filed</span>
+            </div>
+            <div class="lrow">
+              <span>Where it works</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">US, USD, English</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── questions ─────────────────────────────────────────────────── -->
       <section class="band band--paper">
-        <div class="wrap rise stack-lg">
-          <div>
+        <div class="wrap rise">
+          <div class="bhead">
             <p class="eyebrow">Questions</p>
             <h2 class="h2">The ones parents actually ask.</h2>
           </div>
 
-          <div class="faq">
+          <div class="faq mt-8">
             <details>
               <summary>Is fuime a bank?</summary>
               <p class="faq__a">
-                No. fuime is a financial technology company, not a bank. It does
-                not hold deposits and does not offer FDIC-insured products.
-                Payments are processed by Stripe. Ninth Street Labs, LLC
-                (Fuime) is the seller of record.
+                No. fuime is a financial technology company, not a bank. It
+                does not hold deposits and does not offer FDIC-insured
+                products. Payments are processed by Stripe, and Ninth Street
+                Labs, LLC is the seller of record.
               </p>
             </details>
 
             <details>
               <summary>Where does the money actually sit?</summary>
               <p class="faq__a">
-                Client payments settle to Fuime's payment processor account
-                because Fuime is the seller. Ninth Street Labs, LLC is the seller
-                of record. What you see in the app is an amount owed to the
-                venture (a payable), not a bank balance. Payouts go to a
-                destination you approve — that can be a parent, joint, or teen
-                bank account, depending on what you set up.
+                Client payments settle to fuime's payment processor account,
+                because fuime is the seller. What you see in the app is what
+                fuime owes the venture, not a balance. Payouts go to a
+                destination you approve.
               </p>
             </details>
 
             <details>
-              <summary>
-                What if my kid loses interest and stops using it?
-              </summary>
+              <summary>Can my kid take money out without me?</summary>
               <p class="faq__a">
-                Then it stops costing you anything. The platform fee only ever
-                applies to money actually collected. There is no monthly
-                subscription to cancel and no tier to trip into — one price,
-                5%, minimum 50¢. A quiet account bills nothing, and you can close it
-                whenever you like.
+                No. They cannot approve their own payout, and the product
+                refuses it in two separate places. You approve the destination
+                before the first payout leaves.
               </p>
             </details>
 
             <details>
-              <summary>Can I see everything, or just a summary?</summary>
+              <summary>What if my kid loses interest and stops using it?</summary>
               <p class="faq__a">
-                Everything. Every invoice, every payment, every fee and every
-                payout, in a read-only view under your own login. There is no
-                private mode and nothing is hidden from the legal payee.
+                Then it stops costing you anything. The fee only ever applies
+                to money actually collected, there is no monthly subscription
+                to cancel, and you can close the account whenever you like.
               </p>
             </details>
 
             <details>
               <summary>Who is liable if something goes wrong?</summary>
               <p class="faq__a">
-                You are, as the legal payee and clawback obligor. A chargeback, a
-                refund, or a clawback lands with you. That is the trade for a
-                15-year-old being able to accept a card at all, and we would
-                rather you weigh it now than find out later. Ninth Street Labs,
-                LLC is the seller of record on the purchase.
+                You are, as the legal payee and clawback obligor. A chargeback,
+                a refund, or a clawback lands with you. That is the trade for a
+                15-year-old being able to accept a card at all.
               </p>
             </details>
 
@@ -766,9 +562,8 @@
               <summary>What happens when they turn 18?</summary>
               <p class="faq__a">
                 At 18 they can take the books and the customer list with them.
-                We have not shipped a formal handover of the legal-payee role
-                yet. When we do we will say how it works, rather than implying
-                it already exists.
+                A formal handover of the legal-payee role is not shipped yet.
+                When it is, we will say how it works.
               </p>
             </details>
           </div>
@@ -778,11 +573,10 @@
       <!-- ── join ──────────────────────────────────────────────────────── -->
       <section class="band band--night" id="join">
         <div class="wrap rise stack-lg">
-          <div>
+          <div class="bhead">
             <p class="eyebrow">Schools, teachers and cohorts</p>
             <h2 class="h2">Bringing a class or a closed group?</h2>
           </div>
-          <p class="lead">Leave your address. We read every one and follow up by email.</p>
 
           <form class="capture" data-source="parents-cohort" novalidate>
             <div class="capture__row">
@@ -806,13 +600,8 @@
           </form>
 
           <p class="small muted">
-            Here for one teen? You don't need this —
-            <a class="tlink" href="/get-started">have them start their business</a>.
-          </p>
-
-          <p class="small muted">
-            Anything this page doesn't answer:
-            <a class="tlink" href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            Here for one teen?
+            <a class="tlink" href="/get-started">Have them start.</a>
           </p>
         </div>
       </section>

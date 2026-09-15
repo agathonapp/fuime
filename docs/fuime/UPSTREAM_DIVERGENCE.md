@@ -7221,3 +7221,130 @@ and it is outstanding.
 **Still absent: churn and cohorts.** They need subscription STATE — who is
 currently active — and only completed sales are stored. Inferring churn from gaps
 between purchases produces a figure that disagrees with Stripe.
+
+---
+
+## 2026-09-14 — Sandbox Mode: a founder can rehearse a sale on their own storefront
+
+**Files:** `db/migrate/20260914190000_add_sandbox_mode_to_events.rb`,
+`db/migrate/20260914190001_create_fuime_test_sales.rb`,
+`db/migrate/20260914190002_add_stripe_session_to_fuime_test_sales.rb`,
+`app/services/fuime/sandbox_checkout.rb`, `app/services/fuime/payment_link_service.rb`,
+`app/services/stripe_service.rb`,
+`app/models/fuime/test_sale.rb`, `app/models/event.rb` (one association),
+`app/policies/event_policy.rb` (`sandbox?`, `manage_sandbox?`),
+`app/controllers/fuime/sandbox_controller.rb`,
+`app/controllers/fuime/checkouts_controller.rb`,
+`app/controllers/fuime/storefronts_controller.rb`,
+`app/controllers/fuime/payment_pages_controller.rb`,
+`app/helpers/fuime_helper.rb` (`sandbox_rehearsal?`),
+`app/helpers/events_helper.rb` (nav item), `app/views/fuime/sandbox/show.html.erb`,
+`app/views/fuime/_sandbox_banner.html.erb`, `app/views/fuime/storefronts/show.html.erb`,
+`app/views/fuime/payment_pages/show.html.erb`, `config/routes.rb`,
+`spec/requests/fuime_sandbox_spec.rb`, `spec/factories/fuime/test_sale_factory.rb`.
+
+**What it is.** A founder switches Test mode on, opens their **real** storefront,
+presses Buy, and gets **Stripe's own hosted Checkout page in test mode** — the
+real page, Stripe's Test Mode banner, `4242 4242 4242 4242`. They come back and
+the rehearsal is listed. Nothing moves anywhere.
+
+**Why.** The first time a teenager saw their own checkout work was when a real
+customer paid — or, more often, did not, because something about the link was
+wrong and nobody found out. There was no way to answer "does my pay link
+actually work?" short of charging your own card. Stripe and Paddle both ship a
+test mode; Fuime shipped none, and its users are the population least able to
+debug a payment flow by reasoning about it.
+
+**Why not `demo_mode`.** Upstream's Playground Mode already means "this whole
+venture is pretend" and is wired accordingly — excluded from stats, Discover,
+indexing, ACH, disbursements, and Column account numbers. That is right for
+`Fuime::Playground`'s pitch venture and wrong for a real one: flipping a live
+business into `demo_mode` would hide money it has actually earned and block
+payouts it is owed. `sandbox_mode` is the opposite shape — the venture stays
+completely real, and only its own operator's Buy click changes.
+
+**The load-bearing decision: test money never becomes canonical.** A venture's
+balance is `canonical_transactions.sum(:amount_cents)`
+(`Event#settled_incoming_balance_cents`), unfiltered, and every figure a family
+sees or is paid from descends from it — `#balance_available_v2_cents`,
+`Fuime::PayablesLedger`, the payout batch, the fee accrual, the exports. Marking
+a canonical transaction as "test" and filtering it out would mean correcting each
+of those call sites inside the pipeline Rule 3 forbids touching, with a wrong
+balance or a wrong payout as the cost of missing one. So a rehearsal writes a
+`Fuime::TestSale` and nothing else: no Stripe call, no ledger line, no
+`Fuime::Sale`, no customer row, no fee, no webhook. The property holds without
+anyone remembering to maintain it. Specced from the outside
+(`not_change(CanonicalTransaction, :count)` and five siblings).
+
+**Real Stripe test mode, not a mock — and the mock was deleted.** The first cut
+of this faked the checkout entirely. That was replaced because *a mock cannot
+fail the way production fails*: the hosted page rendering, the redirect, the
+success URL landing on the right screen are the parts most likely to be broken
+for a given venture, and a mock skips exactly those. `render.yaml` already
+provisions `STRIPE__TEST__SECRET_KEY` on the live services alongside
+`STRIPE__LIVE__*`, so this needed no new credential —
+`StripeService.sandbox_secret_key` fetches the `:test` key explicitly and is the
+one place in the app that deliberately ignores `STRIPE_MODE`.
+`create_mor_checkout_session` already passed `api_key:` per call, so the change
+there is one argument.
+
+**`livemode: false` is the ledger gate, and it is stronger than a flag of ours.**
+`Fuime::SandboxCheckout` records a rehearsal only after Stripe itself reports
+`livemode == false` — the payment processor's own assertion that no money moved.
+A bug that sent a live session id down this path could not turn a real payment
+into a discarded test row. It also checks `payment_status == "paid"` and that the
+session's `fuime_event_id` matches the venture, so a session id cannot be
+replayed against another venture's page.
+
+**No webhook, on purpose.** Stripe scopes webhook endpoints per mode, with their
+own signing secret; Fuime has one mode-agnostic `FUIME_STRIPE_WEBHOOK_SECRET`, so
+a test-mode delivery would fail verification against it. Instead the success URL
+carries Stripe's `{CHECKOUT_SESSION_ID}` template and the return leg retrieves the
+session — Stripe is still the source of truth, and the founder is standing right
+there, so there is nobody to be asynchronous for. Idempotent on a unique index
+over `stripe_checkout_session_id`, so a refresh does not double-count. A webhook
+can be added later for the founder who closes the tab; it would post through the
+same class.
+
+**The safety property: a customer is never diverted.**
+`Fuime::CheckoutsController#sandbox_checkout?` requires BOTH the venture flag and
+`EventPolicy#manage_sandbox?` for the person clicking. A customer, a stranger
+with the link, a signed-out visitor and an operator of a *different* venture all
+fail it and reach real Stripe. That is what makes the flag safe to leave switched
+on — the worst case for a founder who forgets is a banner they stopped reading,
+not a lost sale. Asserted from both sides: the customer writes no rehearsal AND
+`Fuime::PaymentLinkService` receives `.new`.
+
+**Two deliberate bypasses**, both narrowed by that same predicate:
+- `refuse_minor_buyer` is skipped for a rehearsal. The rule exists to stop a
+  minor being CHARGED; a rehearsal charges nobody, and the founder rehearsing is
+  a teenager, so applying it would make the feature unusable by the only people
+  it was built for.
+- `@accepts_payments` is ORed with `sandbox_rehearsal?` on the storefront and pay
+  page, so the Buy button renders before the venture can take real money, and
+  `create_mor_checkout_session` skips `selling_blockers` for a rehearsal. That is
+  the moment a founder most wants to know their link works, and a test-mode
+  session can take money from nobody. (A venture in that state cannot publish an
+  offer — `only_a_selling_venture_may_publish` — so the rehearsal runs through the
+  free-amount box; the Sandbox page says so.)
+
+⚠️ **`FuimeHelper#sandbox_rehearsal?` and `CheckoutsController#sandbox_checkout?`
+must agree condition for condition**, including `StripeService.sandbox_available?`.
+The helper opens the Buy button on a venture that cannot take real money, so if it
+said yes where the checkout said no, the founder's click would fall through to the
+LIVE path — a real charge on a page that had just told them it was a test. Both
+carry the comment.
+
+**Copy corrected on three success screens.** The storefront's "It'll appear on
+the ledger once Stripe confirms it", the pay page's "Stripe has emailed you a
+receipt", and the pay-page thank-you are all false for a rehearsal. Each now
+branches on `sandbox_rehearsal?`.
+
+**Guardian reads, operator writes.** `sandbox?` = `offers?` so a guardian sees
+the page and the rehearsals; `manage_sandbox?` = `manage_offers?` so only the
+operator flips the switch. Same split, and the same reasoning, as pricing.
+
+**Not done:** test purchases are not shown on the ledger page itself, only on
+`/:event_slug/sandbox`. Interleaving them into the transactions list was
+considered and rejected for this pass — a row that looks like a ledger line and
+is not is the exact confusion the separate table exists to prevent.

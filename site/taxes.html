@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -125,13 +101,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -143,24 +112,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -184,17 +138,9 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
@@ -206,126 +152,72 @@
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>The threshold is $400.<br />The trigger is $433.14.</h1>
             <p class="lead">
-              fuime totals what your business collected, what it spent, and what
-              is left, and says how far that is from the point where the IRS
-              expects a self-employment return. It is an estimate read off your
-              ledger. It files nothing and it collects nothing.
+              fuime totals what you collected and what you spent, and says how
+              far the difference is from the IRS threshold.
             </p>
 
             <div class="hero__cta">
               <a class="btn btn--accent" href="/get-started">Start your business</a>
               <p class="hero__note">
-                The books start the first time somebody pays you.
+                It is an estimate. fuime files nothing.
               </p>
             </div>
 
-            <p class="disclaimer">
-              Nothing here is tax advice. fuime is not a tax preparer and has no
-              registration in any tax jurisdiction. The number on this page is an
-              estimate computed from your fuime ledger, for you to take to
-              somebody qualified to act on it.
-            </p>
           </div>
         </div>
       </section>
 
       <!-- ── the arithmetic ────────────────────────────────────────────── -->
       <section class="band band--cream">
-        <div class="wrap rise">
+        <div class="wrap split rise">
           <div class="bhead">
             <p class="eyebrow">The arithmetic</p>
             <h2 class="h2">Four hundred dollars, after the multiplier.</h2>
             <p class="lead">
-              The $400 test is not run against your profit. It is run against
-              your profit times 92.35%, the Schedule SE adjustment for the
-              employer-equivalent half of self-employment tax. The profit that
-              actually trips it is $433.14.
+              The $400 test runs on profit times 92.35%.
             </p>
           </div>
 
-          <div class="split mt-8">
-            <div class="stack-lg">
-              <p>
-                fuime used to compare raw net profit to $400, which told every
-                business between $400 and $433 that it owed when it may not
-                have. The number on this page is the corrected one, and the
-                specificity is the whole point: $400 is the rule, $433.14 is
-                where the rule bites.
-              </p>
-              <p>
-                Income is every ledger line that reads as a customer paying you.
-                Expenses are the lines going the other way, fuime's own fee
-                included. Net profit is the difference, kept running all year
-                rather than assembled in April. Money you put into the business
-                yourself, and transfers between your own accounts, are excluded
-                on a best-effort basis,
-                because overstating what somebody owes is the more harmful
-                mistake to make.
-              </p>
-              <p>
-                <a class="tlink" href="/books"
-                  >Where those ledger lines come from<svg
-                    class="arrow"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-                ></a>
-              </p>
-            </div>
-
-            <div>
-              <span class="artifact-label">Worked example</span>
-              <div class="invoice">
-                <div class="invoice__head">
-                  <div>
-                    <strong>Self-employment check</strong>
-                    <div class="muted small">Estimated from the ledger</div>
-                  </div>
-                  <span class="tag">Estimate</span>
+          <div>
+            <span class="artifact-label">Worked example</span>
+            <div class="invoice">
+              <div class="invoice__head">
+                <div>
+                  <strong>Self-employment check</strong>
+                  <div class="muted small">Estimated from your ledger</div>
                 </div>
-                <div class="invoice__body">
-                  <div class="invoice__row">
-                    <span>Collected this year</span>
-                    <span class="num">$5,120.00</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">Expenses, fuime's fee included</span>
-                    <span class="muted num">−$4,686.86</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span>Net profit</span>
-                    <span class="num">$433.14</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">Schedule SE multiplier</span>
-                    <span class="muted num">92.35%</span>
-                  </div>
-                  <div class="invoice__row invoice__row--total">
-                    <span>Net earnings, tested against $400</span>
-                    <span class="num">$400.05</span>
-                  </div>
+                <span class="tag">Estimate</span>
+              </div>
+              <div class="invoice__body">
+                <div class="invoice__row">
+                  <span>Collected this year</span>
+                  <span class="num">$5,120.00</span>
                 </div>
-                <div class="invoice__foot">
-                  <span class="small muted"
-                    >A return is likely expected. fuime does not file it.</span
-                  >
-                  <span class="tag">Flagged</span>
+                <div class="invoice__row">
+                  <span class="muted">Expenses, fee included</span>
+                  <span class="muted num">−$4,686.86</span>
                 </div>
+                <div class="invoice__row">
+                  <span>Net profit</span>
+                  <span class="num">$433.14</span>
+                </div>
+                <div class="invoice__row">
+                  <span class="muted">Schedule SE multiplier</span>
+                  <span class="muted num">92.35%</span>
+                </div>
+                <div class="invoice__row invoice__row--total">
+                  <span>Tested against $400</span>
+                  <span class="num">$400.05</span>
+                </div>
+              </div>
+              <div class="invoice__foot">
+                <span class="small muted">A return is likely expected.</span>
+                <span class="tag">Flagged</span>
               </div>
             </div>
           </div>
@@ -340,244 +232,159 @@
             <h2 class="h2">Income, expenses, net profit, all year.</h2>
             <p class="lead">
               Four numbers, kept current by the ledger itself rather than typed
-              in by you at the end of the year.
+              in at the end of the year.
             </p>
           </div>
 
-          <div class="grid grid--2 mt-8">
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M3 17.5V9.25M8.25 17.5V4.5M13.5 17.5v-6M18.75 17.5V7" />
               </svg>
               <h3 class="h4">Income, as it actually arrives</h3>
-              <p>
-                Every sale posts its own ledger line, so the year's income is
-                what was collected and not what was billed. An invoice nobody
-                paid stays outstanding and never counts toward the threshold.
-              </p>
+              <p>Every sale posts its own ledger line. An invoice nobody paid never counts.</p>
             </article>
 
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M4.5 3.5h13v15l-2.2-1.5-2.15 1.5L11 17l-2.15 1.5L6.7 17 4.5 18.5Z" />
                 <path d="M7.75 8h6.5M7.75 11.5h4.25" />
               </svg>
               <h3 class="h4">Expenses, with the receipt attached</h3>
-              <p>
-                What you spend on the business sits beside what you earned, with
-                the receipt paired to the transaction. You can upload one or
-                email it in, and it lands on the right line.
-              </p>
+              <p>What you spend sits beside what you earned, fuime's own fee included.</p>
             </article>
 
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M11 6v5.25l3.25 2" />
               </svg>
               <h3 class="h4">Net profit, updated as you go</h3>
-              <p>
-                Income minus expenses, recomputed whenever the ledger moves. The
-                page tells you how much more profit would reach $433.14, which
-                is a more useful sentence in June than in April.
-              </p>
+              <p>Recomputed whenever the ledger moves, and the page says what still reaches $433.14.</p>
             </article>
 
-            <article class="card">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M11 3v10.5" />
                 <path d="M7.25 10 11 13.75 14.75 10" />
                 <path d="M3.5 16.5v2h15v-2" />
               </svg>
               <h3 class="h4">A packet somebody else can read</h3>
-              <p>
-                A CSV of income, expenses, net profit, net earnings and the
-                threshold, stamped as an estimate on its own first line. A
-                guardian on the account can download it and hand it on.
-              </p>
+              <p>A CSV stamped as an estimate, for a guardian to download and hand on.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── what counts ───────────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What counts</p>
+            <h2 class="h2">Income is what arrived, not what you billed.</h2>
+            <p class="lead">
+              Overstating what somebody owes is the more harmful mistake, so
+              the doubtful cases fall out.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M5 3.5h8L17 7.5v11H5Z" />
+                <path d="M12.5 3.5v4.25H17" />
+              </svg>
+              <h3 class="h4">An unpaid invoice</h3>
+              <p>It stays outstanding and never counts toward the threshold.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.5v9M8.5 8.75h4a1.75 1.75 0 0 1 0 3.5h-3a1.75 1.75 0 0 0 0 3.5h4" />
+              </svg>
+              <h3 class="h4">Your own money in</h3>
+              <p>Money you put into the business is excluded, on a best-effort basis.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M4 9.75h10a4.5 4.5 0 0 1 0 9H8.5" />
+                <path d="M7.5 6.25 4 9.75l3.5 3.5" />
+              </svg>
+              <h3 class="h4">A refund</h3>
+              <p>Income falls, and fuime's fee is rebated in proportion.</p>
             </article>
           </div>
         </div>
       </section>
 
       <!-- ── where it stops ────────────────────────────────────────────── -->
-      <section class="band band--cream">
+      <section class="band band--paper">
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">Where it stops</p>
             <h2 class="h2">Six things this does not do.</h2>
             <p class="lead">
-              Other platforms say they handle tax. fuime does not handle tax. It
-              estimates one number about your own income, and here is everything
-              that sits outside it.
+              Other platforms say they handle tax. fuime does not handle tax.
             </p>
           </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
             <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M5 3.5h8L17 7.5v11H5Z" />
-                <path d="M7.5 9.5h7M7.5 13h4.5" />
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M5.5 16.5 16.5 5.5" />
               </svg>
               <h3 class="h4">It does not file anything</h3>
-              <p>
-                No return, no extension, no quarterly payment. fuime shows you a
-                number and that is where its job ends. Whether you file, and
-                what you file, is between you and whoever prepares it.
-              </p>
+              <p>No return, no extension, no quarterly payment.</p>
             </article>
 
             <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M5.5 16.5 16.5 5.5" />
+              </svg>
+              <h3 class="h4">It does not calculate sales tax</h3>
+              <p>No sales tax, no VAT, no GST, and zero registrations.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <rect x="2.5" y="5.5" width="17" height="11" rx="1.5" />
                 <path d="M2.5 9.25h17" />
               </svg>
               <h3 class="h4">It does not touch checkout</h3>
-              <p>
-                The estimate is read off the ledger after the money has already
-                moved. Nothing about it changes what a client is charged, what
-                the payment page shows, or what the receipt says.
-              </p>
+              <p>Read off the ledger after the money has moved.</p>
             </article>
 
             <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M5.5 16.5 16.5 5.5" />
-              </svg>
-              <h3 class="h4">It does not calculate or collect sales tax</h3>
-              <p>
-                No sales tax, no VAT, no GST, at checkout or anywhere else.
-                fuime holds tax registrations in zero jurisdictions and files no
-                return in any of them. If something you sell is taxable where
-                you sell it, that is not handled here.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M2.5 11S5.5 5.5 11 5.5 19.5 11 19.5 11 16.5 16.5 11 16.5 2.5 11 2.5 11Z" />
-                <circle cx="11" cy="11" r="2.25" />
-              </svg>
-              <h3 class="h4">It only knows what it can see</h3>
-              <p>
-                A job paid in cash, a W-2 shift, a second platform: none of it
-                reaches this number. The estimate covers your fuime ledger and
-                nothing outside it, which is usually not the whole of your year.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <path d="M11 3.25 19.5 18.25H2.5L11 3.25Z" />
                 <path d="M11 8.75v4M11 15.5h.01" />
               </svg>
               <h3 class="h4">It is an estimate, not a determination</h3>
-              <p>
-                Income is classified by heuristic, not by a chart of accounts.
-                State income tax, information reporting and quarterly estimated
-                payments are not modelled. No accountant has signed off on the
-                arithmetic, and the app says so where it shows it.
-              </p>
+              <p>Income is classified by heuristic, and no accountant has signed off.</p>
             </article>
 
             <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
+                <path d="M2.5 11S5.5 5.5 11 5.5 19.5 11 19.5 11 16.5 16.5 11 16.5 2.5 11 2.5 11Z" />
+                <circle cx="11" cy="11" r="2.25" />
+              </svg>
+              <h3 class="h4">It only knows what it can see</h3>
+              <p>A cash job, a W-2 shift, another platform: none of it lands here.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" aria-hidden="true">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M8.75 8.5a2.25 2.25 0 1 1 2.75 2.2V13" />
                 <path d="M11 15.75h.01" />
               </svg>
               <h3 class="h4">It is not tax advice</h3>
-              <p>
-                fuime is not a tax preparer and not an advisor. The page hedges
-                on purpose: it says what your ledger shows and what the
-                threshold is, and stops before telling you what you owe.
-              </p>
+              <p>fuime is not a preparer and not an advisor.</p>
             </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── questions ─────────────────────────────────────────────────── -->
-      <section class="band band--paper">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">Questions</p>
-            <h2 class="h2">The ones worth asking in June.</h2>
-          </div>
-
-          <div class="faq mt-8">
-            <details>
-              <summary>Why $433.14 and not $400?</summary>
-              <p class="faq__a">
-                Because the $400 test applies to net earnings from
-                self-employment, and net earnings are net profit times 92.35% —
-                Schedule SE deducts the employer-equivalent half of the tax
-                before the test is run. $433.14 times 92.35% is $400.05, which
-                is the first dollar of profit that clears it.
-              </p>
-            </details>
-
-            <details>
-              <summary>Does fuime file anything for me?</summary>
-              <p class="faq__a">
-                No. Not a return, not a schedule, not a quarterly payment.
-                fuime produces a packet you can download and hand to whoever
-                does your return, and that is the entire extent of it.
-              </p>
-            </details>
-
-            <details>
-              <summary>What about money I earn outside fuime?</summary>
-              <p class="faq__a">
-                It is not in the number. fuime can only total the transactions
-                in your own fuime ledger, so cash work, a W-2 job and any other
-                platform sit outside the estimate. Your actual position is the
-                sum of all of them, which is one of the reasons this is not a
-                determination.
-              </p>
-            </details>
-
-            <details>
-              <summary>Does fuime charge my clients sales tax?</summary>
-              <p class="faq__a">
-                No. There is no tax line at checkout and no tax collected on any
-                sale. fuime is registered in zero tax jurisdictions and remits
-                nothing to any of them. A platform that says it handles tax for
-                you is describing something fuime does not do.
-              </p>
-            </details>
-
-            <details>
-              <summary>What happens to the number when I refund a client?</summary>
-              <p class="faq__a">
-                The refund posts as a reversal on the ledger and fuime's fee is
-                rebated in proportion, so income falls and so does net profit. A
-                partial refund books the increment rather than the running
-                total, which keeps the year-to-date figure honest instead of
-                double-counting.
-              </p>
-            </details>
-
-            <details>
-              <summary>Who else can see this?</summary>
-              <p class="faq__a">
-                A guardian on the account has read access to the ledger, the
-                same numbers, and the packet download. Where a business is run
-                by somebody under 18 that is the point of it: the person who has
-                to answer for the tax position can read it without asking.
-              </p>
-            </details>
-
-            <details>
-              <summary>Is any of this tax advice?</summary>
-              <p class="faq__a">
-                No, and it is written to avoid sounding like it. fuime is not a
-                tax advisor. Take the packet to somebody who is, and treat every
-                number on the page as an input to their work rather than an
-                answer.
-              </p>
-            </details>
           </div>
         </div>
       </section>
@@ -587,11 +394,10 @@
         <div class="wrap rise stack-lg">
           <div class="bhead">
             <p class="eyebrow">Start</p>
-            <h2 class="h2">Keep the books while the year is still on.</h2>
+            <h2 class="h2">Keep the books while the year is on.</h2>
             <p class="lead">
-              Reconstructing twelve months of payments in April is the expensive
-              way to find out what you owe. The cheap way is a ledger that has
-              been adding up since January.
+              Reconstructing twelve months in April is the expensive way to
+              find out what you owe.
             </p>
           </div>
 
@@ -600,8 +406,8 @@
           </p>
 
           <p>
-            <a class="tlink" href="/pricing"
-              >What fuime costs, and what comes out of a sale<svg
+            <a class="tlink" href="/books"
+              >Where the ledger lines come from<svg
                 class="arrow"
                 width="14"
                 height="14"

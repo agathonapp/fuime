@@ -66,8 +66,6 @@ const PAGES = [
   '/',
   '/pricing',
   '/parents',
-  '/dive',
-  '/start-scroll',
   '/payment-links',
   '/subscriptions',
   '/books',
@@ -95,18 +93,10 @@ try {
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /text\/html/)
     const body = await r.text()
-    // index.html, not the dive: it carries the nav, the worked example and the
-    // footer sitemap. The dive is a good first impression and a bad hub, and
-    // the site has twenty pages that need reaching.
-    assert.match(body, /class="nav nav--over"/, 'root should be index.html')
+    // index.html carries the nav, the worked example and the footer sitemap.
+    // It is the only landing page; the dive that used to sit here was deleted.
+    assert.match(body, /class="nav nav--solid"/, 'root should be index.html')
     assert.match(body, /class="foot"/, 'root should carry the footer sitemap')
-  })
-
-  await run('the dive keeps its own address', async () => {
-    const body = await (await get('/dive')).text()
-    // start.html is the only page that loads the frame ladder, so /dive is what
-    // keeps 22MB of pre-encoded frames from being dead weight.
-    assert.match(body, /dive\/track\.json/, '/dive should be start.html')
   })
 
   await run('every page in the footer sitemap is actually served', async () => {
@@ -169,10 +159,9 @@ try {
   })
 
   await run('moved pages redirect in a single hop', async () => {
-    // /start is no longer the dive's old address — it is the sign-up door,
-    // asserted alongside /login below — so only the file spelling is a moved
-    // page now.
-    for (const [from, to] of [['/start.html', '/dive']]) {
+    // /start is the sign-up door, asserted alongside /login below. The dive's
+    // own spellings are moved pages now that it is deleted.
+    for (const [from, to] of [['/start.html', '/'], ['/start-scroll.html', '/']]) {
       const r = await get(from)
       assert.equal(r.status, 308, `${from} status`)
       assert.equal(r.headers.get('location'), to, `${from} -> ${to}`)
@@ -185,7 +174,7 @@ try {
       ['/site.js', /javascript/],
       ['/robots.txt', /text\/plain/],
       ['/sitemap.xml', /xml/],
-      ['/dive/f_0001.webp', /image\/webp/],
+      ['/img/mark.svg', /image\/svg/],
     ]
     for (const [p, type] of cases) {
       const r = await get(p)
@@ -303,20 +292,6 @@ try {
     }
   })
 
-  await run('the dive says what the product is', async () => {
-    // The dive is a scroll-driven film, and a film is easy to keep polishing
-    // until the first screen is a mood with no nouns on it. That is the state
-    // this assertion exists to catch: a visitor who cannot tell what fuime is
-    // without scrolling does not scroll. It moved from / to /dive when the
-    // landing page took the front door.
-    const body = await (await get('/dive')).text()
-    assert.match(body, /class="dive__lede"/, 'no lede on the first screen')
-    assert.match(body, /13 to 17/, 'the lede never says who this is for')
-    // And a way past the flight for a thumb, landing on the composed sign-up.
-    assert.match(body, /class="lede__skip" href="#signup"/, 'no skip link')
-    assert.match(body, /id="signup"/, 'skip link points at nothing')
-  })
-
   await run('security headers on every response', async () => {
     for (const p of ['/', '/nope', '/style.css']) {
       const r = await get(p)
@@ -337,8 +312,8 @@ try {
   })
 
   await run('immutable caching only for content-addressed dirs', async () => {
-    const frame = await get('/dive/f_0001.webp')
-    assert.match(frame.headers.get('cache-control'), /immutable/)
+    const asset = await get('/img/mark.svg')
+    assert.match(asset.headers.get('cache-control'), /immutable/)
     // HTML must revalidate or a deploy goes unseen.
     const page = await get('/')
     assert.match(page.headers.get('cache-control'), /must-revalidate/)

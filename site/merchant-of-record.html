@@ -46,32 +46,8 @@
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <!-- First paint, inline and above every script: the browser must never get a
          chance to paint white before the loader's own background arrives. -->
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#f9f8f7" />
     <meta name="darkreader-lock" />
-    <style>
-      html {
-        background: #141420;
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        display: grid;
-        place-items: center;
-        gap: 22px;
-        background: #141420;
-      }
-      #boot[hidden] {
-        display: none;
-      }
-    </style>
-    <noscript
-      ><style>
-        #boot {
-          display: none;
-        }
-      </style></noscript
-    >
     <link rel="stylesheet" href="/style.css" />
     <!-- Undo the .rise reveal when nothing will ever fire it — see the long
          note on index.html. Must follow the stylesheet link to win on source
@@ -125,13 +101,6 @@
   </head>
 
   <body>
-    <script>
-      try {
-        if (sessionStorage.getItem('fuime.booted')) {
-          document.documentElement.classList.add('booted')
-        }
-      } catch (e) {}
-    </script>
 
     <!-- The mark, defined once and referenced everywhere it appears. -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
@@ -143,24 +112,9 @@
       </symbol>
     </svg>
 
-    <!-- ── first-visit loader ───────────────────────────────────────────
-         The arch fills from the bottom as a progress meter. Suppressed for
-         the rest of the session by the sessionStorage guard above. -->
-    <div id="boot" role="status" aria-label="Loading fuime">
-      <svg class="boot__arch" viewBox="0 0 713 582" aria-hidden="true">
-        <defs>
-          <clipPath id="boot-fill">
-            <rect id="boot-rect" x="0" y="0" width="713" height="582" />
-          </clipPath>
-        </defs>
-        <use href="#arch" class="boot__ghost" />
-        <use href="#arch" class="boot__lit" clip-path="url(#boot-fill)" />
-      </svg>
-      <span class="boot__word">fu<i>i</i>me</span>
-    </div>
 
     <!-- ── nav ─────────────────────────────────────────────────────────── -->
-    <header class="nav nav--over">
+    <header class="nav nav--solid">
       <div class="wrap nav__in">
         <a class="mark" href="/" aria-label="fuime home">
           <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
@@ -184,39 +138,27 @@
           <a class="nav__link" href="/compare">Compare</a>
           <a class="nav__link" href="/parents">Parents</a>
           <a class="nav__link" href="/login">Log in</a>
-          <a class="btn btn--accent" href="/get-started">Start your business</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
         </nav>
       </div>
-      <div
-        class="split-mount split-mount--dock"
-        data-fx-split="dock"
-        data-you="95.0"
-        data-fuime="2.0"
-        data-stripe="3.0"
-        aria-hidden="true"
-      ></div>
     </header>
 
     <main>
       <!-- ══ PAGE BODY STARTS HERE ══════════════════════════════════════════
            Replace everything between these two markers. Compose ONLY classes
-           that already exist in style.css. No inline <style>, no hex literal,
+           that already exist in style.css. No inline style, no hex literal,
            no CDN script, no framework, no emoji.
            ═══════════════════════════════════════════════════════════════════ -->
 
       <!-- ── hero ──────────────────────────────────────────────────────── -->
       <section class="hero hero--short">
-        <div class="grain"></div>
 
         <div class="wrap hero__in">
           <div class="hero__body stack-lg">
-            <p class="beta">Live · payments processed by Stripe</p>
             <h1>Two transactions,<br />not one.</h1>
             <p class="lead">
               Your client buys from Ninth Street Labs, LLC, doing business as
-              fuime. fuime then owes your business what the sale earned. Every
-              odd thing about getting paid this way falls out of those two
-              sentences, and this page is all of them.
+              fuime. fuime then owes your business what the sale earned.
             </p>
 
             <div class="hero__cta">
@@ -226,12 +168,6 @@
               </p>
             </div>
 
-            <p class="disclaimer">
-              fuime is a financial technology company, not a bank. Ninth Street
-              Labs, LLC, doing business as Fuime, is the seller of record on
-              purchases. What the app shows your business is an amount fuime
-              owes it, not money held on its behalf.
-            </p>
           </div>
         </div>
       </section>
@@ -240,46 +176,23 @@
       <section class="band band--cream">
         <div class="wrap rise">
           <div class="bhead">
-            <p class="eyebrow">The mechanism</p>
             <h2 class="h2">You sell to fuime. fuime sells to them.</h2>
-            <p class="lead">
-              It is the arrangement a distributor has with a shop, written in
-              software. The shop is on the receipt, the shop argues with the
-              card network, and the shop owes the supplier for what sold.
-            </p>
           </div>
 
           <div class="grid grid--3 mt-8">
-            <article class="step">
-              <p class="step__n">01</p>
-              <h3>Your client buys from fuime</h3>
-              <p>
-                Ninth Street Labs, LLC, doing business as fuime, is the seller
-                of record on that purchase, and Stripe processes the card. The
-                contract for the sale is between your client and fuime, which is
-                the part that does the work here.
-              </p>
+            <article class="card">
+              <h3 class="h4">01 They buy from fuime</h3>
+              <p>Ninth Street Labs, LLC is the seller of record. Stripe runs the card.</p>
             </article>
 
-            <article class="step">
-              <p class="step__n">02</p>
-              <h3>fuime keeps its fee</h3>
-              <p>
-                5% of the sale, minimum 50¢, posted to your ledger as its own
-                negative line. Stripe's roughly 2.9% + 30¢ for running the card
-                comes out of that, not out of you. A refund reverses the sale
-                and rebates the fee in proportion.
-              </p>
+            <article class="card">
+              <h3 class="h4">02 fuime keeps its fee</h3>
+              <p>5% of the sale, minimum 50¢, as its own ledger line.</p>
             </article>
 
-            <article class="step">
-              <p class="step__n">03</p>
-              <h3>fuime owes your business the rest</h3>
-              <p>
-                The remainder is booked as a payable: an amount fuime owes you,
-                carried on fuime's side until a payout run moves it. A person
-                approves every run before anything moves.
-              </p>
+            <article class="card">
+              <h3 class="h4">03 fuime owes you the rest</h3>
+              <p>A payable, until a person approves the payout run.</p>
             </article>
           </div>
         </div>
@@ -291,11 +204,6 @@
           <div class="bhead">
             <p class="eyebrow">What follows from it</p>
             <h2 class="h2">Six consequences, said out loud.</h2>
-            <p class="lead">
-              None of these is a policy fuime chose independently. Each one is
-              what being the seller of record actually means once money starts
-              moving.
-            </p>
           </div>
 
           <div class="rows mt-8" data-fx-rows="plain">
@@ -306,13 +214,8 @@
               </svg>
               <h3 class="h4">The statement says fuime</h3>
               <p>
-                Your client's card line reads as fuime with your business name
-                after it, because fuime is who they bought from. People forget
-                and call their card issuer about it, so there is a page to send
-                them:
-                <a class="tlink" href="/why-has-fuime-charged-me"
-                  >why has fuime charged me</a
-                >.
+                Your client's card line reads fuime, with your business name after
+                it.
               </p>
             </article>
 
@@ -323,25 +226,8 @@
               </svg>
               <h3 class="h4">fuime carries the chargeback</h3>
               <p>
-                When a payment is disputed, the card network's counterparty is
-                fuime, not the person who did the work. fuime handles it. The
-                money still comes back out of what fuime owes the business, and
-                where an operator is under 18 the guardian is the party on the
-                hook for that.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M4 15.5 10 9l3.25 3.25L18.5 6.5" />
-                <path d="M14.25 6.5h4.25v4.25" />
-              </svg>
-              <h3 class="h4">Stripe's fee is not added to yours</h3>
-              <p>
-                Stripe bills fuime, so its roughly 2.9% + 30¢ comes out of
-                fuime's 5% instead of being charged to you on top. What you are
-                owed is the sale minus the fuime fee, and that is the figure on
-                the ledger line.
+                The card network's counterparty is fuime, not the person who did
+                the work.
               </p>
             </article>
 
@@ -350,12 +236,17 @@
                 <path d="M4.5 3.5h13v15l-2.2-1.5-2.15 1.5L11 17l-2.15 1.5L6.7 17 4.5 18.5Z" />
                 <path d="M7.75 8.5h6.5M7.75 12h4.25" />
               </svg>
-              <h3 class="h4">The number in the app is what fuime owes</h3>
-              <p>
-                It is a payable, not an account holding your money, and the
-                product has no control anywhere that lets you pull it out on
-                demand. fuime is a financial technology company and not a bank.
-              </p>
+              <h3 class="h4">The app shows what fuime owes</h3>
+              <p>A payable, not an account holding your money.</p>
+            </article>
+
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M4 15.5 10 9l3.25 3.25L18.5 6.5" />
+                <path d="M14.25 6.5h4.25v4.25" />
+              </svg>
+              <h3 class="h4">Stripe's fee is not added to yours</h3>
+              <p>Stripe bills fuime, so its 2.9% + 30¢ comes out of fuime's 5%.</p>
             </article>
 
             <article class="card card--row">
@@ -364,12 +255,7 @@
                 <path d="M4.75 18.5a6.25 6.25 0 0 1 12.5 0" />
               </svg>
               <h3 class="h4">A person approves every payout run</h3>
-              <p>
-                Nothing is sent by a machine on a schedule. A run is generated,
-                a human approves it, and it is marked paid against a real transfer
-                reference afterwards. If a business is skipped, it is given a
-                stated reason rather than silence.
-              </p>
+              <p>Nothing is sent by a machine on a schedule.</p>
             </article>
 
             <article class="card card--row">
@@ -379,13 +265,7 @@
                 <path d="M11 13v2" />
               </svg>
               <h3 class="h4">Where there is a guardian, they are the payee</h3>
-              <p>
-                For a business run by somebody aged 13 to 17, the parent or
-                legal guardian is the legal payee and has to approve the
-                destination before the first payout. An operator under 18 cannot
-                approve their own payout, and the product refuses it in two
-                separate places.
-              </p>
+              <p>A seller aged 13 to 17 cannot approve their own payout.</p>
             </article>
           </div>
         </div>
@@ -397,11 +277,6 @@
           <div class="bhead">
             <p class="eyebrow">The payout policy</p>
             <h2 class="h2">Six rules, and the reason for each.</h2>
-            <p class="lead">
-              Money from a sale does not go out the moment it arrives, and this
-              is every reason it does not. No date appears anywhere on this
-              list, because there is no rail behind one.
-            </p>
           </div>
 
           <div class="matrix-scroll mt-8">
@@ -454,10 +329,12 @@
             <summary>Why there is no payout date on this page</summary>
             <p class="faq__a">
               Because there is no automated rail behind one. A person generates
-              the run and a person approves it, and putting a day of the week in
-              marketing copy would be inventing a promise the product cannot
-              keep. When there is a rail that can keep it, this page will say so
-              and name it.
+              the run and a person approves it. Putting a day of the week in
+              marketing copy would invent a promise the product cannot keep.
+            </p>
+            <p class="faq__a">
+              When there is a rail that can keep one, this page will say so and
+              name it.
             </p>
           </details>
         </div>
@@ -469,151 +346,29 @@
           <div class="bhead">
             <p class="eyebrow">What comes out of a sale</p>
             <h2 class="h2">One deduction, and you can see it.</h2>
-            <p class="lead">
-              5% of what you collect with a 50¢ minimum, no monthly fee, and
-              nothing at all until something sells. Unlimited businesses and API
-              keys are included rather than unlocked.
-            </p>
           </div>
 
-          <div class="split mt-8">
-            <div class="stack-lg">
+          <div class="grid grid--3 mt-8">
+            <article class="card">
+              <h3 class="h4">A floor, not an addition</h3>
               <p>
-                It is a floor, not an addition. On a $400 sale the fee is
-                $20.00, not $20.50. Under $10 the floor binds and the effective
-                rate is higher: a $5 sale pays 50¢, which is a tenth of it. That
-                is the honest way to state a minimum, and it is why the 50¢ is
-                never quoted without the 5% beside it.
-              </p>
-              <p>
-                Stripe's roughly 2.9% + 30¢ for running the card is billed to
-                fuime, because fuime is the legal seller, and it comes out of
-                fuime's 5% rather than being added to yours. Most platforms
-                charge their cut and let the processor charge you separately.
-                Here the one number already contains both.
-              </p>
-              <p>
-                Selling at volume, or selling something the standard rate does
-                not fit? That is custom pricing and a conversation with us, not
-                a tier you get pushed into. Email
-                <a href="mailto:support@fuime.com">support@fuime.com</a>.
-              </p>
-            </div>
-
-            <div>
-              <span class="artifact-label">Worked example</span>
-              <div class="invoice">
-                <div class="invoice__head">
-                  <div>
-                    <strong>Invoice 0014</strong>
-                    <div class="muted small">Maya R. · Photography</div>
-                  </div>
-                  <span class="tag">Due on receipt</span>
-                </div>
-                <div class="invoice__body">
-                  <div class="invoice__row">
-                    <span>Senior portraits · 3 hr session</span>
-                    <span class="num">$400.00</span>
-                  </div>
-                  <div class="invoice__row">
-                    <span class="muted">fuime fee · 5%, minimum 50¢</span>
-                    <span class="muted num">−$20.00</span>
-                  </div>
-                  <div class="invoice__row invoice__row--total">
-                    <span>What fuime owes the business</span>
-                    <span class="num">$380.00</span>
-                  </div>
-                </div>
-                <div class="invoice__foot">
-                  <span class="small muted"
-                    >Stripe's ~2.9% + 30¢ is paid by fuime out of its 5%.</span
-                  >
-                  <span class="tag">Paid</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── where this stops ──────────────────────────────────────────── -->
-      <section class="band band--night">
-        <div class="wrap rise stack-lg">
-          <div class="bhead">
-            <p class="eyebrow">Where this stops</p>
-            <h2 class="h2">Four things being seller of record is not.</h2>
-            <p class="lead">
-              Other merchants of record do more than this. Reading it here is
-              cheaper than discovering it after your first sale.
-            </p>
-          </div>
-
-          <div class="rows" data-fx-rows="plain">
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2.5" y="4.5" width="17" height="13" rx="1.5" />
-                <circle cx="8" cy="10" r="2.25" />
-                <path d="M4.75 15.25a3.5 3.5 0 0 1 6.5 0M13.5 9h4M13.5 12.5h4" />
-              </svg>
-              <h3 class="h4">Nobody's identity is checked</h3>
-              <p>
-                There is no identity verification in fuime, of a seller or of a
-                guardian. A guardian accepts an agreement and the acceptance is
-                recorded: the version, the timestamp, the IP and the browser.
-                That is the whole of it, and you should read it as exactly that
-                much. Vetting is a person reading an application.
+                On a $400 sale the fee is $20.00, not $20.50, and $380.00 is
+                left.
               </p>
             </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M3 11h16M11 3c2 2.4 3 5.1 3 8s-1 5.6-3 8c-2-2.4-3-5.1-3-8s1-5.6 3-8Z" />
-              </svg>
-              <h3 class="h4">No tax is calculated or collected</h3>
-              <p>
-                fuime holds tax registrations in zero jurisdictions and remits
-                to none of them. There is no tax line at checkout. A platform
-                that tells you it handles tax is describing something this one
-                does not do.
-              </p>
+            <article class="card">
+              <h3 class="h4">Under $10 the floor binds</h3>
+              <p>A $5 sale pays 50¢, which is a tenth of it.</p>
             </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M11 3.5v15M6 7.5h7.25a2.5 2.5 0 0 1 0 5H8.5a2.5 2.5 0 0 0 0 5H16" />
-              </svg>
-              <h3 class="h4">Dollars, and the United States</h3>
-              <p>
-                One currency, one country, one language. There is no
-                multi-currency, no settlement outside the US, and no dunning
-                sequence chasing a card that failed. If you need those, fuime is
-                not the right seller for you yet.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M3.5 18.5 7 8.5h8l3.5 10Z" />
-                <path d="M8.5 8.5V5.5h5v3" />
-                <path d="M5 13.5 17 13.5" />
-              </svg>
-              <h3 class="h4">Services and digital work only</h3>
-              <p>
-                Not physical goods, not food, not crafts. Childcare,
-                babysitting and coaching children are deliberately excluded, and
-                that is a decision rather than an oversight.
-              </p>
+            <article class="card">
+              <h3 class="h4">Stripe bills fuime, not you</h3>
+              <p>Its 2.9% + 30¢ comes out of fuime's 5%.</p>
             </article>
           </div>
 
-          <p>
-            <a class="btn btn--accent" href="/get-started">Start your business</a>
-          </p>
-
-          <p>
-            <a class="tlink" href="/pricing"
-              >The full price list, and what is never billed<svg
+          <p class="mt-7">
+            <a class="tlink" href="mailto:support@fuime.com"
+              >Selling at scale? Talk to us<svg
                 class="arrow"
                 width="14"
                 height="14"
@@ -627,6 +382,42 @@
               >
                 <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
             ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── where this stops ──────────────────────────────────────────── -->
+      <section class="band band--night">
+        <div class="wrap rise stack-lg">
+          <div class="bhead">
+            <h2 class="h2">Four things this is not.</h2>
+          </div>
+
+          <div class="grid lrow--boxed">
+            <div class="lrow">
+              <span>Identity checks</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">None, of a seller or a guardian</span>
+            </div>
+            <div class="lrow">
+              <span>Tax</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">Registered in zero jurisdictions</span>
+            </div>
+            <div class="lrow">
+              <span>Currency and country</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">USD, US, English</span>
+            </div>
+            <div class="lrow">
+              <span>What you can sell</span>
+              <span class="lrow__lead" aria-hidden="true"></span>
+              <span class="lrow__val">Services and digital work, not goods or childcare</span>
+            </div>
+          </div>
+
+          <p>
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
           </p>
         </div>
       </section>

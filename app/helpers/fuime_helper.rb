@@ -49,6 +49,27 @@ module FuimeHelper
     !Rails.env.local?
   end
 
+  # Is the person reading this page about to make a TEST purchase?
+  #
+  # True only for an operator of this venture while Sandbox Mode is on — the
+  # exact condition Fuime::CheckoutsController#sandbox_checkout? uses to divert
+  # a Buy click, asked here so the banner and the behaviour cannot disagree. A
+  # customer reading the same page gets no banner because for them nothing is
+  # different: their Buy is real either way.
+  def sandbox_rehearsal?(event)
+    return false if event.blank? || !event.sandbox_mode?
+    return false if current_user.blank?
+    # Must match Fuime::CheckoutsController#sandbox_checkout? condition for
+    # condition. This one is load-bearing rather than cosmetic: this predicate
+    # also opens the Buy button on a venture that cannot take real money
+    # (`@accepts_payments ||=`), so if it said yes where the checkout said no,
+    # the founder's click would fall through to the LIVE Stripe path — a real
+    # charge, on a page that just told them it was a test.
+    return false unless ::StripeService.sandbox_available?
+
+    EventPolicy.new(current_user, event).manage_sandbox?
+  end
+
   # What Fuime owes an operator, for any operator-facing view.
   #
   # The single door to Fuime::PayablesLedger from a template. It exists so that

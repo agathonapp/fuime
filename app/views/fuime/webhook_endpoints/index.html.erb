@@ -1,0 +1,127 @@
+<% title "Webhooks – #{@event.name}" %>
+<%# Shares the Developer nav entry with the API-keys screen: the symbol is
+    :api_keys, and a symbol that matches no entry highlights nothing. %>
+<%= render "events/nav", selected: :api_keys %>
+
+<div id="webhooks_page">
+<div class="container container--sm">
+  <header class="mb-4">
+    <h1 class="h2 mt0 mb-1">Webhooks</h1>
+    <p class="muted mt0 mb0">
+      Tell your own code when you make a sale, so it can do something about it —
+      unlock a download, send a message, update a spreadsheet.
+    </p>
+    <p class="muted mt-1 mb0 text-sm">
+      Looking for API keys?
+      <%= link_to "They're on the Developer page", fuime_api_keys_path(event_slug: @event.slug),
+                  class: "underline" %>.
+    </p>
+  </header>
+
+  <%# One-time reveal, rendered in the response that created it. See the
+      controller for why this is never put in the flash. %>
+  <% if @fresh_secret.present? %>
+    <div class="card mb-4" style="border: 1px solid rgba(128,128,128,.35);">
+      <h2 class="h4 mt0 mb-1">Your signing secret</h2>
+      <p class="muted text-sm mt0 mb-2">
+        Copy this now — it is not shown again. Use it to check that a request
+        really came from Fuime and not from somebody pretending to be us.
+      </p>
+      <pre style="overflow-x: auto; padding: .75rem; border-radius: 6px;
+                  background: rgba(128,128,128,.15); margin: 0;"><code><%= @fresh_secret %></code></pre>
+    </div>
+  <% end %>
+
+  <div class="card mb-4">
+    <h2 class="h4 mt0 mb-2">Add an endpoint</h2>
+    <%= form_with url: fuime_webhooks_create_path(event_slug: @event.slug), method: :post do |form| %>
+      <div class="field mb1">
+        <%= form.label :url, "Where should we send it?" %>
+        <%= form.text_field :url, placeholder: "https://yoursite.com/fuime-webhook",
+                                  required: true, class: "w-full max-w-full" %>
+        <p class="muted text-sm mt0 mb0">
+          <%# Said here rather than only enforced, because "it has to be https"
+              is a five-second fix and a confusing error if you learn it late. %>
+          Has to start with <code>https://</code>, and has to be a public address —
+          not localhost or a machine inside your network.
+        </p>
+      </div>
+      <div class="field mb1">
+        <%= form.label :description, "What is it? (optional)" %>
+        <%= form.text_field :description, placeholder: "e.g. my Discord bot",
+                                          class: "w-full max-w-full" %>
+      </div>
+      <%= form.submit "Add endpoint", class: "btn" %>
+    <% end %>
+  </div>
+
+  <% if @endpoints.any? %>
+    <section class="mb-4">
+      <h2 class="h4 mt0 mb-2">Your endpoints</h2>
+      <% @endpoints.each do |endpoint| %>
+        <div class="card mb-2">
+          <div class="flex justify-between items-baseline gap-2 flex-wrap">
+            <div>
+              <strong><%= endpoint.description.presence || endpoint.url %></strong>
+              <% unless endpoint.enabled? %>
+                <span class="muted text-sm">· turned off</span>
+              <% end %>
+            </div>
+            <% if endpoint.enabled? %>
+              <%= button_to "Turn off",
+                            fuime_webhook_disable_path(event_slug: @event.slug, id: endpoint.id),
+                            method: :delete, class: "btn btn--sm bg-muted",
+                            form: { data: { turbo_confirm: "Stop sending sales to this address?" } } %>
+            <% end %>
+          </div>
+          <p class="muted text-sm mt0 mb0" style="word-break: break-all;"><%= endpoint.url %></p>
+          <p class="muted text-sm mt0 mb0">
+            <% if endpoint.last_delivered_at %>
+              Last delivered <%= time_ago_in_words(endpoint.last_delivered_at) %> ago.
+            <% else %>
+              <%# An endpoint with nothing delivered looks identical to a broken
+                  one unless we say which it is. %>
+              Nothing delivered yet.
+            <% end %>
+          </p>
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @recent_deliveries.any? %>
+    <section class="mb-4">
+      <h2 class="h4 mt0 mb-2">Recent deliveries</h2>
+      <p class="muted text-sm mt0 mb-2">
+        <%# The only question anybody has on this screen. %>
+        Did it arrive? If not, Fuime keeps trying for about a day before giving up.
+      </p>
+      <div class="card">
+        <% @recent_deliveries.each do |delivery| %>
+          <div class="flex justify-between items-baseline gap-2 mb-1 flex-wrap">
+            <span>
+              <%# Status first, then what it was: the actual scan order. %>
+              <% label, colour = case delivery.status
+                                 when "delivered" then ["Delivered", "var(--success)"]
+                                 when "failed" then ["Failed", "var(--error)"]
+                                 else ["Trying", "var(--muted)"]
+                                 end %>
+              <span style="color: <%= colour %>; font-weight: 600;"><%= label %></span>
+              <span class="muted text-sm">· <%= delivery.event_type %></span>
+            </span>
+            <span class="muted text-sm">
+              <%= time_ago_in_words(delivery.created_at) %> ago
+              <% if delivery.attempts > 1 %>· <%= pluralize delivery.attempts, "try" %><% end %>
+            </span>
+          </div>
+          <% if delivery.failed? && delivery.last_error.present? %>
+            <p class="muted text-sm mt0 mb-2" style="word-break: break-all;">
+              <%= delivery.last_error %>
+            </p>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</div>
+</div>

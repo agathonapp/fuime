@@ -29,25 +29,34 @@
 import { getStage } from 'cwe/stage'
 
 /* Fetch order is irrelevant, so this list is written in init order purely so
-   the two can be diffed by eye. */
-const NAMES = [
-  'ledger-bus',
-  'crease',
-  'grain',
-  'handoff',
-  'live',
-  'plate',
-  'dive',
-  'steprail',
-  'tape',
-  'strike',
-  'rows',
-  'arch',
-  'roll',
-  'split',
-  'threshold',
-  'field',
-]
+   the two can be diffed by eye.
+
+   Cut from fifteen to five on 2026-09-14. paddle.com ships FIVE @keyframes in
+   its entire stylesheet and animates, at most, one object per page — the logo
+   marquee — with no scroll reveals, no video, no canvas and no animation
+   library anywhere. Measured, not assumed. Its polish comes from type, warm
+   neutrals and restraint; ours was coming from entrance choreography, which is
+   the thing that reads as busy.
+
+   Retired (files kept, per CLAUDE.md Rule 2 — nothing here is deleted):
+     crease    paper-fold at every band boundary
+     grain     film grain over dark bands
+     handoff   the loader's FLIP onto the nav mark
+     live      still-to-video swap; no hero carries video now
+     plate     image reveal, parallax and gyro tilt
+     steprail  scroll-driven spine down the numbered steps
+     strike    headline mask wipe on every h1 and .h2
+     arch      border-radius animating to a semicircle
+     tape      marquee rate coupled to scroll velocity
+     threshold a tick for a monthly fee that no longer exists
+
+   What survives is the part caused by a hand rather than by scrolling:
+     ledger-bus  the fee arithmetic every other module reads
+     rows        one-shot rule draw on a ruled list
+     roll        per-digit odometer on the calculator's figures
+     split       the fee bar, which IS the argument
+     field       focus-visible rings and 44px mobile hit areas (WCAG 2.4.7) */
+const NAMES = ['ledger-bus', 'rows', 'roll', 'split', 'field']
 
 /* One wave. A module that 404s or fails to parse resolves to null here and is
    simply skipped later — it never rejects, so it cannot unwind the sequence. */
@@ -110,31 +119,21 @@ const motion = (bus && bus.motion) || null
 // CSS-only, no layout dependency. Safe anywhere; here because they are cheap
 // and the page looks finished sooner with them in.
 await Promise.all([
-  start('crease', m => m.initCrease()),
-  start('grain', m => m.initGrain()),
 ])
 
 // Dependency, not preference: handoff observes #boot, and site.js lifts #boot
 // on a 1200ms cap. Binding after the lift means the transition never runs.
-await start('handoff', m => m.initHandoff())
 
 // Scroll readers. Independent of each other.
 await Promise.all([
-  start('live', m => m.initLive()),
-  start('plate', m => m.initPlate()),
-  start('dive', m => m.initDive()),
   // The mount attribute is deliberately not `data-fx-steprail`: the module
   // writes that one onto its host to mark itself mounted, so shipping it in
   // the markup would make steprail bail on sight.
-  start('steprail', m => each('[data-fx-steps]', el => m.initStepRail(el))),
-  start('tape', m => m.initTape(null, motion ? { motion } : {})),
 ])
 
 // One-shot entrances, driven by IntersectionObserver.
 await Promise.all([
-  start('strike', m => m.initStrike()),
   start('rows', m => each('[data-fx-rows]', el => m.initRows(el))),
-  start('arch', m => m.initArch()),
 ])
 
 // The console. These three are peers in the spec, so the order inside this
@@ -152,7 +151,6 @@ await start('split', m =>
   )
 )
 
-await start('threshold', m => m.initThreshold())
 
 // Last, and this one is a real constraint: field measures its magnet bounds at
 // init, so any layout shift caused by a module above would silently invalidate

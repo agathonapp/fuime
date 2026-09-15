@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_190002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1192,6 +1192,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
     t.datetime "sale_terms_acknowledged_at"
     t.bigint "sale_terms_acknowledged_by_id"
     t.string "sale_terms_version"
+    t.boolean "sandbox_mode", default: false, null: false
     t.string "short_name"
     t.boolean "show_recent_donors", default: false, null: false
     t.boolean "show_top_donors", default: false, null: false
@@ -1457,6 +1458,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
     t.index ["event_id"], name: "index_fuime_subscriptions_on_event_id", unique: true, where: "(event_id IS NOT NULL)"
     t.index ["granted_by_id"], name: "index_fuime_subscriptions_on_granted_by_id"
     t.index ["stripe_subscription_id"], name: "index_fuime_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
+  end
+
+  create_table "fuime_test_sales", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.bigint "event_id", null: false
+    t.bigint "fuime_offer_id"
+    t.datetime "occurred_at", null: false
+    t.string "stripe_checkout_session_id"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["event_id", "occurred_at"], name: "index_fuime_test_sales_on_event_id_and_occurred_at"
+    t.index ["event_id"], name: "index_fuime_test_sales_on_event_id"
+    t.index ["fuime_offer_id"], name: "index_fuime_test_sales_on_fuime_offer_id", where: "(fuime_offer_id IS NOT NULL)"
+    t.index ["stripe_checkout_session_id"], name: "index_fuime_test_sales_on_stripe_checkout_session_id", unique: true, where: "(stripe_checkout_session_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_fuime_test_sales_on_user_id"
   end
 
   create_table "fuime_webhook_deliveries", force: :cascade do |t|
@@ -3559,6 +3577,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_180000) do
   add_foreign_key "fuime_subscriptions", "events"
   add_foreign_key "fuime_subscriptions", "users", column: "billed_to_id"
   add_foreign_key "fuime_subscriptions", "users", column: "granted_by_id", validate: false
+  add_foreign_key "fuime_test_sales", "events"
+  add_foreign_key "fuime_test_sales", "users"
   add_foreign_key "fuime_webhook_deliveries", "fuime_webhook_endpoints"
   add_foreign_key "fuime_webhook_endpoints", "events"
   add_foreign_key "g_suite_accounts", "g_suites"

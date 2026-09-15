@@ -35,6 +35,33 @@ module StripeService
     Credentials.fetch(:STRIPE, self.mode, :SECRET_KEY)
   end
 
+  # Fuime: Sandbox Mode's key — ALWAYS Stripe's test mode, whatever `mode` says.
+  #
+  # This is the one place in the app that deliberately ignores STRIPE_MODE. A
+  # rehearsal has to reach test-mode Stripe even when production is live, which
+  # is exactly what a `sk_test_` key is for: Stripe treats the two modes as
+  # separate worlds on one account, so a session created with this key can only
+  # ever take a test card and can only ever produce `livemode: false` objects.
+  #
+  # render.yaml already provisions STRIPE__TEST__SECRET_KEY on the live services
+  # alongside STRIPE__LIVE__*, so this needs no new credential.
+  #
+  # NEVER use this for anything a customer touches. The only caller is the
+  # sandbox path in Fuime::PaymentLinkService, and a live sale created with a
+  # test key would take no money at all.
+  def self.sandbox_secret_key
+    Credentials.fetch(:STRIPE, :test, :SECRET_KEY)
+  end
+
+  # Whether Sandbox Mode can reach Stripe at all. False in an environment given
+  # only live keys — the founder-facing pages ask this before offering to
+  # rehearse, so the button is never a link to a 500.
+  def self.sandbox_available?
+    sandbox_secret_key.present?
+  rescue
+    false
+  end
+
   def self.physical_bundle_ids
     {
       white: Credentials.fetch(:STRIPE, self.mode, :PHYSICAL_BUNDLE_IDS, :US_VISA_CREDIT_WHITE),

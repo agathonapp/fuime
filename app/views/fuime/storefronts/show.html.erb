@@ -21,6 +21,8 @@
     </div>
   <% end %>
 
+  <%= render "fuime/sandbox_banner", event: @event %>
+
   <%# Header %>
   <div class="text-center mb-8">
     <% if @event.logo.attached? %>
@@ -65,16 +67,32 @@
   </div>
 
   <%# Payment %>
-  <div class="card text-center mb-6 bg-snow">
+  <div class="card text-center mb-6">
     <% if params[:paid].present? %>
       <div class="badge bg-success text-white px-3 py-1.5 rounded-full mb-3 inline-flex items-center gap-1">
         <%= inline_icon "checkmark", size: 16 %>
         Payment received
       </div>
       <p class="muted m-0">Thank you for supporting <%= @event.name %>.</p>
-      <p class="text-sm muted mt-2">
-        It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
-      </p>
+      <% if sandbox_rehearsal?(@event) %>
+        <%# A rehearsal went through real Stripe test mode, so a real card form
+            was filled in — but no money moved and nothing reaches the ledger.
+            The customer line below would be false for the one person who can
+            see this. %>
+        <p class="text-sm muted mt-2">
+          <% if @sandbox_result&.recorded? || @sandbox_result&.already? %>
+            That was a <strong>test purchase</strong> — Stripe took a test card,
+            no money moved, and it won't appear on your ledger.
+          <% else %>
+            That was a <strong>test purchase</strong> — no money moved.
+          <% end %>
+          <%= link_to "See your test purchases", fuime_sandbox_path(event_slug: @event.slug), class: "underline" %>
+        </p>
+      <% else %>
+        <p class="text-sm muted mt-2">
+          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+        </p>
+      <% end %>
     <% else %>
       <h3 class="m-0 mb-2">Support this business</h3>
       <p class="muted m-0 mb-4">
@@ -198,19 +216,27 @@
         HCB shows it because its orgs are nonprofits publishing accountability
         data; here it would tell the internet how much money a named teenager
         has. Same reasoning for the owner's name, shown only for adult owners. %>
+    <%# FUIME: these were `bg-snow`, which is a fixed light fill. `--snow` is NOT
+        redefined in dark mode — _dark.scss flips `--bg-color` and then patches
+        individual components — so in dark mode the card stayed white while the
+        text colour flipped to the light-on-dark foreground. White on white:
+        the whole panel was unreadable, and it is a PUBLIC storefront.
+
+        Fixed with a translucent neutral instead of any named colour. A grey at
+        low alpha darkens a light page and lightens a dark one, so the panel
+        reads in both themes without a second rule to keep in sync — and it
+        cannot regress the next time the palette changes. Same reasoning as the
+        fill on the sales dashboard. %>
     <div class="grid grid-cols-2 gap-4">
-      <div class="p-3 bg-snow rounded-lg text-center">
-        <p class="muted m-0 mb-1 text-sm">On Fuime since</p>
-        <p class="m-0 text-xl font-bold"><%= @event.created_at.strftime("%b %Y") %></p>
-      </div>
-      <div class="p-3 bg-snow rounded-lg text-center">
-        <p class="muted m-0 mb-1 text-sm">Status</p>
-        <p class="m-0 text-xl font-bold"><%= @has_guardian ? "Parent-signed" : "Active" %></p>
-      </div>
-      <% if @show_owner_name %>
-        <div class="p-3 bg-snow rounded-lg text-center">
-          <p class="muted m-0 mb-1 text-sm">Owner</p>
-          <p class="m-0 text-xl font-bold"><%= @owner.first_name %></p>
+      <% [
+           ["On Fuime since", @event.created_at.strftime("%b %Y")],
+           ["Status", @has_guardian ? "Parent-signed" : "Active"],
+           (["Owner", @owner.first_name] if @show_owner_name)
+         ].compact.each do |label, value| %>
+        <div class="p-3 rounded-lg text-center"
+             style="background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.2);">
+          <p class="muted m-0 mb-1 text-sm"><%= label %></p>
+          <p class="m-0 text-xl font-bold"><%= value %></p>
         </div>
       <% end %>
     </div>

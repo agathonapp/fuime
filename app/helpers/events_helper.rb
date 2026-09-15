@@ -115,6 +115,26 @@ module EventsHelper
       symbol: :offers,
       available_proc: ->(event) { policy(event).offers? && organizer_signed_in? }
     },
+    # Fuime: Sandbox Mode — rehearsing a sale on your own storefront.
+    #
+    # Directly after "What you sell" because it is the question that follows
+    # listing something: a founder who has just published a $35 mow wants to
+    # know the Buy button works before they text the link to a neighbour.
+    #
+    # Gated on `sandbox?` (= `offers?`), so a guardian sees the page too. They
+    # cannot flip the switch — that is `manage_sandbox?` — but watching a
+    # teenager rehearse a checkout is exactly the oversight this product is for.
+    #
+    # `switches.svg` is verified to exist in app/assets/images/icons; a missing
+    # icon 500s the entire org nav rather than one entry (see the Taxes note).
+    {
+      name: "Test mode",
+      path_proc: ->(event_id) { fuime_sandbox_path(event_slug: event_id) },
+      tooltip: "Try buying from your own storefront without being charged",
+      icon: "switches",
+      symbol: :sandbox,
+      available_proc: ->(event) { policy(event).sandbox? && organizer_signed_in? }
+    },
     # Fuime: keys for the operator's own software. See Fuime::ApiKeysController.
     #
     # Sits next to "What you sell" because it is the same act by another route —

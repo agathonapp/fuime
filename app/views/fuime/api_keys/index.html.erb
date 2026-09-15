@@ -12,6 +12,17 @@
 
 <%= render "events/nav", selected: :api_keys %>
 
+<%# FUIME: the webhooks screen has no nav entry of its own — it shares this
+    Developer section — so without this link it is reachable only by typing the
+    URL, which is the same "exists for Fuime, not for the founder" problem the
+    screen itself was built to fix. %>
+<div class="container container--sm">
+  <p class="muted text-sm mt-2 mb0">
+    Want Fuime to tell your code when you make a sale?
+    <%= link_to "Set up webhooks", fuime_webhooks_path(event_slug: @event.slug), class: "underline" %>.
+  </p>
+</div>
+
 <h1>Developer</h1>
 
 <p class="muted">

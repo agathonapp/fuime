@@ -732,3 +732,35 @@ Two rules, both cheap:
 
 A clean database is worth checking before trusting a full-suite number:
 `Event.count`, `User.count` and `PublicActivity::Activity.count` should all be zero.
+
+---
+
+## 2026-09-14 — `fuime/m3-copy-sweep` (Sandbox Mode)
+
+**4204 examples, 4 failures, 17 pending.**
+
+| Count | Spec | Cause |
+|---|---|---|
+| 4 | `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — Apple Silicon `wkhtmltopdf`. The standing baseline, unchanged. |
+
+**The real baseline on this tree is still 4, all environmental.** Sandbox Mode's
+own file (`spec/requests/fuime_sandbox_spec.rb`) is 24/24.
+
+**Two testing gotchas this run, both worth the next session's time:**
+
+1. **Use your own test database, and only one runner against it.** Two concurrent
+   `rspec`/`db:migrate` runs against `bank_test_sbx` produced first a
+   `PG::ObjectInUse`, then a `PG::TRDeadlockDetected` on `db:schema:load` — and
+   once, a **corrupted `db/schema.rb`**: a duplicated tail fragment appended after
+   the final `end`, which then fails to parse. If `schema.rb` suddenly has syntax
+   errors near the last line, that is what happened; truncate the garbage and
+   diff against `HEAD` to confirm nothing else moved. The per-agent database tip
+   further down this file is necessary but not sufficient — one runner per
+   database, not just one database per agent.
+
+2. **`create(:fuime_offer, :published)` fails SILENTLY when the venture cannot
+   sell.** `Fuime::Offer`'s `only_a_selling_venture_may_publish` requires
+   `accepts_payments?`, and AASM's `publish!` returns false rather than raising,
+   leaving a draft offer that `find_public` then correctly refuses. The symptom is
+   an offer-token checkout spec that redirects with "That isn't for sale right
+   now" for no visible reason. Give the event a `business_category`.
