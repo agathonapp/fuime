@@ -37,13 +37,18 @@
       <th>Date</th>
       <th>Fuime Code</th>
       <th>Event</th>
-      <th>User</th>
+      <%# FUIME: the cell under this only ever fills for a Stripe Issuing charge
+          (hcb_code.card.user). Named for what it is rather than implying every
+          row has a user — a MoR sale is made by an anonymous buyer. %>
+      <th>Card user</th>
       <th>Amount</th>
       <th>Pending TXs</th>
       <th>Canonical TXs</th>
       <th>Comments</th>
       <th>Receipts</th>
-      <th>Actions</th>
+      <%# FUIME: dropped an "Actions" column that rendered an empty cell on every
+          row. The memo in the Fuime Code column is already the link to this
+          record, so there was never a second action to put here. %>
     </tr>
   </thead>
   <tbody>
@@ -56,7 +61,7 @@
           <% end %>
         </td>
         <td><%= link_to hcb_code.memo, url_for(hcb_code) %></td>
-        <td><%= link_to hcb_code.event&.name, hcb_code.event %></td>
+        <td><%= link_to hcb_code.event.name, hcb_code.event if hcb_code.event %></td>
         <td>
           <% if hcb_code.stripe_card? && hcb_code.card&.user %>
            <%= link_to hcb_code.card.user.name, hcb_code.card.user %>
@@ -90,8 +95,6 @@
           <% hcb_code.receipts.each do |r| %>
             <%= r.id %>
           <% end %>
-        </td>
-        <td>
         </td>
       </tr>
     <% end %>

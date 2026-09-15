@@ -34,20 +34,27 @@ class AdminController < Admin::BaseController
     @hcb_code = @canonical_transaction.local_hcb_code
 
     # potentials
-    @potential_donation_payouts = DonationPayout.donation_hcb_code.where(amount: @canonical_transaction.amount_cents)
+    # FUIME-DISABLED: DonationPayout is HCB's nonprofit money-in, which is off
+    # (nav.rb's Incoming Money section). The view's block is guarded on
+    # `.present?`, so leaving this nil hides it without touching the markup.
+    # @potential_donation_payouts = DonationPayout.donation_hcb_code.where(amount: @canonical_transaction.amount_cents)
     @potential_invoice_payouts = InvoicePayout.invoice_hcb_code.where(amount: @canonical_transaction.amount_cents)
 
     # other
     @canonical_pending_transactions = CanonicalPendingTransaction.unmapped.where(amount_cents: @canonical_transaction.amount_cents)
     @ahoy_events = Ahoy::Event.where("name in (?) and (properties->'canonical_transaction'->>'id')::int = ?", [::SystemEventService::Write::SettledTransactionMapped::NAME, ::SystemEventService::Write::SettledTransactionCreated::NAME], @canonical_transaction.id).order("time desc")
 
-    if @canonical_transaction.memo.include?("WISE INC")
-      potential_wise_transfers = WiseTransfer.sent.where(usd_amount_cents: -@canonical_transaction.amount_cents)
-
-      if potential_wise_transfers.one?
-        @suggested_wise_mapping = potential_wise_transfers.first
-      end
-    end
+    # FUIME-DISABLED: "WISE INC" is a memo that arrives on a bank feed Fuime does
+    # not have, and `wise_transfers` is refused by Fuime::DisabledModules, so
+    # WiseTransfer.sent is permanently empty. The view's block is guarded on
+    # @suggested_wise_mapping, so leaving it nil hides it.
+    # if @canonical_transaction.memo.include?("WISE INC")
+    #   potential_wise_transfers = WiseTransfer.sent.where(usd_amount_cents: -@canonical_transaction.amount_cents)
+    #
+    #   if potential_wise_transfers.one?
+    #     @suggested_wise_mapping = potential_wise_transfers.first
+    #   end
+    # end
 
     # Mapping confirm message
     @mapping_confirm_msg = if !@canonical_transaction.local_hcb_code.unknown?
@@ -150,7 +157,8 @@ class AdminController < Admin::BaseController
     @count = relation.count
     @sum = relation.sum(:amount_cents)
 
-    @bank_fees = relation.page(@page).per(@per).order("bank_fees.created_at desc")
+    # FUIME: the table links each row to its event, so load them in one query.
+    @bank_fees = relation.includes(:event).page(@page).per(@per).order("bank_fees.created_at desc")
   end
 
   def users
@@ -221,7 +229,9 @@ class AdminController < Admin::BaseController
 
     @count = relation.count
 
-    @raw_transactions = relation.page(@page).per(@per).order("date_posted desc")
+    # FUIME: the Actions column asks each row whether it hashed and canonized,
+    # so preload both rather than issuing 2n queries for a 100-row page.
+    @raw_transactions = relation.includes(:hashed_transactions, :canonical_transaction).page(@page).per(@per).order("date_posted desc")
   end
 
   def raw_transaction_new
@@ -297,6 +307,11 @@ class AdminController < Admin::BaseController
     @q = params[:q].presence
     @amount = params[:amount].presence
     @unmapped = params[:unmapped] != "0"
+    # FUIME-DISABLED: no longer reachable from the view. `not_stripe_top_up`
+    # matches HCB's Issuing top-up memos ("HCKCLB Stripe Top Up"), which Fuime
+    # never writes — there is no pooled Issuing float to top up. Kept so an
+    # existing bookmarked URL still behaves, and so nav.rb's badge scope (which
+    # uses the same relation) stays honest.
     @exclude_top_ups = params[:exclude_top_ups] == "1" ? true : nil
     @exclude_spending = params[:exclude_spending] == "1" ? true : nil
     @mapped_by_human = params[:mapped_by_human] == "1" ? true : nil
@@ -1877,6 +1892,10 @@ class AdminController < Admin::BaseController
     @messages = messages.page(@page).per(@per).order(sent_at: :desc)
   end
 
+  # FUIME-DISABLED: route removed. Reads RawStripeTransaction (Stripe Issuing
+  # card spend), which merchant-of-record Checkout never produces, and reports
+  # gaps in hackclub/yellow_pages — Hack Club's own dataset. Kept on disk per
+  # CLAUDE.md Rule 2; see app/views/admin/unknown_merchants.html.erb.
   def unknown_merchants
     @merchants = Rails.cache.fetch("admin_unknown_merchants", expires_in: 12.hours) do
       RawStripeTransaction.all.group_by { |rst| rst.stripe_transaction["merchant_data"]["network_id"] }.map do |network_id, rsts|

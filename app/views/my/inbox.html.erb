@@ -17,22 +17,36 @@
 <% end %>
 
 <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
-  <div class="flex flex-col">
-    <label for="sms_number">Send in via SMS</label>
-    <p class="h5 muted mt0 mb1">
-      Message photos from your phone.
-    </p>
-    <div class="relative block mt-auto flex gap-2" data-controller="clipboard" data-clipboard-text-value="+1-864-548-4225">
-      <input id="sms_number" type="tel" value="+1-864-548-4225" readonly style="cursor: text;" class="fit select-all">
-      <button
-        type="button"
-        class="pointer pop align-middle tooltipped tooltipped--n"
-        aria-label="Copy number"
-        data-action="clipboard#copy:prevent">
-        <%= inline_icon "copy", size: 28 %>
-      </button>
+  <%# Fuime: was a hardcoded `+1-864-548-4225` — Hack Club's Twilio number,
+      added upstream in hackclub/hcb#7671 and never changed in this fork, handed
+      to a Fuime founder as the number to text their receipts to. Messages go to
+      another organisation's ingress, and CLAUDE.md Rule 4 forbids this fork
+      reaching Hack Club's production services at all. Same failure the email
+      address next door already had fixed (`reimburse@hcb.gg`).
+
+      Now reads Fuime's own number and hides the whole control when there isn't
+      one. TWILIO__PHONE_NUMBER is also what TwilioMessageService::Send replies
+      from, and TwilioController rejects inbound webhooks without
+      TWILIO__AUTH_TOKEN — so an unset credential means the number genuinely
+      would not work, not merely that it is unbranded. %>
+  <% if (sms_number = Credentials.fetch(:TWILIO, :PHONE_NUMBER)).present? %>
+    <div class="flex flex-col">
+      <label for="sms_number">Send in via SMS</label>
+      <p class="h5 muted mt0 mb1">
+        Message photos from your phone.
+      </p>
+      <div class="relative block mt-auto flex gap-2" data-controller="clipboard" data-clipboard-text-value="<%= sms_number %>">
+        <input id="sms_number" type="tel" value="<%= sms_number %>" readonly style="cursor: text;" class="fit select-all">
+        <button
+          type="button"
+          class="pointer pop align-middle tooltipped tooltipped--n"
+          aria-label="Copy number"
+          data-action="clipboard#copy:prevent">
+          <%= inline_icon "copy", size: 28 %>
+        </button>
+      </div>
     </div>
-  </div>
+  <% end %>
 
   <%# Fuime: hidden until FUIME_MAILBOX_DOMAIN is set. Every address this
       minted ended in `hcb.gg`, Hack Club's domain, so a founder who forwarded a

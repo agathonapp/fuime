@@ -2,7 +2,23 @@
 
 require "rails_helper"
 
-RSpec.describe Reimbursement::ExpensesController do
+# FUIME-DISABLED (2026-09-15): this whole file runs with :sponsor_banking on.
+#
+# `reimbursement/expenses` is now in
+# Fuime::DisabledModules::SPONSOR_BANKING_CONTROLLER_PREFIXES, so every
+# state-changing request in here is refused for a non-admin while the flag is
+# off — which is Fuime's shipping posture. A reimbursement report settles through
+# `ach_transfer || increase_check || paypal_transfer || wire || wise_transfer`
+# and `PayoutHoldingService::ProcessSingle` posts a Column book transfer, none of
+# which this fork has (see Event::Plan#reimbursements_enabled?).
+#
+# Tagged rather than skipped, deliberately. These examples pin real
+# authorization rules — an attacker cannot move a report or an expense onto
+# another venture, a payout method must belong to the user — that are worth
+# keeping green for the day this is rebuilt on Fuime::PayoutRequest. Skipping
+# them would let those rules rot; running them in the world where the module is
+# on keeps them honest without pretending the module is on today.
+RSpec.describe Reimbursement::ExpensesController, :sponsor_banking do
   include SessionSupport
 
   describe "#update" do

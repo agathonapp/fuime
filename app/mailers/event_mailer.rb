@@ -73,7 +73,11 @@ class EventMailer < ApplicationMailer
     @can_enable_transparency = @event.eligible_for_transparency?
     @visible_pages = []
     @visible_pages << { name: "donation page", link: start_donation_donations_url(@event) } if @event.donation_page_available?
-    @visible_pages << { name: "public reimbursements page", link: reimbursement_start_reimbursement_report_url(@event) } if @event.public_reimbursement_page_enabled?
+    # FUIME-DISABLED: the public reimbursement page. Note this was gated on the
+    # raw `public_reimbursement_page_enabled?` COLUMN rather than on
+    # `public_reimbursement_page_available?`, so any inherited event with the
+    # column set would have raised NameError here once the route was removed.
+    # @visible_pages << { name: "public reimbursements page", link: reimbursement_start_reimbursement_report_url(@event) } if @event.public_reimbursement_page_enabled?
     @visible_pages << { name: "announcements page", link: event_announcement_overview_url(@event) } if @event.announcements.published.any?
 
     mail to: @emails, subject: "#{@event.name} has disabled transparency mode"

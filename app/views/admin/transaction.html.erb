@@ -17,7 +17,10 @@
       <td><%= @canonical_transaction.memo %></td>
     </tr>
     <tr>
-      <th>Bank account</th>
+      <%# FUIME: not "Bank account" — there is no bank feed. This is the
+          transaction_source: FUIMECONNECT (settled Stripe sales), FUIMEINTERNAL,
+          FUIMEPLAYGROUND, or Stripe Issuing. %>
+      <th>Source</th>
       <td><%= @canonical_transaction.bank_account_name %></td>
     </tr>
     <tr>
@@ -36,6 +39,15 @@
       <th>Fuime Code</th>
       <td><%= link_to @canonical_transaction.hcb_code, hcb_code_path(@canonical_transaction.local_hcb_code) %></td>
     </tr>
+    <%# FUIME: a settled Fuime line carries its ledger key on the end of the memo
+        (Fuime::VentureLedger.settled_memo), so the Stripe object it came from is
+        one hop away. Absent for Playground Mode and school-funded lines. %>
+    <% if (stripe_url = fuime_stripe_dashboard_url(@canonical_transaction.memo)) %>
+      <tr>
+        <th>Stripe</th>
+        <td><%= link_to stripe_url, stripe_url, target: "_blank", rel: "noopener" %></td>
+      </tr>
+    <% end %>
     <tr>
       <th>MappedBy</th>
       <td><%= @canonical_transaction.canonical_event_mapping.try(:user).try(:email) %></td>
@@ -52,6 +64,10 @@
   </tbody>
 </table>
 
+<%# FUIME-DISABLED: Wise is outbound international transfer, one of the rails
+    Fuime::DisabledModules turns off ("wise_transfers"). The block below keys off
+    a "WISE INC" memo arriving on a bank feed Fuime does not have, so it can
+    never render; admin_controller#transaction no longer computes it. %>
 <% if @suggested_wise_mapping %>
   <div class="border-[#9FE870] border-solid border-1 p-5 my-6">
     <h3 class="mt-0 pt-0 mb-4">Suggested Wise mapping</h3>
@@ -74,9 +90,13 @@
 <table>
   <thead>
     <tr>
+      <%# FUIME-DISABLED: removed the "Map to a Wire" and "Map to a Wise transfer"
+          columns. Both controllers are refused by Fuime::DisabledModules
+          ("wires", "wise_transfers"), so Wire.approved and WiseTransfer.sent are
+          permanently empty — the cells rendered an empty select and a Set button
+          that could only ever no-op. Mapping to an event is the one real action
+          on this page. set_wire_path / set_wise_transfer_path are untouched. %>
       <th>Map to an Event</th>
-      <th>Map to a Wire</th>
-      <th>Map to a Wise transfer</th>
     </tr>
   </thead>
   <tbody>
@@ -91,18 +111,6 @@
         <%= form_with url: set_event_path(@canonical_transaction), method: :post do |form| %>
           <%= form.hidden_field :event_id, value: EventMappingEngine::EventIds::NOEVENT %>
           <%= form.submit "Map to NoEvent", data: { turbo_confirm: @canonical_transaction.local_hcb_code.unknown? ? "Hey there– you sure you want to map this transaction to NoEvent?" : "Woaaahaa! 😯 This seems like a transaction that SHOULD NOT be manually mapped! Are you sure you want to do this? 👀" }, class: "my-0" %>
-        <% end %>
-      </td>
-      <td>
-        <%= form_with model: false, local: true, url: set_wire_path(@canonical_transaction), method: :post do |form| %>
-          <%= form.collection_select(:wire_id, Wire.approved + [@canonical_transaction.wire].compact, :id, :admin_dropdown_description, { include_blank: true, selected: @canonical_transaction.wire&.id }, { style: "width: 300px;" }) %>
-          <%= form.submit "Set", data: { "turbo-confirm": @mapping_confirm_msg } %>
-        <% end %>
-      </td>
-      <td>
-        <%= form_with model: false, local: true, url: set_wise_transfer_path(@canonical_transaction), method: :post do |form| %>
-          <%= form.collection_select(:wise_transfer_id, WiseTransfer.sent + [@canonical_transaction.wise_transfer].compact, :id, :admin_dropdown_description, { include_blank: true, selected: @canonical_transaction.wise_transfer&.id }, { style: "width: 300px;" }) %>
-          <%= form.submit "Set", data: { "turbo-confirm": @mapping_confirm_msg } %>
         <% end %>
       </td>
     </tr>
@@ -149,6 +157,10 @@
   <% end %>
 <% end %>
 
+<%# FUIME-DISABLED: DonationPayout belongs to HCB's nonprofit money-in, which
+    is off (see nav.rb's Incoming Money section). admin_controller#transaction no
+    longer queries it, so this stays permanently hidden rather than being
+    deleted. %>
 <% if @potential_donation_payouts.present? %>
   <h4>Potential DonationPayouts to Map to</h4>
 
@@ -199,8 +211,12 @@
           <td><%= cpt.date %></td>
           <td><%= cpt.memo %></td>
           <td><%= cpt.amount %></td>
-          <td><%= link_to cpt.event.name, cpt.event %></td>
-          <td><%= link_to "Linked Object", cpt.linked_object %></td>
+          <%# FUIME: @canonical_pending_transactions is CanonicalPendingTransaction.unmapped,
+              so cpt.event is nil by definition and `cpt.event.name` raised
+              NoMethodError the moment any unmapped pending row matched this
+              transaction's amount. %>
+          <td><%= link_to cpt.event.name, cpt.event if cpt.event %></td>
+          <td><%= link_to "Linked Object", cpt.linked_object if cpt.linked_object %></td>
         </tr>
       <% end %>
     </tbody>

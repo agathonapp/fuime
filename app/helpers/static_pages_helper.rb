@@ -50,8 +50,20 @@ module StaticPagesHelper
       { name: "OPDRs", path: organizer_position_deletion_requests_path, badge: OrganizerPositionDeletionRequest.under_review.count },
       { name: "Unmapped ledger", path: ledger_admin_index_path, badge: CanonicalTransaction.not_stripe_top_up.unmapped.count },
       { name: "Pending ledger", path: pending_ledger_admin_index_path, badge: CanonicalPendingTransaction.unsettled.count },
-      { name: "Ledger audits", path: admin_ledger_audits_path, badge: Admin::LedgerAudit.pending.count },
-      { name: "Bank fees", path: bank_fees_admin_index_path, badge: BankFee.in_transit_or_pending.count },
+      # FUIME: mirrors the Admin::Nav change — `LedgerAudit.pending` is permanently 0
+      # under MoR (its only writer samples card authorizations), so this card never
+      # surfaced work. `Task.flagged` is the queue a human actually fills.
+      { name: "Ledger audits", path: admin_ledger_audits_path, badge: Admin::LedgerAudit::Task.flagged.count },
+      # FUIME-DISABLED: "Bank fees" was a queue badge for HCB's fiscal-sponsorship fee
+      # sweep. Two reasons it cannot stay here:
+      #   1. `admin_queues` is work outstanding, and a pending BankFee is not work — the
+      #      only thing that acts on one is BankFeeService::ProcessSingle, a Column book
+      #      transfer Fuime has no relationship for. Nothing in Fuime creates a BankFee
+      #      either (FeeEngine::Create waives the accrual for Fuime-keyed transactions).
+      #   2. L5 forbids "bank" in copy while no partner bank exists.
+      # The route is removed too (config/routes.rb); view, controller and model stay on
+      # disk per Rule 2. Legacy pooled-simulator rows remain reachable by Fuime Code.
+      # { name: "Bank fees", path: bank_fees_admin_index_path, badge: BankFee.in_transit_or_pending.count },
       { name: "Raw transactions", path: raw_transactions_admin_index_path, badge: RawCsvTransaction.unhashed.count },
     ]
   end
@@ -66,9 +78,22 @@ module StaticPagesHelper
         { name: "Emails", path: emails_admin_index_path, badge: Ahoy::Message.count, subtle: true },
       ],
       "Money"               => [
-        { name: "Invoices", path: invoices_admin_index_path },
+        # FUIME-DISABLED: mirrors the Admin::Nav removal. `invoices` is refused at
+        # the request layer for a money-correctness reason (DisabledModules) —
+        # under merchant-of-record an invoice payment never becomes a payable to
+        # the operator, so a teen would be paid and have no record Fuime owes them.
+        # The route stays for inherited rows; only the advertising goes.
+        # { name: "Invoices", path: invoices_admin_index_path },
         { name: "Cards", path: stripe_cards_admin_index_path },
-        { name: "Fee revenues", path: fee_revenues_admin_index_path },
+        # FUIME-DISABLED: `FeeRevenue` books to Hack Club's HQ event (id 636, see
+        # FeeRevenue#event) and settles over Column. Under merchant-of-record nothing
+        # creates one — FeeEngine::Create waives the accrual for every Fuime-keyed
+        # transaction, so BankFeeService::Weekly never has a fee balance to sweep.
+        # Fuime's real revenue is the platform fee line
+        # Fuime::PaymentWebhookHandler#record_platform_fee writes at checkout.
+        # Commented out alongside the route removal in config/routes.rb — leaving the
+        # path helper here would raise once the route is gone.
+        # { name: "Fee revenues", path: fee_revenues_admin_index_path },
         { name: "Business balances", path: balances_admin_index_path },
         { name: "Negative businesses", path: negative_events_path },
         { name: "Bookkeeping", path: bookkeeping_path },

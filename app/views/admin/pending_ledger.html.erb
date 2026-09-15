@@ -30,7 +30,12 @@
       <th>Fuime Code</th>
       <th>Event</th>
       <th>Category</th>
-      <th>Actions</th>
+      <%# FUIME: was "Actions", rendering an empty cell on every row — its two
+          links (Process / View, into admin#transaction) had been ERB-commented
+          upstream because that action loads a CanonicalTransaction and a pending
+          row has none. Replaced with the one action that is real here: the Stripe
+          object this pending line was written from. %>
+      <th>Stripe</th>
     </tr>
   </thead>
   <tbody>
@@ -51,8 +56,8 @@
           <% end %>
         </td>
         <td><%= cpt.amount %></td>
-        <td><%= cpt.hcb_code %></td>
-        <td><%= cpt.event.try(:id) %></td>
+        <td><%= cpt.local_hcb_code ? link_to(cpt.hcb_code, hcb_code_path(cpt.local_hcb_code)) : cpt.hcb_code %></td>
+        <td><%= link_to cpt.event.id, cpt.event if cpt.event %></td>
         <td>
           <%= render(
                 partial: "hcb_codes/transaction_category_form",
@@ -60,8 +65,13 @@
               ) %>
         </td>
         <td>
-          <%#= link_to "Process", transaction_admin_path(cpt) unless cpt.event.present? %>
-          <%#= link_to "View", transaction_admin_path(cpt) if cpt.event.present? %>
+          <%# FUIME: every Fuime money-in line is a RawPendingDonationTransaction
+              whose donation_transaction_id is the ledger key — "fuime_<pi_…>" for
+              the sale, "fuime_fee_<pi_…>" for Fuime's cut. nil for Playground
+              Mode and school-funded lines, which have no Stripe object. %>
+          <% if (stripe_url = fuime_stripe_dashboard_url(cpt.raw_pending_donation_transaction&.donation_transaction_id)) %>
+            <%= link_to "Stripe", stripe_url, target: "_blank", rel: "noopener" %>
+          <% end %>
         </td>
       </tr>
     <% end %>

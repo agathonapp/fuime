@@ -1,3 +1,8 @@
+<%# FUIME-DISABLED (2026-09-15): the nav badge counting reports awaiting review. UNROUTED, and it names the
+    removed event_reimbursements_pending_review_icon_path. Rendered only by
+    EventsController#reimbursements_pending_review_icon, which has no route.
+    Kept on disk per CLAUDE.md Rule 2. See config/routes.rb and
+    Event::Plan#reimbursements_enabled? for why, and how to restore. %>
 <%= turbo_frame_tag event_reimbursements_pending_review_icon_path(@event) do %>
   <% if @reimbursements_pending_review_count != 0 %>
     <div class="dock__item--badge">

@@ -6,13 +6,13 @@
   <%= render "settings_header", active: "payouts", legal_entities: @legal_entities, legal_entity: @legal_entity %>
     <section>
       <% unless @legal_entity != @user.personal_legal_entity %>
+        <%# FUIME-DISABLED: this paragraph led with reimbursements, linked to
+            /my/reimbursements (route removed), and gave "you won't be able to
+            submit reimbursement reports" as the reason to add a payout method —
+            a reason that is no longer true and was never payable anyway. The
+            surviving reason is real: payments from a business. %>
         <p class="muted mt0 mb2">
-          When a <%= link_to "reimbursement report of yours", my_reimbursements_path, data: { turbo_frame: "_top" } %> is approved or an <%= !@user.payments_received.exists? ? link_to("business sends you a payment", my_pay_path, data: { turbo_frame: "_top" }) : "business sends you a payment" %>, Fuime will use your preferred payout method to pay you. Without a payout method, you won't be able to submit reimbursement reports, and you won't be able to accept payments from businesses on Fuime. You can update these settings at any time.
-          <% if @user.reimbursement_reports.pending.any? %>
-            <p>
-              Changes made here will apply to all non-reimbursed reports of yours, including your <%= pluralize(@user.reimbursement_reports.pending.count, "pending report") %>.
-            </p>
-          <% end %>
+          When a <%= !@user.payments_received.exists? ? link_to("business sends you a payment", my_pay_path, data: { turbo_frame: "_top" }) : "business sends you a payment" %>, Fuime will use your preferred payout method to pay you. Without a payout method, you won't be able to accept payments from businesses on Fuime. You can update these settings at any time.
         </p>
       <% end %>
       <%= render "users/payout_methods_list", user: @user, legal_entity: @legal_entity, attempted: @payout_method %>

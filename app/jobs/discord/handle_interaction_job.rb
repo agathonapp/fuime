@@ -148,19 +148,17 @@ module Discord
       end
     end
 
+    # FUIME-DISABLED (2026-09-15): the `reimburse:new` button.
+    #
+    # This was the last intake for a reimbursement report that did not go through
+    # a route — it called `reimbursement_reports.create!` on the model directly,
+    # so removing the controller routes did not close it. A report Fuime cannot
+    # pay (see Event::Plan#reimbursements_enabled?) should not be creatable from
+    # a chat button either.
     def reimburse_component
       return require_linked_user unless @user
 
-      report = @user.reimbursement_reports.create!(name: "Reimbursement report from Discord")
-
-      respond content: "Your new reimbursement report has been created!", embeds: [
-        {
-          title: report.name,
-          description: "Start by adding expenses",
-          color:,
-          url: url_helpers.reimbursement_report_url(report)
-        }
-      ], components: button_to("View on Fuime", url_helpers.reimbursement_report_url(report)), flags: EPHEMERAL_MESSAGE_FLAG
+      respond content: "Reimbursements aren't available on Fuime.", flags: EPHEMERAL_MESSAGE_FLAG
     end
 
     def setup_component
@@ -271,10 +269,10 @@ module Discord
           description: reimbursement_reports.empty? ? "No reimbursement reports yet" : nil,
           color:,
         }
-      ], components: [
-        button_to("Create new report", "reimburse:new", style: 3),
-        button_to("View on Fuime", url_helpers.my_reimbursements_url),
       ]
+      # FUIME-DISABLED: "Create new report" (see #reimburse_component) and
+      # "View on Fuime", which pointed at the removed my_reimbursements_url.
+      # Existing reports are still linked per-row above.
     end
 
     def missing_receipts_command

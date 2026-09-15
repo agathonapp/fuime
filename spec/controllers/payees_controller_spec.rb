@@ -2,7 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe PayeesController do
+# Tagged :sponsor_banking (spec/support/sponsor_banking.rb) because that is what
+# this file's subject is. HCB's contractor/payroll module is now blocked at the
+# request level by Fuime::DisabledModules — every payout method it can use
+# resolves to a check, ACH, wire or Wise transfer Fuime cannot originate — so
+# these upstream POSTs are refused in Fuime's default world. The behaviour they
+# describe is still correct when a sponsor bank exists, and keeping the spec
+# recognisable is what lets upstream fixes merge (CLAUDE.md Rule 6/8).
+RSpec.describe PayeesController, :sponsor_banking do
   include SessionSupport
 
   describe "POST #create" do

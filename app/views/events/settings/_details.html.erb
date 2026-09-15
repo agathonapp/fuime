@@ -95,14 +95,13 @@
         <div class="float-left flex gap-3 items-start flex-1 max-w-xl mr-auto">
           <%= inline_icon "info", size: 24, class: "muted" %>
           <p class="h5 muted m0">
+            <%# FUIME-DISABLED: the "public reimbursement page" half of this
+                sentence. Its live branch called a removed route, and its fallback
+                linked to a settings tab that no longer renders. %>
             Your logo is displayed on the
             <%= link_to "donation page",
               event.donation_page_available? ? start_donation_donations_path(event) : { tab: "donations" },
-              target: event.donation_page_available? ? "_blank" : nil %>
-            and your
-            <%= link_to "public reimbursement page",
-              event.public_reimbursement_page_available? ? reimbursement_start_reimbursement_report_url(event) : { tab: "reimbursements" },
-              target: event.public_reimbursement_page_available? ? "_blank" : nil %>. Business banners are visible on the homepage only.
+              target: event.donation_page_available? ? "_blank" : nil %>. Business banners are visible on the homepage only.
           </p>
         </div>
         <%= form.submit "Update", disabled:, class: "md:ml-3 mt-2 md:mt-0" %>

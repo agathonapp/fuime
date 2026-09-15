@@ -25,7 +25,11 @@
 <% end %>
 
 <div class="hcb_code mt2">
-  <div class="hcb_code_wrapper <%= event.plan.is_a?(Event::Plan::HackClubAffiliate) ? "hack_club_hq" : "" %>" style="margin-top: -16px;">
+  <%# FUIME: dropped the `hack_club_hq` modifier (a --hcb-primary border for
+      Event::Plan::HackClubAffiliate). That plan is `selectable? false` and
+      documented "Not a Fuime plan", so it can never match here. Its CSS rule
+      below is left in place. %>
+  <div class="hcb_code_wrapper" style="margin-top: -16px;">
     <%= render partial: "hcb_codes/rich_metadata" %>
   </div>
   <div class="receipts_wrapper_mobile">

@@ -183,16 +183,31 @@ class EventPolicy < ApplicationPolicy
   # on it bouncing off the write filter. Standard is the default plan for new
   # orgs (EventService::Create) and it enables google_workspace, so this was
   # shown to every Fuime business.
+  # The overview was hidden here first. `#g_suite_create?` and `#g_suite_verify?`
+  # followed on 2026-09-15, because hiding the page did not close the door:
+  # `POST /:event_id/g_suite_create` lives on EventsController, which is NOT and
+  # cannot be covered by the Fuime::DisabledModules prefix list — a prefix there
+  # would refuse the entire venture surface. So the write survived every other
+  # control: no nav link, no rendered page, and still `GSuiteService::Create`
+  # reachable by URL to any venture manager on a plan carrying `google_workspace`
+  # — which Standard, the default plan, does. That is live Google Workspace
+  # provisioning against a real Google account, from a fork that is not supposed
+  # to reach a third party at all (Rule 4).
+  #
+  # Fuime does not offer Google Workspace: it is a Hack Club perk for fiscally
+  # sponsored nonprofits, and a teen business has no use for it. This is a
+  # product decision, not a licensing one, so there is no flag — unlike the
+  # sponsor-banking modules, nothing here is waiting to be switched back on.
   def g_suite_overview?
     false
   end
 
   def g_suite_create?
-    admin_or_manager? && is_not_demo_mode? && record.plan.google_workspace_enabled?
+    false
   end
 
   def g_suite_verify?
-    auditor_or_reader? && is_not_demo_mode? && record.plan.google_workspace_enabled?
+    false
   end
 
   def transfers?

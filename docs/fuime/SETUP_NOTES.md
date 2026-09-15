@@ -2,6 +2,39 @@
 
 ## Handoff (most recent first)
 
+**2026-09-15 — The admin console, swept. 4219 examples, 4 failures (the standing
+Apple-Silicon baseline); zero regressions across six parallel passes.**
+1. **Start at `docs/fuime/ADMIN_CONSOLE_MAP.md`.** New this session: every admin
+   surface classified LIVE / ORPHANED / PERMANENTLY EMPTY / UNREACHABLE with the
+   grep that proves each verdict. Read it before adding or removing an admin page.
+2. **There are FOUR admin surfaces, not one, and they must agree.**
+   `app/models/admin/nav.rb`, `StaticPagesHelper#admin_queues`/`#admin_directories`,
+   `app/javascript/components/command_bar/actions.js` (⌘K — navigates by hardcoded
+   URL string, so dead routes 404 silently; it had never been trimmed), and
+   `config/routes.rb`. A change to one is a change to all four.
+3. **Order matters when removing an admin page: nav item FIRST, route SECOND.**
+   `Admin::Nav` calls `_path` helpers at build time and renders on every admin page,
+   so a route removed without its nav item raises on the whole console, not on the
+   page you removed. Also: `Item#active?` matches the item's NAME against the page
+   title — a rename that misses the view's `title` silently kills the highlight
+   (that is how "Organizations" vs "Businesses" broke it).
+4. **Two Rule 4 violations were live and are now closed:** `Reimbursement::NightlyJob`
+   ran every 5 minutes and posts a Column book transfer out of Hack Club's
+   clearinghouse org, and `+1-864-548-4225` (upstream Hack Club's Twilio number) was
+   rendered on `/my/inbox`. Neither had a flag in front of it. When you inherit an
+   upstream job or a hardcoded contact detail, assume it points at Hack Club.
+5. **Do not rebuild reimbursements.** `PayoutRequest`'s three destinations already
+   cover every shape; `app/models/payout_request.rb:316` says why a family venture
+   has exactly one of them. The open question is different and larger: under MoR
+   (`connect_money_out`, PR #101) a teen cannot request a payout at all — the page is
+   read-only and money moves only through the weekly batch you approve.
+
+**Concurrency, if you run agents in parallel again:** give each its own Postgres
+database (`pg_dump -s bank_test | psql -q bank_test_agN` — NOT `db:schema:load`,
+which deadlocks and once corrupted `db/schema.rb`). Redis is still shared: waitlist
+specs fail under concurrency and pass alone. See `known-failures.md`.
+
+
 **2026-09-14 (c) — Sandbox Mode: a founder can rehearse a sale on their own
 storefront, against real Stripe test mode. 4204 examples, 4 failures (the
 standing Apple-Silicon baseline); the feature's own file is 24/24.**

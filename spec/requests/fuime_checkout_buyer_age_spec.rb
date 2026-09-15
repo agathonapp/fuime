@@ -2,13 +2,20 @@
 
 require "rails_helper"
 
-# Fuime: a signed-in minor must not open a Stripe Checkout session.
+# Fuime: anyone may buy — guest, adult, teen, or unknown age.
 #
-# Storefront pay (`POST /b/:slug/pay`) and the hosted pay-link form both
-# create the session through Fuime::CheckoutsController. Guests (no
-# session) still check out — the link a teen texts to a customer they
-# know has to work without a Fuime account. Price still comes off the
-# offer record, never the POST body.
+# This file used to assert the opposite. The adult-only buyer rule was removed
+# on 2026-09-15 (Fuime::CheckoutsController#refuse_minor_buyer carries the
+# reasoning): it was bypassable by its own instructions ("Sign out to pay as a
+# guest"), it blocked teen-to-teen sales, and because `User#is_minor?` is nil
+# without a birthday it refused every signed-in account that had never attested
+# an age. The examples are inverted rather than deleted so the change is legible
+# and so a future re-tightening has to argue with them.
+#
+# Storefront pay (`POST /b/:slug/pay`) and the hosted pay-link form both create
+# the session through Fuime::CheckoutsController. What this file still guards is
+# the invariant that did NOT change: **price comes off the offer record, never
+# the POST body.**
 RSpec.describe "checkout buyer age", type: :request do
   # The real login dance (proven in family_signup_flow_spec) — the
   # SessionSupport factory shortcut trips over 2FA state in request specs.
@@ -95,20 +102,22 @@ RSpec.describe "checkout buyer age", type: :request do
 
     before { login_as!(teen) }
 
-    it "refuses storefront pay and does not open a Stripe session" do
+    it "starts checkout from the storefront" do
       pay_storefront!
 
-      expect(Fuime::PaymentLinkService).not_to have_received(:new)
-      expect(response).to redirect_to(fuime_storefront_path(slug: event.slug))
-      expect(flash[:alert]).to match(/adult/i)
+      expect(Fuime::PaymentLinkService).to have_received(:new)
+      expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_buyer")
     end
 
-    it "refuses a pay-link checkout and does not open a Stripe session" do
-      pay_offer!
+    # Teen-to-teen is the case the old rule cost most: one teenager buying from
+    # another's storefront is the product working, not an edge case.
+    it "starts a pay-link checkout at the operator's price, not a posted one" do
+      pay_offer!(amount: "1.00")
 
-      expect(Fuime::PaymentLinkService).not_to have_received(:new)
-      expect(response).to redirect_to(fuime_payment_page_path(event_slug: event.slug, offer: offer.to_param))
-      expect(flash[:alert]).to match(/adult/i)
+      expect(Fuime::PaymentLinkService).to have_received(:new).with(
+        hash_including(amount_cents: 35_00)
+      )
+      expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_buyer")
     end
   end
 
@@ -117,17 +126,20 @@ RSpec.describe "checkout buyer age", type: :request do
 
     before { login_as!(unknown) }
 
-    it "is treated as a minor and refused" do
+    # The common case, and the one the old rule got most wrong: `User#is_minor?`
+    # is `age&.<(18)`, nil with no birthday on record, so fail-closed age refused
+    # adults who had simply never told Fuime when they were born.
+    it "may start checkout" do
       pay_storefront!
 
-      expect(Fuime::PaymentLinkService).not_to have_received(:new)
-      expect(flash[:alert]).to match(/adult/i)
+      expect(Fuime::PaymentLinkService).to have_received(:new)
+      expect(response).to redirect_to("https://checkout.stripe.com/c/pay/cs_test_buyer")
     end
   end
 
-  # Same exemption as BillingController#adult?: staff accounts have no
-  # birthday, and fail-closed age would otherwise lock the console's own
-  # operators out of a public checkout.
+  # Kept after the rule's removal: staff could always check out, and asserting it
+  # still holds means a re-tightening cannot quietly lock the console's own
+  # operators out of a public checkout again.
   describe "signed-in staff" do
     let(:admin) { create(:user, :make_admin, :unknown_age, verified: true) }
 

@@ -91,13 +91,33 @@ payout_nightly_job:
   cron: "0 0 * * *" # run every 1 day
   class: "Payout::NightlyJob"
 
-reimbursement_nightly_job:
-  cron: "*/5 * * * *" # run every 5 minutes
-  class: "Reimbursement::NightlyJob"
-
-reimbursement_expense_approved_notification_job:
-  cron: "*/20 * * * *" # run every 20 minutes
-  class: "Reimbursement::Expense::ApprovedNotificationJob"
+# FUIME-DISABLED (2026-09-15): the reimbursement payout sweeps.
+#
+# This is the one that actually reaches outside the machine, so it matters more
+# than the UI. Reimbursement::NightlyJob ran every 5 MINUTES and called
+# PayoutHoldingService::ProcessSingle, which does a bare
+# `ColumnService.post "/transfers/book"` out of
+# EventMappingEngine::EventIds::REIMBURSEMENT_CLEARING — Hack Club's
+# clearinghouse org, over Hack Club's Column credentials. CLAUDE.md Rule 4
+# forbids this fork touching Hack Club's production services at all, and
+# PayoutHoldingService::Nightly would additionally originate real wires, checks
+# and ACH through the same clearinghouse.
+#
+# Harmless today only because no Reimbursement::PayoutHolding rows exist. That is
+# an accident of there being no data, not a control — one inherited row and the
+# scheduler would have made the call unprompted. So the schedule entry goes with
+# the routes; the jobs and services stay on disk per CLAUDE.md Rule 2.
+#
+# Restore alongside a Fuime payout rail (Fuime::PayoutBatch / PayoutRequest),
+# never against Column.
+#
+# reimbursement_nightly_job:
+#   cron: "*/5 * * * *" # run every 5 minutes
+#   class: "Reimbursement::NightlyJob"
+#
+# reimbursement_expense_approved_notification_job:
+#   cron: "*/20 * * * *" # run every 20 minutes
+#   class: "Reimbursement::Expense::ApprovedNotificationJob"
 
 payroll_nightly_job:
   cron: "*/5 * * * *" # run every 5 minutes

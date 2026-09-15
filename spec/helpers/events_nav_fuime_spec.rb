@@ -27,7 +27,12 @@ RSpec.describe EventsHelper, type: :helper do
       # payable). `receipts` is the durable choice: it is record-keeping Fuime
       # needs permanently, so it will not be reclassified out from under this spec.
       expect(helper.fuime_module_hidden?("receipts")).to be(false)
-      expect(helper.fuime_module_hidden?("reimbursement")).to be(false)
+      # FUIME-DISABLED (2026-09-15): `reimbursement` was the other example here
+      # and has moved to the sponsor-banking list — its payout rails are the ones
+      # already on it. `comments` takes its place as a permanently-permitted
+      # module that will not be reclassified.
+      # expect(helper.fuime_module_hidden?("reimbursement")).to be(false)
+      expect(helper.fuime_module_hidden?("comments")).to be(false)
     end
 
     it "treats an untagged nav item as visible" do
@@ -44,6 +49,7 @@ RSpec.describe EventsHelper, type: :helper do
     it "hides sponsor-banking modules while the flag is off" do
       expect(helper.fuime_module_hidden?("check_deposits")).to be(true)
       expect(helper.fuime_module_hidden?("ach_transfers")).to be(true)
+      expect(helper.fuime_module_hidden?("reimbursement")).to be(true)
     end
   end
 

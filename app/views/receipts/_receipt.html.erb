@@ -81,17 +81,20 @@
 
       <span style="flex-grow: 1;"></span>
 
-      <% if defined?(show_reimbursements_button) && receipt.receiptable_id == nil && current_user&.events&.any? %>
-        <%= pop_icon_to "attachment",
-            "#",
-            data: {
-              "behavior": "modal_trigger",
-              "modal": "create_#{receipt.id}"
-            },
-            size: 24,
-            class: "info tooltipped tooltipped--w mr1",
-            'aria-label': "Get reimbursed for this" %>
-      <% end %>
+      <%# FUIME-DISABLED (2026-09-15): the "Get reimbursed for this" paperclip,
+          and the create-report modal at the foot of this partial.
+
+          /my/inbox is a live page and it passed show_reimbursements_button: true,
+          so this rendered on every unmatched receipt a founder had — the last
+          reachable door into a reimbursement report. The modal's form resolves
+          reimbursement_reports_path via form_with(model: Reimbursement::Report),
+          which no longer exists, so leaving it would 500 the Receipts page.
+
+          Removed here rather than by dropping the local at the call site, so a
+          future caller passing show_reimbursements_button cannot reopen it by
+          accident. Why the feature is off: Event::Plan#reimbursements_enabled?.
+          To restore: git show HEAD -- app/views/receipts/_receipt.html.erb, plus
+          the routes in config/routes.rb's FUIME-DISABLED notes. %>
       <% if defined?(show_receipt_bin_button) %>
         <%= pop_icon_to "payment-docs",
             reverse_receipt_path(receipt, { popover: local_assigns[:popover], format: (:html unless local_assigns[:turbo_for_deletion]) }.compact),
@@ -177,6 +180,5 @@
   </section>
 <% end %>
 
-<% if defined?(show_reimbursements_button) && receipt.receiptable_id == nil && current_user %>
-  <%= render partial: "reimbursement/reports/create_form", locals: { receipt: } %>
-<% end %>
+<%# FUIME-DISABLED (2026-09-15): the create-report modal that the paperclip
+    above opened. Its form has no route to post to. See the note above. %>

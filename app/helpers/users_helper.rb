@@ -71,14 +71,28 @@ module UsersHelper
       end
     end
 
-    items << {
-      name: "Reimbursements",
-      path: my_reimbursements_path,
-      icon: "reimbursement",
-      tooltip: "See expense reimbursements",
-      async_badge: (my_reimbursements_icon_path if signed_in?),
-      selected: selected == :reimbursements
-    }
+    # FUIME-DISABLED: "Reimbursements" in the personal nav.
+    #
+    # This was the ONE module left in a teen's production sidebar (Cards and
+    # Receipts correctly hide in live mode), and the page behind it could never
+    # pay anybody: `Reimbursement::PayoutHolding#payout_transfer` runs on
+    # ACH / check / PayPal / wire / Wise, all of them Column-Increase rails this
+    # fork does not have. The venture nav had already made this call for the same
+    # feature (EventsHelper::NAV_ITEMS, gated on sponsor banking); the personal
+    # nav had not, which is how a founder's only sidebar entry became a form that
+    # manufactures an unpayable debt.
+    #
+    # The route is gone too (config/routes.rb), so this is removal rather than
+    # hiding. Restore both together, behind FEATURE_SPONSOR_BANKING.
+    #
+    # items << {
+    #   name: "Reimbursements",
+    #   path: my_reimbursements_path,
+    #   icon: "reimbursement",
+    #   tooltip: "See expense reimbursements",
+    #   async_badge: (my_reimbursements_icon_path if signed_in?),
+    #   selected: selected == :reimbursements
+    # }
 
     if current_user&.payments_received&.any? || current_user&.payroll_positions&.any?
       items << {

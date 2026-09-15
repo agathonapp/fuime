@@ -1,3 +1,6 @@
+<%# FUIME-DISABLED (2026-09-15): this page is UNROUTED — /my/reimbursements is
+    commented out in config/routes.rb. The view is kept on disk per CLAUDE.md Rule 2
+    and is unreachable; it still names removed helpers. %>
 <% title "My reimbursements" %>
 <% page_md %>
 <%= render "users/nav", selected: :reimbursements %>
@@ -46,8 +49,10 @@
         <p class="h5 muted mt0 mb1">
           Message photos from your phone.
         </p>
-        <div class="flex gap-2" data-controller="clipboard" data-clipboard-text-value="+1-864-548-4225">
-          <input id="sms_number" type="tel" value="+1-864-548-4225" readonly style="cursor: text;" class="fit">
+        <%# Fuime: was a hardcoded +1-864-548-4225 — Hack Club's Twilio number
+            (hackclub/hcb#7671), not Fuime's. See app/views/my/inbox.html.erb. %>
+        <div class="flex gap-2" data-controller="clipboard" data-clipboard-text-value="<%= Credentials.fetch(:TWILIO, :PHONE_NUMBER) %>">
+          <input id="sms_number" type="tel" value="<%= Credentials.fetch(:TWILIO, :PHONE_NUMBER) %>" readonly style="cursor: text;" class="fit">
           <button
             type="button"
             class="pointer pop tooltipped tooltipped--n"

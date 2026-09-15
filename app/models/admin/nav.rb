@@ -91,7 +91,7 @@ module Admin
       [
         "Ledger",
         "Incoming Money",
-        "Organizations",
+        "Businesses",
         "Misc"
       ]
     end
@@ -212,16 +212,30 @@ module Admin
             count: ->{ HcbCode.count },
             count_type: :records
           ),
-          make_item(
-            name: "Unknown Merchants",
-            path: unknown_merchants_admin_index_path,
-            count: ->{ Rails.cache.fetch("admin_unknown_merchants")&.length || 0 },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: Unknown Merchants reads `RawStripeTransaction`, which is
+          # Issuing-only — a merchant-of-record sale writes RawPendingDonationTransaction
+          # plus RawCsvTransaction and never appears here. It also needs ≥30 transactions
+          # per merchant and reports gaps against `hackclub/yellow_pages`, Hack Club's
+          # own dataset. Route removed; view and controller action stay on disk (Rule 2).
+          # make_item(
+          #   name: "Unknown Merchants",
+          #   path: unknown_merchants_admin_index_path,
+          #   count: ->{ Rails.cache.fetch("admin_unknown_merchants")&.length || 0 },
+          #   count_type: :records
+          # ),
           make_item(
             name: "Audits",
+            # FUIME: badge the queue a human actually fills, not the one a job fills.
+            # `Admin::LedgerAudit.pending` needs an audit carrying pending tasks, and
+            # the only thing that creates those is `Admin::LedgerAudit::GenerateJob`,
+            # which samples `raw_pending_stripe_transaction` card authorizations — so
+            # under MoR this badge was permanently 0 and the section never flagged work.
+            # `Task.flagged` is the manual flagged-transaction queue, which does work
+            # here. Name and path deliberately unchanged: `Item#active?` matches the
+            # item name against the page title, so re-pointing the path would break the
+            # highlight (see the Businesses fix above).
             path: admin_ledger_audits_path,
-            count: ->{ Admin::LedgerAudit.pending.count },
+            count: ->{ Admin::LedgerAudit::Task.flagged.count },
             count_type: :tasks
           ),
         ]
@@ -247,12 +261,26 @@ module Admin
           #   count: ->{ RecurringDonation.count },
           #   count_type: :records
           # ),
-          make_item(
-            name: "Invoices",
-            path: invoices_admin_index_path,
-            count: ->{ Invoice.count },
-            count_type: :records
-          ),
+          # FUIME-DISABLED: `invoices` is in DISABLED_CONTROLLER_PREFIXES for a
+          # money-correctness reason, not a product one — see the long comment in
+          # app/controllers/concerns/fuime/disabled_modules.rb. In short:
+          # `Fuime::PayablesLedger` attributes a sale to an operator by the
+          # `fuime_pi_` memo prefix, an upstream invoice payment writes an
+          # invoice-shaped memo, so under merchant-of-record the money lands in
+          # Fuime's balance and never becomes a payable. A teenager would invoice
+          # a client, be paid, and have no record that Fuime owes them anything.
+          #
+          # It is already refused at the request layer. The nav item was the last
+          # thing still advertising it: a door an operator can see and not open.
+          # The ROUTE deliberately stays — inherited `Invoice` rows may predate
+          # the block, and an invoice is money someone was asked to pay, so it
+          # stays inspectable by URL until we confirm the table is empty.
+          # make_item(
+          #   name: "Invoices",
+          #   path: invoices_admin_index_path,
+          #   count: ->{ Invoice.count },
+          #   count_type: :records
+          # ),
           # FUIME: the family plan — Fuime's own subscription revenue. :tasks
           # because the count is failed and stalled payments, which is work owed
           # to a family, not a total.
@@ -288,9 +316,11 @@ module Admin
       )
     end
 
+    # FUIME: the method name stays `organizations` (internal, Rule 6); the
+    # rendered section heading is Fuime's noun.
     def organizations
       Section.new(
-        name: "Organizations",
+        name: "Businesses",
         items: [
           make_item(
             name: "Applications (Fuime)",
@@ -331,14 +361,23 @@ module Admin
             count: ->{ Guardianship.stale_pending.count },
             count_type: :tasks
           ),
+          # FUIME: "Businesses", not "Organizations" — and this is a bug fix, not
+          # only a wording one. `Item#active?` compares the item's name to the
+          # page title, so an item whose name does not match its own page never
+          # highlights, and `Section#active?` is `items.any?(&:active?)`, so the
+          # whole section stopped highlighting too. The views were retitled to
+          # "Businesses" / "Business Balances" during the rebrand and these two
+          # items were missed, which silently broke the highlight on both pages.
+          # The three admin surfaces (this, StaticPagesHelper#admin_directories,
+          # and the ⌘K bar) now agree on Fuime's noun.
           make_item(
-            name: "Organizations",
+            name: "Businesses",
             path: events_admin_index_path,
             count: ->{ Event.approved.count },
             count_type: :records
           ),
           make_item(
-            name: "Organization Balances",
+            name: "Business Balances",
             path: balances_admin_index_path,
             count: ->{ Event.approved.count },
             count_type: :records
@@ -447,18 +486,40 @@ module Admin
         #   count: ->{ BankAccount.failing.count },
         #   count_type: :records
         # ),
-        make_item(
-          name: "Fuime Fees",
-          path: bank_fees_admin_index_path,
-          count: ->{ BankFee.in_transit_or_pending.count },
-          count_type: :records
-        ),
-        make_item(
-          name: "Fee Revenues",
-          path: fee_revenues_admin_index_path,
-          count: ->{ FeeRevenue.count },
-          count_type: :records
-        ),
+        # FUIME-DISABLED: `BankFee` / `FeeRevenue` are HCB's fiscal-sponsorship fee
+        # sweep, and the "Fuime Fees" label was the most misleading string in the
+        # console — it claimed to be where Fuime's 5% + 50¢ lives, and it can never
+        # hold a row. Four reasons, each independently sufficient:
+        #
+        #   1. `BankFeeService::ProcessSingle` settles a BankFee with a Column book
+        #      transfer. No Column relationship ⇒ a BankFee can never leave pending.
+        #   2. `FeeRevenue#event` is hardcoded to EventMappingEngine::EventIds::
+        #      HACK_CLUB_BANK (id 636) — Hack Club's own org, not Ninth Street Labs.
+        #   3. `FeeEngine::Create` marks every Fuime-keyed transaction
+        #      `revenue_waived` at zero, so a venture never accrues a fee balance
+        #      and `BankFeeService::Weekly` never builds either record.
+        #   4. Fuime's real fee is a ledger line written at checkout by
+        #      `Fuime::PaymentWebhookHandler#record_platform_fee`, at
+        #      `Event#fuime_fee_cents_on` = max(5%, 50¢) (L8). It never touches these.
+        #
+        # ⚠️ ORDER MATTERS: these items call the path helpers at nav BUILD time, and
+        # the nav renders on every admin page. Remove the items BEFORE the routes —
+        # routes first would raise on every single admin page.
+        # Routes removed in config/routes.rb; view, controller and model stay on
+        # disk per Rule 2, so legacy pooled-simulator rows remain inspectable by
+        # their Fuime Code.
+        # make_item(
+        #   name: "Fuime Fees",
+        #   path: bank_fees_admin_index_path,
+        #   count: ->{ BankFee.in_transit_or_pending.count },
+        #   count_type: :records
+        # ),
+        # make_item(
+        #   name: "Fee Revenues",
+        #   path: fee_revenues_admin_index_path,
+        #   count: ->{ FeeRevenue.count },
+        #   count_type: :records
+        # ),
         # FUIME-DISABLED: Fuime has no Column relationship.
         # make_item(
         #   name: "Column Statements",
