@@ -1,5 +1,29 @@
 <% title "Fee Revenues" %>
 
+<%# FUIME-DISABLED: `FeeRevenue` is the HQ side of HCB's fiscal-sponsorship fee sweep.
+
+    BankFeeService::Weekly rolls that week's BankFees into one FeeRevenue and books it
+    to `EventMappingEngine::EventIds::HACK_CLUB_BANK` (id 636) — see FeeRevenue#event.
+    That is Hack Club's own org, not Ninth Street Labs, and settling it runs through
+    Column, which Fuime does not have.
+
+    Fuime's real revenue under merchant-of-record is the platform fee line
+    Fuime::PaymentWebhookHandler#record_platform_fee writes at checkout, plus the
+    payout side in Fuime::PayoutBatch. Neither passes through this model.
+
+    View, controller action and model stay on disk (Rule 2); the admin route is removed,
+    so this is unreachable by URL. Nothing can create a FeeRevenue under MoR.
+
+    ⚠️ L8: the "Uncharged Fee Balance" below is NOT what Fuime charges. It is
+    Event#fee_balance_v2_cents, a pure `amount × revenue_fee` accrual with NO 50c
+    floor, whereas the real charge is Event#fuime_fee_cents_on => max(5%, 50c).
+    It is also not money owed: under MoR the fee was already taken at checkout, and
+    FeeEngine::Create waives the accrual for every Fuime-keyed transaction. A non-zero
+    figure here means something built a fee accrual outside the MoR path — seeded /
+    playground ventures (Fuime::Playground runs on Event::Plan::Free) or an
+    invoice/manual line — and should be investigated, not collected. The number is
+    left as the code computes it rather than "corrected" here; fixing it means fixing
+    the accrual, not the view. %>
 <div class="mb3">
   <h3>Uncharged Fee Balance: <%= render_money @total_pending_fees %></h3>
 

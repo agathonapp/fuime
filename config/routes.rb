@@ -402,8 +402,30 @@ Rails.application.routes.draw do
     get "activities", to: "my#activities", as: :my_activities
     post "toggle_admin_activities", to: "my#toggle_admin_activities", as: :toggle_admin_activities
     get "tasks", to: "my#tasks", as: :my_tasks
-    get "reimbursements", to: "my#reimbursements", as: :my_reimbursements
-    get "reimbursements_icon", to: "my#reimbursements_icon", as: :my_reimbursements_icon
+    # FUIME-DISABLED: /my/reimbursements and its nav badge.
+    #
+    # A reimbursement report is an obligation to pay a person back, and
+    # `Reimbursement::PayoutHolding#payout_transfer` settles it through
+    # `ach_transfer || increase_check || paypal_transfer || wire ||
+    # wise_transfer` — every one of them a Column/Increase rail this fork does
+    # not have, and every one of them already refused by
+    # Fuime::DisabledModules. `PayoutHoldingService::ProcessSingle` posts
+    # straight to `ColumnService`. So a teen could file a report, an organizer
+    # could approve it, and nothing here could ever pay it.
+    #
+    # The route is removed rather than the page merely un-navved, because a
+    # reachable "Start report" form is the specific harm: it manufactures an
+    # unpayable debt and tells a fifteen-year-old their money is coming.
+    # MyController#reimbursements, its view and every model stay on disk
+    # (CLAUDE.md Rule 2) — restore these two lines, drop "reimbursement" from
+    # Fuime::DisabledModules::SPONSOR_BANKING_CONTROLLER_PREFIXES, and set
+    # FEATURE_SPONSOR_BANKING to bring it back.
+    #
+    # Fuime's money-out is Fuime::PayoutBatch / PayoutRequest to a
+    # guardian-owned bank account. See docs/fuime/MOR_WEBHOOK_PASS.md.
+    #
+    # get "reimbursements", to: "my#reimbursements", as: :my_reimbursements
+    # get "reimbursements_icon", to: "my#reimbursements_icon", as: :my_reimbursements_icon
 
     get "receipts", to: redirect("/my/inbox")
     post "receipts/upload", to: "static_pages#receipt", as: :my_receipts_upload
@@ -576,8 +598,17 @@ Rails.application.routes.draw do
       get "nav", to: "admin#nav"
       get "bank_accounts", to: "admin#bank_accounts"
       get "hcb_codes", to: "admin#hcb_codes"
-      get "bank_fees", to: "admin#bank_fees"
-      get "fee_revenues", to: "admin#fee_revenues"
+      # FUIME-DISABLED: HCB's fiscal-sponsorship fee sweep. `BankFee` settles via a
+      # Column book transfer Fuime has no relationship for; `FeeRevenue` books to
+      # Hack Club's HQ event (id 636); and `FeeEngine::Create` waives the accrual for
+      # every Fuime-keyed transaction, so neither record can ever be created here.
+      # Fuime's own 5% + 50c is a ledger line written at checkout by
+      # `Fuime::PaymentWebhookHandler#record_platform_fee`. The "Fuime Fees" page was
+      # the most misleading surface in the console: it named Fuime's fee and could
+      # never hold it. Views/controller/model stay on disk per Rule 2; legacy
+      # pooled-simulator rows remain reachable by their Fuime Code.
+      # get "bank_fees", to: "admin#bank_fees"
+      # get "fee_revenues", to: "admin#fee_revenues"
       get "users", to: "admin#users"
       get "raw_transactions", to: "admin#raw_transactions"
       get "raw_transaction_new", to: "admin#raw_transaction_new"
@@ -592,7 +623,12 @@ Rails.application.routes.draw do
       get "pending_ledger", to: "admin#pending_ledger"
       get "ach", to: "admin#ach"
       get "reimbursements", to: "admin#reimbursements"
-      get "payroll", to: "admin#payroll"
+      # FUIME-DISABLED: this route was a live 404 — `AdminController` has no
+      # `payroll` action and there is no `admin/payroll` view, so it raised
+      # AbstractController::ActionNotFound for anyone who reached it. Broken since
+      # the fork, referenced by nothing. HCB payroll runs on Column; school ventures
+      # pay students through PayoutRequest#personal_transfer.
+      # get "payroll", to: "admin#payroll"
       get "stripe_card_personalization_designs", to: "admin#stripe_card_personalization_designs"
       get "stripe_card_personalization_design_new", to: "admin#stripe_card_personalization_design_new"
       post "stripe_card_personalization_design_create", to: "admin#stripe_card_personalization_design_create"
@@ -666,18 +702,27 @@ Rails.application.routes.draw do
       get "google_workspaces", to: "admin#google_workspaces"
       post "google_workspaces_verify_all", to: "admin#google_workspaces_verify_all"
       get "balances", to: "admin#balances"
-      get "hq_receipts", to: "admin#hq_receipts"
-      get "account_numbers", to: "admin#account_numbers"
+      # FUIME-DISABLED: `hq_receipts` is Hack Club's own employee-receipt desk;
+      # `account_numbers` lists Column-issued account numbers and Fuime has no Column.
+      # Neither has a single reference anywhere in app/, lib/ or spec/.
+      # get "hq_receipts", to: "admin#hq_receipts"
+      # get "account_numbers", to: "admin#account_numbers"
       get "employees", to: "admin#employees"
-      get "employee_payments", to: "admin#employee_payments"
+      # FUIME-DISABLED: HCB payroll. Unreferenced.
+      # get "employee_payments", to: "admin#employee_payments"
       get "emails", to: "admin#emails"
       get "email", to: "admin#email"
       get "email_html", to: "admin#email_html"
-      get "merchant_memo_check", to: "admin#merchant_memo_check"
+      # FUIME-DISABLED: an orphaned upstream debugging page for bank-feed memos.
+      # No bank feeds in Fuime, and nothing links to it.
+      # get "merchant_memo_check", to: "admin#merchant_memo_check"
       get "referral_programs", to: "admin#referral_programs"
       post "referral_program_create", to: "referral/programs#create"
       post "referral_link_create", to: "referral/links#create"
-      get "unknown_merchants", to: "admin#unknown_merchants"
+      # FUIME-DISABLED: reads Issuing-only `RawStripeTransaction` (a MoR sale never
+      # lands there), needs >=30 transactions per merchant, and reports gaps against
+      # hackclub/yellow_pages — Hack Club's own dataset. View/controller stay (Rule 2).
+      # get "unknown_merchants", to: "admin#unknown_merchants"
       post "request_balance_export", to: "admin#request_balance_export"
       get "active_teenagers_leaderboard", to: "admin#active_teenagers_leaderboard"
       get "new_teenagers_leaderboard", to: "admin#new_teenagers_leaderboard"
@@ -978,14 +1023,34 @@ Rails.application.routes.draw do
     collection do
       get "collect_email", to: "exports#collect_email", as: "collect_email"
       get ":event", to: "exports#transactions", as: "transactions"
-      get "reimbursements/:event", to: "exports#reimbursements", as: "reimbursements"
+      # FUIME-DISABLED: the reimbursements CSV export, with the page it was
+      # downloaded from. Its only caller was events/reimbursements.html.erb.
+      # get "reimbursements/:event", to: "exports#reimbursements", as: "reimbursements"
     end
   end
 
   resources :transactions, only: [:index, :show, :edit, :update], path: "deprecated/transactions"
 
+  # FUIME-DISABLED (partial): every route that CREATES a reimbursement report is
+  # gone; the ones that read or wind down an inherited report remain.
+  #
+  # Why the surgery rather than dropping the namespace: `reimbursement_report_path`
+  # is rendered by the activity feed, /settings/payouts, the admin digest mailer
+  # and the admin queue — all live pages — so removing `:show` would turn a dead
+  # feature into a 500 on pages that work. What had to go is the intake: `:create`,
+  # `quick_expense` (drag-a-receipt), and the public `start`/`finished` pages.
+  #
+  # The write routes that survive (update, destroy, submit, approve, reject,
+  # admin_approve, convert_to_wise_transfer, and the expense routes) are refused
+  # at the request layer by Fuime::DisabledModules — see the "reimbursement"
+  # entry in SPONSOR_BANKING_CONTROLLER_PREFIXES. Nothing can advance a report
+  # toward a payout that cannot happen.
+  #
+  # To restore: put `:create` back, uncomment the collection block and `start`,
+  # drop "reimbursement" from SPONSOR_BANKING_CONTROLLER_PREFIXES, and set
+  # FEATURE_SPONSOR_BANKING. See config/routes.rb's /my/reimbursements note.
   namespace :reimbursement do
-    resources :reports, only: [:show, :create, :edit, :update, :destroy] do
+    resources :reports, only: [:show, :edit, :update, :destroy] do
       post "request_reimbursement"
       post "convert_to_wise_transfer"
       post "admin_approve"
@@ -1000,13 +1065,18 @@ Rails.application.routes.draw do
       post "draft"
       get "wise_transfer_quote"
       get "wise_transfer_breakdown"
-      collection do
-        post "quick_expense"
-        get "/:event_name/finished", to: "reports#finished", as: "finished"
-      end
+      # FUIME-DISABLED: report intake.
+      # collection do
+      #   post "quick_expense"
+      #   get "/:event_name/finished", to: "reports#finished", as: "finished"
+      # end
     end
 
-    get "start/:event_name", to: "reports#start", as: "start_reimbursement_report"
+    # FUIME-DISABLED: the public "start a reimbursement report" page. Also gated
+    # upstream of here by Event#public_reimbursement_page_available?, which now
+    # returns false because Event::Plan#reimbursements_enabled? requires sponsor
+    # banking.
+    # get "start/:event_name", to: "reports#start", as: "start_reimbursement_report"
 
     resources :expenses, only: [:create, :edit, :update, :destroy] do
       post "approve"
@@ -1452,7 +1522,9 @@ Rails.application.routes.draw do
     # receipt_required scope carries several LEFT JOINs, and a school roster
     # renders one of these per student.
     get "async_missing_receipts"
-    get "reimbursements_pending_review_icon"
+    # FUIME-DISABLED: the venture-nav badge counting reports awaiting review,
+    # with the page it linked to. See the /my/reimbursements note above.
+    # get "reimbursements_pending_review_icon"
 
     get "documentation", to: redirect("/%{event_id}/documents", status: 302)
     get "transfers"
@@ -1460,7 +1532,10 @@ Rails.application.routes.draw do
     get "statements"
     get "statement_of_activity"
     get "promotions"
-    get "reimbursements"
+    # FUIME-DISABLED: the venture's reimbursements page. EventsController#reimbursements
+    # and its view stay on disk; EventPolicy#reimbursements? already returns false
+    # because Event::Plan#reimbursements_enabled? requires sponsor banking.
+    # get "reimbursements"
     get "employees"
     get "contractors"
     get "sub_organizations"

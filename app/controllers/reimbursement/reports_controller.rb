@@ -12,6 +12,17 @@ module Reimbursement
 
     invisible_captcha only: [:create], honeypot: :subtitle
 
+    # FUIME-DISABLED (2026-09-15): #create, #quick_expense, #start and #finished
+    # are UNROUTED (see config/routes.rb) — they are the intake for an obligation
+    # that `Reimbursement::PayoutHolding#payout_transfer` can never settle on any
+    # rail this fork has. They are kept on disk per CLAUDE.md Rule 2 and are
+    # unreachable; the `event_reimbursements_path` and
+    # `finished_reimbursement_reports_path` calls inside them name removed
+    # helpers and would raise if a route were restored without the rest.
+    #
+    # The write actions that ARE still routed (update, destroy, submit, approve,
+    # reject, …) are refused by Fuime::DisabledModules for everyone but admins.
+
     # POST /reimbursement_reports
     def create
       @event = Event.find(report_params[:event_id])
@@ -436,10 +447,16 @@ module Reimbursement
 
       @report.destroy
 
+      # FUIME-DISABLED: both destinations were removed routes
+      # (event_reimbursements_path, my_reimbursements_path), and this action is
+      # still routed — so for an admin, who is exempt from
+      # Fuime::DisabledModules, deleting a report would have raised NameError
+      # after the record was already gone. There is no reimbursements index to
+      # return to any more, so fall back to the venture, then the dashboard.
       if organizer_signed_in? && @event
-        redirect_to event_reimbursements_path(@event)
+        redirect_to event_path(@event)
       else
-        redirect_to my_reimbursements_path
+        redirect_to my_inbox_path
       end
     end
 

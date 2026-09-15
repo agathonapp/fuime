@@ -78,6 +78,34 @@ RSpec.describe "admin payout batches", type: :request do
 
     before { login_as!(admin) }
 
+    # FUIME (2026-09-15): approving a run is the last human decision before Fuime's
+    # own money leaves, and a batch line is machine-generated — it carries no note
+    # saying what it is for. Without a way to reach the sales behind a figure, the
+    # approval is a rubber stamp on a number. The composition is not stored on the
+    # line, so this links at the venture's ledger scoped to the run's own period.
+    it "links each line to the sales that produced it, scoped to the run's period" do
+      get payout_batch_admin_index_path(id: batch.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(
+        CGI.escapeHTML(
+          Rails.application.routes.url_helpers.event_transactions_path(
+            event, start: batch.period_start, end: batch.period_end
+          )
+        )
+      )
+    end
+
+    # The dates in the link text have to be the run's, not today's — a reviewer
+    # reading a historical run must not be told it covers the current week.
+    it "labels the link with the run's period" do
+      get payout_batch_admin_index_path(id: batch.id)
+
+      expect(CGI.unescapeHTML(response.body)).to include(
+        "Sales #{batch.period_start.strftime('%-d %b')}"
+      )
+    end
+
     it "shows the policy the run was generated under, not today's" do
       batch.update_columns(hold_days: 30, reserve_basis_points: 250)
 

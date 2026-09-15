@@ -244,6 +244,38 @@ class Event
       end
     end
 
+    # Fuime: reimbursements need a rail to pay the person back, and Fuime has none.
+    #
+    # `Reimbursement::PayoutHolding#payout_transfer` settles a report through
+    # `ach_transfer || increase_check || paypal_transfer || wire || wise_transfer`,
+    # and `PayoutHoldingService::ProcessSingle` posts a Column book transfer out of
+    # `EventMappingEngine::EventIds::REIMBURSEMENT_CLEARING` — Hack Club's
+    # clearinghouse org. Every one of those rails is already refused by
+    # Fuime::DisabledModules, so upstream's flow ends with a teenager holding an
+    # approved report that nothing in this codebase can pay.
+    #
+    # Deliberately overriding the generated predicate rather than dropping
+    # "reimbursements" from `available_features`: the generator above defines
+    # `reimbursements_enabled?` FROM that list, so removing the string would delete
+    # the method and turn four call sites into NoMethodError. Keeping the feature in
+    # the list and answering the question here leaves every plan's `#features`
+    # untouched (CLAUDE.md Rule 2) — a legacy plan still *has* the feature, Fuime
+    # just cannot honor it yet.
+    #
+    # One override, four surfaces: Event#public_reimbursement_page_available?,
+    # EventPolicy#reimbursements? (the venture page and the CSV export),
+    # events/edit.html.erb's settings tab, and the two nav entries that already
+    # asked `Fuime::Features.sponsor_banking?` for exactly this reason.
+    #
+    # Comes back on its own when FEATURE_SPONSOR_BANKING is set — and when it does,
+    # rebuild it on Fuime::PayoutRequest rather than on Column. See the
+    # FUIME-DISABLED notes in config/routes.rb.
+    def reimbursements_enabled?
+      return false unless ::Fuime::Features.sponsor_banking?
+
+      "reimbursements".in?(features)
+    end
+
     def self.available_plans
       Event::Plan.descendants
     end

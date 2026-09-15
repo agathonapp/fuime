@@ -24,4 +24,27 @@ RSpec.describe TransactionCategory do
       expect(instance.errors[:slug]).to include("is not included in the list")
     end
   end
+
+  # FUIME: `hq_only` shipped from upstream and was never read — every category
+  # list offered Fuime's own bookkeeping categories to teen founders. See the
+  # comment on the scope.
+  describe ".operator_visible" do
+    it "excludes hq_only categories" do
+      hq_only = described_class.create!(slug: "hcb-revenue")
+      ordinary = described_class.create!(slug: "rent")
+
+      expect(described_class.operator_visible).to include(ordinary)
+      expect(described_class.operator_visible).not_to include(hq_only)
+    end
+
+    it "is composable with `or`, so an active filter can be kept visible" do
+      hq_only = described_class.create!(slug: "hcb-revenue")
+      ordinary = described_class.create!(slug: "rent")
+
+      relation = described_class.operator_visible.or(described_class.where(id: hq_only))
+
+      expect(relation).to include(ordinary, hq_only)
+    end
+  end
+
 end

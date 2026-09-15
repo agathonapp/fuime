@@ -1,3 +1,14 @@
+<%# FUIME-DISABLED (route removed; see config/routes.rb). This page reads
+    RawStripeTransaction — Stripe ISSUING card spend imported by
+    TransactionEngine::RawStripeTransactionService::Stripe::Import — groups it by
+    merchant network_id, drops anything under 30 transactions, and lists what is
+    missing from hackclub/yellow_pages. Three reasons it can never do anything
+    here: Fuime's money-in is merchant-of-record Checkout, which produces
+    RawPendingDonationTransaction and RawCsvTransaction and never a
+    RawStripeTransaction; card issuing is off outside Stripe test mode
+    (Fuime::Features.card_issuing_permitted?); and the output is a contribution
+    queue for Hack Club's own merchant dataset, which this fork cannot write to.
+    The view, the controller action and the YellowPages gem stay on disk. %>
 <% title "Unknown Merchants" %>
 
 <p class="mb-6">This page shows merchant IDs of popular merchants on Fuime that don't exist in the <%= link_to "YellowPages database", "https://github.com/hackclub/yellow_pages" %>.</p>

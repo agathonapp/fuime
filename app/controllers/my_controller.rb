@@ -130,6 +130,12 @@ class MyController < ApplicationController
     end
   end
 
+  # FUIME-DISABLED (2026-09-15): UNROUTED. /my/reimbursements and its nav badge
+  # are commented out in config/routes.rb — this was the only module left in a
+  # teen's production sidebar, and a report filed here could never be paid
+  # (Event::Plan#reimbursements_enabled? has the argument). Kept on disk per
+  # CLAUDE.md Rule 2; the skip_* filters above still name these actions, which is
+  # harmless and keeps restoration to a routes change.
   def reimbursements
     return unless signed_in?
 

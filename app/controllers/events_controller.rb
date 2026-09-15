@@ -899,6 +899,10 @@ class EventsController < ApplicationController
     @is_argosy = @event.plan.is_a?(Event::Plan::Argosy2025) || @event.plan.is_a?(Event::Plan::Argosy2026)
   end
 
+  # FUIME-DISABLED (2026-09-15): UNROUTED. `get "reimbursements"` is commented
+  # out in the event member block of config/routes.rb, and EventPolicy#reimbursements?
+  # is false anyway now that Event::Plan#reimbursements_enabled? requires sponsor
+  # banking. Kept on disk per CLAUDE.md Rule 2.
   def reimbursements
     authorize @event
     @total = @event.reimbursement_reports.to_calculate_total.where(currency: "USD").includes(:payout_holding).sum(&:amount_cents)

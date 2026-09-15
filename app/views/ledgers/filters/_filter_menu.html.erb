@@ -132,7 +132,10 @@
           <% end %>
         </div>
         <div data-tabs-target="tab" id="category">
-          <% TransactionCategory.order(slug: :asc).each do |category| %>
+          <%# FUIME: `operator_visible` hides Fuime's own hq_only bookkeeping categories
+              (platform revenue, Stripe service fees) from a venture's ledger filter.
+              The active one is kept so a filter already applied cannot vanish. %>
+          <% TransactionCategory.operator_visible.or(TransactionCategory.where(id: @category)).order(slug: :asc).each do |category| %>
             <div class="flex items-center">
               <%= link_to(category.definition.label, event_ledger_path(@event, upsert_query_params(category: category.slug, page: 1)), class: "flex-auto menu__action #{"menu__action--active" if @category == category}", data: { turbo_prefetch: "false" }) %>
             </div>

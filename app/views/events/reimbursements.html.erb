@@ -1,3 +1,8 @@
+<%# FUIME-DISABLED (2026-09-15): the venture reimbursements page. UNROUTED (`get "reimbursements"` in the
+    event member block of config/routes.rb). Still names reimbursements_exports_path
+    and quick_expense_reimbursement_reports_path, both removed.
+    Kept on disk per CLAUDE.md Rule 2. See config/routes.rb and
+    Event::Plan#reimbursements_enabled? for why, and how to restore. %>
 <% title "Reimbursements for #{@event.name}" %>
 <% page_md %>
 <%= render "events/nav", selected: :reimbursements %>

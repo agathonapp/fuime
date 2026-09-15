@@ -735,6 +735,35 @@ A clean database is worth checking before trusting a full-suite number:
 
 ---
 
+## 2026-09-15 — `fuime/m3-copy-sweep` (admin console pass)
+
+**A second environmental failure, newly characterised: `spec/fuime_marketing_pricing_spec.rb:126`.**
+
+`/terms` body does not match `/5%/`. This is **not** a copy regression. The cause is
+self-describing in the run output: `Request ran for longer than 30000ms`, a Rack::Timeout
+on the cold first request, so `/terms` returns 200 with a truncated body.
+`Event::Plan::Free::REVENUE_FEE` is `0.05`, so the copy itself is correct.
+
+⚠️ **A method note that cost us an over-claim, worth recording.** This was first
+"proved" by reproducing it in a detached `git worktree` at `HEAD`. That reasoning was
+retracted by the agent that made it: **a detached worktree is not a valid baseline for
+request specs**, because it has no built assets — it fails most admin request specs
+(12/13 in `fuime_waitlist_admin_spec`) for that reason alone. It remains valid for
+file-content examples, and for this one request example only because the failure names
+its own cause. If you reach for a worktree baseline, build assets first or expect to
+mis-attribute.
+
+Treat it like the `receipt_bin_mailbox_spec` four: environmental, attributable, not yours.
+It is load-order dependent — running the file alone on a warm container usually passes.
+
+**A concurrency note worth more than the failure.** Six agents ran suites against this
+tree at once. Per-agent databases (`bank_test_ag1`…`ag6`, schema cloned from `bank_test`
+with `pg_dump -s` rather than `db:schema:load`) held up — `db/schema.rb` was never
+touched. **Redis did not.** `spec/requests/fuime_waitlist_admin_spec.rb` failed 3 examples
+inside a large batch and passed 13/13 alone: the waitlist roster uses a shared Redis
+DB 15, which is not partitioned per agent the way Postgres now is. If you see waitlist
+failures under concurrency, re-run the file alone before believing them.
+
 ## 2026-09-14 — `fuime/m3-copy-sweep` (Sandbox Mode)
 
 **4204 examples, 4 failures, 17 pending.**

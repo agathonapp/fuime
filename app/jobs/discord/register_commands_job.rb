@@ -56,13 +56,16 @@ module Discord
           options: [],
           meta: { ephemeral: false },
         },
-        {
-          name: "reimburse",
-          type: Discordrb::ApplicationCommand::TYPES[:chat_input],
-          description: "Open a new reimbursement report on Fuime",
-          options: [],
-          meta: { ephemeral: true },
-        },
+        # FUIME-DISABLED: /reimburse. It advertised "Open a new reimbursement
+        # report", and its button created one straight off the model. See
+        # Discord::HandleInteractionJob#reimburse_component.
+        # {
+        #   name: "reimburse",
+        #   type: Discordrb::ApplicationCommand::TYPES[:chat_input],
+        #   description: "Open a new reimbursement report on Fuime",
+        #   options: [],
+        #   meta: { ephemeral: true },
+        # },
         {
           name: "missing-receipts",
           type: Discordrb::ApplicationCommand::TYPES[:chat_input],

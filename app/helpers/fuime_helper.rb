@@ -110,4 +110,45 @@ module FuimeHelper
   def unit_label_placeholder_for(event)
     UNIT_LABEL_PLACEHOLDERS.fetch(event&.business_category, "per hour")
   end
+
+  # FUIME: the Stripe dashboard link for a Fuime ledger line.
+  #
+  # Every money line Fuime posts is keyed on the Stripe object it came from —
+  # `fuime_<pi_…>` for a sale, `fuime_fee_<pi_…>` for Fuime's cut,
+  # `fuime_stripefee_<pi_…>` for Stripe's, `fuime_payout_<po_…>` for money going
+  # out (see Fuime::VentureLedger's key builders). A PENDING row carries that key
+  # on RawPendingDonationTransaction#donation_transaction_id; a SETTLED row
+  # carries it bracketed on the end of its memo (VentureLedger.settled_memo).
+  # Either string can be passed here.
+  #
+  # This exists because the admin ledger pages inherited HCB's "Actions" columns,
+  # which were built around mapping a bank feed to an org. Fuime has no bank feed
+  # — the one genuinely useful action left on a ledger row is "show me this at
+  # Stripe", and under merchant-of-record that is Fuime's own platform account,
+  # so a plain dashboard URL reaches it.
+  #
+  # Honours StripeService.mode, so a test-mode fork links at /test/… instead of
+  # sending an admin to a live-mode page that does not exist.
+  #
+  # Returns nil for a line with no Stripe object behind it (Playground Mode
+  # sample money, school-funded lines), so callers render nothing rather than a
+  # dead link.
+  FUIME_STRIPE_DASHBOARD_PATHS = {
+    "pi" => "payments",
+    "ch" => "payments",
+    "po" => "payouts"
+  }.freeze
+
+  def fuime_stripe_dashboard_url(ledger_key)
+    match = ledger_key.to_s.match(/(?:\A|[^A-Za-z0-9])(pi|ch|po)_([A-Za-z0-9]+)/)
+    return if match.nil?
+
+    resource = FUIME_STRIPE_DASHBOARD_PATHS[match[1]]
+    return if resource.nil?
+
+    base = "https://dashboard.stripe.com"
+    base += "/test" unless ::StripeService.live?
+
+    "#{base}/#{resource}/#{match[1]}_#{match[2]}"
+  end
 end

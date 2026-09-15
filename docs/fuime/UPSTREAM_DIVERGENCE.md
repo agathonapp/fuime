@@ -7348,3 +7348,334 @@ operator flips the switch. Same split, and the same reasoning, as pricing.
 `/:event_slug/sandbox`. Interleaving them into the transactions list was
 considered and rejected for this pass — a row that looks like a ledger line and
 is not is the exact confusion the separate table exists to prevent.
+
+---
+
+## 2026-09-15 — Admin fee pages are legacy HCB; category labels move to Fuime vocabulary
+
+**`BankFee` / `FeeRevenue` are dead under merchant-of-record.** Evidence, not inference:
+
+- `BankFeeService::ProcessSingle` settles a BankFee with `ColumnService.post
+  "/transfers/book"`. Fuime has no Column relationship, so a BankFee can never leave
+  `pending`.
+- `FeeRevenue#event` returns `Event.find(EventMappingEngine::EventIds::HACK_CLUB_BANK)`
+  — id 636, Hack Club's own org, not Ninth Street Labs.
+- `FeeEngine::Create` marks every Fuime-keyed transaction `revenue_waived` with a zero
+  amount (the 2026-08-13 divergence), so a Fuime venture never accrues a fee balance,
+  never appears in `Event.pending_fees_v2`, and so `BankFeeService::Weekly` never builds
+  a BankFee or a FeeRevenue for it.
+- Fuime's real platform fee is written at checkout by
+  `Fuime::PaymentWebhookHandler#record_platform_fee` as its own ledger line
+  (`Fuime::VentureLedger.fee_key`), at `Event#fuime_fee_cents_on` = `max(5%, 50c)`.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `/admin/bank_fees`: dropped the always-empty "Memo" and "Actions" columns; Fuime Code links to its detail page; Event links by name; amount uses `render_money`; status uses `#state_text`; FUIME-DISABLED header comment | BankFee has no memo of its own (it lives on the HcbCode, reachable only via a `find_or_create_by` write mid-render) and routes expose only `get "bank_fees"` — there is no action to offer | `app/views/admin/bank_fees.html.erb` |
+| `#bank_fees` preloads `:event` | The table now links each row's event | `app/controllers/admin_controller.rb` |
+| `/admin/fee_revenues`: FUIME-DISABLED header comment + explicit L8 warning on "Uncharged Fee Balance" | That figure is `Event#fee_balance_v2_cents`, a percentage-only accrual with **no 50c floor**, so it cannot match what Checkout charged; and under MoR the fee was already taken. Non-zero means a stray accrual (seed/playground/invoice), not money owed. Number deliberately left as computed — the accrual is the thing to fix, not the view | `app/views/admin/fee_revenues.html.erb` |
+| Removed "Bank fees" from `admin_queues` | `admin_queues` is work outstanding; a pending BankFee is not work (nothing creates one, nothing can settle one). Also L5: "bank" | `app/helpers/static_pages_helper.rb` |
+| `hq_only` is now actually read | The flag shipped with upstream and `Definition#hq_only?` existed, but no caller ever used it, so operators were offered Fuime's internal bookkeeping categories on their own ledger. Filtered unless `admin_context`, keeping any already-assigned category so an admin's choice is not blanked | `app/views/hcb_codes/_transaction_category_form.html.erb` |
+| Category **labels** only (slugs unchanged, Rule 6): `hcb-revenue` "HCB Revenue" → "Fuime revenue"; `bank-fees` "Bank fees" → "Payment processing fees" (L5); `fiscal-sponsorship-fees` → "Fuime service fees" (matching the `fiscal_sponsorship_fee` type filter relabelled in PR #105 — deliberately NOT "platform fee", which is the *live MoR* fee line and a different thing); `project-supplies` → "Supplies / inventory" | Slugs are load-bearing — `hcb-revenue` in `FeeRevenueService::CreateCanonicalPendingTransaction` and `EventMappingEngine::Map::HcbCodes::Short`, `bank-fees` in `Reimbursement::ExpensePayout`, plus existing `transaction_categories` rows. Labels are read from JSON at render time, so relabelling is safe with no migration | `db/data/transaction_categories.json` |
+
+**Left alone deliberately:** `PendingTransactionEngine::…::ImportSingle::Invoice` categorises
+an invoice payment as `"donations"` — wrong vocabulary for a teen business, but changing
+the slug the importer writes is a data question, not a copy one. `config/schedule.yml`
+still schedules `BankFee::WeeklyJob` and `BankFee::NightlyJob`; harmless today only
+because `pending_fees_v2` is empty, and a stray accrual would put the nightly job into
+`ColumnService`.
+
+**Routes removed** (`config/routes.rb`, admin namespace): `get "bank_fees"` and
+`get "fee_revenues"`. Both pages are for a model that cannot hold Fuime data. /admin is a
+founder-only console, so no rendered "this page is legacy" banner was added — the
+reasoning lives in the ERB comments above.
+
+**Also legacy, not changed here:** the public v3 API exposes `GET /organizations/:id/hcb_fees`
+and `GET /hcb_fees/:hcb_fee_id` over `org.bank_fees` (`app/api/api/v3.rb`). Under MoR that
+list is permanently empty; a founder looking for their Fuime fees over the API needs the
+ledger, not this resource.
+
+## 2026-09-15 — Four more modules that were hidden but not refused
+
+`Fuime::DisabledModules` blocks at the request level precisely because hiding a nav
+link is not enforcement. A sweep of every controller with a state-changing route,
+checked against `Fuime::DisabledModules.all_gated_prefixes`, found four more modules
+whose nav entry was already hidden and whose POST was not.
+
+Added to `SPONSOR_BANKING_CONTROLLER_PREFIXES` (they come back with the rail, not
+before it):
+
+| Prefix | Why it was reachable | Why this list |
+|---|---|---|
+| `paypal_transfers` | `PaypalTransferPolicy#create?` → `EventPolicy#create_transfer?`, which says yes to any manager. The last of `Reimbursement::PayoutHolding#payout_transfer`'s five rails still off the list — the identical gap `wise_transfers` was added to close | Outbound money; returns with a sponsor bank |
+| `payments`, `payees`, `payroll`, `employees`, `employee` | HCB's contractor/payroll module. The "Payments"/"Contractors" nav entries were already gated on `Fuime::Features.sponsor_banking?` over the comment "a contractor payment that cannot originate is a trap page"; only an upstream Flipper rollout flag stood between a manager and a POST | `Payment::Attempt::PAYOUT_METHOD_TRANSFER_MAPPING` resolves every payout method to IncreaseCheck / AchTransfer / Wire / WiseTransfer — all four already blocked. An approved payment was an obligation with no door out, exactly like an approved reimbursement report |
+| `column/account_number` | `Column::AccountNumberController#create` provisions a real deposit account at Column, rescuing `Faraday::Error` — the `wise_transfers` signature, a live third-party call where a refusal belonged. `AccountNumberPolicy#create?` admits any manager on a plan carrying `account_number`, i.e. every Standard venture | Returns with the bank relationship it describes |
+
+`events/show.html.erb` says account numbers "cannot be gated by controller prefix"
+because EventsController serves them. True of the **page**; the **write** has a
+controller of its own, and that is what is now blocked.
+
+**Checked and deliberately NOT added:**
+
+- `bank_accounts` — reported as a gap; it is not. Every write on `BankAccountPolicy`
+  answers `user.admin?` (reads answer `user.auditor?`), and admins are exempt from this
+  filter anyway, so listing it would change no request's outcome while implying it had.
+  It is HCB's Plaid bank **feed**, not Fuime's payout destination
+  (`Fuime::PayoutMethodsController` over `Fuime::PlaidLinkService`) — the spec now
+  asserts that distinction so the next audit does not re-report it.
+- `g_suites`, `g_suite_accounts`, `g_suite_aliases` — writes are all `user.admin?`.
+  But see the open item below.
+- `sponsors` / `api/v4/sponsors`, `payment_recipients`, `mailbox_addresses` (already
+  refuses in-controller), `contracts`, `contract/parties`, `raffles`,
+  `suborganizations` — no money movement and no provisioning a non-admin can trigger.
+
+**Open, and NOT fixable as a prefix:** `POST /:event_id/g_suite_create` is
+`EventsController#g_suite_create`, authorized by `EventPolicy#g_suite_create?` =
+`admin_or_manager? && plan.google_workspace_enabled?` — and Standard carries
+`google_workspace`. So a venture manager can still run `GSuiteService::Create` by URL
+while `g_suite_overview?` is hardcoded `false` and the nav is hidden. The fix belongs
+next to `g_suite_overview?` (return `false` from `g_suite_create?` and
+`g_suite_verify?`), not in this concern — a `events` prefix would take the whole
+venture down with it.
+
+---
+
+## 2026-09-15 — The admin Ledger section: empty columns, dead actions, bank-feed vocabulary
+
+The complaint that started this: on `/admin/pending_ledger` the `Actions` column
+header rendered an empty cell on every row. Its two links had been ERB-commented
+upstream because `admin#transaction` loads a `CanonicalTransaction` and a pending
+row has none — so the column was a header over nothing. The same shape recurred
+across the section.
+
+What was verified before changing anything (grep for the *writers*, not the readers):
+
+- **`RawCsvTransaction` is alive and central under MoR.** `Fuime::ConnectSettlementSweep`
+  (`FUIMECONNECT`), `Fuime::VentureLedger` (`FUIMEINTERNAL`) and `Fuime::Playground`
+  (`FUIMEPLAYGROUND`) all post through `RawCsvTransactionService::Create` — the narrowest
+  legitimate entry into the pipeline (Rule 3). `/admin/raw_transactions` is therefore the
+  raw feed behind every settled Fuime line, not a dead CSV importer.
+- **`Ledger::Item` is written for every CT and CPT** by `assign_ledger_item` callbacks,
+  independent of the `FUIME_NEW_LEDGER` kill switch. `/admin/ledger_items` has real data.
+- **`RawStripeTransaction` is Issuing-only**, imported by
+  `TransactionEngine::RawStripeTransactionService::Stripe::Import`. MoR Checkout writes
+  `RawPendingDonationTransaction` + `RawCsvTransaction` and never this. That settles
+  `/admin/unknown_merchants`.
+- **`Admin::LedgerAudit::GenerateJob` samples only `raw_pending_stripe_transaction`**
+  card authorisations, so the weekly audit is empty by construction here. The manual
+  "Flagged Transactions" queue is the live half, and it works under MoR.
+
+| Change | Why | Files |
+|--------|-----|-------|
+| New `fuime_stripe_dashboard_url(ledger_key)` helper | Every Fuime line is keyed on its Stripe object (`fuime_<pi_…>`, `fuime_fee_<pi_…>`, `fuime_payout_<po_…>`); pending rows carry it on `RawPendingDonationTransaction#donation_transaction_id`, settled rows on the bracketed memo suffix. Honours `StripeService.mode` so a test-mode fork links at `/test/…` | `app/helpers/fuime_helper.rb` |
+| `/admin/pending_ledger`: empty "Actions" → "Stripe" (the dashboard link); Fuime Code and Event ids are now links | The reported bug. Mapping a pending row to a CT is not an action that exists | `app/views/admin/pending_ledger.html.erb` |
+| `/admin/ledger`: removed the "Exclude Top Ups" control; "Bank account" → "Source"; removed the `BUSBILLPAY` ACH hint and its row-highlight term; Fuime Code links; Stripe link added; fixed a `clas=` typo | `not_stripe_top_up` matches HCB `topup_stripe_job` memos and `BUSBILLPAY` is HCB ACH origination — neither can occur. "Bank account" is actively misleading: there is no bank feed, the value is the pseudo-account (`FUIMECONNECT` / `FUIMEINTERNAL` / `FUIMEPLAYGROUND`) | `app/views/admin/ledger.html.erb`, `app/controllers/admin_controller.rb` |
+| `/admin/raw_transactions`: source filter now plucks from `RawCsvTransaction` instead of `HashedTransaction`; "Bank Identifier" → "Source"; empty "Actions" now links the `CanonicalTransaction` (or says Hashed/Unhashed) plus Stripe; controller preloads both | The filter offered `STRIPEISSUING1` and Plaid/Column identifiers no `RawCsvTransaction` has ever had, so choosing one returned zero rows | `app/views/admin/raw_transactions.html.erb`, `app/controllers/admin_controller.rb` |
+| `/admin/raw_transaction_new`: same filter fix; default `FSMAIN` → `FUIMEINTERNAL`; label → "Source" | `FSMAIN` is HCB's SVB operating account | `app/views/admin/raw_transaction_new.html.erb` |
+| `/admin/hcb_codes`: dropped the empty "Actions" column; "User" → "Card user"; guarded a nil event | The memo is already the link to the record. The user cell only ever fills for Issuing card spend; a MoR sale has an anonymous buyer | `app/views/admin/hcb_codes.html.erb` |
+| `/admin/ledger_items`: dropped the "Actions" column; memo links the Fuime code directly | "View", "Fuime Code" and the memo were three links to one destination — `Ledger::ItemsController#show` redirects to `hcb_codes#show` for anyone outside `FlipperGroups.hcb_engineer?`, a `HackClub::OrgChart` list that resolves to nobody in this fork | `app/views/admin/ledger_items.html.erb` |
+| `/admin/transaction/:id`: "Bank account" → "Source"; added a Stripe row; removed the "Map to a Wire" / "Map to a Wise transfer" columns and the suggested-Wise block's query; disabled the DonationPayout query; **fixed a latent 500** | `wires` and `wise_transfers` are both refused by `Fuime::DisabledModules`, so those selects were empty and their Set buttons could only no-op. The 500: the "Potential Pending Transactions" table called `cpt.event.name` on rows from `CanonicalPendingTransaction.unmapped`, where `event` is nil by definition | `app/views/admin/transaction.html.erb`, `app/controllers/admin_controller.rb` |
+| Ledger audits: dropped two `Event::Plan::HackClubAffiliate` branches (a red row highlight and an `--hcb-primary` border); documented why the weekly audit is empty | That plan declares `selectable? false` and "Not a Fuime plan", so neither branch can match | `app/views/admin/ledger_audits/tasks/{index,show}.html.erb`, `app/controllers/admin/ledger_audits_controller.rb` |
+
+**Route removal requested** (not applied here — `config/routes.rb` was being edited
+concurrently): `get "unknown_merchants"` and `get "merchant_memo_check"`. Both read
+`RawStripeTransaction` and report gaps against `hackclub/yellow_pages`, Hack Club's own
+merchant dataset. View, controller action and gem stay on disk (Rule 2).
+
+**Left alone deliberately:** the `user_id` filter on `/admin/ledger` (it joins through
+`StripeCardholder`, and Issuing stays demonstrable in test mode);
+`config/schedule.yml`'s `ledger_audit_weekly_job` (harmless no-op, and it becomes correct
+the day cards are on); `Admin::LedgerAudit::GenerateJob` itself; `/admin/raw_intrafi_transactions`
+(already out of the nav, and outside this pass's scope).
+
+
+## 2026-09-15 — Reimbursements turned off (money-out has no rail)
+
+**Finding.** `Reimbursement::PayoutHolding#payout_transfer`
+(`app/models/reimbursement/payout_holding.rb:107`) pays a report through
+`ach_transfer || increase_check || paypal_transfer || wire || wise_transfer`, and
+`Reimbursement::PayoutHoldingService::ProcessSingle` posts a bare
+`ColumnService.post "/transfers/book"` out of
+`EventMappingEngine::EventIds::REIMBURSEMENT_CLEARING` — Hack Club's clearinghouse
+org. Every one of those five rails is already refused by `Fuime::DisabledModules`.
+So a teen could file a report and an organizer approve it, and nothing in this
+codebase could pay it. Money out in Fuime is `Fuime::PayoutBatch` / `PayoutRequest`
+to a guardian-owned bank account (docs/fuime/MOR_WEBHOOK_PASS.md).
+
+| Change | Why | Files |
+|--------|-----|-------|
+| `Event::Plan#reimbursements_enabled?` overridden to require `Fuime::Features.sponsor_banking?` | The single lever. Four surfaces read it: `Event#public_reimbursement_page_available?`, `EventPolicy#reimbursements?` (venture page + CSV export), the settings tab, and the two nav entries that already asked the same question. Overridden rather than dropping `reimbursements` from `available_features`, because that list GENERATES the predicate — removing the string would delete the method and NoMethodError four call sites | `app/models/event/plan.rb` |
+| `"reimbursement"` added to `SPONSOR_BANKING_CONTROLLER_PREFIXES` | Its payout rails are the ones already on that list. Inverts the old "deliberately absent" note, whose premise ("the money moves within Fuime") was wrong | `app/controllers/concerns/fuime/disabled_modules.rb` |
+| Routes removed: `/my/reimbursements` + icon, `/:event/reimbursements` + pending-review icon, the reimbursements CSV export, `reports#create`, `quick_expense`, the public `start`/`finished` pages | The intake is the harm — a reachable form that manufactures an unpayable debt. `resources :reports, only: [:show, :edit, :update, :destroy]` and `resources :expenses` stay routed because `reimbursement_report_path` is rendered by the activity feed, `/settings/payouts`, `AdminMailer` and `/admin/reimbursements`; removing `:show` would turn a dead feature into a 500 on live pages | `config/routes.rb` |
+| `reimbursement_nightly_job` and `reimbursement_expense_approved_notification_job` unscheduled | **Rule 4.** The first ran every 5 minutes and would have called Hack Club's Column API unprompted for any inherited `PayoutHolding` row. Harmless today only because no rows exist — an accident of data, not a control | `config/schedule.yml` |
+| Nav entries removed (personal + venture), "Get reimbursed" quick action removed, "Get reimbursed for this" receipt paperclip and its modal removed | A commented-out route DELETES the helper, so every `_path` caller becomes a NameError — hiding and unrouting had to land together. The receipt paperclip was the last live door: `/my/inbox` passed `show_reimbursements_button: true`, and the modal's `form_with(model: Reimbursement::Report)` resolves the removed `reimbursement_reports_path` | `app/helpers/users_helper.rb`, `app/helpers/events_helper.rb`, `app/views/events/show.html.erb`, `app/views/receipts/_receipt.html.erb` |
+| Discord `/reimburse` command unregistered; `reimburse_component` refuses | It called `reimbursement_reports.create!` on the MODEL, so removing controller routes did not close it — a chat button that created an unpayable obligation | `app/jobs/discord/{register_commands_job,handle_interaction_job}.rb` |
+| `/settings/payouts` copy rewritten; `EventMailer#transparency_mode_disabled` no longer lists the public reimbursement page; venture settings "Your logo is displayed on…" drops its reimbursement half; `ReportsController#destroy` redirects to the venture / inbox | All four called helpers the route removal deleted. The mailer's guard was on the raw `public_reimbursement_page_enabled?` COLUMN, so any inherited event with it set would have raised | `app/views/users/edit_payout.html.erb`, `app/mailers/event_mailer.rb`, `app/views/events/settings/_details.html.erb`, `app/controllers/reimbursement/reports_controller.rb` |
+| Hack Club's Twilio number `+1-864-548-4225` replaced with `Credentials.fetch(:TWILIO, :PHONE_NUMBER)`, hidden when unset | **Rule 4.** Hardcoded upstream in hackclub/hcb#7671 (Sam Poder, Aug 2024) and never changed in this fork — a founder texting receipts reached another organisation's ingress. Same failure `reimburse@hcb.gg` next door already had fixed | `app/views/my/inbox.html.erb`, `app/views/my/reimbursements.html.erb` |
+
+**Specs.** `spec/controllers/reimbursement/{reports,expenses}_controller_spec.rb` are
+now tagged `:sponsor_banking` rather than skipped — they pin real authorization rules
+(an attacker cannot move a report onto another venture; a payout method must belong to
+the user) that are worth keeping green for the rebuild.
+`spec/controllers/fuime/disabled_modules_spec.rb`'s "does NOT disable reimbursements"
+is inverted; `spec/helpers/events_nav_fuime_spec.rb` swaps `reimbursement` for
+`comments` as its permitted-module example; `spec/policies/event_policy_spec.rb` and
+`spec/controllers/my_controller_spec.rb` updated. All FUIME-DISABLED tagged.
+
+**Left routed deliberately:** `/admin/reimbursements` (founder-only read of inherited
+rows; `app/models/admin/nav.rb:163-168` still names `reimbursements_admin_index_path`
+inside `def spending`, which `sections` never calls — remove both together or neither),
+`users#admin_details_reimbursement_reports`, and card grants'
+`convert_to_reimbursement_report` (card-grant pages are still GET-readable, so
+unrouting it would 500 them).
+
+**Recommendation, not built:** rebuild this on `PayoutRequest`. See the Phase note in
+docs/fuime/README.md if one is added.
+
+## 2026-09-15 — The admin console's shared surfaces (nav, tools page, routes)
+
+**Context.** Six parallel passes trimmed the admin console this session; each is logged
+above under its own heading. This entry covers only the files every one of them wanted
+to touch and none of them was allowed to — `app/models/admin/nav.rb`,
+`app/helpers/static_pages_helper.rb` and `config/routes.rb` — plus two findings that
+turned up while reconciling them.
+
+**Why those three were centralised.** The nav renders on *every* admin page and builds
+its items by calling `_path` helpers at construction time. So a route removal that lands
+without its nav item raises on every admin page at once, not on the page being removed.
+The safe order is always: nav item first, route second. Four agents editing one routes
+file concurrently is also how `db/schema.rb` got corrupted in the 2026-09-14 session
+(see known-failures.md).
+
+| Change | Why | Files |
+|--------|-----|-------|
+| Nav items `Organizations` → `Businesses`, `Organization Balances` → `Business Balances`; section `Organizations` → `Businesses`; `section_names` updated | **A bug, not a rename.** `Item#active?` compares the item's name to the page title and `Section#active?` is `items.any?(&:active?)`. The views were retitled to "Businesses" / "Business Balances" during the rebrand but these items were not, so neither item nor its enclosing section had highlighted on `/admin/events` or `/admin/balances` since. The method name `organizations` stays (internal, Rule 6); only the rendered string moves | `app/models/admin/nav.rb` |
+| `Invoices` removed from the nav and from `admin_directories["Money"]`; **route deliberately kept** | `invoices` is in `DISABLED_CONTROLLER_PREFIXES` for a money-correctness reason, so the item advertised a door that refuses. The route stays because inherited `Invoice` rows may predate the block and an invoice is money someone was asked to pay — it stays inspectable by URL until the table is confirmed empty | `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb` |
+| `Fuime Fees` and `Fee Revenues` nav items removed, then their routes | "Fuime Fees" was the most misleading string in the console: it named Fuime's 5% + 50¢ and can never hold it. `BankFee` settles via a Column book transfer Fuime has no relationship for, `FeeRevenue#event` is hardcoded to Hack Club's HQ event 636, and `FeeEngine::Create` waives the accrual for every Fuime-keyed transaction. Fuime's fee is the ledger line `Fuime::PaymentWebhookHandler#record_platform_fee` writes at checkout | `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb`, `config/routes.rb` |
+| `Unknown Merchants` nav item and route removed | Reads Issuing-only `RawStripeTransaction` (a MoR sale writes `RawPendingDonationTransaction` + `RawCsvTransaction`), needs ≥30 transactions per merchant, and reports gaps against `hackclub/yellow_pages` — Hack Club's own dataset | `app/models/admin/nav.rb`, `config/routes.rb` |
+| `Audits` badge re-pointed from `Admin::LedgerAudit.pending.count` to `Admin::LedgerAudit::Task.flagged.count`, on both surfaces | The old count needs an audit carrying pending tasks, and the only writer is `Admin::LedgerAudit::GenerateJob`, which samples `raw_pending_stripe_transaction` card authorizations — permanently 0 under MoR, so the badge never surfaced work. `Task.flagged` is the manual queue that does fill. Name and path unchanged, because they are the highlight key | `app/models/admin/nav.rb`, `app/helpers/static_pages_helper.rb` |
+| Routes removed: `admin#payroll`, `admin#hq_receipts`, `admin#account_numbers`, `admin#employee_payments`, `admin#merchant_memo_check` | Zero references anywhere in `app/`, `lib/` or `spec/`. `admin#payroll` was worse than dead: the route existed with **no controller action and no view**, so it raised `AbstractController::ActionNotFound` for anyone who reached it — broken since the fork | `config/routes.rb` |
+
+**Second finding: `hq_only` had never been read.** The flag has been in
+`db/data/transaction_categories.json` since upstream and `Definition#hq_only?` has always
+existed, but nothing called it — so every category list offered the whole set. On a
+venture's own ledger that meant a teen founder and their guardian were shown Fuime's
+internal bookkeeping categories ("Fuime revenue" — the platform's own take — plus "Stripe
+service fees" and "Stripe fee reimbursements"). Fixed in the categorise dropdown
+(`app/views/hcb_codes/_transaction_category_form.html.erb`) and, via a new
+`TransactionCategory.operator_visible` scope, in both ledger filter menus. A scope rather
+than a view-level `reject` because the two filter menus render the same list and had
+already drifted apart once. Each keeps the currently-applied category visible so an active
+filter cannot vanish.
+
+**Left open, deliberately, for a decision:**
+
+- `POST /:event_id/g_suite_create` runs live Google Workspace provisioning and
+  `EventPolicy#g_suite_create?` admits any venture manager on a plan carrying
+  `google_workspace`, which Standard does. It lives on `EventsController`, so a
+  `DisabledModules` prefix would take the whole venture surface down with it. The fix
+  belongs at `app/policies/event_policy.rb:186`, next to the already-hardcoded
+  `g_suite_overview? == false`.
+- `/admin/reimbursements` and `nav.rb`'s `def spending` reference each other; remove both
+  together or neither.
+- `admin_queues` still badges `Raw transactions`. Unlike the other HCB importers this one
+  is **live** — `RawCsvTransaction` is how `Fuime::ConnectSettlementSweep`,
+  `Fuime::VentureLedger` and `Fuime::Playground` post every settled line — so it stays.
+
+## 2026-09-15 — Google Workspace closed at the policy; what a payout line is for
+
+**Google Workspace provisioning.** `EventPolicy#g_suite_create?` and `#g_suite_verify?`
+now return `false`, joining `#g_suite_overview?`, which had been pinned false earlier.
+
+Why the earlier fix was not enough, and why this one is not in `Fuime::DisabledModules`:
+`POST /:event_id/g_suite_create` runs `GSuiteService::Create` — a live call against a real
+Google account — and it lives on **`EventsController`**. A `DisabledModules` prefix matches
+on controller path, so adding one would refuse the entire venture surface. The `g_suite`,
+`g_suite_accounts` and `g_suite_aliases` prefixes on that list never covered this action.
+So every other control was in place — the nav item hidden, the overview page pinned false,
+the three `g_suite*` controllers blocked — and a venture **manager** could still provision
+Workspace by typing the URL, because `record.plan.google_workspace_enabled?` is true on
+`Standard`, the default plan for new organizations. Rule 4: this fork must not be able to
+reach a third party at all.
+
+No flag. Unlike the sponsor-banking modules this is a product decision, not a licensing
+one — Google Workspace is a Hack Club perk for fiscally sponsored nonprofits and a teen
+business has no use for it. Nothing here is waiting to be switched back on.
+Two examples in `spec/policies/event_policy_spec.rb` pin it for a manager and for an admin.
+
+**"What it's for" on a payout batch line.** `app/views/admin/payout_batch.html.erb` gains a
+column linking each line to `event_transactions_path(line.event, start: period_start,
+end: period_end)`.
+
+This began as "put a reason and a receipt on a payout request" and moved after reading
+`Fuime::PayoutsController#index`: under merchant-of-record
+(`connect_money_out = !Fuime::Features.merchant_of_record?`, PR #101) `@can_request`,
+`@can_decide` and `@can_settle` are all false, so the teen-facing request form, the
+guardian's Approve button and the school's settle button are dark. A field on that form
+would have been dead UI. The money-out path that actually executes today is the weekly
+`Fuime::PayoutBatch` run, so that is where the question belongs.
+
+A batch line is machine-generated (`PayoutBatchService#create_line!` sets
+`requested_by: nil`), so it carries no note saying what it is for, and this page is the
+last human decision before Fuime's own money leaves. Approving a figure with no route to
+the sales behind it is how an approval gate becomes a rubber stamp. The composition is not
+stored on the line — only the figures are — so this links at the transactions rather than
+claiming a breakdown the record does not hold; the batch knows its own period and
+`SetLedgerFilters` already accepts `?start=`/`?end=`. No migration.
+
+**Open, and now better characterised than "reimbursements are missing":** under MoR a teen
+has no way to *ask* for their money. The payables page still renders what they are owed;
+every control on it is off. That is defensible while payouts are deferred, but it is a
+product decision to revisit deliberately — not something a form field papers over. See the
+reimbursements entry above for why rebuilding `Reimbursement::Report` is the wrong answer:
+`PayoutRequest`'s three destinations already cover every reimbursement shape, and
+`payout_request.rb:316` explains why a family venture has exactly one of them.
+
+## 2026-09-15 — Anyone may buy: the signed-in buyer age rule removed
+
+**What changed.** `before_action :refuse_minor_buyer` is off in
+`Fuime::CheckoutsController`, and the founder's own-page preview card in
+`Fuime::PaymentPagesController` / `fuime/payment_pages/show.html.erb` is gone. A
+signed-in user of any age now gets the same working Pay button a guest always had.
+
+**Why, given the rule cited L2.** L2 is about the *operator's* account: guardian as
+account owner, Stripe Representative and principal obligor on ToS, fees, chargebacks and
+indemnity. It says nothing about who may BUY from a venture, and `LEGAL_RESEARCH.md`
+carries no purchaser-age constraint at all. The doctrine the rule invoked is characterised
+in that document's own words (§205) as "close to right but imprecise (minors *can* sign;
+contracts are voidable)".
+
+Three concrete problems, the first fatal on its own:
+
+1. **It was bypassable by its own instructions.** The refusal read "Sign out to pay as a
+   guest," and guests have always been able to check out — the pay link a teen texts a
+   customer must work without a Fuime account. A minor who wanted to buy opened a private
+   window. The rule stopped no minor from paying; it stopped the ones signed in.
+2. **It blocked teen-to-teen sales.** One teenager buying from another's storefront is a
+   core Fuime case.
+3. **Unknown age failed closed, and unknown is the default.** `User#is_minor?` is
+   `age&.<(18)` — nil with no birthday on record — so `known_adult?` fell through to an
+   attestation most accounts have never made. Every signed-in user without a date of
+   birth, adult or not, was refused. This is why the first person to hit the refusal was
+   always the operator testing their own link.
+
+Voidability is a chargeback risk Fuime already carries on every guest sale, and a
+signed-in buyer is the better-evidenced version of the same transaction.
+
+**Preserved.** The invariant that price comes off the offer record and never the POST body
+is untouched and still asserted (a teen buyer posting `amount: "1.00"` against a $35 offer
+is charged $35). Playground and Sandbox bypasses are unchanged. `#refuse_minor_buyer`,
+`#adult?` and `#refuse_minor` are kept as methods per Rule 2 — restoring the rule is
+putting one `before_action` line back.
+
+**Specs.** `fuime_checkout_buyer_age_spec.rb` is inverted rather than deleted, so a future
+re-tightening has to argue with it; the teen example now doubles as the price-integrity
+assertion. `fuime_parent_and_preview_spec.rb`'s "still does not give them a way to actually
+pay" becomes "gives them a real, working pay form".
+
+**One example genuinely retired**, in `fuime_buyer_sees_why_spec.rb`: it pressed Buy as a
+minor and asserted the refusal was visible on the pay page it returned to. `#refuse_minor`
+was the *only* refusal that routed back to that layout — every other refusal in
+`CheckoutsController#create` redirects to the storefront, whose layout has always rendered
+a flash. With the rule gone there is nothing left to press that would exercise it. The
+file's load-bearing example (the pay page renders `flash-container` at all) stays, and the
+comment says to re-add a press-and-follow example the day a refusal points back there.

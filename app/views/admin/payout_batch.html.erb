@@ -132,6 +132,20 @@
           not stored, so they are not claimed here — a column of em-dashes reads
           as missing data rather than as an explanation. %>
       <th>Operator</th>
+      <%# Fuime: what this line IS.
+
+          A batch line is machine-generated (`requested_by: nil`), so unlike a
+          person-initiated request it carries no note saying what it is for — and
+          this page is the last human decision before Fuime's own money leaves.
+          Approving "$482.19 to Sam's Stickers" with no way to see the sales behind
+          it is how an approval gate becomes a rubber stamp.
+
+          The composition is not stored on the line (only the figures are — see the
+          note above), but it is recoverable: the batch knows its period, and the
+          venture's own ledger filters on `?start=`/`?end=` via SetLedgerFilters.
+          So this links at the transactions that produced the figure rather than
+          claiming a breakdown the line does not hold. %>
+      <th>What it's for</th>
       <th>Cleared the hold, less commitments</th>
       <th>Reserve held</th>
       <th>Eligible</th>
@@ -148,6 +162,13 @@
     <% @lines.each do |line| %>
       <tr>
         <td><%= link_to line.event.name, event_path(line.event) %></td>
+        <td>
+          <%= link_to event_transactions_path(line.event,
+                                              start: @batch.period_start,
+                                              end: @batch.period_end) do %>
+            Sales <%= @batch.period_start.strftime("%-d %b") %>–<%= @batch.period_end.strftime("%-d %b") %>
+          <% end %>
+        </td>
         <td class="muted"><%= render_money line.eligible_cents.to_i + line.reserve_held_cents.to_i %></td>
         <td><%= render_money line.reserve_held_cents %></td>
         <td><%= render_money line.eligible_cents %></td>

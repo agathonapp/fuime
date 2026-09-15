@@ -46,6 +46,27 @@ RSpec.describe EventPolicy, type: :policy do
       expect(policy.g_suite_overview?).to eq(false)
     end
 
+    # FUIME (2026-09-15): the overview being hidden was never the control.
+    # `POST /:event_id/g_suite_create` runs GSuiteService::Create against a real
+    # Google account, and it lives on EventsController — which cannot be covered
+    # by a Fuime::DisabledModules prefix without refusing the whole venture
+    # surface. So this manager could still provision Workspace by URL. These two
+    # examples are the only thing standing in front of a live third-party call
+    # (Rule 4); a manager is deliberately the subject, because a manager is
+    # exactly who upstream allows.
+    it "denies Google Workspace provisioning to a manager, not just the page" do
+      expect(event.plan.google_workspace_enabled?).to eq(true)
+      expect(policy.g_suite_create?).to eq(false)
+      expect(policy.g_suite_verify?).to eq(false)
+    end
+
+    it "denies Google Workspace provisioning to an admin too" do
+      admin_policy = described_class.new(create(:user, :make_admin), event)
+
+      expect(admin_policy.g_suite_create?).to eq(false)
+      expect(admin_policy.g_suite_verify?).to eq(false)
+    end
+
     it "denies the Perks page even though the plan enables promotions" do
       expect(event.plan.promotions_enabled?).to eq(true)
       expect(policy.promotions?).to eq(false)
@@ -76,7 +97,14 @@ RSpec.describe EventPolicy, type: :policy do
     # donation overview must not silently take it with it.
     it "does not disable unrelated predicates on the same policy" do
       expect(policy.show?).to eq(true)
-      expect(policy.reimbursements?).to eq(true)
+      # FUIME-DISABLED (2026-09-15): `reimbursements?` was the second example
+      # here. It is now false for everyone — Event::Plan#reimbursements_enabled?
+      # requires sponsor banking, because every rail
+      # Reimbursement::PayoutHolding#payout_transfer settles on is a Column /
+      # Increase rail this fork does not have. `transfers?` replaces it as the
+      # "unrelated predicate" control.
+      # expect(policy.reimbursements?).to eq(true)
+      expect(policy.reimbursements?).to eq(false)
     end
   end
 

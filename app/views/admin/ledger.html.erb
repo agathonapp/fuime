@@ -17,10 +17,11 @@
         Unmapped
         <% end %>
 
-        <%= form.label :exclude_top_ups do %>
-        <%= form.check_box :exclude_top_ups, checked: @exclude_top_ups %>
-        Exclude Top Ups
-        <% end %>
+        <%# FUIME-DISABLED: "Exclude Top Ups" filtered CanonicalTransaction.not_stripe_top_up,
+             whose scope matches memos like "HCKCLB Stripe Top Up" — HCB's
+             topup_stripe_job moving 501(c)(3) money into one shared Issuing balance.
+             Fuime has no pooled Issuing float, so the scope matches nothing and the
+             checkbox only ever narrowed the result set by zero rows. %>
 
         <%= form.label :exclude_spending do %>
         <%= form.check_box :exclude_spending, checked: @exclude_spending %>
@@ -51,16 +52,23 @@
         <th class="w-32">ID</th>
         <th class="w-32">Date</th>
         <th>Memo</th>
-        <th>Bank account</th>
+        <%# FUIME: not "Bank account" — there is no bank feed. This is the
+            transaction_source: FUIMECONNECT (settled Stripe sales),
+            FUIMEINTERNAL, FUIMEPLAYGROUND, or Stripe Issuing. %>
+        <th>Source</th>
         <th class="w-24">Amount</th>
-        <th clas="w-64">Fuime Code</th>
+        <th class="w-64">Fuime Code</th>
         <th class="w-24">Event</th>
         <th class="w-24">Actions</th>
       </tr>
     </thead>
     <tbody>
       <% @canonical_transactions.each do |ct| %>
-        <tr class="<%= "admin-bg-pending" unless ct.canonical_event_mapping || !ct.local_hcb_code.unknown? || ct.memo.include?("BUSBILLPAY") %>">
+        <%# FUIME: dropped the `|| ct.memo.include?("BUSBILLPAY")` term — that was
+            HCB's ACH-origination memo, auto-mapped by EventMappingEngine within 24h.
+            Fuime originates no ACH, so the term only ever suppressed the
+            needs-attention highlight on a memo that cannot occur. %>
+        <tr class="<%= "admin-bg-pending" unless ct.canonical_event_mapping || !ct.local_hcb_code.unknown? %>">
           <td>
             <%= form.check_box ct.id %>
           </td>
@@ -69,14 +77,17 @@
           <td><%= link_to ct.memo, transaction_path(ct) %></td>
           <td><%= ct.bank_account_name %></td>
           <td class="nowrap"><%= ct.amount.format %></td>
-          <td><%= ct.hcb_code %></td>
+          <td><%= ct.local_hcb_code ? link_to(ct.hcb_code, hcb_code_path(ct.local_hcb_code)) : ct.hcb_code %></td>
           <td><%= link_to ct.canonical_event_mapping.event.id, ct.canonical_event_mapping.event if ct.canonical_event_mapping.try(:event) %></td>
           <td>
             <%= link_to "Process", transaction_admin_path(ct) unless ct.event.present? %>
             <%= link_to "View", transaction_admin_path(ct) if ct.event.present? %>
-            <% if !ct.event.present? && ct.memo.include?("BUSBILLPAY") %>
+            <%# FUIME: the settled memo carries the Fuime ledger key, so the row can
+                link straight at the Stripe object it settled from. nil for
+                Playground Mode and school-funded lines. %>
+            <% if (stripe_url = fuime_stripe_dashboard_url(ct.memo)) %>
               <br>
-              🕐 This ACH should auto-map within 24 hours
+              <%= link_to "Stripe", stripe_url, target: "_blank", rel: "noopener" %>
             <% end %>
 
             <% if ct.canonical_event_mapping.try(:user) %>

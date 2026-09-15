@@ -20,10 +20,27 @@
     <%= hidden_field_tag("context", "admin") %>
   <% end %>
 
+  <%# FUIME: honour `hq_only`.
+
+      db/data/transaction_categories.json has carried an `hq_only` flag since upstream
+      and TransactionCategory::Definition exposes `#hq_only?`, but nothing ever read it —
+      so every dropdown offered the whole list. On this partial that is the operator's own
+      ledger (rendered without `admin_context` from hcb_codes/_transactions_table), which
+      meant a teen founder and their guardian were offered Fuime's internal bookkeeping
+      categories: "Fuime revenue" (the platform's own take), "Stripe service fees" and
+      "Stripe fee reimbursements". None of those describe anything a venture can spend on.
+
+      An already-assigned hq_only category stays in the list so an admin's choice is not
+      silently blanked when an operator opens the same row. %>
+  <% category_options = TransactionCategory::Definition::ALL.filter_map { |_, d|
+       next if d.hq_only? && !admin_context && d.slug != model.category&.slug
+
+       [d.label, d.slug]
+     } %>
   <%= select_tag(
         f.field_name(:category_slug),
         options_for_select(
-          TransactionCategory::Definition::ALL.map { |_, d| [d.label, d.slug] },
+          category_options,
           model.category&.slug,
         ),
         include_blank: "None",

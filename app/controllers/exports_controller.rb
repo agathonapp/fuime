@@ -100,6 +100,7 @@ class ExportsController < ApplicationController
     end
   end
 
+  # FUIME-DISABLED (2026-09-15): UNROUTED, with the page it was downloaded from.
   def reimbursements
     authorize @event, :reimbursements?
 

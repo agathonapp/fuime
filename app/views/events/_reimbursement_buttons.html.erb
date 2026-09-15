@@ -1,3 +1,6 @@
+<%# FUIME-DISABLED (2026-09-15): rendered only by events/reimbursements.html.erb, which is unrouted.
+    Kept on disk per CLAUDE.md Rule 2. See config/routes.rb and
+    Event::Plan#reimbursements_enabled? for why, and how to restore. %>
 <%= pop_icon_to "settings",
     edit_event_path(@event, tab: "reimbursements"),
     data: { turbo_frame: "_top", behavior: "modal_trigger", modal: "reimbursement_settings" },

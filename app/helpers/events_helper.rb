@@ -454,19 +454,32 @@ module EventsHelper
       beta: true,
       available_proc: ->(event) { policy(event).contractors? && ::Fuime::Features.sponsor_banking? }
     },
-    {
-      name: "Reimbursements",
-      path_proc: ->(event_id) { event_reimbursements_path(event_id:) },
-      async_badge_proc: ->(event) { event_reimbursements_pending_review_icon_path(event) },
-      tooltip: "Reimburse team members & volunteers",
-      icon: "reimbursement",
-      symbol: :reimbursements,
-      # Hide-nav, not DisabledModules (FUIME_HACKATHON_SPEC). Reports can be
-      # written, but payout is Column book transfers + ACH/check/wire from the
-      # HCB reimbursements clearinghouse — none of which Fuime has without a
-      # sponsor bank. A family MoR venture cannot fund or send one.
-      available_proc: ->(event) { policy(event).reimbursements? && ::Fuime::Features.sponsor_banking? }
-    },
+    # FUIME-DISABLED (2026-09-15): the venture's "Reimbursements" entry.
+    #
+    # Was hide-nav-only, gated on sponsor banking. That is no longer enough: the
+    # routes it names — `event_reimbursements_path` and
+    # `event_reimbursements_pending_review_icon_path` — have been REMOVED from
+    # config/routes.rb, so these lambdas would raise NameError rather than render
+    # a dead link if the guard ever went true. A commented-out route deletes a
+    # method; a proc naming that method has to go with it.
+    #
+    # The reason is unchanged and is now stated once in
+    # Event::Plan#reimbursements_enabled?: payout runs on Column book transfers
+    # plus ACH/check/wire out of HCB's reimbursements clearinghouse, none of which
+    # this fork has. Restoring this item means restoring the routes, not just
+    # setting FEATURE_SPONSOR_BANKING.
+    #
+    # `reject_empty_nav_sections` drops the now-childless SPEND header on its own.
+    #
+    # {
+    #   name: "Reimbursements",
+    #   path_proc: ->(event_id) { event_reimbursements_path(event_id:) },
+    #   async_badge_proc: ->(event) { event_reimbursements_pending_review_icon_path(event) },
+    #   tooltip: "Reimburse team members & volunteers",
+    #   icon: "reimbursement",
+    #   symbol: :reimbursements,
+    #   available_proc: ->(event) { policy(event).reimbursements? && ::Fuime::Features.sponsor_banking? }
+    # },
     {
       section: "",
       available_proc: ->(event) { policy(event).team? || policy(event).promotions? || policy(event).g_suite_overview? || policy(event).documentation? || policy(event).sub_organizations? }

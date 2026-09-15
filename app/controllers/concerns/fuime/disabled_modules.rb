@@ -42,12 +42,38 @@ module Fuime
     # Deliberately in NONE of them: receipts,
     # comments, ledger/transactions, card grants' read views, or the admin console.
     #
-    # NOTE: reimbursements are deliberately absent too. FUIME_HACKATHON_SPEC lists
-    # them as "hide nav", not disable — a teen reimbursing themselves for a
-    # business expense is a legitimate flow, and the money moves within Fuime
-    # rather than out of it. Blocking them silently no-opped report updates: a
-    # PATCH that returned success while changing nothing, which is worse than
-    # either allowing the action or plainly refusing it.
+    # Also deliberately absent, and worth naming because it keeps being
+    # mistaken for a gap: `bank_accounts`. That is HCB's PLAID BANK FEED —
+    # `BankAccountPolicy` answers `user.admin?` to new?/create?/update?/
+    # reauthenticate? and `user.auditor?` to the two reads, so no ordinary user
+    # can reach a write and admins are exempt from this filter anyway. Listing
+    # it would change no request's outcome while implying it had. Fuime's payout
+    # destination is a different thing entirely — `Fuime::PayoutMethodsController`
+    # over `Fuime::PlaidLinkService` — and must stay reachable.
+    #
+    # NOTE (2026-09-15): reimbursements USED to be deliberately absent, on the
+    # reasoning that "the money moves within Fuime rather than out of it" and that
+    # blocking writes here silently no-opped report updates — a PATCH that returned
+    # success while changing nothing.
+    #
+    # The first half was wrong. `Reimbursement::PayoutHolding#payout_transfer` is
+    # `ach_transfer || increase_check || paypal_transfer || wire || wise_transfer`,
+    # and `PayoutHoldingService::ProcessSingle` posts a Column book transfer out of
+    # Hack Club's clearinghouse org. Every one of those rails is in the list below.
+    # The money does leave, it just leaves by a door Fuime does not have — so a
+    # teen could file a report and an organizer approve it, and nothing here could
+    # pay it.
+    #
+    # The second half no longer applies. The no-op complaint was about a feature
+    # that was still navigable and still had a "Start report" button: users were
+    # being invited to act and then quietly refused. Every entry point is now gone
+    # (the intake routes are removed in config/routes.rb and both nav entries are
+    # hidden), so what is left is an inherited report nobody can create, and a
+    # plain refusal on it is the honest answer rather than the confusing one.
+    #
+    # Matches `reimbursement/reports` and `reimbursement/expenses`, and nothing
+    # else — `matches_prefix?` requires an exact match or a "reimbursement/" path
+    # segment, so `fee_reimbursements` and friends are untouched.
 
     # Modules Fuime does not offer and will not offer. No flag reaches these.
     DISABLED_CONTROLLER_PREFIXES = [
@@ -120,7 +146,66 @@ module Fuime
       # originate one. Reaching it also raised Faraday::BadRequestError from a
       # live Wise API call rather than being refused: a policy gap and a 500.
       "wise_transfers",
+      # PayPal is outbound money by the same reasoning, and it was the last of
+      # `Reimbursement::PayoutHolding#payout_transfer`'s five rails still
+      # missing from this list — the identical gap to `wise_transfers` above,
+      # one rail over. `PaypalTransferPolicy#create?` delegates to
+      # `EventPolicy#create_transfer?`, which says yes to any manager, so a teen
+      # with a hidden nav item and a URL could still originate one.
+      "paypal_transfers",
       "disbursements",
+
+      # Reimbursements, whose every payout rail is one of the five above. See the
+      # NOTE in the header for why this moved from "deliberately absent" to here.
+      "reimbursement",
+
+      # ── HCB's contractor / payroll module ─────────────────────────────────
+      #
+      # Same shape as reimbursements, and missed for the same reason: the
+      # "Payments" and "Contractors" nav entries are already hidden behind
+      # `Fuime::Features.sponsor_banking?` in events_helper.rb, over a comment
+      # reading "a contractor payment that cannot originate is a trap page".
+      # Hiding the entry was never the enforcement. (`employees` never had a nav
+      # item of its own — only a Flipper flag and a live `resources :employees`.)
+      #
+      # `Payment::Attempt::PAYOUT_METHOD_TRANSFER_MAPPING` is the proof rather
+      # than the assertion: every payout method resolves to IncreaseCheck,
+      # AchTransfer, Wire or WiseTransfer — all four already on this list — so
+      # an approved contractor payment is an obligation with no door out, and
+      # `Employee::Payment#payout_method_name` names those plus PaypalTransfer.
+      # What stood between a venture manager and a POST here was an upstream
+      # HCB rollout flag (`payments_contractors_refresh_2026_06_26`,
+      # `payroll_2025_02_13`), which is a deploy toggle, not a Fuime decision.
+      #
+      # `payees` belongs here and is not a harmless contact book:
+      # `PayeePolicy#create?` delegates to `EventPolicy#create_payment?`, and
+      # `#set_legal_entity` binds a TIN-bearing legal entity to a recipient —
+      # the step before an outbound payment, not a note to self.
+      #
+      # `payroll` covers `payroll/positions` and `payroll/invoices`; creating or
+      # editing a position also sends a DocuSeal contract, a third-party
+      # provisioning call behind an account this fork does not have.
+      "payments",
+      "payees",
+      "payroll",
+      "employees",
+      "employee", # namespace: employee/payments
+
+      # Provisioning a Column account number — a real deposit account at a real
+      # bank, created on demand by `Column::AccountNumberController#create`,
+      # which rescues Faraday::Error. That rescue is the `wise_transfers`
+      # signature: a live third-party call standing where a refusal belonged.
+      # `Column::AccountNumberPolicy#create?` admits any manager (and any
+      # auditor) on a plan carrying the `account_number` feature, which is every
+      # Standard venture — the default plan for new orgs.
+      #
+      # Both entry points are already hidden on sponsor banking, but
+      # `events/account_number.html.erb` still renders a "View account number"
+      # button that POSTs here and the page is still reachable by URL. The note
+      # in events/show.html.erb says account numbers "cannot be gated by
+      # controller prefix" — true of the PAGE, which EventsController serves,
+      # and not of this write, which has a controller of its own.
+      "column/account_number",
 
       # Emburse is the pre-Stripe card platform inherited from upstream. Custody
       # shaped and long dead, but kept loadable for existing rows.

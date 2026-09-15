@@ -1,5 +1,28 @@
 <% title "Fuime Fees" %>
 
+<%# FUIME-DISABLED: `BankFee` is HCB's fiscal-sponsorship fee sweep, not Fuime's
+    platform fee.
+
+    Upstream, FeeEngine accrues `event.revenue_fee` into a fee balance, the weekly
+    BankFee::WeeklyJob turns each balance into a BankFee, and BankFeeService::ProcessSingle
+    settles it with a COLUMN book transfer (`ColumnService.post "/transfers/book"`).
+    Fuime has no Column relationship, so that last step cannot run here.
+
+    Under merchant-of-record Fuime's 5% + 50c is taken by Stripe at checkout and posted
+    as its own explicit ledger line by Fuime::PaymentWebhookHandler#record_platform_fee.
+    FeeEngine::Create then deliberately marks every Fuime-keyed transaction
+    `revenue_waived` with a zero amount so the fee is not charged twice, which means a
+    Fuime venture never builds a fee balance and never produces a BankFee.
+
+    The view, controller action and model stay on disk (Rule 2: disable, don't delete).
+    The admin route is removed, so this is unreachable by URL — the only rows that ever
+    landed here came from the pooled-simulator era and are reachable through their
+    Fuime Code. Nothing on this page was ever a task.
+
+    ⚠️ `bank_fees_admin_index_path` below no longer exists — the route removal deleted
+    the helper. That is harmless only while this template is unreachable: rendering it
+    raises NameError. If you restore the route, restore it in config/routes.rb FIRST,
+    then the nav items in app/models/admin/nav.rb and app/helpers/static_pages_helper.rb. %>
 <%= form_with local: true, class: "card overflow-visible", url: bank_fees_admin_index_path, method: :get do |form| %>
   <div class="flex flex-col sm:flex-row items-center gap-2">
     <%= combobox_tag :event_id, event_search_admin_index_path, placeholder: "Event", class: "!max-w-full !min-w-full sm:!min-w-72", value: @event&.to_combobox_display %>
@@ -24,25 +47,33 @@
       <th>Date</th>
       <th>Status</th>
       <th>Fuime Code</th>
-      <th>Memo</th>
       <th>Amount</th>
       <th>Event</th>
-      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
     <% @bank_fees.each do |bank_fee| %>
-      <tr style="
-      ">
+      <%# FUIME: "Memo" and "Actions" removed rather than left blank.
+
+          BankFee has no memo column of its own — the memo lives on the HcbCode, and
+          reaching it from here means `HcbCode.find_or_create_by` (BankFee#local_hcb_code),
+          i.e. a write per row during a render. The Fuime Code now links to the detail
+          page that already shows it.
+
+          "Actions" was empty because there are none: config/routes.rb exposes only
+          `get "bank_fees"`, and the one thing that acts on a pending BankFee is
+          BankFeeService::ProcessSingle, which posts a Column book transfer. %>
+      <tr>
         <td><%= bank_fee.id %></td>
         <td><%= bank_fee.created_at.strftime("%Y-%m-%d") %></td>
-        <td><%= bank_fee.aasm_state %></td>
-        <td><%= bank_fee.hcb_code %></td>
-        <td></td>
-        <td><%= bank_fee.amount %></td>
-        <td><%= bank_fee.event_id %></td>
+        <td><%= bank_fee.state_text %></td>
         <td>
+          <% if bank_fee.hcb_code.present? %>
+            <%= link_to bank_fee.hcb_code, hcb_code_path(bank_fee.hcb_code) %>
+          <% end %>
         </td>
+        <td><%= render_money bank_fee.amount_cents %></td>
+        <td><%= link_to bank_fee.event.name, event_path(bank_fee.event) %></td>
       </tr>
     <% end %>
   </tbody>

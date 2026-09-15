@@ -11,23 +11,48 @@ RSpec.describe Admin::Nav do
       expect(instance.sections).to all(be_a(described_class::Section))
     end
 
-    # Fuime: examples use Invoices — Donations left the nav with the rest of
-    # the HCB nonprofit money-in (see FUIME-DISABLED notes in Admin::Nav).
+    # Fuime: examples use Subscriptions — Donations left the nav with the rest
+    # of the HCB nonprofit money-in, and Invoices followed it out (blocked in
+    # DISABLED_CONTROLLER_PREFIXES for money-correctness). See the
+    # FUIME-DISABLED notes in Admin::Nav.
     it "marks the appropriate section and item as active" do
-      instance = described_class.new(page_title: "Invoices")
+      instance = described_class.new(page_title: "Subscriptions (Fuime)")
 
       active_section = instance.sections.filter(&:active?).sole
       expect(instance.active_section).to eq(active_section)
       expect(active_section.name).to eq("Incoming Money")
 
       active_item = instance.sections.flat_map(&:items).filter(&:active?).sole
-      expect(active_item.name).to eq("Invoices")
+      expect(active_item.name).to eq("Subscriptions (Fuime)")
     end
 
     it "performs basic normalization when finding the active item and section" do
-      instance = described_class.new(page_title: "  invoices")
+      instance = described_class.new(page_title: "  subscriptions (fuime)")
 
-      expect(instance.active_section.items.find(&:active?).name).to eq("Invoices")
+      expect(instance.active_section.items.find(&:active?).name).to eq("Subscriptions (Fuime)")
+    end
+
+    # Fuime regression: an item's name IS its active-state key — Item#active?
+    # compares it to the page title. The rebrand retitled these two views to
+    # "Businesses" / "Business Balances" but left the nav items named
+    # "Organizations" / "Organization Balances", so neither item nor its section
+    # highlighted on its own page. Keep each name equal to its view's `title`.
+    %w[Businesses Business\ Balances].each do |page_title|
+      it "highlights #{page_title.inspect}, whose view titles itself that" do
+        instance = described_class.new(page_title:)
+
+        active_item = instance.sections.flat_map(&:items).filter(&:active?).sole
+        expect(active_item.name).to eq(page_title)
+        expect(instance.active_section.name).to eq("Businesses")
+      end
+    end
+
+    it "no longer advertises Invoices, which is refused at the request layer" do
+      instance = described_class.new(page_title: "")
+      names = instance.sections.flat_map(&:items).map(&:name)
+
+      expect(names).not_to include("Invoices")
+      expect(Fuime::DisabledModules.blocked_prefixes).to include("invoices")
     end
 
     # Fuime G2: /admin/cohorts already auto-admits, but it lived off the nav
@@ -36,7 +61,7 @@ RSpec.describe Admin::Nav do
     # Organizations, next to those two, and highlight when you are on it.
     it "lists Cohorts in Organizations next to Applications and Vetting" do
       instance = described_class.new(page_title: "Cohorts (Fuime)")
-      organizations = instance.sections.find { |section| section.name == "Organizations" }
+      organizations = instance.sections.find { |section| section.name == "Businesses" }
       names = organizations.items.map(&:name)
 
       expect(names).to include("Applications (Fuime)", "Cohorts (Fuime)", "Operator vetting (Fuime)")
@@ -55,7 +80,7 @@ RSpec.describe Admin::Nav do
     # "teen is stuck" queues, not only on /users/:id/admin.
     it "lists Guardian invites in Organizations as a task queue" do
       instance = described_class.new(page_title: "Guardian invites (Fuime)")
-      organizations = instance.sections.find { |section| section.name == "Organizations" }
+      organizations = instance.sections.find { |section| section.name == "Businesses" }
       item = organizations.items.find { |entry| entry.name == "Guardian invites (Fuime)" }
 
       expect(item).to be_present

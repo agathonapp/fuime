@@ -46,15 +46,28 @@ RSpec.describe MyController do
     end
   end
 
-  describe "GET #reimbursements" do
-    it "does not render the authenticated reimbursement-report listing UI for an unverified user" do
-      sign_in_unverified
-
-      get :reimbursements
-
-      expect(response.status).to eq(200)
-      expect(response.body).to include("Verify your email")
-      expect(response.body).not_to include("To review")
+  # FUIME-DISABLED (2026-09-15): /my/reimbursements is unrouted. It was the only
+  # module left in a teen's production sidebar and the report it let them file
+  # could never be paid — Reimbursement::PayoutHolding#payout_transfer settles on
+  # ACH / check / PayPal / wire / Wise, all Column-Increase rails this fork lacks.
+  #
+  # The original example (an unverified user gets the one-pager, not the listing)
+  # is kept commented rather than deleted: when reimbursements are rebuilt on
+  # Fuime::PayoutRequest the route comes back and so does this behaviour.
+  #
+  # describe "GET #reimbursements" do
+  #   it "does not render the authenticated reimbursement-report listing UI for an unverified user" do
+  #     sign_in_unverified
+  #     get :reimbursements
+  #     expect(response.status).to eq(200)
+  #     expect(response.body).to include("Verify your email")
+  #     expect(response.body).not_to include("To review")
+  #   end
+  # end
+  describe "the removed reimbursements route" do
+    it "has no /my/reimbursements route to reach" do
+      expect(Rails.application.routes.url_helpers).not_to respond_to(:my_reimbursements_path)
+      expect { get :reimbursements }.to raise_error(ActionController::UrlGenerationError)
     end
   end
 

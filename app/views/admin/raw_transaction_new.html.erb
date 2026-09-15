@@ -6,9 +6,14 @@
   <fieldset>
     <legend>Raw Transaction</legend>
     <p>
-      <%= form.label :unique_bank_identifier, "Bank Identifier" %>
+      <%# FUIME: "Bank Identifier" defaulting to FSMAIN was HCB's SVB operating
+          account, and the options came off HashedTransaction (every raw source,
+          including ones no RawCsvTransaction can have). Both are wrong here:
+          this form writes a RawCsvTransaction, and Fuime's only pseudo-accounts
+          are FUIMECONNECT / FUIMEINTERNAL / FUIMEPLAYGROUND. %>
+      <%= form.label :unique_bank_identifier, "Source" %>
       <br>
-      <%= form.collection_select(:unique_bank_identifier, HashedTransaction.distinct(:unique_bank_identifier).where("unique_bank_identifier is not null").order("unique_bank_identifier asc").pluck(:unique_bank_identifier), :to_s, :to_s, { selected: "FSMAIN", include_blank: true }, {}) %>
+      <%= form.collection_select(:unique_bank_identifier, RawCsvTransaction.distinct.where.not(unique_bank_identifier: nil).order("unique_bank_identifier asc").pluck(:unique_bank_identifier), :to_s, :to_s, { selected: "FUIMEINTERNAL", include_blank: true }, {}) %>
     </p>
 
     <p>

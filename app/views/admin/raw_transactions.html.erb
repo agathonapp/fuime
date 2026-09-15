@@ -1,7 +1,12 @@
 <% title "Raw Transactions" %>
 
 <%= form_with local: true, class: "card overflow-visible", url: raw_transactions_admin_index_path, method: :get do |form| %>
-  <%= form.collection_select(:unique_bank_identifier, HashedTransaction.distinct(:unique_bank_identifier).where("unique_bank_identifier is not null").order("unique_bank_identifier asc").pluck(:unique_bank_identifier), :to_s, :to_s, { include_blank: "Select Bank Account", selected: @unique_bank_identifier }, { width: 250, class: "mb-2", style: "max-width: 250px" }) %>
+  <%# FUIME: options came off HashedTransaction, which carries identifiers from
+      every raw source (STRIPEISSUING1, Plaid's, Column's) — most of which no
+      RawCsvTransaction has ever had, so picking one filtered to zero rows. Ask
+      the table being filtered instead. Under MoR the real values are
+      FUIMECONNECT (settled Stripe sales), FUIMEINTERNAL and FUIMEPLAYGROUND. %>
+  <%= form.collection_select(:unique_bank_identifier, RawCsvTransaction.distinct.where.not(unique_bank_identifier: nil).order("unique_bank_identifier asc").pluck(:unique_bank_identifier), :to_s, :to_s, { include_blank: "Any source", selected: @unique_bank_identifier }, { width: 250, class: "mb-2", style: "max-width: 250px" }) %>
   <%= form.submit "Search" %>
   <%= link_to raw_transaction_new_admin_index_path do %>
     <button class="btn bg-primary">
@@ -21,7 +26,9 @@
   <thead>
     <tr>
       <th>ID</th>
-      <th>Bank Identifier</th>
+      <%# FUIME: not "Bank Identifier" — nothing here comes off a bank. It is the
+          pseudo-account a Fuime ledger line was posted through. %>
+      <th>Source</th>
       <th>Date</th>
       <th>Memo</th>
       <th>Amount</th>
@@ -37,6 +44,21 @@
         <td><%= rt.memo %></td>
         <td><%= rt.amount %></td>
         <td>
+          <%# FUIME: was an empty cell. A raw row's whole reason to be looked at
+              is "did it canonize, and onto which venture?" — so link the
+              CanonicalTransaction it became, and say so when it has not become
+              one (which is what the pending-coloured row already hints at). %>
+          <% if rt.canonical_transaction %>
+            <%= link_to "Transaction", transaction_admin_path(rt.canonical_transaction) %>
+          <% elsif rt.hashed_transactions.present? %>
+            Hashed, not canonized
+          <% else %>
+            Unhashed
+          <% end %>
+          <% if (stripe_url = fuime_stripe_dashboard_url(rt.memo)) %>
+            <br>
+            <%= link_to "Stripe", stripe_url, target: "_blank", rel: "noopener" %>
+          <% end %>
         </td>
       </tr>
     <% end %>

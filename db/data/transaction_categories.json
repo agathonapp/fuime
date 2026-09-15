@@ -1,6 +1,6 @@
 {
   "bank-fees": {
-    "label": "Bank fees"
+    "label": "Payment processing fees"
   },
   "benefits": {
     "label": "Benefits"
@@ -20,7 +20,7 @@
     ]
   },
   "fiscal-sponsorship-fees": {
-    "label": "Fiscal sponsorship fees"
+    "label": "Fuime service fees"
   },
   "food-fun": {
     "label": "Food / fun",
@@ -90,7 +90,7 @@
   },
   "hcb-revenue": {
     "hq_only": true,
-    "label": "HCB Revenue"
+    "label": "Fuime revenue"
   },
   "hr": {
     "label": "HR"
@@ -250,7 +250,7 @@
     ]
   },
   "project-supplies": {
-    "label": "Project supplies",
+    "label": "Supplies / inventory",
     "stripe_merchant_categories": [
       "artists_supply_and_craft_shops",
       "auto_and_home_supply_stores",
