@@ -261,6 +261,15 @@ Rails.application.routes.draw do
   post "/:event_slug/offers/:id/archive", to: "fuime/offers#archive", as: :fuime_offer_archive
   post "/:event_slug/offers/:id/restore", to: "fuime/offers#restore", as: :fuime_offer_restore
 
+  # Fuime: Sandbox Mode — rehearsing a sale on your own storefront.
+  #
+  # Sibling of /offers rather than a page under it: what a founder does here is
+  # test the whole buying flow, which outlives any one listing.
+  get "/:event_slug/sandbox", to: "fuime/sandbox#show", as: :fuime_sandbox
+  post "/:event_slug/sandbox/enable", to: "fuime/sandbox#enable", as: :fuime_sandbox_enable
+  post "/:event_slug/sandbox/disable", to: "fuime/sandbox#disable", as: :fuime_sandbox_disable
+  delete "/:event_slug/sandbox/test-purchases", to: "fuime/sandbox#clear", as: :fuime_sandbox_clear
+
   # Fuime: the keys a venture issues to its own software, and the links those
   # keys have made. See Fuime::ApiKeysController.
   # Fuime: outbound webhooks — a founder's own server hearing about their sales.

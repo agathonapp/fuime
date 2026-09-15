@@ -21,6 +21,8 @@
     </div>
   <% end %>
 
+  <%= render "fuime/sandbox_banner", event: @event %>
+
   <%# Header %>
   <div class="text-center mb-8">
     <% if @event.logo.attached? %>
@@ -72,9 +74,25 @@
         Payment received
       </div>
       <p class="muted m-0">Thank you for supporting <%= @event.name %>.</p>
-      <p class="text-sm muted mt-2">
-        It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
-      </p>
+      <% if sandbox_rehearsal?(@event) %>
+        <%# A rehearsal went through real Stripe test mode, so a real card form
+            was filled in — but no money moved and nothing reaches the ledger.
+            The customer line below would be false for the one person who can
+            see this. %>
+        <p class="text-sm muted mt-2">
+          <% if @sandbox_result&.recorded? || @sandbox_result&.already? %>
+            That was a <strong>test purchase</strong> — Stripe took a test card,
+            no money moved, and it won't appear on your ledger.
+          <% else %>
+            That was a <strong>test purchase</strong> — no money moved.
+          <% end %>
+          <%= link_to "See your test purchases", fuime_sandbox_path(event_slug: @event.slug), class: "underline" %>
+        </p>
+      <% else %>
+        <p class="text-sm muted mt-2">
+          It'll appear on <%= @event.name %>'s ledger once Stripe confirms it.
+        </p>
+      <% end %>
     <% else %>
       <h3 class="m-0 mb-2">Support this business</h3>
       <p class="muted m-0 mb-4">

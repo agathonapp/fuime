@@ -54,6 +54,25 @@ module Fuime
       # before any guardian had set payments up.
       @accepts_payments = @event.show_public_pay_button?
 
+      # Fuime: …or the operator is rehearsing. Sandbox Mode's whole value is
+      # seeing the Buy button BEFORE the venture can take real money — that is
+      # the moment a founder most wants to know their link works, and a
+      # rehearsal reaches nothing the missing setup would have provided.
+      # Fuime::CheckoutsController checks the same condition before Stripe, so
+      # the button this renders cannot 404 into a real charge.
+      @accepts_payments ||= helpers.sandbox_rehearsal?(@event)
+
+      # Fuime: the return leg of a rehearsal. Stripe sends the founder back here
+      # with `sandbox_session=cs_test_…`; we ask Stripe what actually happened
+      # rather than trusting the redirect, and record a Fuime::TestSale.
+      # Idempotent on the session id, so a refresh does not double-count.
+      @sandbox_result =
+        if params[:sandbox_session].present? && helpers.sandbox_rehearsal?(@event)
+          ::Fuime::SandboxCheckout.new(
+            event: @event, user: current_user, session_id: params[:sandbox_session]
+          ).record!
+        end
+
       # What this business sells, in the operator's own order.
       #
       # Published only. A draft is an offer the operator has not finished, and an

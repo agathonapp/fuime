@@ -1,0 +1,151 @@
+<% title "Test mode — #{@event.name}" %>
+
+<%= render "events/nav", selected: :sandbox %>
+
+<%# FUIME: Sandbox Mode. See Fuime::SandboxController for the design note.
+    The claim this page makes and must keep making: turning this on changes
+    what YOU see when you press Buy, and changes nothing for a customer. %>
+
+<div class="flex items-baseline justify-between gap-2 flex-wrap mb-4">
+  <div>
+    <h1 class="mt0 mb0">Test mode</h1>
+    <p class="muted mb0">
+      Try buying from your own storefront before you send the link to anyone.
+      No card is charged and no money moves.
+    </p>
+  </div>
+</div>
+
+<div class="card mb2 <%= "b--info border" if @event.sandbox_mode? %>">
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h2 class="mt0 mb0 text-lg">
+        Test mode is <%= @event.sandbox_mode? ? "on" : "off" %>
+      </h2>
+      <p class="muted text-sm mt-1 mb-0">
+        <% if @event.sandbox_mode? %>
+          When <strong>you</strong> press Buy, you get Stripe's real checkout page in
+          test mode. Your customers still pay for real — turning this on never
+          costs you a sale.
+        <% else %>
+          Turn it on and your own Buy clicks open Stripe's checkout in test mode.
+        <% end %>
+      </p>
+    </div>
+
+    <% if @can_manage %>
+      <% if @event.sandbox_mode? %>
+        <%= button_to "Turn off test mode", fuime_sandbox_disable_path(event_slug: @event.slug),
+                      method: :post, class: "btn bg-muted", id: "disable-sandbox" %>
+      <% else %>
+        <%= button_to "Turn on test mode", fuime_sandbox_enable_path(event_slug: @event.slug),
+                      method: :post, class: "btn bg-blue", id: "enable-sandbox" %>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<% unless @stripe_ready %>
+  <%# No test-mode key in this environment. Said plainly and aimed at Fuime
+      rather than the founder — there is nothing they can do about it, and a
+      vague error would read as their storefront being broken. %>
+  <div class="card border b--warning mb2">
+    <p class="mt-0 mb-0 font-semibold">Test mode isn't available right now</p>
+    <p class="muted mb-0 text-sm">
+      Fuime hasn't finished setting this up. Your real storefront is unaffected
+      and your customers can still pay normally.
+    </p>
+  </div>
+<% end %>
+
+<% if @event.sandbox_mode? && @stripe_ready %>
+  <div class="card mb2">
+    <h2 class="mt0 mb0 text-lg">Try it now</h2>
+    <p class="muted text-sm mt-1">
+      Open your storefront and buy something the way a customer would. You'll get
+      Stripe's real checkout page with a <strong>Test Mode</strong> banner on it.
+    </p>
+
+    <%# The card number is the whole point of the page for a first-timer, so it
+        is shown rather than linked. Stripe's standard test card — it is public,
+        it is not a credential, and it works only against test mode. %>
+    <div class="card bg-snow mt-2 mb-3">
+      <p class="mt-0 mb-1 text-sm font-semibold">Use this card when Stripe asks</p>
+      <p class="mt-0 mb-1"><code class="text-lg">4242 4242 4242 4242</code></p>
+      <p class="muted text-sm mt-0 mb-0">
+        Any future expiry date, any 3-digit CVC, any ZIP. It's a fake card —
+        Stripe only accepts it in test mode, and no money moves.
+      </p>
+    </div>
+    <div class="flex gap-2 flex-wrap items-center">
+      <%= link_to "Open my storefront", fuime_storefront_path(slug: @event.slug),
+                  class: "btn bg-blue", target: "_blank", rel: "noopener" %>
+      <% if @published_offer %>
+        <%= link_to "Open my pay link", fuime_payment_page_path(event_slug: @event.slug, offer: @published_offer.to_param),
+                    class: "btn bg-muted", target: "_blank", rel: "noopener" %>
+      <% end %>
+    </div>
+    <% unless @published_offer %>
+      <p class="muted text-sm mt-2 mb-0">
+        You haven't published anything yet, so your storefront has no Buy button.
+        <%= link_to "Add something to sell", new_fuime_offer_path(event_slug: @event.slug) %>,
+        or use the "pay any amount" box on your storefront.
+      </p>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="card">
+  <div class="flex items-center justify-between gap-2 flex-wrap">
+    <h2 class="mt0 mb0 text-lg">Test purchases</h2>
+    <% if @can_manage && @test_sale_count.positive? %>
+      <%= button_to "Clear all", fuime_sandbox_clear_path(event_slug: @event.slug),
+                    method: :delete, class: "btn bg-muted", id: "clear-test-purchases",
+                    form: { data: { turbo_confirm: "Delete all #{@test_sale_count} test purchases?" } } %>
+    <% end %>
+  </div>
+
+  <%# The sentence that keeps this page honest. These rows look like income and
+      are not, so the page says so next to them rather than in a tooltip. %>
+  <p class="muted text-sm mt-1">
+    These are rehearsals — real Stripe checkouts in test mode, paid with a fake
+    card. They're not on your ledger, they're not in your balance, and you'll
+    never be paid out for them.
+  </p>
+
+  <% if @test_sales.any? %>
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th class="text-left">What</th>
+          <th class="text-left">Amount</th>
+          <th class="text-left">Who tested</th>
+          <th class="text-left">When</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @test_sales.each do |test_sale| %>
+          <tr>
+            <td>
+              <span class="badge bg-muted">TEST</span>
+              <%= test_sale.description.presence || "Payment to #{@event.name}" %>
+            </td>
+            <td><%= render_money test_sale.amount_cents %></td>
+            <td class="muted"><%= test_sale.user.initial_name %></td>
+            <td class="muted"><%= relative_timestamp test_sale.occurred_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% if @test_sale_count > @test_sales.size %>
+      <p class="muted text-sm mt-2 mb-0">
+        Showing the most recent <%= @test_sales.size %> of <%= @test_sale_count %>.
+      </p>
+    <% end %>
+  <% else %>
+    <p class="muted mb0">
+      No test purchases yet.
+      <%= "Turn test mode on, then buy something from your own storefront." unless @event.sandbox_mode? %>
+    </p>
+  <% end %>
+</div>

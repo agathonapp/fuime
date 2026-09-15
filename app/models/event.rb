@@ -40,6 +40,7 @@
 #  risk_level                                   :integer
 #  sale_terms_acknowledged_at                   :datetime
 #  sale_terms_version                           :string
+#  sandbox_mode                                 :boolean          default(FALSE), not null
 #  short_name                                   :string
 #  show_recent_donors                           :boolean          default(FALSE), not null
 #  show_top_donors                              :boolean          default(FALSE), not null
@@ -564,7 +565,15 @@ class Event < ApplicationRecord
   # `restrict_with_error` for the same reason as offers: a key is named by every
   # pay link it created, and those links are referenced by ledger memos and
   # buyers' receipts. Keys are revoked, not deleted.
+  has_many :fuime_webhook_endpoints, class_name: "Fuime::WebhookEndpoint", dependent: :destroy, inverse_of: :event
   has_many :fuime_api_keys, class_name: "Fuime::ApiKey", dependent: :restrict_with_error
+
+  # Fuime: Sandbox Mode rehearsals. See Fuime::TestSale — these are NOT money,
+  # and `dependent: :delete_all` says so: every other money-adjacent association
+  # on this model is `restrict_with_error` because the rows are a record of
+  # something that really happened. A test purchase is not, so it carries no
+  # reason to outlive the venture or to block its deletion.
+  has_many :fuime_test_sales, class_name: "Fuime::TestSale", dependent: :delete_all, inverse_of: :event
 
   # Fuime: top-ups this school made into its own Stripe balance. Restricted rather
   # than dependent-destroy for the same reason as payout_requests — these are the

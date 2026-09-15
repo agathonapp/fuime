@@ -1,0 +1,15 @@
+<%# FUIME: shown to the OPERATOR only, on their own storefront and pay pages,
+    while Sandbox Mode is on. See FuimeHelper#sandbox_rehearsal?.
+
+    A customer never sees this, because for a customer nothing is different —
+    which is also the reassurance the banner leads with, since the founder's
+    first worry on seeing it is "wait, am I losing sales?" %>
+<% if sandbox_rehearsal?(event) %>
+  <div class="card border b--info mb-6 text-center">
+    <p class="mt-0 mb-0 font-semibold">Test mode — this is a rehearsal</p>
+    <p class="muted mb-0 text-sm">
+      Your Buy won't charge a card or move money. Customers still pay normally.
+      <%= link_to "Test mode settings", fuime_sandbox_path(event_slug: event.slug), class: "underline" %>
+    </p>
+  </div>
+<% end %>

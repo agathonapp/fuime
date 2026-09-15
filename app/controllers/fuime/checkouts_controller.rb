@@ -52,6 +52,23 @@ module Fuime
         return
       end
 
+      # ── Sandbox Mode ──────────────────────────────────────────────────────
+      #
+      # A founder rehearsing their own storefront. Checked BEFORE
+      # `accepts_payments?` on purpose: the moment a teenager most wants to see
+      # what a customer sees is while their guardian is still finishing Stripe
+      # onboarding, and a rehearsal reaches nothing that setup would provide.
+      #
+      # #sandbox_checkout? is deliberately narrow — the venture has the flag on
+      # AND the person clicking is an operator of THIS venture. A customer is
+      # never diverted here, which is what makes it safe for a founder to leave
+      # Sandbox Mode switched on and forget about it: the worst case is that
+      # they see a banner they stopped reading, not that they lose a sale.
+      if sandbox_checkout?(event)
+        start_sandbox_checkout!(event)
+        return
+      end
+
       # …and only ventures whose guardian has completed Stripe setup. `is_public`
       # defaults to true, so it never gated anything meaningful — every activated
       # venture presented a working payment form. Under the connected-account
@@ -127,7 +144,22 @@ module Fuime
       # Maya, who is 16 — refusing her bounced the demo's own Buy button.
       return if playground_event?
 
+      # Sandbox Mode bills nobody either, and here the minor is the entire
+      # point: the founder rehearsing the flow is a teenager, and this rule
+      # exists to stop a minor being CHARGED. A rehearsal charges no one, so
+      # applying it here would make the feature unusable by the only people it
+      # was built for. The narrow #sandbox_checkout? gate still means this
+      # bypass is unreachable for anyone but an operator of this venture.
+      return if sandbox_event?
+
       refuse_minor
+    end
+
+    def sandbox_event?
+      event = ::Event.not_hidden.find_by(slug: params[:slug])
+      return false if event.nil?
+
+      sandbox_checkout?(event)
     end
 
     def playground_event?
@@ -200,6 +232,88 @@ module Fuime
       end
 
       redirect_to return_url(event, offer, paid: true), notice:
+    end
+
+    # Is this Buy click a rehearsal?
+    #
+    # Both halves are required, and the second one is the whole safety argument:
+    # `manage_sandbox?` is the operator gate (EventPolicy), so a customer, a
+    # stranger with the link, a signed-out visitor and a member of a DIFFERENT
+    # venture all fail it and fall through to the real Stripe path.
+    #
+    # Not `policy(event)` — Pundit's helper memoizes per record and this runs on
+    # a public controller where `current_user` may be nil.
+    def sandbox_checkout?(event)
+      return false unless event.sandbox_mode?
+      return false if current_user.blank?
+      return false unless ::StripeService.sandbox_available?
+
+      EventPolicy.new(current_user, event).manage_sandbox?
+    end
+
+    # Send the founder to Stripe's own hosted checkout, in test mode.
+    #
+    # This is a REAL Stripe Checkout Session — real hosted page, Stripe's own
+    # Test Mode banner, `4242 4242 4242 4242` — created with the test-mode key
+    # (StripeService.sandbox_secret_key), so it can only ever take a test card
+    # and can only ever produce `livemode: false` objects.
+    #
+    # Rehearsing against a mock was the earlier implementation, and the reason it
+    # was replaced is that a mock cannot fail the way production fails. The parts
+    # most likely to be broken for a given venture — the hosted page rendering,
+    # the redirect, the success URL coming back to the right screen — are exactly
+    # the parts a mock skips.
+    #
+    # The success URL carries Stripe's `{CHECKOUT_SESSION_ID}` template so the
+    # return leg can ask Stripe what actually happened rather than trust the
+    # redirect. See Fuime::SandboxCheckout.
+    def start_sandbox_checkout!(event)
+      offer = find_offer(event)
+      if params[:offer_token].present? && offer.nil?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "That isn't for sale right now."
+        return
+      end
+
+      amount_cents = offer&.price_cents || parse_amount(params[:amount])
+      if amount_cents.nil?
+        redirect_to fuime_storefront_path(slug: event.slug),
+                    alert: "Enter an amount between $1 and $10,000."
+        return
+      end
+
+      session = ::Fuime::PaymentLinkService.new(
+        event:,
+        amount_cents:,
+        description: offer&.payment_description || payment_description(event),
+        offer:,
+        sandbox: true
+      ).create_checkout_session(
+        success_url: sandbox_return_url(event, offer),
+        cancel_url: return_url(event, offer)
+      )
+
+      redirect_to session.url, allow_other_host: true
+    rescue ::Stripe::StripeError => e
+      # A rehearsal that cannot start is a Fuime configuration problem, not
+      # something the founder did. Say so plainly rather than showing them the
+      # customer-facing "please try again" — they are the one person who can
+      # report it, and "we couldn't start that payment" would read to them as
+      # their own storefront being broken.
+      Rails.error.report(e)
+      Rails.logger.error("[Fuime] Sandbox checkout failed for #{event.slug}: #{e.message}")
+      redirect_to fuime_sandbox_path(event_slug: event.slug),
+                  alert: "Test mode couldn't reach Stripe. This is a Fuime problem, not yours — your real storefront is unaffected."
+    end
+
+    # Where Stripe returns a rehearsing founder. `{CHECKOUT_SESSION_ID}` is
+    # Stripe's own template — it substitutes the real id on redirect — so it must
+    # survive URL building unescaped, which is why it is appended rather than
+    # passed as a query param.
+    def sandbox_return_url(event, offer)
+      base = return_url(event, offer, paid: true)
+      separator = base.include?("?") ? "&" : "?"
+      "#{base}#{separator}sandbox_session={CHECKOUT_SESSION_ID}"
     end
 
     def find_offer(event)

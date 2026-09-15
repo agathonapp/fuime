@@ -40,7 +40,46 @@ module Fuime
       # useful as a description of the business — this page has exactly one
       # purpose, so when it cannot serve it the honest thing is to say why.
       @accepts_payments = @event.show_public_pay_button?
+
+      # Fuime: …or the operator is rehearsing. Sandbox Mode's whole value is
+      # seeing the Buy button BEFORE the venture can take real money — that is
+      # the moment a founder most wants to know their link works, and a
+      # rehearsal reaches nothing the missing setup would have provided.
+      # Fuime::CheckoutsController checks the same condition before Stripe, so
+      # the button this renders cannot 404 into a real charge.
+      @accepts_payments ||= helpers.sandbox_rehearsal?(@event)
+
+      # Fuime: the return leg of a rehearsal. Stripe sends the founder back here
+      # with `sandbox_session=cs_test_…`; we ask Stripe what actually happened
+      # rather than trusting the redirect, and record a Fuime::TestSale.
+      # Idempotent on the session id, so a refresh does not double-count.
+      @sandbox_result =
+        if params[:sandbox_session].present? && helpers.sandbox_rehearsal?(@event)
+          ::Fuime::SandboxCheckout.new(
+            event: @event, user: current_user, session_id: params[:sandbox_session]
+          ).record!
+        end
       @paid = params[:paid] == "1"
+
+      # ── FUIME: the founder looking at their own pay page ─────────────────
+      #
+      # A founder could publish a product and then never see what they had
+      # made. Pressing Buy on their own page bounced them with "Checkout is
+      # billed to an adult" — a message about somebody else's purchase, on
+      # their own storefront, which reads as "your page is broken".
+      #
+      # The refusal itself is right and stays: a minor reaching Stripe could
+      # actually complete a payment, and a minor's payment authorisation is
+      # voidable (L2). Letting the founder through to checkout to "just look"
+      # would be letting a minor transact.
+      #
+      # So this is a preview instead of a refusal. Same page the customer sees,
+      # with the button replaced by a plain statement of what goes there. No
+      # Stripe session is created, nothing is charged, and the founder can
+      # finally see their own product.
+      @previewing_own_page = current_user.present? &&
+                             !current_user.known_adult? &&
+                             @event.users.exists?(id: current_user.id)
     end
 
     private

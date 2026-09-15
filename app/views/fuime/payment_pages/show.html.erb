@@ -20,6 +20,8 @@
   <meta name="twitter:card" content="summary">
 <% end %>
 
+<%= render "fuime/sandbox_banner", event: @event %>
+
 <% if @paid %>
   <%# The return leg. Stripe sends the buyer back here with ?paid=1.
       Playground Mode never calls Stripe — same screen, honest copy. %>
@@ -29,6 +31,11 @@
       <%= @event.name %> has your payment for <strong><%= @offer.name %></strong>.
       <% if @event.demo_mode? %>
         Playground Mode — no real charge and no receipt.
+      <% elsif sandbox_rehearsal?(@event) %>
+        <%# A rehearsal ends here too, and this is the one line on the page that
+            would otherwise lie to the founder: Stripe test mode takes a test
+            card and sends no receipt. %>
+        Test purchase — no real charge and no receipt.
       <% else %>
         Stripe has emailed you a receipt.
       <% end %>
@@ -60,7 +67,26 @@
       <p class="muted mb-4"><%= @offer.description %></p>
     <% end %>
 
-    <% if @accepts_payments %>
+    <% if @previewing_own_page %>
+      <%# FUIME: the founder's own preview. Everything above is exactly what a
+          customer sees; only the button differs, because a minor reaching
+          Stripe could actually complete a payment (L2). Said as a preview
+          rather than a refusal — the old behaviour bounced a founder off their
+          own page with a message about somebody else's purchase. %>
+      <div class="card" style="background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.25);">
+        <p class="mt0 mb-1"><strong>This is your pay page.</strong></p>
+        <p class="muted mt0 mb-2">
+          Customers see a
+          <strong>
+            <%= @offer.recurring? ? "Subscribe — #{number_to_currency(@offer.price)} #{@offer.price_cadence}" : "Pay #{number_to_currency(@offer.price)}" %>
+          </strong>
+          button here. You can't buy from yourself — checkout is billed to an
+          adult — but this is exactly what they'll see.
+        </p>
+        <%= link_to "Copy your pay link", fuime_offers_path(event_slug: @event.slug),
+                    class: "btn btn--sm" %>
+      </div>
+    <% elsif @accepts_payments %>
       <%= form_with url: fuime_storefront_pay_path(slug: @event.slug), method: :post,
                     class: "flex flex-col gap-3" do |form| %>
         <%# The offer decides the amount. There is deliberately no amount field on
