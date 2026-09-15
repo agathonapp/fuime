@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Fuime
   # Fuime: where a founder points Fuime at their own server.
   #

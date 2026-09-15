@@ -140,7 +140,7 @@ RSpec.describe "Sandbox Mode", :merchant_of_record, type: :request do
         payment_status:,
         amount_total: amount,
         metadata: {
-          "fuime_event_id" => (event_id || event.id).to_s,
+          "fuime_event_id"   => (event_id || event.id).to_s,
           "fuime_offer_name" => "Front and back lawn mow"
         }
       )
