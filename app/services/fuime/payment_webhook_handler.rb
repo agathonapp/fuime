@@ -44,6 +44,8 @@ module Fuime
       checkout.session.async_payment_succeeded
       charge.refunded
       charge.dispute.created
+      charge.dispute.updated
+      charge.dispute.closed
       invoice.paid
     ].freeze
 
@@ -83,14 +85,14 @@ module Fuime
           amount_cents: @stripe_event.data.object.amount_refunded,
           kind: :refund
         )
-      when "charge.dispute.created"
+      # A chargeback's whole life. `created` is not the only event that can move
+      # money — see #debit_for_dispute — and until `closed` was handled a dispute
+      # Fuime WON left the operator debited forever (Fuime::DisputeRecorder).
+      when "charge.dispute.created", "charge.dispute.updated", "charge.dispute.closed"
         dispute = @stripe_event.data.object
-        record_reversal(
-          object: dispute,
-          amount_cents: dispute.amount,
-          kind: :dispute,
-          payment_intent_id: dispute.payment_intent
-        )
+        reversal = debit_for_dispute(dispute)
+        record_dispute_case(dispute)
+        reversal
       else
         Rails.logger.info("[Fuime] Ignoring webhook event: #{@stripe_event.type}")
         nil
@@ -831,6 +833,78 @@ module Fuime
       row = ::Fuime::VentureLedger.find_row(key)
       Rails.logger.info("[Fuime] Ledger key #{key} was posted concurrently; keeping the first row")
       row
+    end
+
+    # Take the money off the operator — but only once Stripe has actually taken
+    # it off Fuime.
+    #
+    # ── Why this is not simply "on created" ─────────────────────────────────
+    #
+    # A Stripe dispute object in a `warning_*` status is an INQUIRY: the issuer
+    # is asking a question and **no funds have been withdrawn**. Posting a
+    # reversal then debits a teenager for money nobody has taken, on a case that
+    # usually closes with no chargeback at all.
+    #
+    # But an inquiry can escalate, and when it does the SAME dispute object
+    # transitions to `needs_response` and arrives as `charge.dispute.updated` —
+    # so refusing to post on anything but `created` would mean a real chargeback
+    # that began as an inquiry never debits at all, and Fuime pays out money it
+    # has lost. That is the more expensive half of the mistake.
+    #
+    # So the rule is about the STATE, not the event: post unless the dispute is an
+    # inquiry or already closed. The reversal key carries the dispute id and the
+    # amount, so posting from three different events is idempotent by
+    # construction — the second call finds the row and returns it.
+    #
+    # Closed states never post. `lost` already debited while it was open, and
+    # `won` is about to have its debit declined.
+    #
+    # Phrased as "unless it is one of these" rather than "only if it is open",
+    # deliberately. An inquiry is an explicit `warning_*` state; anything else,
+    # including a status we do not recognise or one Stripe adds later, is a
+    # dispute against money that has left Fuime's balance. Failing open here
+    # keeps an unknown status debiting the operator, which is recoverable — a won
+    # dispute declines the line — where failing closed would have Fuime paying
+    # out money it has already lost, which is not.
+    def debit_for_dispute(dispute)
+      status = dispute.try(:status).to_s
+      return nil if status.start_with?("warning_")
+      return nil if ::Fuime::Dispute::WON_STATUSES.include?(status)
+      return nil if ::Fuime::Dispute::LOST_STATUSES.include?(status)
+
+      record_reversal(
+        object: dispute,
+        amount_cents: dispute.amount,
+        kind: :dispute,
+        payment_intent_id: dispute.payment_intent
+      )
+    end
+
+    # The case file behind a chargeback: reason, deadline, outcome, and the
+    # alert. Separate from the reversal above because the two answer different
+    # questions — that one is "what does the operator's payable become", this one
+    # is "what does a person at Fuime have to do, and by when".
+    #
+    # Best-effort, and deliberately so: the ledger reversal is the money and has
+    # already been posted by the time this runs. A dispute whose case file could
+    # not be written must still leave the operator correctly debited, and must
+    # still return 2xx so Stripe stops retrying a webhook we did act on.
+    def record_dispute_case(dispute)
+      intent_id = dispute.try(:payment_intent)
+      return nil if intent_id.blank?
+
+      original = ::Fuime::VentureLedger.find_row(::Fuime::VentureLedger.payment_key(intent_id))
+      event = original && event_for_raw(original)
+      if event.nil?
+        Rails.logger.warn("[Fuime] dispute #{dispute.id}: payment #{intent_id} maps to no business; no case recorded")
+        return nil
+      end
+
+      ::Fuime::DisputeRecorder.record(stripe_dispute: dispute, event:)
+    rescue => e
+      Rails.error.report(e, handled: true, context: { stripe_dispute_id: dispute.try(:id) })
+      Rails.logger.error("[Fuime] dispute #{dispute.try(:id)} case file failed: #{e.class}: #{e.message}")
+      nil
     end
 
     # Total already reversed against a payment intent, as a positive number.

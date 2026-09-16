@@ -1156,6 +1156,52 @@ class AdminController < Admin::BaseController
   # per run rather than one per operator, deliberately: a reviewer comparing fifty
   # lines against each other spots the anomalous one, and fifty separate approvals
   # is a queue people learn to clear rather than read.
+  # FUIME: the chargeback queue. Under merchant of record a dispute is against
+  # Fuime LLC, so if nobody answers by `evidence_due_at` it is lost by default
+  # and Fuime pays it — which makes "what is due soonest" the only ordering this
+  # page can sensibly have.
+  #
+  # Read-only on purpose. The evidence response is submitted in the Stripe
+  # Dashboard (each row links to it); building a second, worse evidence form here
+  # would put a legal statement by Fuime LLC behind an admin button.
+  def fuime_disputes
+    @page = params[:page] || 1
+    @per = params[:per] || 25
+
+    @status = params[:status].presence
+    scope = Fuime::Dispute.includes(:event, :sale)
+    scope = case @status
+            when "open" then scope.open_cases
+            when "closed" then scope.closed_cases
+            when nil then scope
+            else scope.where(status: @status)
+            end
+
+    @disputes = scope.by_deadline.page(@page).per(@per)
+    @counts = {
+      open: Fuime::Dispute.open_cases.count,
+      actionable: Fuime::Dispute.actionable.count,
+      closed: Fuime::Dispute.closed_cases.count
+    }
+    # What is at stake right now, which is the number that decides whether this
+    # page is today's problem. Open cases only — a closed one has settled either
+    # way and its amount is history.
+    @open_amount_cents = Fuime::Dispute.open_cases.sum(:amount_cents)
+  end
+
+  # FUIME: parents asking to review or delete a child's account (COPPA
+  # 16 CFR 312.6). Deletions carry a promised response date; exports are already
+  # served and appear here as the record that they were.
+  def fuime_data_requests
+    @page = params[:page] || 1
+    @per = params[:per] || 25
+
+    @requests = Fuime::DataRequest.includes(:subject, :requested_by, :fulfilled_by)
+                                  .recent_first.page(@page).per(@per)
+    @needs_action = Fuime::DataRequest.needs_action.count
+    @overdue = Fuime::DataRequest.needs_action.select(&:overdue?).size
+  end
+
   def payout_batches
     @page = params[:page] || 1
     @per = params[:per] || 20

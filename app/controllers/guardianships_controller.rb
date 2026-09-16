@@ -285,6 +285,67 @@ class GuardianshipsController < ApplicationController
     redirect_back_or_to post_action_path_for(@guardianship)
   end
 
+  # FUIME: the parent's COPPA rights over their child's account — review what is
+  # held, and ask for it to be deleted (16 CFR 312.6; CLAUDE.md L4/L6). Both hang
+  # off the guardianship rather than off the minor's own account, because the
+  # right belongs to the parent and the guardianship is what proves they are one.
+
+  # Served in this request rather than queued. It is a read of rows the guardian
+  # is already entitled to see, and a parent who has to wait for an email to find
+  # out what is held about their 14-year-old has been given a process, not an
+  # answer.
+  def export_data
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship, :export_data?
+
+    export = ::Fuime::DataExportService.new(user: @guardianship.minor)
+
+    # Recorded AFTER the file is built: a receipt for an export that raised
+    # halfway through would be a false record of disclosure.
+    payload = JSON.pretty_generate(export.as_json)
+    ::Fuime::DataRequest.create!(
+      requested_by: current_user,
+      subject: @guardianship.minor,
+      kind: :export,
+      status: :fulfilled,
+      requested_at: Time.current,
+      fulfilled_at: Time.current,
+      request_ip: request.remote_ip,
+      request_user_agent: request.user_agent
+    )
+
+    send_data payload, filename: export.filename, type: "application/json", disposition: "attachment"
+  end
+
+  # A request, not a switch. See Fuime::DataRequest for why nothing is destroyed
+  # in the request that asks for it.
+  def request_deletion
+    @guardianship = Guardianship.find(params[:id])
+    authorize @guardianship, :request_deletion?
+
+    existing = ::Fuime::DataRequest.status_open.kind_deletion.find_by(subject_id: @guardianship.minor_id)
+    if existing
+      flash[:success] = "A deletion request for this account is already open. We'll be in touch by #{existing.due_at.strftime('%B %-d')}."
+      return redirect_back_or_to post_action_path_for(@guardianship)
+    end
+
+    data_request = ::Fuime::DataRequest.create!(
+      requested_by: current_user,
+      subject: @guardianship.minor,
+      kind: :deletion,
+      reason: params[:reason].presence,
+      requested_at: Time.current,
+      request_ip: request.remote_ip,
+      request_user_agent: request.user_agent
+    )
+
+    ::Fuime::DataRequestMailer.with(data_request:).ops_alert.deliver_later
+
+    flash[:success] =
+      "Deletion request received. A person at Fuime will action it and reply by #{data_request.due_at.strftime('%B %-d')}."
+    redirect_back_or_to post_action_path_for(@guardianship)
+  end
+
   # Re-issue a fresh token for a pending invite whose link has gone stale.
   def resend_invite
     @guardianship = Guardianship.find(params[:id])

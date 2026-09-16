@@ -1,0 +1,30 @@
+<%# FUIME: for whoever actions COPPA requests at Fuime. Leads with the deadline
+    because that is the part with legal weight. %>
+
+<p>
+  <strong><%= @requester.name || @requester.email %></strong> has asked Fuime to
+  delete the account of
+  <strong><%= @subject_user.name || @subject_user.email %></strong>.
+</p>
+
+<table>
+  <tr><td>Requested</td><td><%= @data_request.requested_at.strftime("%B %-d, %Y") %></td></tr>
+  <tr><td>Reply by</td><td><%= @data_request.due_at.strftime("%B %-d, %Y") %></td></tr>
+  <tr><td>Reason given</td><td><%= @data_request.reason.presence || "—" %></td></tr>
+</table>
+
+<p>
+  Check for open disputes and unsettled payouts first —
+  <code>Fuime::DataErasureService#blockers</code> lists them, and both are
+  reasons to reply with a date rather than to refuse. Then:
+</p>
+
+<pre>rake fuime:data_request:fulfil[<%= @data_request.id %>]</pre>
+
+<p>
+  This severs the person from Fuime's records; it does not destroy the sales
+  ledger, which is Fuime's own accounting record as merchant of record. That is
+  what the parent was told on the page they clicked.
+</p>
+
+<p><%= link_to "All data requests", @admin_url %></p>

@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_190002) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1337,6 +1337,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_190002) do
     t.index ["event_id", "email"], name: "index_fuime_customers_on_event_id_and_email", unique: true
     t.index ["event_id"], name: "index_fuime_customers_on_event_id"
     t.index ["stripe_customer_id"], name: "index_fuime_customers_on_stripe_customer_id", where: "(stripe_customer_id IS NOT NULL)"
+  end
+
+  create_table "fuime_data_requests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "fulfilled_at"
+    t.bigint "fulfilled_by_id"
+    t.integer "kind", null: false
+    t.text "reason"
+    t.string "request_ip"
+    t.string "request_user_agent"
+    t.datetime "requested_at", null: false
+    t.bigint "requested_by_id", null: false
+    t.text "resolution_notes"
+    t.integer "status", default: 0, null: false
+    t.bigint "subject_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fulfilled_by_id"], name: "index_fuime_data_requests_on_fulfilled_by_id"
+    t.index ["requested_by_id"], name: "index_fuime_data_requests_on_requested_by_id"
+    t.index ["status", "requested_at"], name: "index_fuime_data_requests_on_status_and_requested_at"
+    t.index ["subject_id", "kind"], name: "index_fuime_data_requests_on_subject_id_and_kind"
+    t.index ["subject_id"], name: "index_fuime_data_requests_on_subject_id"
+  end
+
+  create_table "fuime_disputes", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.string "currency", default: "usd", null: false
+    t.bigint "event_id", null: false
+    t.datetime "evidence_due_at"
+    t.bigint "fuime_sale_id"
+    t.datetime "opened_at", null: false
+    t.string "reason"
+    t.datetime "reinstated_at"
+    t.string "status", null: false
+    t.string "stripe_charge_id"
+    t.string "stripe_dispute_id", null: false
+    t.string "stripe_payment_intent_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_fuime_disputes_on_event_id"
+    t.index ["fuime_sale_id"], name: "index_fuime_disputes_on_fuime_sale_id"
+    t.index ["status", "evidence_due_at"], name: "index_fuime_disputes_on_status_and_evidence_due_at"
+    t.index ["stripe_dispute_id"], name: "index_fuime_disputes_on_stripe_dispute_id", unique: true
+    t.index ["stripe_payment_intent_id"], name: "index_fuime_disputes_on_stripe_payment_intent_id"
   end
 
   create_table "fuime_offers", force: :cascade do |t|
@@ -3567,6 +3611,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_190002) do
   add_foreign_key "fuime_api_keys", "users", column: "created_by_id", validate: false
   add_foreign_key "fuime_cohorts", "users", column: "created_by_id", validate: false
   add_foreign_key "fuime_customers", "events"
+  add_foreign_key "fuime_data_requests", "users", column: "fulfilled_by_id"
+  add_foreign_key "fuime_data_requests", "users", column: "requested_by_id"
+  add_foreign_key "fuime_data_requests", "users", column: "subject_id"
+  add_foreign_key "fuime_disputes", "events"
+  add_foreign_key "fuime_disputes", "fuime_sales"
   add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_offers", "fuime_api_keys", validate: false
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"

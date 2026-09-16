@@ -2,6 +2,51 @@
 
 ## Handoff (most recent first)
 
+**2026-09-16 — Two things a public launch cannot go without: somebody being told
+about a chargeback, and a parent being able to see or delete their child's data.**
+1. **A won dispute used to leave a teenager permanently short.**
+   `charge.dispute.closed` was not a handled event, and the dispute reversal is
+   deliberately excluded from the settlement sweep — so it never cleared. Fixed by
+   DECLINING the pending reversal (`CanonicalPendingDeclinedMapping`), not by
+   posting a credit: a credit would be pending incoming, excluded from the balance,
+   and would never settle either. That is the arrears bug the fee rebate already
+   caused once. See `Fuime::DisputeRecorder`.
+2. **Tick the three `charge.dispute.*` events on the production webhook endpoint.**
+   The code is deployed dead without them. `created` alone reproduces the old
+   behaviour; missing `closed` silently restores the money bug in (1), and missing
+   `updated` means an inquiry that escalates into a real chargeback never debits
+   at all. `docs/fuime/MOR_WEBHOOK_PASS.md` has the full list.
+   Related second fix: a `warning_*` dispute is an INQUIRY and Stripe has taken
+   nothing, but the handler used to debit the operator on `created` regardless.
+   The debit now keys off the dispute's STATE, from whichever event carries it.
+3. **`FUIME_OPS_EMAIL` must be set on BOTH web and worker**, or every dispute and
+   deletion alert goes to `support@fuime.com` — which is only right if somebody
+   reads it. The alerts are `deliver_later`, so it is the WORKER that reads the
+   variable.
+4. **COPPA export/delete is built (G18), and deletion is deliberately not a button.**
+   `rake fuime:data_request:preview[id]` then `fulfil[id] BY=<admin id>`. Erasure
+   severs the person from the sales records rather than destroying them — Fuime is
+   merchant of record and those are Fuime's own books — and the guardian page says
+   so in those words. Do not "improve" that copy into "everything is deleted".
+5. **Every operational alert in the app was going to nobody, and is now fixed.**
+   `AdminMailer` was addressed to Hack Club's Slack credential plus a Hack Club
+   public_id; `#engineers` required an on-call engineer to have a user account;
+   and `EARMUFFED_USER_IDS` held four Hack Club public_ids which, decoded against
+   FUIME's salt, silently deleted mail to whichever Fuime users sit at those ids.
+   All three failed silently because `ApplicationMailer.deliver_mail` drops a
+   message with no recipients. One definition now:
+   `ApplicationMailer.ops_recipients`.
+6. **New `Fuime::OpsDigestMailer`, 13:00 UTC daily.** Upstream's 7am-UTC reminder
+   mail enumerates modules Fuime disabled, so it sends an empty list every
+   morning; it is left alone per Rule 8 and this carries the Fuime queues. It
+   sends on quiet days ON PURPOSE — an absent digest means "the worker is down"
+   as readily as "nothing to do".
+7. **Still open, and not code:** `APPSIGNAL_PUSH_API_KEY` is the thing standing
+   between a 500 and anybody knowing. There is also still no platform-wide way to
+   stop payments without a deploy — `financially_frozen` is per venture, and
+   LAUNCH_SPEC §0's "freeze payments within minutes" is unticked for that reason.
+
+
 **2026-09-15 — The admin console, swept. 4219 examples, 4 failures (the standing
 Apple-Silicon baseline); zero regressions across six parallel passes.**
 1. **Start at `docs/fuime/ADMIN_CONSOLE_MAP.md`.** New this session: every admin

@@ -2,12 +2,20 @@
 
 class AdminMailer < ApplicationMailer
   include Rails.application.routes.url_helpers
-  default to: -> do
-    [
-      Credentials.fetch(:SLACK_NOTIFICATIONS_EMAIL),
-      User.find_by_public_id("usr_MVtap3")&.email_address_with_name # Lucy
-    ].compact
-  end
+  # Fuime: Fuime's own operations inbox.
+  #
+  # Upstream this was Hack Club's Slack-notifications address plus
+  # `usr_MVtap3` — a Hack Club staff member addressed by production public_id.
+  # Neither is Fuime's: the credential is not set here, and that public_id
+  # decodes against Fuime's own HASHID_SALT to somebody else or to nobody. The
+  # result was that every alert in this class went to an empty recipient list and
+  # `ApplicationMailer.deliver_mail` dropped it without a word — so the ledger
+  # anomaly detectors have been running on a schedule and warning nobody.
+  #
+  # Had the credential ever been set, the failure would have been the other way
+  # round: Fuime's operational alerts, with Fuime users' names and balances in
+  # them, delivered to a third party (Rule 4).
+  default to: -> { ApplicationMailer.ops_recipients }
 
   def cash_withdrawal_notification
     @hcb_code = params[:hcb_code]
@@ -139,12 +147,21 @@ class AdminMailer < ApplicationMailer
 
   # Fuime: was a hardcoded list of Hack Club staff, which would have sent Fuime
   # operational alerts (and the user data in them) to a third party.
-  # Set FUIME_ENGINEER_EMAILS to a comma-separated list to receive these.
+  #
+  # Two things were still wrong with the replacement, and both meant silence.
+  # `FUIME_ENGINEER_EMAILS` has never been set, and the lookup then required each
+  # address to already exist as a `User` — so an on-call engineer who has no
+  # account on the platform they operate received nothing. Either miss returned
+  # an empty list, which `deliver_mail` drops without an error, and the four
+  # anomaly detectors that run on a schedule have therefore been warning nobody
+  # since they were forked.
+  #
+  # Now: the configured engineers if there are any, and the operations inbox
+  # otherwise. A ledger anomaly reaching the wrong Fuime inbox is recoverable;
+  # reaching no inbox is how a balance bug is discovered by a family.
   def engineers
     emails = ENV["FUIME_ENGINEER_EMAILS"].to_s.split(",").map(&:strip).reject(&:blank?)
-    return [] if emails.empty?
-
-    User.where(email: emails).pluck(:email)
+    emails.presence || ApplicationMailer.ops_recipients
   end
 
 end

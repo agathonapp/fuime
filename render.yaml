@@ -289,6 +289,15 @@ services:
         sync: false
       - key: APPSIGNAL_APP_ENV
         value: production
+      # Where a chargeback and a parent's deletion request land. Both carry a
+      # deadline set by somebody other than Fuime — the card network's evidence
+      # date, and the response window the guardian page promises in writing — so
+      # an unread inbox here is a missed obligation rather than a missed email.
+      # Falls back to support@fuime.com when unset, which is only the right
+      # answer if somebody reads that. Needed on the WORKER too: the alerts are
+      # `deliver_later`, so the mailer that reads this runs in Sidekiq.
+      - key: FUIME_OPS_EMAIL
+        sync: false
 
   # The marketing site on fuime.com. Separate from fuime-web because it shares
   # almost nothing with it: no database, no Rails. A node service rather than a
@@ -562,3 +571,12 @@ services:
         sync: false
       - key: APPSIGNAL_APP_ENV
         value: production
+      # Where a chargeback and a parent's deletion request land. Both carry a
+      # deadline set by somebody other than Fuime — the card network's evidence
+      # date, and the response window the guardian page promises in writing — so
+      # an unread inbox here is a missed obligation rather than a missed email.
+      # Falls back to support@fuime.com when unset, which is only the right
+      # answer if somebody reads that. Needed on the WORKER too: the alerts are
+      # `deliver_later`, so the mailer that reads this runs in Sidekiq.
+      - key: FUIME_OPS_EMAIL
+        sync: false

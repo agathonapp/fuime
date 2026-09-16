@@ -312,6 +312,16 @@ fuime_missed_mor_payment_sweep_job:
   cron: "20 * * * *"
   class: "Fuime::MissedMorPaymentSweepJob"
 
+# Fuime: the morning digest — what is waiting, and how many sales happened.
+# 13:00 UTC is 6am Pacific, which is the same launch-cohort zone
+# Fuime::MinorMailWindow defaults to. Not 7am UTC alongside upstream's
+# SendAdminRemindersJob: that one lands at 11pm Pacific, which is how a queue
+# goes unread for a day. It sends on quiet days too — see Fuime::OpsDigestMailer
+# for why an absent email is the ambiguous case.
+fuime_ops_digest_job:
+  cron: "0 13 * * *"
+  class: "Fuime::OpsDigestJob"
+
 # Fuime: pick up outbound webhook deliveries whose scheduled retry never ran —
 # a worker restart between the failure and the enqueue. Ordinarily finds nothing;
 # see Fuime::SweepWebhookDeliveriesJob for why it exists anyway.

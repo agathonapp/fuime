@@ -1,0 +1,34 @@
+<% if @needs_action.zero? -%>
+Nothing is waiting.
+<% else -%>
+<%= @needs_action %> thing<%= "s" unless @needs_action == 1 %> waiting.
+<% end %>
+<% if @disputes_actionable.positive? -%>
+CHARGEBACKS TO ANSWER: <%= @disputes_actionable %><% if @disputes_overdue.positive? %> (<%= @disputes_overdue %> PAST THE DEADLINE — a dispute nobody answers is lost by default and Fuime pays it)<% end %>
+  <%= fuime_disputes_admin_index_url %>
+<% end -%>
+<% if @deletion_requests.positive? -%>
+PARENTS WAITING ON A DELETION: <%= @deletion_requests %><% if @deletion_overdue.positive? %> (<%= @deletion_overdue %> past the date we promised them)<% end %>
+  <%= fuime_data_requests_admin_index_url %>
+<% end -%>
+<% if @vetting_waiting.positive? -%>
+FOUNDERS WHO CANNOT SELL YET: <%= @vetting_waiting %> waiting on vetting.
+  <%= operator_vetting_admin_index_url %>
+<% end -%>
+<% if @applications_waiting.positive? -%>
+APPLICATIONS UNDER REVIEW: <%= @applications_waiting %>
+  <%= applications_admin_index_url %>
+<% end -%>
+<% if @payout_runs_waiting.positive? -%>
+PAYOUT RUNS WAITING: <%= @payout_runs_waiting %> — nobody is paid until a person approves the run.
+  <%= payout_batches_admin_index_url %>
+<% end -%>
+<% if @stale_guardian_invites.positive? -%>
+GUARDIAN INVITES OLDER THAN A WEEK: <%= @stale_guardian_invites %> — these families can sell and cannot be paid.
+  <%= guardianships_admin_index_url %>
+<% end -%>
+
+Last 24 hours: <%= @sales_count %> sale<%= "s" unless @sales_count == 1 %>, <%= render_money @sales_cents %> gross.
+
+If this email stops arriving, the worker is down — that is the main reason it is
+sent on quiet days too.

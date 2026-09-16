@@ -1,0 +1,44 @@
+<%# FUIME: written for a 13-to-17-year-old whose earnings just went down, and
+    who did nothing wrong.
+
+    Three rules this copy is built on:
+      * No bank vocabulary (L5). What moved is what Fuime owes them, not a
+        balance held anywhere.
+      * No action is asked for, because there is none — Fuime is the seller of
+        record and Fuime answers the dispute. Asking a minor to "respond" would
+        be both false and alarming.
+      * Say what happens next and when, so the number on their page has an
+        explanation attached to it. %>
+
+<p>Hi,</p>
+
+<p>
+  A customer asked their card company to reverse a payment they made to
+  <strong><%= @event.name %></strong>. This is called a dispute, or a chargeback.
+</p>
+
+<p>
+  While it is being reviewed, <strong><%= render_money @dispute.amount_cents %></strong>
+  has been taken off what Fuime owes you for that sale. That is why the amount on
+  your payouts page changed.
+</p>
+
+<p>
+  <strong>You do not need to do anything.</strong> Fuime is the legal seller on
+  every sale made through the platform, so the card company's dispute is with
+  Fuime and we handle the response. If we win it, the amount goes back to what
+  you are owed. If we lose it, it stays reduced — that is the part of selling
+  online that we carry with you.
+</p>
+
+<p>
+  If you know something about this sale that would help — what you delivered,
+  when, and any messages with the customer — reply to this email and it will
+  reach a person. It genuinely helps.
+</p>
+
+<p><%= link_to "Your payouts page", @payouts_url %></p>
+
+<p>
+  Questions: <%= mail_to @support_email %>
+</p>

@@ -85,6 +85,11 @@ Rails.application.routes.draw do
       # — the link signs its holder in AS THE MINOR, so only the adult who already
       # signed may ask for another one.
       post :resend_join
+      # FUIME: the parent's COPPA rights (16 CFR 312.6). `export_data` streams
+      # the file in the request; `request_deletion` opens a case a person
+      # actions — see Fuime::DataRequest for why deletion is not a switch.
+      get :export_data
+      post :request_deletion
       get :record
     end
   end
@@ -687,6 +692,15 @@ Rails.application.routes.draw do
       post "payout_batches/:id/approve", to: "admin#payout_batch_approve", as: "payout_batch_approve"
       post "payout_batches/:id/mark_paid", to: "admin#payout_batch_mark_paid", as: "payout_batch_mark_paid"
       post "payout_batches/:id/cancel", to: "admin#payout_batch_cancel", as: "payout_batch_cancel"
+      # FUIME: chargebacks against Fuime as merchant of record. Read-only: the
+      # evidence response happens in the Stripe Dashboard, because it is a legal
+      # statement by Fuime LLC rather than an app workflow. This page exists so
+      # nobody misses the deadline. See Fuime::Dispute.
+      get "fuime_disputes", to: "admin#fuime_disputes"
+      # FUIME: parents' COPPA requests over their children's accounts. Read-only:
+      # erasure runs from `rake fuime:data_request:fulfil` after a person has
+      # checked the blockers — see Fuime::DataErasureService.
+      get "fuime_data_requests", to: "admin#fuime_data_requests"
       get "paypal_transfers", to: "admin#paypal_transfers"
       get "wires", to: "admin#wires"
       get "wise_transfers", to: "admin#wise_transfers"

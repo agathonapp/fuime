@@ -23,7 +23,7 @@ unnoticed.
 |---|---|
 | Endpoint | `POST /fuime/webhooks/stripe` (not `/webhooks/stripe` — that 404s) |
 | Signing secret env | `FUIME_STRIPE_WEBHOOK_SECRET` |
-| Events | `payment_intent.succeeded`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.dispute.created` |
+| Events | `payment_intent.succeeded`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed` |
 | Handler | `Fuime::PaymentWebhookHandler` |
 | Ledger key | PaymentIntent id (`fuime_<pi_…>`), never the Checkout Session id |
 | Metadata | `fuime_event_id` + `fuime_fee_cents` on **both** the session and `payment_intent_data` (`PaymentLinkService`) |
@@ -64,7 +64,7 @@ stripe login                  # only if it does not
 # App running at localhost:3000 (docker compose up web).
 stripe listen \
   --forward-to localhost:3000/fuime/webhooks/stripe \
-  --events payment_intent.succeeded,checkout.session.completed,checkout.session.async_payment_succeeded,charge.refunded,charge.dispute.created
+  --events payment_intent.succeeded,checkout.session.completed,checkout.session.async_payment_succeeded,charge.refunded,charge.dispute.created,charge.dispute.updated,charge.dispute.closed
 ```
 
 `stripe listen` prints a `whsec_…`. Either:
@@ -148,6 +148,12 @@ Already-posted sales are skipped.
    `https://app.fuime.com/fuime/webhooks/stripe`.
 2. Events listed in the table above. Losing `payment_intent.succeeded` used to
    be fatal; losing both success events still is.
+   **`charge.dispute.closed` is the other one that costs a real person money.**
+   `created` debits the operator when a chargeback lands; `closed` is what backs
+   that debit out when Fuime WINS. The reversal is deliberately excluded from
+   the settlement sweep, so without this event it never clears and the teenager
+   stays short forever — see `Fuime::DisputeRecorder`. Tick all three
+   `charge.dispute.*`.
 3. Signing secret in `FUIME_STRIPE_WEBHOOK_SECRET` on web **and** worker
    (a 400 from a secret mismatch looks like "Stripe is down").
 4. `STRIPE_MODE=test` until live keys are an explicit, reviewed change.

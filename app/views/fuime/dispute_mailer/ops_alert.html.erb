@@ -1,0 +1,47 @@
+<%# FUIME: the alert that did not exist. Written for whoever is on the hook at
+    Fuime, not for a founder — so it leads with the deadline and the link that
+    answers it. %>
+
+<p>
+  <strong><%= @dispute.status.humanize %></strong> —
+  <%= render_money @dispute.amount_cents %> on
+  <strong><%= @event.name %></strong>.
+</p>
+
+<table>
+  <tr><td>Reason</td><td><%= @dispute.reason_label %></td></tr>
+  <tr><td>Business</td><td><%= @event.name %></td></tr>
+  <tr>
+    <td>Response due</td>
+    <td>
+      <% if @dispute.evidence_due_at.present? %>
+        <%= @dispute.evidence_due_at.strftime("%B %-d, %Y at %l:%M %p UTC") %>
+      <% else %>
+        No deadline (early warning — no evidence to submit yet)
+      <% end %>
+    </td>
+  </tr>
+  <tr><td>Dispute</td><td><%= @dispute.stripe_dispute_id %></td></tr>
+  <tr><td>Payment</td><td><%= @dispute.stripe_payment_intent_id %></td></tr>
+</table>
+
+<% if @dispute.open? %>
+  <p>
+    <strong>Fuime is the merchant of record</strong>, so this dispute is against
+    Fuime LLC and Fuime responds to it — not the founder. A dispute nobody
+    answers by its deadline is lost by default.
+  </p>
+  <p><%= link_to "Respond in Stripe", @stripe_url %></p>
+<% elsif @dispute.won? %>
+  <p>
+    Won. The reversal on <%= @event.name %>'s ledger has been backed out, so the
+    operator's payable is restored to where it was before the chargeback.
+  </p>
+<% else %>
+  <p>
+    Lost. The money has left Fuime's balance and the operator's payable stays
+    reduced. Nothing further happens automatically.
+  </p>
+<% end %>
+
+<p><%= link_to "All disputes", @admin_url %></p>

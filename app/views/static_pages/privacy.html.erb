@@ -26,11 +26,11 @@
 
 <h2>Fuime is 13+</h2>
 <p>
-  You must be at least 13 years old to hold a Fuime account. We ask for a date
-  of birth during signup and refuse to create an account for anyone under 13.
-  We do not knowingly collect any information from a child under 13. If we
-  learn that we have, we delete it. If you believe a child under 13 has given
-  us information, email
+  You must be at least 13 years old to hold a Fuime account. We ask you to
+  confirm that you are — we do not ask for a date of birth at signup — and we
+  refuse an account to anyone who tells us they are under 13. We do not knowingly collect
+  any information from a child under 13. If we learn that we have, we delete it.
+  If you believe a child under 13 has given us information, email
   <%= mail_to "support@fuime.com" %> and we will remove it.
 </p>
 
@@ -132,15 +132,32 @@
 <h2>Your rights, and a parent's rights</h2>
 <p>A parent or guardian on an account may:</p>
 <ul>
-  <li>Review everything Fuime holds about their teen.</li>
-  <li>Withdraw consent, which stops the teen operating a business on Fuime.</li>
-  <li>Request that we delete their teen's information.</li>
-  <li>Request an export of the business's records.</li>
+  <li>
+    Download everything Fuime holds about their teen, from
+    <%= link_to "your guardian page", guardianships_path %>. It is a file, and
+    it arrives straight away.
+  </li>
+  <li>Withdraw consent, which stops any money being paid out of the teen's business until an adult is on the account again.</li>
+  <li>
+    Ask us to delete their teen's information, from the same page. A person
+    actions it within <%= Fuime::DataRequest::RESPONSE_WINDOW_DAYS %> days.
+  </li>
 </ul>
 <p>
-  Email <%= mail_to "support@fuime.com" %> to make any of these requests.
-  Some of them are not yet self-serve in the product; we handle them by hand
-  in the meantime, and we do not charge for them.
+  <%# FUIME: what deletion actually does, stated where a parent decides rather
+      than only in the confirmation dialog. Fuime is the legal seller on every
+      sale made through the platform, so the transaction record is Fuime's own
+      accounting record — see Fuime::DataErasureService. A policy that promised
+      more than the code delivers would be the worse kind of wrong. %>
+  When we delete an account we remove the name, email, phone number and every
+  other detail that identifies the person, and we lock the account. Records of
+  sales already made stay in Fuime's own accounts with the person removed from
+  them: Fuime is the legal seller on those sales, and tax law and the card
+  networks require us to keep our books.
+</p>
+<p>
+  We do not charge for any of this. For anything else, email
+  <%= mail_to "support@fuime.com" %>.
 </p>
 
 <h2>Security</h2>

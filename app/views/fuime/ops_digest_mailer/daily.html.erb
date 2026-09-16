@@ -1,0 +1,91 @@
+<%# FUIME: read on a phone, first thing. Ordered by consequence, not by module. %>
+
+<% if @needs_action.zero? %>
+  <p><strong>Nothing is waiting.</strong></p>
+<% else %>
+  <p><strong><%= @needs_action %> thing<%= "s" unless @needs_action == 1 %> waiting.</strong></p>
+<% end %>
+
+<table>
+  <% if @disputes_actionable.positive? %>
+    <tr>
+      <td><strong>Chargebacks to answer</strong></td>
+      <td>
+        <%= @disputes_actionable %>
+        <% if @disputes_overdue.positive? %>
+          — <strong><%= @disputes_overdue %> past the deadline.</strong>
+          A dispute nobody answers is lost by default and Fuime pays it.
+        <% end %>
+        <br><%= link_to "Dispute queue", fuime_disputes_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+
+  <% if @deletion_requests.positive? %>
+    <tr>
+      <td><strong>Parents waiting on a deletion</strong></td>
+      <td>
+        <%= @deletion_requests %>
+        <% if @deletion_overdue.positive? %>
+          — <strong><%= @deletion_overdue %> past the date we promised them.</strong>
+        <% end %>
+        <br><%= link_to "Data requests", fuime_data_requests_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+
+  <% if @vetting_waiting.positive? %>
+    <tr>
+      <td><strong>Founders who cannot sell yet</strong></td>
+      <td>
+        <%= @vetting_waiting %> waiting on vetting. Until this is cleared their
+        storefront takes no money.
+        <br><%= link_to "Operator vetting", operator_vetting_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+
+  <% if @applications_waiting.positive? %>
+    <tr>
+      <td><strong>Applications under review</strong></td>
+      <td>
+        <%= @applications_waiting %>
+        <br><%= link_to "Applications", applications_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+
+  <% if @payout_runs_waiting.positive? %>
+    <tr>
+      <td><strong>Payout runs waiting</strong></td>
+      <td>
+        <%= @payout_runs_waiting %> — nobody is paid until a person opens and
+        approves the run.
+        <br><%= link_to "Payout runs", payout_batches_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+
+  <% if @stale_guardian_invites.positive? %>
+    <tr>
+      <td>Guardian invites older than a week</td>
+      <td>
+        <%= @stale_guardian_invites %> — these families can sell and cannot be paid.
+        <br><%= link_to "Guardian invites", guardianships_admin_index_url %>
+      </td>
+    </tr>
+  <% end %>
+</table>
+
+<p>
+  <%# The heartbeat. Zero sales reads as a quiet day and as a broken checkout in
+      exactly the same way, so the number is stated every morning whatever it is. %>
+  <strong>Last 24 hours:</strong>
+  <%= @sales_count %> sale<%= "s" unless @sales_count == 1 %>,
+  <%= render_money @sales_cents %> gross.
+</p>
+
+<p class="muted">
+  If this email stops arriving, the worker is down — that is the main reason it
+  is sent on quiet days too.
+</p>

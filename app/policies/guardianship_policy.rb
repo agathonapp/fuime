@@ -94,6 +94,27 @@ class GuardianshipPolicy < ApplicationPolicy
     user.admin? || record.guardian == user
   end
 
+  # FUIME: the parent's COPPA rights over their child's account.
+  #
+  # The guardian only, plus admins — and deliberately NOT the minor, for opposite
+  # reasons in each direction. Review is a right COPPA gives the PARENT, and a
+  # teen who could export their own file gains nothing they cannot already see in
+  # the product. Deletion is the sharper one: a 14-year-old must not be able to
+  # erase the account their parent is legally responsible for, on a bad evening.
+  #
+  # An ACTIVE guardianship, because a pending invite is an unverified claim to be
+  # somebody's parent, and a revoked one is a relationship that ended — neither is
+  # the proof this right rests on.
+  def export_data?
+    return false if user.blank?
+
+    user.admin? || (record.active? && record.guardian == user)
+  end
+
+  def request_deletion?
+    export_data?
+  end
+
   # Same authority as revoking — whoever can end a guardianship can re-send its
   # invite. The minor is included here because chasing an unresponsive parent is
   # their problem to solve, and a resend only ever re-mails the same guardian.

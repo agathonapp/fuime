@@ -1,0 +1,86 @@
+<% title "Data requests (Fuime)" %>
+
+<%# FUIME: what parents have asked for over their children's accounts.
+
+    A deletion row is a clock. Fuime told the parent, on the page they clicked,
+    that a person would action it within
+    Fuime::DataRequest::RESPONSE_WINDOW_DAYS days — so "requested" and "due" are
+    the two columns that matter and everything else is context.
+
+    Read-only on purpose: erasure is irreversible and runs from a rake task after
+    somebody has checked Fuime::DataErasureService#blockers. %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <span class="badge <%= @needs_action.positive? ? "bg-warning" : "bg-muted" %>">
+    Deletions to action: <%= @needs_action %>
+  </span>
+  <% if @overdue.positive? %>
+    <span class="badge bg-error">Past the promised date: <%= @overdue %></span>
+  <% end %>
+</div>
+
+<% if @requests.empty? %>
+  <div class="card">
+    <p class="mt0"><strong>No requests.</strong></p>
+    <p class="muted mb0">
+      A parent raises these from <code>/guardian</code>. Exports are served
+      immediately and recorded here; deletions wait for a person.
+    </p>
+  </div>
+<% else %>
+  <div class="flex items-center mb2 flex-col sm:flex-row">
+    <div class="flex-grow"><%= page_entries_info @requests, entry_name: "requests" %></div>
+    <%= paginate @requests %>
+  </div>
+
+  <table class="min-w-0">
+    <thead>
+      <tr>
+        <th>Kind</th>
+        <th>About</th>
+        <th>Asked by</th>
+        <th>Requested</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>To action it</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @requests.each do |data_request| %>
+        <tr>
+          <td>
+            <span class="badge <%= data_request.kind_deletion? ? "bg-warning" : "bg-muted" %>">
+              <%= data_request.kind.humanize %>
+            </span>
+          </td>
+          <td><%= link_to data_request.subject.name.presence || data_request.subject.email, admin_user_path(data_request.subject) %></td>
+          <td><%= data_request.requested_by.name || data_request.requested_by.email %></td>
+          <td><%= data_request.requested_at.strftime("%b %-d, %Y") %></td>
+          <td>
+            <% if data_request.kind_deletion? && data_request.status_open? %>
+              <span class="<%= data_request.overdue? ? "error" : "" %>">
+                <%= data_request.due_at.strftime("%b %-d, %Y") %>
+              </span>
+            <% else %>
+              <span class="muted">—</span>
+            <% end %>
+          </td>
+          <td>
+            <%= data_request.status.humanize %>
+            <% if data_request.fulfilled_at %>
+              <div class="muted"><%= data_request.fulfilled_at.strftime("%b %-d") %></div>
+            <% end %>
+          </td>
+          <td>
+            <% if data_request.kind_deletion? && data_request.status_open? %>
+              <%# Not a button. See the view note above. %>
+              <code>rake fuime:data_request:fulfil[<%= data_request.id %>]</code>
+            <% elsif data_request.resolution_notes.present? %>
+              <span class="muted"><%= data_request.resolution_notes %></span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

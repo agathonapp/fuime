@@ -1,0 +1,17 @@
+<%= @requester.name || @requester.email %> has asked Fuime to delete the account
+of <%= @subject_user.name || @subject_user.email %>.
+
+Requested:   <%= @data_request.requested_at.strftime("%B %-d, %Y") %>
+Reply by:    <%= @data_request.due_at.strftime("%B %-d, %Y") %>
+Reason given: <%= @data_request.reason.presence || "—" %>
+
+Check for open disputes and unsettled payouts first
+(Fuime::DataErasureService#blockers lists them — both are reasons to reply with
+a date rather than to refuse). Then:
+
+  rake fuime:data_request:fulfil[<%= @data_request.id %>]
+
+This severs the person from Fuime's records; it does not destroy the sales
+ledger, which is Fuime's own accounting record as merchant of record.
+
+All data requests: <%= @admin_url %>

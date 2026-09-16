@@ -290,6 +290,26 @@ module Admin
             count: ->{ Fuime::Subscription.needs_attention.count },
             count_type: :tasks
           ),
+          # FUIME: chargebacks. :tasks because an unanswered dispute is work owed
+          # with a deadline attached — under merchant of record the dispute is
+          # against Fuime LLC, and one nobody answers is lost by default. Counts
+          # only the ones a person can still act on; `under_review` means Stripe
+          # already has our evidence.
+          make_item(
+            name: "Disputes (Fuime)",
+            path: fuime_disputes_admin_index_path,
+            count: ->{ Fuime::Dispute.actionable.count },
+            count_type: :tasks
+          ),
+          # FUIME: parents' COPPA requests. :tasks because a deletion request
+          # carries a response date Fuime has promised the parent in writing, and
+          # the queue is the only thing that knows it is running out.
+          make_item(
+            name: "Data requests (Fuime)",
+            path: fuime_data_requests_admin_index_path,
+            count: ->{ Fuime::DataRequest.needs_action.count },
+            count_type: :tasks
+          ),
           # FUIME: the weekly payout runs. This queue existed with no way to reach
           # it — an admin had to know the URL — which is how a week's payouts get
           # missed. Money out rather than in, but it belongs next to the other

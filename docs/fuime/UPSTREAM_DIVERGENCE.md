@@ -7679,3 +7679,238 @@ was the *only* refusal that routed back to that layout — every other refusal i
 a flash. With the rule gone there is nothing left to press that would exercise it. The
 file's load-bearing example (the pay page renders `flash-container` at all) stays, and the
 comment says to re-add a press-and-follow example the day a refusal points back there.
+
+---
+
+## 2026-09-16 — A chargeback nobody was told about, and a won dispute that never gave the money back
+
+**Files:** `app/models/fuime/dispute.rb`, `app/services/fuime/dispute_recorder.rb`,
+`app/services/fuime/payment_webhook_handler.rb`, `app/mailers/fuime/dispute_mailer.rb`,
+`app/views/fuime/dispute_mailer/*`, `app/views/admin/fuime_disputes.html.erb`,
+`app/controllers/admin_controller.rb`, `app/models/admin/nav.rb`, `config/routes.rb`,
+`db/migrate/20260916100000_create_fuime_disputes.rb`, `render.yaml`,
+`docs/fuime/MOR_WEBHOOK_PASS.md`, `spec/services/fuime/dispute_recorder_spec.rb`.
+
+**Why.** Under merchant of record a dispute is against **Fuime LLC** — Fuime's name is on
+the buyer's statement and Fuime's terms of sale governed the purchase — so Fuime is the
+party the card network expects to answer, and a dispute nobody answers by its evidence
+deadline is lost by default. The money half of this was already correct and is untouched:
+`charge.dispute.created` posts a reversal and rebates Fuime's cut, so the operator's
+payable drops the moment a chargeback lands. What was missing is that **no human being was
+told**. The only trace was a ledger row reading "Disputed payment (chargeback)" on a page
+an admin has no reason to open. Before a public launch that is a deadline nobody is
+watching.
+
+**The money bug found while building it, which is the more serious half.**
+`charge.dispute.closed` was not a handled event. When Fuime **won** a chargeback — Stripe
+returns the funds, the buyer's claim failed — nothing gave the operator their money back.
+The reversal is a pending line that `Fuime::ConnectSettlementSweep` deliberately excludes
+("settling them by construction would be guessing"), so it never settles; and
+`Event#pending_outgoing_balance_v2_cents` counts unsettled outgoing against the payable.
+Permanently. A teenager whose customer lost a chargeback stayed debited for it forever.
+
+**How the money comes back, and why not with a credit.** A credit would be pending
+*incoming*, which is excluded from the balance on purpose (Fuime does not front unsettled
+money) and — being dispute-keyed — would never settle either, leaving a phantom "still
+coming" line forever. That is the arrears bug the fee rebate already caused once
+(2026-09-12 entry). Instead the reversal is **declined**:
+`CanonicalPendingDeclinedMapping` is upstream HCB's own mechanism for a pending line that
+turned out not to happen, and `CanonicalPendingTransaction.unsettled` — which every
+balance method goes through — excludes declined rows. A won dispute is exactly "this debit
+turned out not to happen". The fee rebate posted alongside it is declined for the same
+reason. `reinstated_at` makes it happen once however many times Stripe re-delivers.
+
+**What is new.** `fuime_disputes` is the case file: reason code, evidence deadline,
+outcome. It is not money and nothing computes a balance from it — `amount_cents` is what
+Stripe said, while what the operator was actually debited is the ledger's business and can
+differ (the recorder caps a reversal at the outstanding balance). An admin queue at
+`/admin/fuime_disputes` sorts by deadline and links each row to the Stripe Dashboard;
+there is no evidence form in Fuime, because the response is a legal statement by Fuime LLC
+rather than an app workflow.
+
+**Two mails, deliberately different.** Ops is alerted immediately at any hour, because the
+clock is the card network's. The operator hears once, when a real dispute opens, inside
+`Fuime::MinorMailWindow` (L7) — not on an early warning, which may never become a
+chargeback, and not on the close. The copy tells a 13-to-17-year-old that Fuime is the
+legal seller, that Fuime answers it, and that there is nothing for them to do, because
+before this their payable simply fell with no explanation anywhere in the product.
+
+**A second money bug, found while writing the first fix.** A dispute in a `warning_*`
+status is an **inquiry**: the issuer is asking a question and Stripe has withdrawn nothing.
+The handler posted a full reversal on `charge.dispute.created` regardless of status, so an
+inquiry debited a teenager for money nobody had taken. The obvious fix — debit only on a
+non-warning `created` — is worse, because an inquiry that escalates keeps the *same*
+dispute object and arrives as `charge.dispute.updated`, so a real chargeback that began as
+an inquiry would never debit at all and Fuime would pay out money it had lost. So
+`#debit_for_dispute` keys off the STATE rather than the event: post from whichever of the
+three events carries a status that is neither an inquiry nor a closed outcome. The reversal
+key carries the dispute id and amount, so posting from three events is idempotent by
+construction.
+
+It is phrased as "unless it is one of these" rather than "only if it is open", and the two
+existing dispute examples in `payment_webhook_handler_spec.rb` are what proved that
+matters: their fixtures carry no `status` at all, so an allowlist silently stopped debiting
+them. An unrecognised status — including one Stripe adds later — is a dispute against money
+that has already left Fuime's balance. Failing open debits the operator, which a won
+dispute then declines; failing closed has Fuime paying out money it has lost, which nothing
+recovers.
+
+**Deployment note.** The three `charge.dispute.*` events must be ticked on the platform
+webhook endpoint. `created` alone reproduces the old behaviour; missing `closed` is how
+the won-dispute bug comes back silently, and missing `updated` is how an escalated inquiry
+never debits.
+
+**Specs.** `spec/services/fuime/dispute_recorder_spec.rb` pins the case file, idempotency
+across re-delivery, the reinstatement, that a refund of the same payment survives winning a
+chargeback, that losing leaves the debit standing, that an inquiry records a case without
+touching the payable and still debits when it escalates, that an early warning reaches ops
+but not the teenager, and that both alert templates actually render — `have_enqueued_mail`
+proves only that a mail was queued, not that it can be built.
+`spec/requests/fuime_launch_ops_pages_spec.rb` covers the admin queue, the policy and the
+parent's two buttons as HTTP.
+
+**One test scenario that cannot exist**, worth knowing: a *full* chargeback reverses the
+whole sale, so the recorder's outstanding cap correctly refuses to post anything for a
+later refund of the same payment. The "winning must not back out a refund" example only
+means anything with a partial dispute.
+
+---
+
+## 2026-09-16 — A parent could not see or delete what Fuime holds about their child
+
+**Files:** `app/models/fuime/data_request.rb`, `app/services/fuime/data_export_service.rb`,
+`app/services/fuime/data_erasure_service.rb`, `app/mailers/fuime/data_request_mailer.rb`,
+`app/views/fuime/data_request_mailer/*`, `app/controllers/guardianships_controller.rb`,
+`app/policies/guardianship_policy.rb`, `app/views/guardianships/index.html.erb`,
+`app/views/admin/fuime_data_requests.html.erb`, `lib/tasks/fuime_data_request.rake`,
+`db/migrate/20260916110000_create_fuime_data_requests.rb`,
+`spec/services/fuime/data_rights_spec.rb`.
+
+**Why.** COPPA gives a parent the right to review what is held about their child and to
+have it deleted (16 CFR 312.6; CLAUDE.md L4/L6). Fuime had neither mechanism — this is
+G18 in `TEEN_GROWTH_GAPS.md`, listed there as blocking an honest public launch. A parent
+asking would have been answered by hand, or not at all.
+
+**Export is served in the request that asks for it.** It is a read of rows the guardian is
+already entitled to see, and a parent who has to wait for an email to learn what is held
+about their 14-year-old has been given a process, not an answer. The `Fuime::DataRequest`
+row is written after the file is built, as the receipt.
+
+**The rule the export is shaped around:** a parent has a right to their child's data and
+to nobody else's. A teen's account is entangled with other people — the customers who
+bought from them, a co-founder, that co-founder's guardian — so the file is built by
+asking "is this a fact about the subject?" rather than "can I reach it from the subject?".
+Sales therefore carry amount, date, product and a coarse region, and never a buyer's name,
+email, address or postal code. Receipt *files* are listed but not included (they routinely
+contain a third party's card details), and there are no identity documents to export
+because L4 means none were ever stored. The export says all of this out loud in
+`what_is_not_here`, because a parent who cannot tell an omission from a gap cannot trust
+the document.
+
+**Deletion is a request, not a switch, and the copy says what it actually does.** Fuime is
+the merchant of record: when a teenager's customer paid, they paid Fuime, and the record
+of that sale is Fuime's own accounting record — needed for tax, for a chargeback that can
+arrive up to 120 days later, and for the payable Fuime still owes. So
+`Fuime::DataErasureService` **severs the person from the records** rather than destroying
+them: every identifier on the user is overwritten, the account is locked, sessions and
+login codes go, and what remains is an anonymous counterparty on a transaction. The
+guardian page, the confirmation flash and the admin queue all say so in those words. A
+parent told "everything is deleted" who later learns a sales ledger still exists has been
+misled.
+
+**Two temporary blockers, and they are "not yet" rather than "no":** an open dispute is a
+live claim against a sale this account made, and Fuime cannot answer it after erasing who
+made it; an unsettled payout is money Fuime owes a family it is about to lose the ability
+to identify. Both resolve in weeks, and `#blockers` returns sentences so the parent can be
+told which it is and when.
+
+**Not reachable from a browser.** Erasure runs from `rake fuime:data_request:fulfil[id]`
+with `BY=<admin id>`, after `:preview` has shown what it would do. Irreversible work
+behind an admin button is one misclick from an incident, and this one cannot be undone by
+restoring a backup without restoring everybody else's data with it.
+
+**Authorization.** The active guardian only, plus admins — never the minor, in both
+directions and for opposite reasons. Review is a right COPPA gives the parent, and a teen
+exporting their own file gains nothing they cannot already see. Deletion is sharper: a
+14-year-old must not be able to erase the account their parent is legally responsible for.
+A *pending* guardianship is an unverified claim to be somebody's parent, so it is refused
+too.
+
+**The Privacy Policy was corrected in the same pass** (`PLATFORM_REVIEW_2026_09.md` row
+#25, still open until now). It claimed "We ask for a date of birth during signup and refuse
+to create an account for anyone under 13" fourteen lines above "**We do not ask for your
+date of birth.**" Signup is a 13+ attestation, not a date of birth, so the first sentence
+was false — in a legal document that a public launch puts in front of strangers. Its
+"Your rights" section also still said these requests were handled by hand and that
+withdrawing consent stops a teen operating a business, which is Connect-era and false under
+merchant of record. All three now describe what the code does, including what deletion
+actually leaves behind.
+
+---
+
+## 2026-09-16 — Every operational alert in this app was going to nobody, and one list was eating users' mail
+
+**Files:** `app/mailers/application_mailer.rb`, `app/mailers/admin_mailer.rb`,
+`app/mailers/fuime/dispute_mailer.rb`, `app/mailers/fuime/ops_digest_mailer.rb`,
+`app/views/fuime/ops_digest_mailer/*`, `app/jobs/fuime/ops_digest_job.rb`,
+`config/schedule.yml`, `render.yaml`, `spec/mailers/fuime_ops_alerting_spec.rb`.
+
+**Why this was invisible.** `ApplicationMailer.deliver_mail` returns early when a message
+has no recipients — upstream added it because HCB events without members produced SMTP
+errors. The consequence on a fork is that a misaddressed alert fails **silently**: "nobody
+is being told" and "everything is fine" are indistinguishable from inside the app. Three
+separate alerting paths were in that state.
+
+**1. `AdminMailer` was addressed to Hack Club.** Its `default to:` was
+`Credentials.fetch(:SLACK_NOTIFICATIONS_EMAIL)` plus `User.find_by_public_id("usr_MVtap3")`
+— a Hack Club staff member by *production* public_id. The credential is unset here and that
+public_id decodes against Fuime's own `HASHID_SALT`, so the list has always been empty.
+`Admin::DetectBalanceAnomaliesJob`, `DetectFeeAnomaliesJob`,
+`DetectLogicalTransactionAnomaliesJob` and `DetectLinkedObjectAnomaliesJob` are all
+scheduled, have been running since the fork, and have warned nobody. Had the credential
+been set, the failure would have been the opposite and worse: Fuime users' names and
+balances delivered to a third party (Rule 4).
+
+**2. `#engineers` required an on-call engineer to be a user of the platform.** An earlier
+pass had already replaced the hardcoded Hack Club staff with `FUIME_ENGINEER_EMAILS`, but
+the lookup was `User.where(email: emails)` — so an address that is not an account returned
+nothing — and the variable has never been set. Either miss returned `[]`, which is silence.
+Now: the configured engineers if any, the operations inbox otherwise.
+
+**3. `EARMUFFED_USER_IDS` was silently deleting Fuime users' mail.** This is the serious
+one, and it is a correctness bug rather than a rebrand. The list held four Hack Club staff
+addressed by production public_id. Those are **hashids**, and `find_by_public_id` decodes
+them against whatever salt this app has — so on Fuime they resolve to whichever user sits
+at the decoded integer. The file's own comment already recorded that `usr_b9YtZb` decodes
+to `User#id == 1`. The effect of being on the list is that every email to that person is
+stripped from every recipient list, in production only, with no error and no way to notice
+from outside: a founder who never receives a login code, a guardian who never receives an
+invite. At public-launch volume those low ids are early real accounts. Now `[]`, with the
+mechanism kept (Rule 2).
+
+**One definition, and this is the point of the change.** `ApplicationMailer.ops_recipients`
+reads `FUIME_OPS_EMAIL` (comma-separated, so the person on call changes without a deploy)
+and falls back to `support@fuime.com` rather than to an empty list, because unset must not
+mean "no alerts at all". `AdminMailer`, `Fuime::DisputeMailer` and the new digest all go
+through it. Several definitions is how one of them ends up pointing at an inbox nobody
+reads and nobody finds out until the thing it was warning about has already happened.
+
+**New: `Fuime::OpsDigestMailer#daily`**, 13:00 UTC — 6am Pacific, the same launch-cohort
+zone `Fuime::MinorMailWindow` defaults to. Upstream's `SendAdminRemindersJob` is left alone
+per Rule 8, but it enumerates OPDRs, ACH transfers, Increase checks and reimbursement
+reports — every one of those modules disabled on Fuime — so it has been sending an empty
+task list every morning at 7am UTC, which is 11pm Pacific. An alert that is always empty,
+arriving when nobody reads it, teaches its reader to ignore the channel.
+
+The digest carries the queues where a human standing still leaves a real person stuck:
+chargebacks to answer and any past deadline, parents waiting on a deletion, founders who
+cannot sell until somebody vets them, applications, payout runs waiting on approval, stale
+guardian invites — plus a 24-hour sales count. **It sends on quiet days deliberately.** An
+absent email means "nothing to do", "the worker is down" and "the SMTP credential expired"
+equally well, and on a launch week the last two are the ones that matter; a one-line
+all-clear makes its own absence informative.
+
+**Specs.** `spec/mailers/fuime_ops_alerting_spec.rb` pins each of the three silent failures
+— that `ops_recipients` never returns empty, that anomaly mail reaches Fuime, that an
+engineer need not have an account, that the earmuff list is empty — and that the digest
+renders, still sends when everything is zero, and leads with anything overdue.

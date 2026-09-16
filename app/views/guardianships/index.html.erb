@@ -128,6 +128,35 @@
           <p class="muted text-sm mt-3 mb-0">No venture started yet.</p>
         <% end %>
       <% end %>
+
+      <%# FUIME: the parent's data rights (COPPA 16 CFR 312.6; L4/L6). A right
+          nobody can find is not a right, and before this they existed nowhere in
+          the product — a parent asking would have been answered by hand.
+
+          Deliberately plain, and deliberately not a scary red box: the common
+          case is a parent who wants to see what is held, not one who is leaving.
+          The deletion copy says what deletion actually does, because
+          Fuime::DataErasureService severs the person from the sales records
+          rather than destroying them, and a parent promised more than that has
+          been misled. %>
+      <% if policy(guardianship).export_data? %>
+        <div class="mt-3 pt-3 border-t">
+          <p class="muted text-sm mb-2">
+            <strong>Your rights as <%= minor.first_name || "their" %>'s parent or guardian.</strong>
+            You can download everything Fuime holds about them, or ask us to delete it.
+          </p>
+          <div class="flex items-center flex-wrap gap-2">
+            <%= link_to "Download their data",
+                        export_data_guardianship_path(guardianship),
+                        class: "btn bg-muted" %>
+            <%= button_to "Request deletion",
+                          request_deletion_guardianship_path(guardianship),
+                          method: :post,
+                          class: "btn bg-muted",
+                          form: { data: { turbo_confirm: "Ask Fuime to delete #{minor.first_name || "this"} account? A person will action it within #{::Fuime::DataRequest::RESPONSE_WINDOW_DAYS} days. Records of sales already made stay in Fuime's accounts, with their name removed — Fuime is the legal seller on those sales and has to keep its own books." } } %>
+          </div>
+        </div>
+      <% end %>
     </div>
   <% end %>
 <% end %>

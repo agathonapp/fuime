@@ -5,6 +5,22 @@ class ApplicationMailer < ActionMailer::Base
 
   OPERATIONS_EMAIL = "support@fuime.com"
 
+  # Fuime: where operational alerts go — chargebacks, parents' deletion requests,
+  # ledger anomalies, the daily queue digest.
+  #
+  # One definition, because the failure mode of having several is that some of
+  # them point at an inbox nobody reads and nobody finds out until the thing
+  # they were warning about has already happened. Comma-separated, so the person
+  # on call can be added without a deploy.
+  #
+  # Falls back to support@fuime.com rather than to an empty list on purpose:
+  # ApplicationMailer.deliver_mail drops a message with no recipients silently,
+  # so "unset" must not mean "no alerts at all".
+  def self.ops_recipients
+    configured = ENV["FUIME_OPS_EMAIL"].to_s.split(",").map(&:strip).reject(&:empty?)
+    configured.presence || [OPERATIONS_EMAIL]
+  end
+
   DOMAIN = Rails.env.production? ? "fuime.com" : "localhost"
   default from: "Fuime <no-reply@#{DOMAIN}>"
   layout "mailer/default"
@@ -26,12 +42,25 @@ class ApplicationMailer < ActionMailer::Base
     super(mail)
   end
 
-  EARMUFFED_USER_IDS = [
-    "usr_b9YtZb", # Zach
-    "usr_b6mtLG", # Christina
-    "usr_N4tk5d", # Rachel A (personal)
-    "usr_ZBt5g5", # Rachel A (Hack Club)
-  ].freeze
+  # Fuime: EMPTY, and this is a correctness fix rather than a rebrand.
+  #
+  # Upstream this held four Hack Club staff, addressed by production `public_id`
+  # — `usr_b9YtZb` (Zach), `usr_b6mtLG` (Christina) and two for Rachel A. Those
+  # are hashids of Hack Club's own user ids, and `find_by_public_id` decodes them
+  # against whatever `HASHID_SALT` this app has. On Fuime they therefore do not
+  # resolve to those people; they resolve to whatever Fuime user happens to sit
+  # at the decoded integer, or to nobody.
+  #
+  # The comment below already records that `usr_b9YtZb` decodes to `User#id == 1`
+  # in test. In production that is an early Fuime account — and the effect of
+  # being on this list is that every email to that person is silently removed
+  # from every recipient list, for the life of the process, with no error. A
+  # founder who never receives a login code, a guardian who never gets an invite,
+  # and no way to tell from the outside.
+  #
+  # Kept as a mechanism (Rule 2): suppressing mail to a specific real user is
+  # occasionally necessary. Add Fuime public_ids when Fuime has a reason to.
+  EARMUFFED_USER_IDS = [].freeze
 
   def self.earmuffed_recipients
     # Earmuffing exists to suppress mail to specific real production users

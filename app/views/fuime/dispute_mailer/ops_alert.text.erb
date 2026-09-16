@@ -1,0 +1,21 @@
+<%= @dispute.status.humanize %> — <%= render_money @dispute.amount_cents %> on <%= @event.name %>.
+
+Reason:       <%= @dispute.reason_label %>
+Response due: <%= @dispute.evidence_due_at&.strftime("%B %-d, %Y at %l:%M %p UTC") || "no deadline (early warning)" %>
+Dispute:      <%= @dispute.stripe_dispute_id %>
+Payment:      <%= @dispute.stripe_payment_intent_id %>
+
+<% if @dispute.open? -%>
+Fuime is the merchant of record, so this dispute is against Fuime LLC and Fuime
+responds to it — not the founder. A dispute nobody answers by its deadline is
+lost by default.
+
+Respond in Stripe: <%= @stripe_url %>
+<% elsif @dispute.won? -%>
+Won. The reversal on <%= @event.name %>'s ledger has been backed out, so the
+operator's payable is restored.
+<% else -%>
+Lost. The money has left Fuime's balance and the operator's payable stays reduced.
+<% end -%>
+
+All disputes: <%= @admin_url %>

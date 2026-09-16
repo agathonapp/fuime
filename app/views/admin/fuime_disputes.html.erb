@@ -1,0 +1,109 @@
+<% title "Disputes (Fuime)" %>
+
+<%# FUIME: every chargeback against Fuime as merchant of record, soonest deadline
+    first.
+
+    The row that matters is one in `needs_response` with a due date close to now:
+    the dispute is against Fuime LLC, and one nobody answers by that date is lost
+    by default. The operator's payable has ALREADY been debited — that happens on
+    `charge.dispute.created`, in Fuime::PaymentWebhookHandler — so this page is
+    about the response, not about the money.
+
+    Read-only. Evidence is submitted in the Stripe Dashboard; see
+    AdminController#fuime_disputes for why there is no form here. %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <span class="badge <%= @counts[:actionable].positive? ? "bg-warning" : "bg-muted" %>">
+    Needs a response: <%= @counts[:actionable] %>
+  </span>
+  <span class="badge bg-muted">Open: <%= @counts[:open] %></span>
+  <span class="badge bg-muted">Closed: <%= @counts[:closed] %></span>
+  <span class="badge bg-muted">
+    At stake: <%= render_money @open_amount_cents %>
+  </span>
+</div>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <%= link_to "All", fuime_disputes_admin_index_path, class: "badge #{@status.nil? ? "bg-info" : "bg-muted"}" %>
+  <%= link_to "Open", fuime_disputes_admin_index_path(status: "open"), class: "badge #{@status == "open" ? "bg-info" : "bg-muted"}" %>
+  <%= link_to "Closed", fuime_disputes_admin_index_path(status: "closed"), class: "badge #{@status == "closed" ? "bg-info" : "bg-muted"}" %>
+</div>
+
+<% if @disputes.empty? %>
+  <%# Not a blank slate to decorate. An empty dispute queue is the good outcome,
+      and the sentence has to distinguish it from "the webhook is not wired",
+      which looks identical from here. %>
+  <div class="card">
+    <p class="mt0"><strong>No disputes recorded.</strong></p>
+    <p class="muted mb0">
+      That is the expected state. If you believe a chargeback has happened,
+      check that <code>charge.dispute.created</code>, <code>charge.dispute.updated</code>
+      and <code>charge.dispute.closed</code> are all registered on the platform
+      webhook endpoint — see <code>docs/fuime/MOR_WEBHOOK_PASS.md</code>.
+    </p>
+  </div>
+<% else %>
+  <div class="flex items-center mb2 flex-col sm:flex-row">
+    <div class="flex-grow">
+      <%= page_entries_info @disputes, entry_name: "disputes" %>
+    </div>
+    <%= paginate @disputes %>
+  </div>
+
+  <table class="min-w-0">
+    <thead>
+      <tr>
+        <th>Business</th>
+        <th>Amount</th>
+        <th>Reason</th>
+        <th>Status</th>
+        <th>Response due</th>
+        <th>Opened</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @disputes.each do |dispute| %>
+        <tr>
+          <td>
+            <%= link_to dispute.event.name, event_path(dispute.event) %>
+            <% if dispute.sale&.offer %>
+              <div class="muted"><%= dispute.sale.offer.name %></div>
+            <% end %>
+          </td>
+          <td><%= render_money dispute.amount_cents %></td>
+          <td><%= dispute.reason_label %></td>
+          <td>
+            <span class="badge <%= dispute.actionable? ? "bg-warning" : dispute.lost? ? "bg-error" : "bg-muted" %>">
+              <%= dispute.status.humanize %>
+            </span>
+            <% if dispute.reinstated? %>
+              <%# The operator got their money back. Worth stating on the row,
+                  because "won" alone does not say whether the ledger followed. %>
+              <div class="muted">Payable restored</div>
+            <% end %>
+          </td>
+          <td>
+            <% if dispute.evidence_due_at.present? %>
+              <span class="<%= dispute.overdue? ? "error" : "" %>">
+                <%= dispute.evidence_due_at.strftime("%b %-d, %Y") %>
+              </span>
+              <% if dispute.overdue? %>
+                <div class="error">Overdue</div>
+              <% elsif dispute.actionable? %>
+                <div class="muted"><%= distance_of_time_in_words_to_now(dispute.evidence_due_at) %> left</div>
+              <% end %>
+            <% else %>
+              <span class="muted">—</span>
+            <% end %>
+          </td>
+          <td><%= dispute.opened_at.strftime("%b %-d, %Y") %></td>
+          <td>
+            <%= link_to "Respond in Stripe", dispute.stripe_dashboard_url,
+                        target: "_blank", rel: "noopener", class: "badge bg-info" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

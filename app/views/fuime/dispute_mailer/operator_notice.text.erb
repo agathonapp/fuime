@@ -1,0 +1,22 @@
+Hi,
+
+A customer asked their card company to reverse a payment they made to
+<%= @event.name %>. This is called a dispute, or a chargeback.
+
+While it is being reviewed, <%= render_money @dispute.amount_cents %> has been
+taken off what Fuime owes you for that sale. That is why the amount on your
+payouts page changed.
+
+You do not need to do anything. Fuime is the legal seller on every sale made
+through the platform, so the card company's dispute is with Fuime and we handle
+the response. If we win it, the amount goes back to what you are owed. If we
+lose it, it stays reduced — that is the part of selling online that we carry
+with you.
+
+If you know something about this sale that would help — what you delivered,
+when, and any messages with the customer — reply to this email and it will reach
+a person. It genuinely helps.
+
+Your payouts page: <%= @payouts_url %>
+
+Questions: <%= @support_email %>
