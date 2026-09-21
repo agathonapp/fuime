@@ -772,6 +772,24 @@ failures under concurrency, re-run the file alone before believing them.
 |---|---|---|
 | 4 | `receipt_bin_mailbox_spec` :34 :48 :68 :84 | Environment — Apple Silicon `wkhtmltopdf`. The standing baseline, unchanged. |
 
+## 2026-09-21 — after the on-call pager (`48e9baabb`)
+
+**4324 examples, 4 failures, 17 pending. 22m27s.** The 4 are the same
+`receipt_bin_mailbox_spec` rows as every run since 2026-08-01, so this is a
+zero-regression run — the number of examples moved, the failures did not.
+
+**Gotcha that cost most of an hour here, and it is the one already warned about
+further down this file.** Running the full suite while other targeted `rspec`
+runs hit the same `bank_test` database does not deadlock loudly — it silently
+truncates. The first full run exited 0 after roughly 145 examples with no summary
+line, which reads exactly like a pass if you only check the exit code. Run the
+full suite ALONE, and give each concurrent targeted run its own database
+(`-e DATABASE_URL=...bank_test_<name>`).
+
+**Second gotcha: do not pipe a long docker run through `grep`/`tail`.** The
+pipeline buffers everything until the container exits, so you get no progress and
+no partial output if it dies. Redirect to a file and poll the file instead.
+
 **The real baseline on this tree is still 4, all environmental.** Sandbox Mode's
 own file (`spec/requests/fuime_sandbox_spec.rb`) is 24/24.
 
