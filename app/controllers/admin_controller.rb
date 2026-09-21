@@ -1202,6 +1202,137 @@ class AdminController < Admin::BaseController
     @overdue = Fuime::DataRequest.needs_action.select(&:overdue?).size
   end
 
+  # ── FUIME: the on-call console ───────────────────────────────────────────
+  #
+  # One page that answers three questions, in the order you ask them when
+  # something is wrong:
+  #
+  #   1. What is broken right now?          → open incidents
+  #   2. Who is being told about it?        → the roster
+  #   3. Did the last page actually land?   → recent delivery attempts
+  #
+  # The third is the one no other tool here has ever been able to answer, and it
+  # is the reason every notification attempt is recorded. See
+  # Fuime::IncidentNotification.
+  def oncall
+    @incidents = Fuime::Incident.live.by_urgency.includes(:acknowledged_by).limit(50)
+    @recently_resolved = Fuime::Incident.status_resolved.order(resolved_at: :desc).limit(10)
+    @responders = Fuime::Oncall::Responder.order(:escalation_position, :id)
+    @notifications = Fuime::IncidentNotification.recent.includes(:incident, :responder).limit(25)
+
+    @counts = {
+      sev1: Fuime::Incident.live.severity_sev1.count,
+      unacknowledged: Fuime::Incident.unacknowledged.count,
+      live: Fuime::Incident.live.count
+    }
+    # Surfaced at the top of the page because it is the one configuration gap
+    # that makes everything else on the page decorative: nothing inside this app
+    # can notice that this app has stopped.
+    @heartbeat_url = ENV["FUIME_HEARTBEAT_URL"].presence
+  end
+
+  def oncall_responder_create
+    responder = Fuime::Oncall::Responder.new(oncall_responder_params)
+
+    if responder.save
+      flash[:success] = "#{responder.name} is on call."
+    else
+      flash[:error] = responder.errors.full_messages.to_sentence
+    end
+
+    redirect_to oncall_admin_index_path
+  end
+
+  def oncall_responder_update
+    responder = Fuime::Oncall::Responder.find(params[:id])
+
+    if responder.update(oncall_responder_params)
+      flash[:success] = "Updated #{responder.name}."
+    else
+      flash[:error] = responder.errors.full_messages.to_sentence
+    end
+
+    redirect_to oncall_admin_index_path
+  end
+
+  def oncall_responder_destroy
+    responder = Fuime::Oncall::Responder.find(params[:id])
+    responder.destroy!
+    flash[:success] = "Removed #{responder.name} from the roster."
+    redirect_to oncall_admin_index_path
+  end
+
+  def oncall_incident_acknowledge
+    incident = Fuime::Incident.find(params[:id])
+    incident.acknowledge!(user: current_user)
+    flash[:success] = "Acknowledged. Repeat pages for this incident have stopped."
+    redirect_to oncall_admin_index_path
+  end
+
+  def oncall_incident_resolve
+    incident = Fuime::Incident.find(params[:id])
+    incident.resolve!(user: current_user)
+    flash[:success] = "Resolved."
+    redirect_to oncall_admin_index_path
+  end
+
+  # FUIME: fire a real page, through the real path, on purpose.
+  #
+  # ── Why this button is not a nicety ──────────────────────────────────────
+  #
+  # A pager is a control you use once a quarter, at the worst possible moment,
+  # after months in which nothing exercised it. Every part of it rots silently:
+  # a push topic gets deleted, a Twilio number lapses, a phone reinstalls the app
+  # and loses its subscription, an SMTP key rotates. None of that produces an
+  # error anywhere until the night it matters, and on that night the symptom is
+  # simply that nobody wakes up.
+  #
+  # So this raises a genuine sev-1 through Fuime::Oncall::Pager — the same
+  # code, the same channels, the same escalation — and then resolves it. It is
+  # the only honest answer to "is my pager working", and it should be pressed
+  # after any change to the roster, and about monthly otherwise.
+  def oncall_test_page
+    incident = Fuime::Incident.raise!(
+      key: "oncall.test_page",
+      check_name: "manual_test",
+      title: "Test page requested by #{current_user.name}",
+      severity: :sev1,
+      detail: {
+        "requested_by" => current_user.name,
+        "requested_at" => Time.current.iso8601,
+        "note"         => "This is a test. Nothing is broken. If you did not receive this on every " \
+                  "channel you expected, that channel is not working."
+      }
+    )
+
+    Fuime::Oncall::Pager.page!(incident)
+    attempts = incident.notifications.reload
+
+    # Resolved immediately: a test incident left open would escalate through the
+    # roster all night, which is a memorable way to learn this lesson once.
+    incident.resolve!(user: current_user)
+
+    delivered = attempts.select(&:succeeded?)
+    if delivered.any?
+      flash[:success] = "Test page sent over #{delivered.map(&:channel).uniq.join(', ')}. " \
+                        "If it does not arrive on your phone in the next minute, the channel is broken even though it reported success."
+    else
+      flash[:error] = "Nothing was delivered. #{attempts.map(&:error).compact.first || 'Check the roster below.'}"
+    end
+
+    redirect_to oncall_admin_index_path
+  end
+
+  # FUIME: run the checks now rather than waiting for the 5-minute schedule.
+  # `page: false` — a manual sweep is for looking, and a button that could wake
+  # somebody is a button people stop pressing.
+  def oncall_sweep
+    result = Fuime::Oncall::Sweep.run!(page: false)
+    flash[:success] = "Swept #{result.checked.size} checks: #{result.raised.size} raised, " \
+                      "#{result.resolved.size} resolved, #{result.errored.size} could not run."
+    redirect_to oncall_admin_index_path
+  end
+
   def payout_batches
     @page = params[:page] || 1
     @per = params[:per] || 20
@@ -2224,6 +2355,14 @@ class AdminController < Admin::BaseController
     pending_task :organizer_position_deletion_requests
 
     @pending_tasks
+  end
+
+
+  def oncall_responder_params
+    params.require(:responder).permit(
+      :name, :email, :phone_number, :push_kind, :push_url, :push_credential,
+      :escalation_position, :receives_pages, :receives_digest, :active
+    )
   end
 
 end

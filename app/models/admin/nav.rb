@@ -301,6 +301,17 @@ module Admin
             count: ->{ Fuime::Dispute.actionable.count },
             count_type: :tasks
           ),
+          # FUIME: the on-call console. :tasks because an open incident is
+          # literally work that somebody has to pick up, and because the count
+          # appearing in the nav is a second, passive way to learn that
+          # something is wrong — one that works even if every paging channel
+          # is broken, which is the case this whole subsystem is about.
+          make_item(
+            name: "On-call (Fuime)",
+            path: oncall_admin_index_path,
+            count: ->{ Fuime::Incident.live.count },
+            count_type: :tasks
+          ),
           # FUIME: parents' COPPA requests. :tasks because a deletion request
           # carries a response date Fuime has promised the parent in writing, and
           # the queue is the only thing that knows it is running out.

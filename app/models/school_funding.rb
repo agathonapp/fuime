@@ -47,7 +47,7 @@
 # Check Constraints
 #
 #  school_fundings_amount_positive         (amount_cents > 0) NOT VALID
-#  school_fundings_status_known            (status::text = ANY (ARRAY['pending'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text, 'canceled'::character varying::text])) NOT VALID
+#  school_fundings_status_known            (status::text = ANY (ARRAY['pending'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])) NOT VALID
 #  school_fundings_succeeded_is_evidenced  (status::text <> 'succeeded'::text OR stripe_topup_id IS NOT NULL AND succeeded_at IS NOT NULL) NOT VALID
 #
 class SchoolFunding < ApplicationRecord

@@ -42,6 +42,11 @@ module StaticPagesHelper
   # lists can be read, and reordered, without picking through ERB.
   def admin_queues
     [
+      # FUIME: first, and not by accident. Every other queue on this list is work
+      # that can wait until tomorrow. This one is the only entry that can mean
+      # money is not reaching ledgers right now, and it is also the passive
+      # channel that still works when every paging channel is broken.
+      { name: "Open incidents", path: oncall_admin_index_path, badge: Fuime::Incident.live.count },
       { name: "Operator vetting", path: operator_vetting_admin_index_path, badge: Event.not_hidden.operator_vetting_unvetted.count },
       { name: "Payout runs", path: payout_batches_admin_index_path, badge: Fuime::PayoutBatch.awaiting_approval.count },
       { name: "Applications", path: applications_admin_index_path, badge: Event::Application.under_review.count },

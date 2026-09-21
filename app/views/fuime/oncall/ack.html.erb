@@ -1,0 +1,21 @@
+<%# Fuime: what you see after tapping "acknowledge" on a page.
+    Written for a phone screen at 3am: the one fact that matters is whether the
+    repeat pages have stopped, so that is the first line and it is unambiguous. %>
+<div class="container" style="max-width: 32rem; margin: 4rem auto; text-align: center;">
+  <h1 style="margin-bottom: 0.5rem;">
+    <%= @incident.status_open? ? "Could not acknowledge" : "Acknowledged" %>
+  </h1>
+
+  <p style="color: #8492a6;">
+    <%= @incident.severity.upcase %> · <%= @incident.title %>
+  </p>
+
+  <p style="margin-top: 1.5rem;">
+    The repeat pages for this incident have stopped.
+    It stays open until somebody resolves it or the check stops seeing the problem.
+  </p>
+
+  <p style="margin-top: 2rem;">
+    <%= link_to "Open the on-call console", oncall_admin_index_path, class: "btn" %>
+  </p>
+</div>

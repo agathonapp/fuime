@@ -354,6 +354,19 @@ export const adminActions = (adminUrls, isPretending) => {
     //
     // Do not re-add from upstream. Re-enabling a module means restoring its
     // Admin::Nav entry first; this list follows.
+    // FUIME: the on-call console. First in this list because ⌘K is how an admin
+    // navigates when they are already in a hurry, and this is the page that
+    // answers "is anything on fire" — including the case where the pager itself
+    // is the thing that is broken and no notification arrived at all.
+    {
+      id: 'admin-oncall',
+      section: 'Admin Tools',
+      priority: Priority.HIGH,
+      name: 'On-call',
+      keywords: 'oncall incidents pager alerts paging broken outage',
+      icon: <Icon glyph="important" size={16} />,
+      perform: navigate('/admin/oncall'),
+    },
     // ledger
     {
       id: 'admin-ledger',

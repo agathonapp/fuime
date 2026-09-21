@@ -2,6 +2,45 @@
 
 ## Handoff (most recent first)
 
+**2026-09-21 — A pager, and the daily digest finally reaching a person rather
+than an inbox.** Read `docs/fuime/ONCALL.md` first.
+1. **The digest was not broken — being an admin simply granted nothing.**
+   `Fuime::OpsDigestMailer` sent to `ApplicationMailer.ops_recipients`, which
+   read `FUIME_OPS_EMAIL` (never set) and fell back to `support@fuime.com`.
+   There was no path from `User#admin?` to being told anything. Alert routing is
+   now the `fuime_oncall_responders` table, unioned with the env var; add
+   yourself with `rake 'fuime:oncall:add[Name,email]'` or at `/admin/oncall`.
+2. **THE TWO THINGS STILL TO DO, and neither is code.** Both need a free
+   account outside Render, and until they exist a total outage pages nobody:
+   set `FUIME_HEARTBEAT_URL` on the **worker** (a healthchecks.io ping,
+   ~5 min + grace), and point an uptime check at `https://fuime.com/healthz`.
+   `/admin/oncall` leads with a banner while the first is missing. Everything
+   else in the subsystem runs *inside* the app and cannot report its own death.
+3. **Press "Send a test page" after any roster change, and monthly otherwise.**
+   A pager is used once a quarter at the worst moment after months of nothing
+   exercising it, and every part of it rots silently — a deleted push topic, a
+   lapsed Twilio number, a rotated SMTP key. `rake fuime:oncall:test_page` does
+   the same from a shell. A `delivered` means the relay accepted it, NOT that a
+   phone made a noise.
+4. **Email is not a page.** A roster row with only an email shows "email only"
+   on the console for that reason. To actually be woken: ntfy (free, but put a
+   bearer token in `push_credential` or the topic is world-readable and Fuime
+   strips the page down to a severity and a link), Pushover ($5, emergency
+   priority), or a phone number (SMS on sev-2, a real call on sev-1 — needs
+   Fuime's own `TWILIO__*`, not Hack Club's). Set your Fuime number to Emergency
+   Bypass on your phone; it is the one channel DND cannot eat.
+5. **`money_in` is deliberately disarmed below 14 sales/week, and that is
+   correct.** Zero sales in six hours is a broken checkout and a quiet afternoon
+   equally. Do not lower the threshold to make it feel useful. The check that
+   works at any volume from day one is `money_in.webhook_gap`, raised by
+   `Fuime::MissedMorPaymentSweepJob` when the sweep actually recovers a sale —
+   that means the webhook path is broken and the next sale drops too.
+6. **Gotcha:** `Stripe::Balance.retrieve({api_key: key})` sends the key as a
+   query param and 400s. It is `retrieve({}, {api_key: key})` — params first,
+   options second. My Stripe health check reported Stripe as down for this
+   reason until it was fixed.
+
+
 **2026-09-16 — Two things a public launch cannot go without: somebody being told
 about a chargeback, and a parent being able to see or delete their child's data.**
 1. **A won dispute used to leave a teenager permanently short.**

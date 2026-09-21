@@ -1,5 +1,39 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: fuime_disputes
+#
+#  id                       :bigint           not null, primary key
+#  amount_cents             :integer          not null
+#  closed_at                :datetime
+#  currency                 :string           default("usd"), not null
+#  evidence_due_at          :datetime
+#  opened_at                :datetime         not null
+#  reason                   :string
+#  reinstated_at            :datetime
+#  status                   :string           not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  event_id                 :bigint           not null
+#  fuime_sale_id            :bigint
+#  stripe_charge_id         :string
+#  stripe_dispute_id        :string           not null
+#  stripe_payment_intent_id :string           not null
+#
+# Indexes
+#
+#  index_fuime_disputes_on_event_id                    (event_id)
+#  index_fuime_disputes_on_fuime_sale_id               (fuime_sale_id)
+#  index_fuime_disputes_on_status_and_evidence_due_at  (status,evidence_due_at)
+#  index_fuime_disputes_on_stripe_dispute_id           (stripe_dispute_id) UNIQUE
+#  index_fuime_disputes_on_stripe_payment_intent_id    (stripe_payment_intent_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (event_id => events.id)
+#  fk_rails_...  (fuime_sale_id => fuime_sales.id)
+#
 module Fuime
   # Fuime: a chargeback against a merchant-of-record sale, as a thing a person
   # can be assigned rather than a line in a ledger.

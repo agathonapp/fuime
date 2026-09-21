@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1058,7 +1058,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["fuime_cohort_id"], name: "index_event_applications_on_fuime_cohort_id"
     t.index ["service_type"], name: "index_event_applications_on_service_type", where: "(service_type IS NOT NULL)"
     t.index ["user_id"], name: "index_event_applications_on_user_id"
-    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying, 'have_idea'::character varying, 'from_template'::character varying]::text[]))", name: "event_applications_starting_point_known"
+    t.check_constraint "starting_point IS NULL OR (starting_point::text = ANY (ARRAY['have_business'::character varying::text, 'have_idea'::character varying::text, 'from_template'::character varying::text]))", name: "event_applications_starting_point_known"
   end
 
   create_table "event_configurations", force: :cascade do |t|
@@ -1383,6 +1383,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["stripe_payment_intent_id"], name: "index_fuime_disputes_on_stripe_payment_intent_id"
   end
 
+  create_table "fuime_incident_notifications", force: :cascade do |t|
+    t.datetime "attempted_at", null: false
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.text "error"
+    t.bigint "incident_id", null: false
+    t.bigint "responder_id"
+    t.string "response_code"
+    t.integer "status", default: 0, null: false
+    t.string "target_redacted"
+    t.datetime "updated_at", null: false
+    t.index ["incident_id", "attempted_at"], name: "idx_on_incident_id_attempted_at_acf1592728"
+    t.index ["responder_id"], name: "index_fuime_incident_notifications_on_responder_id"
+  end
+
+  create_table "fuime_incidents", force: :cascade do |t|
+    t.string "ack_token", null: false
+    t.datetime "acknowledged_at"
+    t.bigint "acknowledged_by_id"
+    t.boolean "auto_resolved", default: false, null: false
+    t.string "check_name", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "detail", default: {}, null: false
+    t.integer "escalation_position", default: 0, null: false
+    t.string "key", null: false
+    t.datetime "last_paged_at"
+    t.datetime "opened_at", null: false
+    t.integer "page_count", default: 0, null: false
+    t.datetime "resolved_at"
+    t.integer "severity", default: 1, null: false
+    t.integer "status", default: 0, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ack_token"], name: "index_fuime_incidents_on_ack_token", unique: true
+    t.index ["acknowledged_by_id"], name: "index_fuime_incidents_on_acknowledged_by_id"
+    t.index ["key"], name: "index_fuime_incidents_one_open_per_key", unique: true, where: "(resolved_at IS NULL)"
+    t.index ["status", "severity", "opened_at"], name: "index_fuime_incidents_on_status_and_severity_and_opened_at"
+  end
+
   create_table "fuime_offers", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
     t.datetime "created_at", null: false
@@ -1405,13 +1444,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["event_id"], name: "index_fuime_offers_on_event_id"
     t.index ["fuime_api_key_id"], name: "index_fuime_offers_on_fuime_api_key_id"
     t.index ["public_token"], name: "index_fuime_offers_on_public_token", unique: true, where: "(public_token IS NOT NULL)"
-    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])", name: "fuime_offers_state_known"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'published'::character varying::text, 'archived'::character varying::text])", name: "fuime_offers_state_known"
     t.check_constraint "price_cents > 0 AND price_cents <= 1000000", name: "fuime_offers_price_in_range"
-    t.check_constraint "recurring_interval IS NULL OR (recurring_interval::text = ANY (ARRAY['month'::character varying, 'year'::character varying]::text[]))", name: "fuime_offers_recurring_interval_known"
+    t.check_constraint "recurring_interval IS NULL OR (recurring_interval::text = ANY (ARRAY['month'::character varying::text, 'year'::character varying::text]))", name: "fuime_offers_recurring_interval_known"
   end
 
   add_check_constraint "fuime_offers", "created_via::text <> 'api'::text OR fuime_api_key_id IS NOT NULL", name: "fuime_offers_api_offers_name_their_key", validate: false
-  add_check_constraint "fuime_offers", "created_via::text = ANY (ARRAY['operator'::character varying, 'api'::character varying]::text[])", name: "fuime_offers_created_via_known", validate: false
+  add_check_constraint "fuime_offers", "created_via::text = ANY (ARRAY['operator'::character varying::text, 'api'::character varying::text])", name: "fuime_offers_created_via_known", validate: false
+
+  create_table "fuime_oncall_responders", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.integer "escalation_position", default: 1, null: false
+    t.string "name", null: false
+    t.string "phone_number"
+    t.text "push_credential_ciphertext"
+    t.string "push_kind"
+    t.string "push_url"
+    t.boolean "receives_digest", default: true, null: false
+    t.boolean "receives_pages", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["active", "escalation_position"], name: "idx_on_active_escalation_position_a5877b0ccb"
+    t.index ["user_id"], name: "index_fuime_oncall_responders_on_user_id"
+  end
 
   create_table "fuime_payout_batches", force: :cascade do |t|
     t.string "aasm_state", default: "draft", null: false
@@ -1437,7 +1494,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["approved_by_id"], name: "index_fuime_payout_batches_on_approved_by_id"
     t.index ["paid_by_id"], name: "index_fuime_payout_batches_on_paid_by_id"
     t.index ["period_end"], name: "index_live_fuime_payout_batches_on_period_end", unique: true, where: "((aasm_state)::text <> 'cancelled'::text)"
-    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying, 'approved'::character varying, 'paid'::character varying, 'cancelled'::character varying]::text[])", name: "fuime_payout_batches_state_known"
+    t.check_constraint "aasm_state::text = ANY (ARRAY['draft'::character varying::text, 'approved'::character varying::text, 'paid'::character varying::text, 'cancelled'::character varying::text])", name: "fuime_payout_batches_state_known"
     t.check_constraint "period_end >= period_start", name: "fuime_payout_batches_period_ordered"
   end
 
@@ -1461,9 +1518,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["event_id"], name: "index_live_fuime_payout_methods_on_event", unique: true, where: "((aasm_state)::text <> 'removed'::text)"
   end
 
-  add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'failed'::character varying, 'removed'::character varying]::text[])", name: "fuime_payout_methods_state_known", validate: false
+  add_check_constraint "fuime_payout_methods", "aasm_state::text = ANY (ARRAY['pending'::character varying::text, 'verified'::character varying::text, 'failed'::character varying::text, 'removed'::character varying::text])", name: "fuime_payout_methods_state_known", validate: false
   add_check_constraint "fuime_payout_methods", "last4 IS NULL OR length(last4::text) <= 4", name: "fuime_payout_methods_last4_is_last4", validate: false
-  add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying, 'stripe'::character varying, 'manual'::character varying]::text[])", name: "fuime_payout_methods_provider_known", validate: false
+  add_check_constraint "fuime_payout_methods", "provider::text = ANY (ARRAY['plaid'::character varying::text, 'stripe'::character varying::text, 'manual'::character varying::text])", name: "fuime_payout_methods_provider_known", validate: false
 
   create_table "fuime_sales", force: :cascade do |t|
     t.integer "amount_cents", null: false
@@ -1537,7 +1594,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["fuime_webhook_endpoint_id", "event_id"], name: "index_fuime_deliveries_unique_per_endpoint", unique: true
     t.index ["fuime_webhook_endpoint_id"], name: "index_fuime_deliveries_on_endpoint"
     t.index ["status", "next_attempt_at"], name: "index_fuime_deliveries_on_status_and_due"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[])", name: "fuime_webhook_deliveries_status_known"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text])", name: "fuime_webhook_deliveries_status_known"
   end
 
   create_table "fuime_webhook_endpoints", force: :cascade do |t|
@@ -2382,7 +2439,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
     t.index ["requested_by_id"], name: "index_payout_requests_on_requested_by_id"
     t.index ["settled_by_id"], name: "index_payout_requests_on_settled_by_id"
     t.index ["stripe_payout_id"], name: "index_payout_requests_on_stripe_payout_id", unique: true, where: "(stripe_payout_id IS NOT NULL)"
-    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying, 'personal_transfer'::character varying, 'fuime_vendor_payment'::character varying]::text[])", name: "payout_requests_destination_known"
+    t.check_constraint "destination::text = ANY (ARRAY['account_owner_bank'::character varying::text, 'personal_transfer'::character varying::text, 'fuime_vendor_payment'::character varying::text])", name: "payout_requests_destination_known"
     t.check_constraint "reserve_held_cents >= 0", name: "payout_requests_reserve_not_negative"
   end
 
@@ -2870,7 +2927,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
 
   add_check_constraint "school_fundings", "amount_cents > 0", name: "school_fundings_amount_positive", validate: false
   add_check_constraint "school_fundings", "status::text <> 'succeeded'::text OR stripe_topup_id IS NOT NULL AND succeeded_at IS NOT NULL", name: "school_fundings_succeeded_is_evidenced", validate: false
-  add_check_constraint "school_fundings", "status::text = ANY (ARRAY['pending'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])", name: "school_fundings_status_known", validate: false
+  add_check_constraint "school_fundings", "status::text = ANY (ARRAY['pending'::character varying::text, 'succeeded'::character varying::text, 'failed'::character varying::text, 'canceled'::character varying::text])", name: "school_fundings_status_known", validate: false
 
   create_table "sponsors", force: :cascade do |t|
     t.text "address_city"
@@ -3616,8 +3673,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_110000) do
   add_foreign_key "fuime_data_requests", "users", column: "subject_id"
   add_foreign_key "fuime_disputes", "events"
   add_foreign_key "fuime_disputes", "fuime_sales"
+  add_foreign_key "fuime_incident_notifications", "fuime_incidents", column: "incident_id"
+  add_foreign_key "fuime_incident_notifications", "fuime_oncall_responders", column: "responder_id"
+  add_foreign_key "fuime_incidents", "users", column: "acknowledged_by_id"
   add_foreign_key "fuime_offers", "events"
   add_foreign_key "fuime_offers", "fuime_api_keys", validate: false
+  add_foreign_key "fuime_oncall_responders", "users"
   add_foreign_key "fuime_payout_batches", "users", column: "approved_by_id"
   add_foreign_key "fuime_payout_batches", "users", column: "paid_by_id"
   add_foreign_key "fuime_payout_methods", "events", validate: false

@@ -1,0 +1,16 @@
+<%= @incident.severity.upcase %> — <%= @incident.title %>
+
+Opened <%= @incident.opened_at.utc.strftime("%Y-%m-%d %H:%M UTC") %> by the <%= @incident.check_name.humanize.downcase %> check.
+
+<% if @detail.any? -%>
+WHAT THE CHECK SAW
+<% @detail.each do |key, value| -%>
+  <%= key.to_s.humanize %>: <%= value.is_a?(Enumerable) ? value.to_json : value %>
+<% end -%>
+
+<% end -%>
+Acknowledge (stops the repeat pages, leaves the incident open):
+  <%= @incident.ack_url %>
+
+All open incidents:
+  <%= @incident.console_url %>

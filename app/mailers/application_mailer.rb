@@ -10,15 +10,48 @@ class ApplicationMailer < ActionMailer::Base
   #
   # One definition, because the failure mode of having several is that some of
   # them point at an inbox nobody reads and nobody finds out until the thing
-  # they were warning about has already happened. Comma-separated, so the person
-  # on call can be added without a deploy.
+  # they were warning about has already happened.
+  #
+  # ── Two sources, and why the roster was added ─────────────────────────────
+  #
+  # This used to be FUIME_OPS_EMAIL alone, and every property of that worked
+  # against the thing it was for. It was never set, so every alert went to
+  # support@fuime.com — a shared inbox, not a person. It has to be set on BOTH
+  # the web service and the worker, because these alerts are `deliver_later` and
+  # it is the worker that reads the variable, and setting one of the two looks
+  # exactly like setting both. And nothing in the app could show you its value,
+  # so "am I actually being alerted?" was a question you could only answer by
+  # breaking something.
+  #
+  # Being an admin granted nothing here either. An admin could hold every
+  # permission in the console and still never learn that a chargeback had
+  # arrived, because admin status and alert routing had no connection at all.
+  #
+  # So the on-call roster is now the primary source: a row per person, editable
+  # from /admin/oncall at 3am without a deploy, visible to anyone who wonders
+  # who is being told. FUIME_OPS_EMAIL is kept and UNIONED rather than replaced —
+  # it is the escape hatch for a mailing list or a ticketing address that should
+  # not be a responder, and removing a working mechanism to install a better one
+  # is how the gap between them becomes an outage.
   #
   # Falls back to support@fuime.com rather than to an empty list on purpose:
   # ApplicationMailer.deliver_mail drops a message with no recipients silently,
   # so "unset" must not mean "no alerts at all".
   def self.ops_recipients
     configured = ENV["FUIME_OPS_EMAIL"].to_s.split(",").map(&:strip).reject(&:empty?)
-    configured.presence || [OPERATIONS_EMAIL]
+    (configured + roster_recipients).uniq.presence || [OPERATIONS_EMAIL]
+  end
+
+  # Rescued rather than allowed to raise: this is called from a mailer's `to:`,
+  # which runs during migrations, during `db:schema:load`, and in any process
+  # where the table may not exist yet. An alert that fails to send because the
+  # ROSTER lookup exploded would be the most ironic outage in this codebase, so
+  # a broken lookup degrades to the environment variable and the fallback inbox.
+  def self.roster_recipients
+    Fuime::Oncall::Responder.digesting.pluck(:email).compact_blank
+  rescue => e
+    Rails.logger.error("[Fuime] could not read the on-call roster for alert routing: #{e.class}: #{e.message}")
+    []
   end
 
   DOMAIN = Rails.env.production? ? "fuime.com" : "localhost"

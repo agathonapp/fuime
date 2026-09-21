@@ -334,3 +334,21 @@ fuime_sweep_webhook_deliveries_job:
 fuime_guardian_invite_reminder_job:
   cron: "0 13 * * *"
   class: "Fuime::GuardianInviteReminderJob"
+
+# Fuime: the on-call sweep — run every check, page anybody who needs paging, and
+# ping the external monitor. See docs/fuime/ONCALL.md.
+#
+# Every 5 minutes, and one schedule rather than several. Detection latency is
+# the whole product here: a sev-1 found 30 minutes late is 30 minutes of sales
+# that did not happen. The cheaper checks (deadlines, webhook failures) do not
+# need this cadence, but splitting them would buy a negligible amount of
+# database load in exchange for four more things that can be misconfigured
+# independently — and the repage throttle in Fuime::Incident already means a
+# frequent sweep does not become frequent paging.
+#
+# ⚠️ This schedule cannot detect its own absence. That is what the outbound
+# heartbeat inside the job is for, and it is why FUIME_HEARTBEAT_URL matters
+# more than anything else in this file.
+fuime_oncall_sweep_job:
+  cron: "*/5 * * * *"
+  class: "Fuime::Oncall::SweepJob"

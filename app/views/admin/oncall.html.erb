@@ -1,0 +1,280 @@
+<% title "On-call (Fuime)" %>
+
+<%# FUIME: the page you open when something is wrong, and the page you open once
+    a month to check that opening it would still work.
+
+    Ordered by the questions you actually ask, in the order you ask them: what is
+    broken, who is being told, and — the one no other tool here has ever
+    answered — did the last page actually leave the building. %>
+
+<% if @heartbeat_url.blank? %>
+  <%# Deliberately the first thing on the page, and deliberately alarming.
+      Everything below this banner runs INSIDE the app. None of it can fire if
+      the worker is dead, and a dead worker looks exactly like a quiet night. %>
+  <div class="card bg-warning mb2">
+    <p class="mt0"><strong>Nothing outside this app is watching it.</strong></p>
+    <p class="mb0">
+      <code>FUIME_HEARTBEAT_URL</code> is not set, so if the worker stops — or Render does —
+      no check on this page will run and nobody will be paged. The silence is
+      indistinguishable from everything being fine.
+      Set up a free healthchecks.io ping and put its URL in that variable on the
+      <strong>worker</strong> service. See <code>docs/fuime/ONCALL.md</code>.
+    </p>
+  </div>
+<% end %>
+
+<div class="flex items-center gap-2 mb2 flex-wrap">
+  <span class="badge <%= @counts[:sev1].positive? ? "bg-error" : "bg-muted" %>">
+    SEV1: <%= @counts[:sev1] %>
+  </span>
+  <span class="badge <%= @counts[:unacknowledged].positive? ? "bg-warning" : "bg-muted" %>">
+    Unacknowledged: <%= @counts[:unacknowledged] %>
+  </span>
+  <span class="badge bg-muted">Open: <%= @counts[:live] %></span>
+
+  <%= button_to "Send a test page", oncall_test_page_admin_index_path,
+                method: :post, class: "btn",
+                data: { turbo_confirm: "This fires a real sev-1 page on every channel — your phone will ring. Continue?" } %>
+  <%= button_to "Run the checks now", oncall_sweep_admin_index_path, method: :post, class: "btn bg-muted" %>
+</div>
+
+<h2>Open incidents</h2>
+
+<% if @incidents.empty? %>
+  <%# An empty incident list means two very different things, and the difference
+      matters more than anything else on this page. %>
+  <div class="card">
+    <p class="mt0"><strong>Nothing is broken.</strong></p>
+    <p class="mb0 muted">
+      Or nothing is being checked. Press <em>Send a test page</em> if it has been
+      a while — a pager that has never been fired is not a control, it is a hope.
+    </p>
+  </div>
+<% else %>
+  <table class="table mb2">
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th>What</th>
+        <th>Opened</th>
+        <th>Pages</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @incidents.each do |incident| %>
+        <tr>
+          <td>
+            <span class="badge <%= incident.sev1? ? "bg-error" : incident.sev2? ? "bg-warning" : "bg-muted" %>">
+              <%= incident.severity.upcase %>
+            </span>
+          </td>
+          <td>
+            <strong><%= incident.title %></strong>
+            <div class="muted"><code><%= incident.key %></code></div>
+            <% if incident.detail.present? %>
+              <details>
+                <summary class="muted">What the check saw</summary>
+                <table class="table">
+                  <% incident.detail.each do |k, v| %>
+                    <tr>
+                      <td><%= k.to_s.humanize %></td>
+                      <td><%= v.is_a?(Enumerable) ? v.to_json : v %></td>
+                    </tr>
+                  <% end %>
+                </table>
+              </details>
+            <% end %>
+          </td>
+          <td>
+            <%= time_ago_in_words(incident.opened_at) %> ago
+            <div class="muted"><%= incident.opened_at.utc.strftime("%b %-d, %H:%M UTC") %></div>
+          </td>
+          <td>
+            <%= incident.page_count %>
+            <% if incident.escalation_position > 1 %>
+              <div class="muted">escalated to position <%= incident.escalation_position %></div>
+            <% end %>
+          </td>
+          <td>
+            <%= incident.status.humanize %>
+            <% if incident.acknowledged_at %>
+              <div class="muted">
+                by <%= incident.acknowledged_by&.name || "link" %>,
+                <%= time_ago_in_words(incident.acknowledged_at) %> ago
+              </div>
+            <% end %>
+          </td>
+          <td>
+            <% if incident.status_open? %>
+              <%= button_to "Ack", oncall_incident_acknowledge_admin_index_path(id: incident.id), method: :post, class: "btn bg-muted" %>
+            <% end %>
+            <%= button_to "Resolve", oncall_incident_resolve_admin_index_path(id: incident.id), method: :post, class: "btn bg-muted" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<h2>Who is on call</h2>
+
+<%# The `pageable?` column is the point of this table. A roster can look fully
+    staffed while every row on it is email-only, and email is not a page. %>
+<table class="table mb2">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Push</th>
+      <th>Can be woken?</th>
+      <th>Gets</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @responders.each do |responder| %>
+      <tr>
+        <td><%= responder.escalation_position %></td>
+        <td>
+          <%= responder.name %>
+          <% unless responder.active? %><span class="badge bg-muted">inactive</span><% end %>
+        </td>
+        <td><%= responder.email.presence || content_tag(:span, "—", class: "muted") %></td>
+        <td><%= responder.redacted_phone || content_tag(:span, "—", class: "muted") %></td>
+        <td><%= responder.redacted_push || content_tag(:span, "—", class: "muted") %></td>
+        <td>
+          <% if responder.pageable? %>
+            <span class="badge bg-success">yes</span>
+          <% else %>
+            <span class="badge bg-warning">email only</span>
+          <% end %>
+        </td>
+        <td class="muted">
+          <%= [("pages" if responder.receives_pages?), ("digest" if responder.receives_digest?)].compact.join(" + ").presence || "nothing" %>
+        </td>
+        <td>
+          <%= button_to "Remove", oncall_responder_destroy_admin_index_path(id: responder.id),
+                        method: :delete, class: "btn bg-muted",
+                        data: { turbo_confirm: "Remove #{responder.name} from the on-call roster?" } %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<details class="mb2">
+  <summary>Add somebody to the roster</summary>
+  <%= form_with url: oncall_responder_create_admin_index_path, method: :post, scope: :responder, class: "card" do |f| %>
+    <p>
+      <%= f.label :name, "Name" %>
+      <%= f.text_field :name, required: true %>
+    </p>
+    <p>
+      <%= f.label :email, "Email" %>
+      <%= f.email_field :email %>
+      <span class="muted">Gets the daily digest and the full incident detail. Not a page.</span>
+    </p>
+    <p>
+      <%= f.label :phone_number, "Phone (E.164, e.g. +14155551234)" %>
+      <%= f.telephone_field :phone_number %>
+      <span class="muted">SMS on a sev-2; an actual phone call on a sev-1.</span>
+    </p>
+    <p>
+      <%= f.label :push_kind, "Push relay" %>
+      <%= f.select :push_kind, [["—", ""]] + Fuime::Oncall::Responder::PUSH_KINDS.map { |k| [k, k] } %>
+    </p>
+    <p>
+      <%= f.label :push_url, "Push URL" %>
+      <%= f.text_field :push_url, placeholder: "https://ntfy.sh/your-private-topic" %>
+    </p>
+    <p>
+      <%= f.label :push_credential, "Push token" %>
+      <%= f.text_field :push_credential, placeholder: "ntfy: bearer token · pushover: apptoken:userkey" %>
+      <span class="muted">
+        Without one, an ntfy topic is world-readable, so pages over it are reduced
+        to a severity and a link — no venture names, no amounts.
+      </span>
+    </p>
+    <p>
+      <%= f.label :escalation_position, "Escalation position" %>
+      <%= f.number_field :escalation_position, value: 1, min: 1 %>
+      <span class="muted">Position 1 is paged first. Later positions are added, not handed over to.</span>
+    </p>
+    <p>
+      <%= f.check_box :receives_pages, checked: true %> <%= f.label :receives_pages, "Gets paged" %>
+      &nbsp;
+      <%= f.check_box :receives_digest, checked: true %> <%= f.label :receives_digest, "Gets the daily digest" %>
+      &nbsp;
+      <%= f.check_box :active, checked: true %> <%= f.label :active, "Active" %>
+    </p>
+    <%= f.submit "Add to the roster", class: "btn" %>
+  <% end %>
+</details>
+
+<h2>Did the last pages actually land?</h2>
+
+<%# This table is the whole reason Fuime::IncidentNotification exists. Three
+    separate alerting paths in this codebase have reported perfect health while
+    reaching nobody; the only defence is a record you can read BEFORE the
+    outage that depends on it. %>
+<% if @notifications.empty? %>
+  <p class="muted">No pages have been attempted. Press <em>Send a test page</em> above.</p>
+<% else %>
+  <table class="table mb2">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Channel</th>
+        <th>To</th>
+        <th>Incident</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @notifications.each do |notification| %>
+        <tr>
+          <td><%= notification.attempted_at.utc.strftime("%b %-d, %H:%M UTC") %></td>
+          <td><%= notification.channel %></td>
+          <td><%= notification.target_redacted.presence || content_tag(:span, "nobody", class: "error") %></td>
+          <td class="muted"><code><%= notification.incident.key %></code></td>
+          <td>
+            <span class="badge <%= notification.status_failed? ? "bg-error" : "bg-success" %>">
+              <%= notification.status %>
+            </span>
+            <% if notification.error.present? %>
+              <div class="muted"><%= notification.error %></div>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @recently_resolved.any? %>
+  <h2>Recently resolved</h2>
+  <table class="table">
+    <thead>
+      <tr><th>What</th><th>Opened</th><th>Resolved</th><th>How</th></tr>
+    </thead>
+    <tbody>
+      <% @recently_resolved.each do |incident| %>
+        <tr>
+          <td><%= incident.title %></td>
+          <td><%= incident.opened_at.utc.strftime("%b %-d, %H:%M UTC") %></td>
+          <td><%= incident.resolved_at&.utc&.strftime("%b %-d, %H:%M UTC") %></td>
+          <td class="muted">
+            <%# Worth distinguishing: a check that opens and auto-resolves over
+                and over is itself a bug, usually a threshold set at the noise
+                floor, and it is invisible if these look the same. %>
+            <%= incident.auto_resolved? ? "the check stopped seeing it" : "closed by #{incident.acknowledged_by&.name || 'a person'}" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

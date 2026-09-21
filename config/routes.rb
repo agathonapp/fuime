@@ -6,6 +6,25 @@ require "sidekiq/cron/web"
 Rails.application.routes.draw do
   # For details on the DSL available within this file, see https://guides.rubyonrails.org/routing.html
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # FUIME: one-tap acknowledgement of a page, from the notification itself.
+  #
+  # Unauthenticated ON PURPOSE. A page that can only be acknowledged by finding a
+  # laptop, signing in and navigating to an admin page will not be acknowledged
+  # at 3am — it will be silenced at the phone, and a silenced channel is what the
+  # next incident arrives on.
+  #
+  # The token is 24 random bytes, scoped to one incident, and can ONLY
+  # acknowledge: it cannot resolve, cannot read the incident detail, and cannot
+  # reach anything else. The worst a leaked token does is stop the repeat pages
+  # for one already-open incident that stays visible in the console. Tokens are
+  # withheld entirely from unauthenticated relays — see Fuime::Incident#page_text.
+  get "oncall/ack/:token", to: "fuime/oncall#ack", as: :oncall_ack
+
+  # FUIME: the health endpoint the external monitor polls. Richer than
+  # `rails/health#show`, which only proves a process is listening — see
+  # Fuime::OncallController#health.
+  get "healthz", to: "fuime/oncall#health", as: :fuime_health
   get "/my_ip", to: "admin#my_ip"
 
   constraints AdminConstraint do
@@ -701,6 +720,22 @@ Rails.application.routes.draw do
       # erasure runs from `rake fuime:data_request:fulfil` after a person has
       # checked the blockers — see Fuime::DataErasureService.
       get "fuime_data_requests", to: "admin#fuime_data_requests"
+      # FUIME: the on-call console — open incidents, who is on the roster, and
+      # whether the last page actually left the building. See
+      # Fuime::Oncall::Sweep and docs/fuime/ONCALL.md.
+      #
+      # `oncall_test_page` is not a convenience. The only honest way to know a
+      # pager works is to fire it, and a pager whose first real use is its first
+      # use at all is not a control. It raises a genuine sev-1 incident through
+      # the genuine path and auto-resolves it.
+      get "oncall", to: "admin#oncall"
+      post "oncall/responders", to: "admin#oncall_responder_create", as: "oncall_responder_create"
+      patch "oncall/responders/:id", to: "admin#oncall_responder_update", as: "oncall_responder_update"
+      delete "oncall/responders/:id", to: "admin#oncall_responder_destroy", as: "oncall_responder_destroy"
+      post "oncall/incidents/:id/acknowledge", to: "admin#oncall_incident_acknowledge", as: "oncall_incident_acknowledge"
+      post "oncall/incidents/:id/resolve", to: "admin#oncall_incident_resolve", as: "oncall_incident_resolve"
+      post "oncall/test_page", to: "admin#oncall_test_page", as: "oncall_test_page"
+      post "oncall/sweep", to: "admin#oncall_sweep", as: "oncall_sweep"
       get "paypal_transfers", to: "admin#paypal_transfers"
       get "wires", to: "admin#wires"
       get "wise_transfers", to: "admin#wise_transfers"

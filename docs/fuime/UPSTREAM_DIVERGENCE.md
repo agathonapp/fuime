@@ -7914,3 +7914,93 @@ all-clear makes its own absence informative.
 — that `ops_recipients` never returns empty, that anomaly mail reaches Fuime, that an
 engineer need not have an account, that the earmuff list is empty — and that the digest
 renders, still sends when everything is zero, and leads with anything overdue.
+
+---
+
+## 2026-09-21 — An on-call pager, and the daily digest finally reaching a person
+
+Full operating guide: `docs/fuime/ONCALL.md`.
+
+**The complaint that started it: an admin was not getting the daily emails.** Not a
+delivery bug. `Fuime::OpsDigestMailer#daily` sent to `ApplicationMailer.ops_recipients`,
+which read `FUIME_OPS_EMAIL` or fell back to `support@fuime.com` — and `User#admin?`
+granted access to the console and nothing else. There was no path at all from "I am an
+admin" to "I am told when something happens". The digest had been going to a shared inbox
+every day at 13:00 UTC.
+
+The env var was the wrong shape for the job in three ways, all of which had already bitten:
+it had to be set identically on the web service **and** the worker (these are
+`deliver_later`, so the worker is what reads it) and setting one looks exactly like setting
+both; it was set on neither; and nothing in the app could show its value, so "am I being
+alerted?" could only be answered by breaking something.
+
+**New: `fuime_oncall_responders`.** Alert routing is a table now — a row per person,
+editable at 3am from a phone without a deploy, visible to anyone who wonders who is being
+told. `ops_recipients` unions it with `FUIME_OPS_EMAIL` rather than replacing the variable
+(it is the escape hatch for a mailing list that should not be a responder), and the lookup
+is rescued so a broken roster degrades to the old behaviour instead of taking alerting down
+with it. `user_id` is nullable: the previous `AdminMailer#engineers` required each address
+to resolve to a `User`, so an on-call engineer with no account on the platform they operate
+received nothing.
+
+**New: a pager, because email is not a page.** `Fuime::Incident` +
+`Fuime::IncidentNotification` + `app/services/fuime/oncall/`. Nine checks on a 5-minute
+sweep, raising deduplicated incidents that escalate, page, and auto-resolve. Channels are
+push (ntfy / Pushover / Slack / generic), SMS, a voice call, and email. Severity gates the
+channel rather than the recipient — adding more people to a sev-3 is how a team learns to
+mute the tool.
+
+Decisions worth carrying, each recorded at length in the file it belongs to:
+
+* **A check that raises is not a check that found nothing.** An exception raises an incident
+  about the check itself and leaves that check's existing incidents open. Auto-resolving
+  them would mean a broken detector silently closes the outage it was detecting.
+* **Escalation adds people, it does not hand over.** The commonest reason for a missed page
+  is that the page never arrived, and handing over stops retrying the channel that might work.
+* **Acknowledgement stops paging.** If pages keep arriving after "I am on it", the only way
+  left to stop them is to mute the channel — and a muted channel is what the next incident
+  arrives on. Acking is one unauthenticated tap from the notification (`/oncall/ack/:token`),
+  a capability narrow enough that a leaked token can only silence one already-open,
+  still-visible incident.
+* **The page body is content-free on an unauthenticated relay.** A bare ntfy topic is
+  readable by anyone who guesses the name, and these incidents carry the names of businesses
+  run by minors. Without a credential the page is reduced to a severity and a link.
+* **Every delivery attempt is written down.** This codebase has three separate examples of
+  alerting that reported health while reaching nobody; the only defence is a record you can
+  read *before* the outage that depends on it.
+* **`money_in` disarms itself below 14 sales/week.** Zero sales in six hours is the signature
+  of a broken checkout and of a quiet afternoon, and at current volume it is the second.
+  An unarmed silence detector is the correct behaviour here, not a gap to be closed by
+  lowering the threshold.
+
+**Strongest new money check: `money_in.webhook_gap`**, raised from
+`Fuime::MissedMorPaymentSweepJob` when the sweep actually recovers something. It needs no
+baseline — it compares Stripe's record of succeeded PaymentIntents against Fuime's ledger,
+so one sale Stripe took and Fuime never recorded is conclusive on day one. `posted > 0` is
+not "the safety net worked", it is "the primary path is broken and the next sale will be
+dropped too". Kept out of `Check.all` on purpose so the sweep cannot auto-resolve an
+incident it never looked at.
+
+**Three observers, because a pager inside the app cannot report the app's own death.**
+The 5-minute sweep (app up but broken), `/healthz` polled externally (runs
+`Check.infrastructure`, answers 503 where `rails/health#show` answers 200 with an
+unreachable database), and an outbound heartbeat to `FUIME_HEARTBEAT_URL` from the worker
+(pings stop → an external monitor pages). **The last two need a free account somewhere
+outside Render and do not exist until somebody sets them up** — until then a total outage
+still pages nobody, which is why the console leads with a banner saying so.
+
+**Bug found and fixed while testing:** `Stripe::Balance.retrieve({api_key: key})` sends the
+key as a query parameter — Stripe answers `Received unknown parameter: api_key`, and the
+check reported Stripe as down. A monitoring check that manufactures its own outage is worse
+than no check. Now `retrieve({}, {api_key: key})`.
+
+**Admin surfaces touched (all four must agree, per 2026-09-15):** `AdminController#oncall`
+and siblings, `app/views/admin/oncall.html.erb`, `Admin::Nav`,
+`StaticPagesHelper#admin_queues` (first in the list — the only queue entry that can mean
+money is not reaching ledgers right now), `command_bar/actions.js`, and `config/routes.rb`.
+
+**Files:** migrations `20260921100000..2`; `app/models/fuime/{incident,incident_notification}.rb`,
+`app/models/fuime/oncall/responder.rb`; `app/services/fuime/oncall/` (check, sweep, pager,
+9 checks, 3 channels); `app/jobs/fuime/oncall/sweep_job.rb`;
+`app/mailers/fuime/oncall_mailer.rb`; `app/controllers/fuime/oncall_controller.rb`;
+`lib/tasks/fuime_oncall.rake`; `spec/services/fuime/oncall_spec.rb`; `docs/fuime/ONCALL.md`.

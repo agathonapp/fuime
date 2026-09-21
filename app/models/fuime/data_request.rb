@@ -1,5 +1,38 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: fuime_data_requests
+#
+#  id                 :bigint           not null, primary key
+#  fulfilled_at       :datetime
+#  kind               :integer          not null
+#  reason             :text
+#  request_ip         :string
+#  request_user_agent :string
+#  requested_at       :datetime         not null
+#  resolution_notes   :text
+#  status             :integer          default(0), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  fulfilled_by_id    :bigint
+#  requested_by_id    :bigint           not null
+#  subject_id         :bigint           not null
+#
+# Indexes
+#
+#  index_fuime_data_requests_on_fulfilled_by_id          (fulfilled_by_id)
+#  index_fuime_data_requests_on_requested_by_id          (requested_by_id)
+#  index_fuime_data_requests_on_status_and_requested_at  (status,requested_at)
+#  index_fuime_data_requests_on_subject_id               (subject_id)
+#  index_fuime_data_requests_on_subject_id_and_kind      (subject_id,kind)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (fulfilled_by_id => users.id)
+#  fk_rails_...  (requested_by_id => users.id)
+#  fk_rails_...  (subject_id => users.id)
+#
 module Fuime
   # Fuime: a parent's COPPA request over their child's account — review it, or
   # have it deleted.

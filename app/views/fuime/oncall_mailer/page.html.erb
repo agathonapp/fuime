@@ -1,0 +1,23 @@
+<h1 style="margin-bottom: 0.25rem;"><%= @incident.severity.upcase %> — <%= @incident.title %></h1>
+<p style="color: #8492a6; margin-top: 0;">
+  Opened <%= @incident.opened_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+  by the <%= @incident.check_name.humanize.downcase %> check.
+</p>
+
+<% if @detail.any? %>
+  <h2>What the check saw</h2>
+  <table cellpadding="6" style="border-collapse: collapse; font-size: 0.9rem;">
+    <% @detail.each do |key, value| %>
+      <tr>
+        <td style="border-bottom: 1px solid #e0e6ed; vertical-align: top;"><strong><%= key.to_s.humanize %></strong></td>
+        <td style="border-bottom: 1px solid #e0e6ed;"><%= value.is_a?(Enumerable) ? value.to_json : value %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<p style="margin-top: 1.5rem;">
+  <%= link_to "Acknowledge this incident", @incident.ack_url %>
+  — stops the repeat pages and leaves the incident open.
+</p>
+<p><%= link_to "All open incidents", @incident.console_url %></p>
