@@ -463,6 +463,94 @@ RSpec.describe "Fuime on-call" do
     end
   end
 
+  describe Fuime::Oncall::ErrorCounter do
+    # Real Redis, cleared per example. The counter is a rolling window by
+    # construction, so leftover state from another example is the one thing that
+    # would make these order-dependent — pass alone, fail in a full run.
+    before do
+      Sidekiq.redis do |conn|
+        keys = conn.call("KEYS", "#{described_class::KEY_PREFIX}*")
+        conn.call("DEL", *keys) if keys.any?
+      end
+    end
+
+    let(:counter) { described_class.new }
+
+    it "counts an unhandled error" do
+      3.times { counter.report(RuntimeError.new("boom"), handled: false) }
+
+      count, classes = described_class.recent(window: 10.minutes)
+
+      expect(count).to eq(3)
+      expect(classes).to eq("RuntimeError" => 3)
+    end
+
+    # `handled: true` is code that caught something and carried on — which
+    # includes this subsystem's own Rails.error.report calls in Sweep and Pager.
+    # Counting those would let a failing check inflate the error rate and raise
+    # a second, unrelated incident about it.
+    it "ignores an error something already handled" do
+      counter.report(RuntimeError.new("caught"), handled: true)
+
+      expect(described_class.recent(window: 10.minutes).first).to eq(0)
+    end
+
+    # A scanner walking the URL space generates hundreds of these an hour on any
+    # public site. A check that fires on bot traffic gets muted before the night
+    # it would have mattered.
+    it "ignores errors that mean 'somebody sent a bad request'" do
+      counter.report(ActiveRecord::RecordNotFound.new("nope"), handled: false)
+      counter.report(ActionController::RoutingError.new("nope"), handled: false)
+
+      expect(described_class.recent(window: 10.minutes).first).to eq(0)
+    end
+
+    # This runs on the failure path of every request in the app. An exception
+    # here would replace the error the user actually hit with a confusing one
+    # from the monitoring, and could turn a handled error into a 500.
+    it "never raises, even when Redis is gone" do
+      allow(Sidekiq).to receive(:redis).and_raise(RedisClient::ConnectionError, "gone")
+
+      expect { counter.report(RuntimeError.new("boom"), handled: false) }.not_to raise_error
+    end
+  end
+
+  describe Fuime::Oncall::Checks::Errors do
+    before do
+      Sidekiq.redis do |conn|
+        keys = conn.call("KEYS", "#{Fuime::Oncall::ErrorCounter::KEY_PREFIX}*")
+        conn.call("DEL", *keys) if keys.any?
+      end
+    end
+
+    it "stays quiet below the threshold, because a burst is not a breakage" do
+      counter = Fuime::Oncall::ErrorCounter.new
+      (described_class::WARN_THRESHOLD - 1).times { counter.report(RuntimeError.new("x"), handled: false) }
+
+      expect(described_class.new.call).to be_empty
+    end
+
+    it "escalates to a sev-1 once the rate is unmistakable" do
+      counter = Fuime::Oncall::ErrorCounter.new
+      described_class::PAGE_THRESHOLD.times { counter.report(RuntimeError.new("x"), handled: false) }
+
+      finding = described_class.new.call.first
+
+      expect(finding.severity).to eq(:sev1)
+      expect(finding.detail[:top_classes]).to include("RuntimeError")
+    end
+
+    # The important one. An unreadable count is NOT all-clear — see the header
+    # on Fuime::Oncall::Check. Raising here makes Sweep record the error rate as
+    # UNMONITORED; returning [] would have it read as healthy, which is the
+    # exact inversion this whole subsystem exists to prevent.
+    it "refuses to report all-clear when it cannot read the counts" do
+      allow(Fuime::Oncall::ErrorCounter).to receive(:recent).and_return([nil, {}])
+
+      expect { described_class.new.call }.to raise_error(/unreadable/)
+    end
+  end
+
   describe ApplicationMailer, ".ops_recipients" do
     # The original complaint this whole feature came from: an admin held every
     # permission in the console and still never learned that a chargeback had

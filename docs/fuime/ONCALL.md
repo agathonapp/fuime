@@ -102,6 +102,7 @@ muted channel is what the next incident arrives on.
 | `stripe` | unreachable, no credential, slow | **1** | under MoR, Stripe *is* money-in |
 | `money_in` | no sales when sales were expected | 2 | **disarms itself below 14 sales/week** — see below |
 | `webhook_deliveries` | a founder's endpoint failing repeatedly | 3 | their integration, not Fuime's money |
+| `errors` | unhandled exceptions: 10+ in 10 min, 50+ escalates | 2 / **1** | a 500 spike, which is what "broken" usually means. Bot-shaped errors are excluded by class, not by threshold |
 | `obligations` | chargeback and COPPA deadlines | **1** overdue / 2 soon | a dispute nobody answers is lost by default and Fuime pays it |
 | `alerting` | empty roster, nobody pageable, SMTP unset, a dead channel | **1** / 2 | the check that watches the watchman |
 
@@ -220,9 +221,10 @@ Named so nobody discovers them at 3am:
   text you at 2am if a chargeback deadline is three days out. If that becomes a
   problem the fix is to reclassify the check, not to add a mute window — a mute
   window applies to the sev-1 you did want.
-* **No error-rate or 500 monitoring.** `APPSIGNAL_PUSH_API_KEY` is still the
-  thing standing between a 500 and anybody knowing, and remains unset. This
-  subsystem watches *conditions*, not *exceptions*, and the two do not overlap
-  much.
+* **No backtraces, and no replacement for AppSignal.** The `errors` check will
+  page you on a 500 spike, but it can only tell you how many and of which class.
+  `APPSIGNAL_PUSH_API_KEY` is still unset, the gem is still reporting into the
+  void, and that is still the difference between knowing something broke and
+  being able to fix it. Keep both: this pages, that debugs.
 * **No auto-remediation.** Nothing here restarts, retries or rolls back. A pager
   that acts on its own is a pager whose failures you cannot reason about.

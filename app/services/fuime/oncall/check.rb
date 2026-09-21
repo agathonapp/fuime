@@ -52,6 +52,7 @@ module Fuime
           Checks::Stripe,
           Checks::MoneyIn,
           Checks::WebhookDeliveries,
+          Checks::Errors,
           Checks::Obligations,
           Checks::Alerting,
         ]

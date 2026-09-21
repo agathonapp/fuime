@@ -7944,7 +7944,7 @@ to resolve to a `User`, so an on-call engineer with no account on the platform t
 received nothing.
 
 **New: a pager, because email is not a page.** `Fuime::Incident` +
-`Fuime::IncidentNotification` + `app/services/fuime/oncall/`. Nine checks on a 5-minute
+`Fuime::IncidentNotification` + `app/services/fuime/oncall/`. Ten checks on a 5-minute
 sweep, raising deduplicated incidents that escalate, page, and auto-resolve. Channels are
 push (ntfy / Pushover / Slack / generic), SMS, a voice call, and email. Severity gates the
 channel rather than the recipient — adding more people to a sev-3 is how a team learns to
@@ -8001,6 +8001,6 @@ money is not reaching ledgers right now), `command_bar/actions.js`, and `config/
 
 **Files:** migrations `20260921100000..2`; `app/models/fuime/{incident,incident_notification}.rb`,
 `app/models/fuime/oncall/responder.rb`; `app/services/fuime/oncall/` (check, sweep, pager,
-9 checks, 3 channels); `app/jobs/fuime/oncall/sweep_job.rb`;
+10 checks, 3 channels, the error counter); `app/jobs/fuime/oncall/sweep_job.rb`;
 `app/mailers/fuime/oncall_mailer.rb`; `app/controllers/fuime/oncall_controller.rb`;
 `lib/tasks/fuime_oncall.rake`; `spec/services/fuime/oncall_spec.rb`; `docs/fuime/ONCALL.md`.
