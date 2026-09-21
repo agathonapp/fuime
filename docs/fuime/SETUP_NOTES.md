@@ -10,12 +10,15 @@ than an inbox.** Read `docs/fuime/ONCALL.md` first.
    There was no path from `User#admin?` to being told anything. Alert routing is
    now the `fuime_oncall_responders` table, unioned with the env var; add
    yourself with `rake 'fuime:oncall:add[Name,email]'` or at `/admin/oncall`.
-2. **THE TWO THINGS STILL TO DO, and neither is code.** Both need a free
-   account outside Render, and until they exist a total outage pages nobody:
-   set `FUIME_HEARTBEAT_URL` on the **worker** (a healthchecks.io ping,
-   ~5 min + grace), and point an uptime check at `https://fuime.com/healthz`.
-   `/admin/oncall` leads with a banner while the first is missing. Everything
-   else in the subsystem runs *inside* the app and cannot report its own death.
+2. **Setup is a three-step checklist at the top of `/admin/oncall`.** Steps 1
+   and 2 (be on the roster, be wakeable) are one click each — no shell, because
+   a setup step that needs a terminal is a setup step that does not happen.
+   **Step 3 is the one that still needs doing and cannot be automated:** a free
+   healthchecks.io ping in `FUIME_HEARTBEAT_URL` on **fuime-worker** (the key is
+   declared in `render.yaml`, so the field is waiting), plus an uptime check on
+   `https://app.fuime.com/healthz`. Everything else in this subsystem runs
+   *inside* the app and cannot report its own death — until step 3 exists, a
+   total outage pages nobody.
 3. **Press "Send a test page" after any roster change, and monthly otherwise.**
    A pager is used once a quarter at the worst moment after months of nothing
    exercising it, and every part of it rots silently — a deleted push topic, a

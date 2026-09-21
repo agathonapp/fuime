@@ -7,18 +7,70 @@
     broken, who is being told, and — the one no other tool here has ever
     answered — did the last page actually leave the building. %>
 
-<% if @heartbeat_url.blank? %>
-  <%# Deliberately the first thing on the page, and deliberately alarming.
-      Everything below this banner runs INSIDE the app. None of it can fire if
-      the worker is dead, and a dead worker looks exactly like a quiet night. %>
-  <div class="card bg-warning mb2">
-    <p class="mt0"><strong>Nothing outside this app is watching it.</strong></p>
+<%# FUIME: the setup checklist.
+    It is at the top, it is three steps, and each one states what is still
+    broken if you stop there. The whole failure this subsystem addresses is
+    alerting that was configured nowhere while looking fine, so a setup flow
+    that lets you feel finished at step one would rebuild the same problem. %>
+<% unless @me&.pageable? && @heartbeat_url.present? %>
+  <div class="card mb2">
+    <h3 class="mt0">Set this up — three steps</h3>
+
+    <p>
+      <strong>1. <%= @me ? "✓" : "☐" %> Be on the roster.</strong>
+      <% if @me %>
+        You are, as <%= @me.email %>. The daily digest and every incident come here by email.
+      <% else %>
+        Nobody is being told anything right now.
+        <%= button_to "Add me", oncall_add_me_admin_index_path, method: :post, class: "btn" %>
+      <% end %>
+    </p>
+
+    <p>
+      <strong>2. <%= @me&.pageable? ? "✓" : "☐" %> Be wakeable.</strong>
+      <% if @me.nil? %>
+        <span class="muted">Do step 1 first.</span>
+      <% elsif @me.pageable? %>
+        <%= @me.redacted_push || @me.redacted_phone %> — a sev-1 will make a noise.
+      <% else %>
+        <span class="error">Email is not a page.</span>
+        An email sits silently until you open it, which at 3am is the morning.
+        <%= button_to "Set up phone alerts (free)", oncall_enable_ntfy_admin_index_path(id: @me.id),
+                      method: :post, class: "btn" %>
+        <span class="muted">Generates a private ntfy topic. Install the free ntfy app first.</span>
+      <% end %>
+    </p>
+
     <p class="mb0">
-      <code>FUIME_HEARTBEAT_URL</code> is not set, so if the worker stops — or Render does —
-      no check on this page will run and nobody will be paged. The silence is
-      indistinguishable from everything being fine.
-      Set up a free healthchecks.io ping and put its URL in that variable on the
-      <strong>worker</strong> service. See <code>docs/fuime/ONCALL.md</code>.
+      <strong>3. <%= @heartbeat_url.present? ? "✓" : "☐" %> Be watched from outside.</strong>
+      <% if @heartbeat_url.present? %>
+        A heartbeat is configured. If this worker stops, something outside Fuime will notice.
+      <% else %>
+        <span class="error">Nothing outside this app is watching it.</span>
+        Everything on this page runs <em>inside</em> Fuime, so none of it can fire if
+        Fuime is down — and that silence looks exactly like a quiet night.
+        Create a free <strong>healthchecks.io</strong> check (period 5 min, grace 15 min)
+        and put its ping URL in <code>FUIME_HEARTBEAT_URL</code> on the
+        <strong>fuime-worker</strong> service in Render. Then add an uptime check on
+        <code>/healthz</code>. See <code>docs/fuime/ONCALL.md</code>.
+      <% end %>
+    </p>
+  </div>
+<% end %>
+
+<%# The generated topic, shown once, right after it is created. Not rendered in
+    the roster table on purpose: the topic name IS the access control on a public
+    ntfy server, and a page an admin opens casually and may screen share is not
+    where a shared secret belongs. %>
+<% if flash[:oncall_topic].present? %>
+  <div class="card bg-info mb2">
+    <p class="mt0"><strong>Subscribe to this topic in the ntfy app:</strong></p>
+    <p style="font-size: 1.4rem; font-family: monospace;"><%= flash[:oncall_topic] %></p>
+    <p class="mb0 muted">
+      Open ntfy → + → paste the topic → Subscribe. On iOS also turn on
+      <strong>Critical Alerts</strong> for ntfy, or Do Not Disturb will swallow the page
+      silently. Then press <strong>Send a test page</strong> below.
+      This is the only time the topic is shown — anyone who has it receives Fuime's alerts.
     </p>
   </div>
 <% end %>
@@ -157,6 +209,10 @@
           <%= [("pages" if responder.receives_pages?), ("digest" if responder.receives_digest?)].compact.join(" + ").presence || "nothing" %>
         </td>
         <td>
+          <% unless responder.push_configured? %>
+            <%= button_to "Add push", oncall_enable_ntfy_admin_index_path(id: responder.id),
+                          method: :post, class: "btn bg-muted" %>
+          <% end %>
           <%= button_to "Remove", oncall_responder_destroy_admin_index_path(id: responder.id),
                         method: :delete, class: "btn bg-muted",
                         data: { turbo_confirm: "Remove #{responder.name} from the on-call roster?" } %>

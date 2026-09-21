@@ -133,55 +133,54 @@ arms itself is a good day. `money_in.webhook_gap` covers the gap meanwhile.
 
 ## Setup
 
-### 1. Put yourself on the roster
+### Open `/admin/oncall` and work down the checklist
 
-```
-rake 'fuime:oncall:add[Rushil Chopra,rushil@fuime.com]'
-```
+The page leads with three steps and each one says what is still broken if you
+stop there. No shell, no rake task — a setup step that needs a terminal is a
+setup step that does not happen, which is how alerting came to be configured
+nowhere in the first place.
 
-This alone fixes the daily digest — `ApplicationMailer.ops_recipients` now reads
-the roster, so every operational alert and the 13:00 UTC digest go to you. It
-does **not** make you pageable: email is not a page.
+**1 · Be on the roster.** Press **Add me**. You now get the daily digest and the
+full detail of every incident by email. `ApplicationMailer.ops_recipients` reads
+the roster, so this single click is also what fixes the 13:00 UTC digest.
 
-### 2. Add a channel that can actually wake you
+**2 · Be wakeable.** Email is not a page — it sits silently until you open it,
+which at 3am is the morning.
 
-At `/admin/oncall`, on your row:
+* Install the free **ntfy** app ([iOS](https://apps.apple.com/app/ntfy/id1625396347) /
+  [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)).
+* Press **Set up phone alerts**. Fuime generates a random topic and shows it
+  once. Subscribe to it in the app: **+ → paste → Subscribe**.
+* **On iOS, turn on Critical Alerts for ntfy.** Without it Do Not Disturb
+  swallows the page silently — delivered, reported as a success, never heard.
+* The topic name is the whole access control on a public ntfy server, which is
+  why Fuime generates it instead of letting you choose. Untokened, pages over it
+  are reduced to a severity and a link — no venture names, no amounts. Add a
+  bearer token to `push_credential` to unlock the full title.
 
-* **ntfy** (free). Create a topic with a name nobody would guess, install the
-  app, set `push_kind: ntfy` and `push_url: https://ntfy.sh/<topic>`. On iOS,
-  turn on Critical Alerts for the app or Do Not Disturb will still swallow it.
-  **Without a bearer token in `push_credential` the topic is world-readable**,
-  so Fuime reduces those pages to a severity and a link — no venture names, no
-  amounts.
-* **Pushover** ($5 once). `push_kind: pushover`,
-  `push_url: https://api.pushover.net/1/messages.json`,
-  `push_credential: <apptoken>:<userkey>`. Sev-1 goes out at emergency priority,
-  which re-alerts every 60s for 30 minutes until acknowledged. Closest of the
-  four to a real pager.
-* **Phone** (`phone_number`, E.164). SMS on a sev-2; an actual call on a sev-1.
-  Needs `TWILIO__ACCOUNT_SID`, `TWILIO__AUTH_TOKEN` and `TWILIO__PHONE_NUMBER` —
-  a Fuime Twilio account, not Hack Club's (Rule 4). **Set your Fuime number to
-  Emergency Bypass on your phone.** A call you can whitelist per-contact is the
-  one channel Do Not Disturb cannot eat.
+Alternatives, if you would rather: **Pushover** ($5 once, emergency priority
+re-alerts until acknowledged) or a **phone number** (SMS on sev-2, a real call on
+sev-1 — needs Fuime's own `TWILIO__*`, not Hack Club's). Set your Fuime number to
+**Emergency Bypass**; a call is the one channel you can whitelist per-contact.
 
-### 3. The external watchdog — the part nothing in this repo can do for you
+**3 · Be watched from outside.** The part nothing in this repo can do for itself.
 
-Create two checks at healthchecks.io (free) or Better Stack:
+1. Sign up at [healthchecks.io](https://healthchecks.io) (free).
+2. **New Check** → name it `fuime-worker` → **Period 5 minutes, Grace 15
+   minutes** → Save. Copy its ping URL.
+3. Render → **fuime-worker** → Environment → set `FUIME_HEARTBEAT_URL` to that
+   URL → Save. (The key is already declared in `render.yaml`, so the field is
+   waiting for a value.) The worker POSTs to it after every sweep; when the
+   pings stop, healthchecks pages you.
+4. Second check, **New Check → HTTP** → `https://app.fuime.com/healthz`, every
+   minute. That endpoint runs `Check.infrastructure` and answers **503** when any
+   of it is sev-1 — it catches a web process that is listening but cannot reach
+   its database, which `/up` answers 200 for.
+5. In healthchecks' own **Integrations**, point both at your phone.
 
-1. **Heartbeat.** A "cron"-style check expecting a ping every ~5 minutes with
-   ~15 minutes of grace. Put its ping URL in `FUIME_HEARTBEAT_URL`
-   **on the worker service**. `Fuime::Oncall::SweepJob` pings it after every
-   successful sweep, so pings stopping means the worker, Redis, or the whole app
-   is gone.
-2. **Uptime.** An HTTP check on `https://fuime.com/healthz` every minute. That
-   endpoint runs `Check.infrastructure` and answers **503** when any of it is
-   sev-1, so it catches a web process that is listening but cannot reach its
-   database — which `/up` answers 200 for.
+Until steps 3 and 4 exist, a total outage pages nobody.
 
-Point both at your phone in that provider's own settings. **This is the only
-part of the system that can page you when Fuime itself is down.**
-
-### 4. Fire a test page
+### Finally: fire a test page
 
 **Send a test page** on `/admin/oncall`, or `rake fuime:oncall:test_page`.
 

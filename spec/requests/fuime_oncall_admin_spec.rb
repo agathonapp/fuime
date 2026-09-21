@@ -29,10 +29,64 @@ RSpec.describe "admin on-call", type: :request do
       get "/admin/oncall"
 
       expect(response).to have_http_status(:ok)
-      # The banner is the most important thing on an unconfigured page: every
+      # The checklist is the most important thing on an unconfigured page: every
       # check below it runs inside the app and none of them can fire if the app
       # is gone.
       expect(response.body).to include("Nothing outside this app is watching it")
+      expect(response.body).to include("Set this up")
+    end
+
+    # The alternative was a rake task in a Render shell, and a setup step that
+    # needs a shell is a setup step that does not happen.
+    it "puts the signed-in admin on the roster in one click" do
+      login_as!(admin)
+
+      post "/admin/oncall/add_me"
+
+      responder = Fuime::Oncall::Responder.find_by(user: admin)
+      expect(responder).to be_present
+      expect(responder.email).to eq(admin.email)
+      # The gap between "on the roster" and "can be woken" is the one a person is
+      # most likely to assume away, so it is said at the moment of adding.
+      expect(flash[:success]).to include("not a page")
+    end
+
+    it "does not add the same person twice" do
+      Fuime::Oncall::Responder.create!(name: "Ada", email: admin.email)
+      login_as!(admin)
+
+      expect { post "/admin/oncall/add_me" }.not_to change(Fuime::Oncall::Responder, :count)
+    end
+
+    # On a public ntfy server the unguessability of the topic IS the access
+    # control. A human picking a name picks "fuime-alerts", which is not a secret.
+    it "generates a random ntfy topic rather than letting somebody choose one" do
+      responder = Fuime::Oncall::Responder.create!(name: "Ada", email: admin.email)
+      login_as!(admin)
+
+      post "/admin/oncall/responders/#{responder.id}/ntfy"
+
+      responder.reload
+      expect(responder.push_kind).to eq("ntfy")
+      expect(responder.push_url).to match(/\Ahttps:\/\/ntfy\.sh\/fuime-[a-z0-9]{18}\z/)
+      expect(responder).to be_pageable
+      # Untokened, so Fuime still treats it as public and strips the page down.
+      expect(responder).not_to be_push_private
+    end
+
+    # The topic is shown once, in the flash, and never in the roster table — that
+    # table is a page an admin opens casually and may screen share.
+    it "shows the topic once and does not put it in the roster table" do
+      responder = Fuime::Oncall::Responder.create!(name: "Ada", email: admin.email)
+      login_as!(admin)
+      post "/admin/oncall/responders/#{responder.id}/ntfy"
+      topic = responder.reload.push_url.split("/").last
+
+      follow_redirect!
+      expect(response.body).to include(topic)
+
+      get "/admin/oncall"
+      expect(response.body).not_to include(topic)
     end
 
     it "renders incidents, the roster and the delivery record" do

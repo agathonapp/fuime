@@ -729,6 +729,11 @@ Rails.application.routes.draw do
       # use at all is not a control. It raises a genuine sev-1 incident through
       # the genuine path and auto-resolves it.
       get "oncall", to: "admin#oncall"
+      # One click rather than a Render shell — see AdminController#oncall_add_me
+      # for why a setup step that needs a terminal is a setup step that does not
+      # happen.
+      post "oncall/add_me", to: "admin#oncall_add_me", as: "oncall_add_me"
+      post "oncall/responders/:id/ntfy", to: "admin#oncall_enable_ntfy", as: "oncall_enable_ntfy"
       post "oncall/responders", to: "admin#oncall_responder_create", as: "oncall_responder_create"
       patch "oncall/responders/:id", to: "admin#oncall_responder_update", as: "oncall_responder_update"
       delete "oncall/responders/:id", to: "admin#oncall_responder_destroy", as: "oncall_responder_destroy"

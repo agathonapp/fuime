@@ -1229,6 +1229,65 @@ class AdminController < Admin::BaseController
     # that makes everything else on the page decorative: nothing inside this app
     # can notice that this app has stopped.
     @heartbeat_url = ENV["FUIME_HEARTBEAT_URL"].presence
+    # Drives the setup checklist. Looked up by user OR email because somebody
+    # added by the rake task has no user_id, and showing them "you are not on
+    # the roster" when they are is how a person adds themselves twice.
+    @me = Fuime::Oncall::Responder.find_by(user: current_user) ||
+          Fuime::Oncall::Responder.find_by(email: current_user.email)
+  end
+
+  # FUIME: put the signed-in admin on the roster in one click.
+  #
+  # This exists because the alternative was `rake 'fuime:oncall:add[...]'` in a
+  # Render shell, and a setup step that needs a shell is a setup step that does
+  # not happen. The whole failure this subsystem addresses is that alerting was
+  # configured nowhere and nobody noticed — making the fix require a terminal
+  # would have rebuilt the same problem one layer up.
+  def oncall_add_me
+    existing = Fuime::Oncall::Responder.find_by(user: current_user) ||
+               Fuime::Oncall::Responder.find_by(email: current_user.email)
+
+    if existing
+      flash[:info] = "You are already on the roster."
+      return redirect_to oncall_admin_index_path
+    end
+
+    responder = Fuime::Oncall::Responder.create!(
+      user: current_user,
+      name: current_user.name.presence || current_user.email,
+      email: current_user.email,
+      escalation_position: (Fuime::Oncall::Responder.maximum(:escalation_position) || 0) + 1
+    )
+
+    # Said immediately, because the gap between "I am on the roster" and "I can
+    # be woken up" is the one a person is most likely to assume away.
+    flash[:success] = "#{responder.name} now receives the daily digest and every incident by email. " \
+                      "That is not a page — add a phone alert below so something can actually wake you."
+    redirect_to oncall_admin_index_path
+  end
+
+  # FUIME: generate an ntfy topic and wire it up, in one click.
+  #
+  # The topic name is generated SERVER-SIDE and deliberately random. On a public
+  # ntfy server the unguessability of the topic is the entire access control —
+  # anybody who guesses it receives every alert Fuime sends. A human picking a
+  # name picks "fuime-alerts", which is not a secret.
+  #
+  # Even so, an untokened topic is treated as public by Fuime::Incident#page_text:
+  # those pages carry a severity and a link and nothing else. Adding a bearer
+  # token to the responder afterwards is what unlocks the full title.
+  def oncall_enable_ntfy
+    responder = Fuime::Oncall::Responder.find(params[:id])
+    topic = "fuime-#{SecureRandom.alphanumeric(18).downcase}"
+
+    responder.update!(push_kind: "ntfy", push_url: "https://ntfy.sh/#{topic}")
+
+    flash[:success] = "Push set up. Subscribe to the topic below in the ntfy app, then press Send a test page."
+    # Carried in the flash rather than only in the row, because the topic is the
+    # one value the person has to copy into their phone and the redacted column
+    # deliberately does not show it.
+    flash[:oncall_topic] = topic
+    redirect_to oncall_admin_index_path
   end
 
   def oncall_responder_create

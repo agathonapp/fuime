@@ -580,3 +580,19 @@ services:
       # `deliver_later`, so the mailer that reads this runs in Sidekiq.
       - key: FUIME_OPS_EMAIL
         sync: false
+      # THE ONLY THING THAT CAN PAGE YOU WHEN FUIME ITSELF IS DOWN.
+      #
+      # Everything in app/services/fuime/oncall/ runs inside this worker, so it
+      # can detect an app that is broken and can never detect an app that is
+      # gone: a dead worker does not run the check that would say the worker is
+      # dead, and that silence is indistinguishable from a quiet, healthy night.
+      #
+      # Fuime::Oncall::SweepJob POSTs to this URL after every successful sweep.
+      # Point it at a free healthchecks.io "cron" check expecting a ping every
+      # 5 minutes with ~15 minutes of grace; when the pings stop, THEY page you.
+      #
+      # Worker only — the web service has no sweep to ping from. Its half of the
+      # same job is an external uptime check on https://app.fuime.com/healthz.
+      # See docs/fuime/ONCALL.md.
+      - key: FUIME_HEARTBEAT_URL
+        sync: false
