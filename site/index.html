@@ -60,6 +60,13 @@
          own white for one frame and the whole thing reads as a strobe. These
          values are the literal night tokens; style.css must agree with them. -->
     <!-- Without JS nothing would ever lift the overlay off the page. -->
+    <!-- The dive gates on these two, so they are asked for in the head rather
+         than discovered by a module several round trips later. `crossorigin`
+         matches dive.js's same-origin fetch, or the track downloads twice. The
+         media queries mirror LADDERS in fx/dive.js (900px). -->
+    <link rel="preload" as="fetch" href="/dive/track.json" crossorigin />
+    <link rel="preload" as="image" href="/dive-m/f_0001.webp" media="(max-width: 900px)" />
+    <link rel="preload" as="image" href="/dive/f_0001.webp" media="(min-width: 901px)" />
     <link rel="stylesheet" href="/style.css" />
     <!-- style.css parks every .rise block at opacity 0 and site.js adding
          .is-in is the only thing that ever puts it back. With scripting off the
@@ -168,55 +175,130 @@
     </header>
 
     <main>
-      <!-- ── hero ──────────────────────────────────────────────────────── -->
-      <section class="hero">
-
-        <div class="wrap hero__in">
-          <div class="hero__body">
-            <h1>You're already working.<br />Start billing.</h1>
-            <p class="lead">
-              Write a real invoice, keep books that hold up, and know what you
-              owe at tax time. You run the business.
-            </p>
-
-            <div class="hero__cta">
-              <a class="btn btn--accent" href="/get-started">Start your business</a>
-              <a class="btn btn--ghost" href="/parents">Parents: what you'll be asked to sign</a>
-              <p class="hero__note">Free to start. Nothing until you sell something.</p>
+      <!-- ── the dive ──────────────────────────────────────────────────────
+           Scroll flies into the laptop on the desk and lands on the sign-up.
+           The panel is not a picture of a screen: it is the door itself,
+           registered onto the laptop's glass by fx/dive.js from the same
+           four-corner track the frames were composited with.
+           It is in the markup from first paint and styled at rest by
+           style.css, so with scripts off or motion reduced the still and the
+           panel are simply two blocks stacked in the page, and the panel is
+           the hero. fx/dive.js holds `inert` on the panel for the flight and
+           drops it when the panel comes to rest.
+           data-surface="dark" is what turns the nav dark over it. -->
+      <section class="dive" data-fx-dive data-surface="dark">
+        <div class="dive__track">
+          <div class="dive__stage">
+            <canvas class="dive__canvas" aria-hidden="true"></canvas>
+            <img
+              class="dive__still"
+              src="/img/dive-end.webp"
+              width="1920"
+              height="1080"
+              fetchpriority="high"
+              decoding="async"
+              alt="A laptop open on a desk at night, a city lit up in the window behind it."
+            />
+            <div class="dive__app dive__app--join">
+              <div class="dv-join">
+                <svg class="dv-join__mark" viewBox="0 0 713 582" aria-hidden="true">
+                  <use href="#arch" />
+                </svg>
+                <h1 class="dv-join__h">You're already working.<br />Start billing.</h1>
+                <p class="dv-join__lead">
+                  Write a real invoice, keep books that hold up, and know what
+                  you owe at tax time. You run the business.
+                </p>
+                <div class="dv-join__cta">
+                  <a class="btn btn--accent" href="/get-started">Start your business</a>
+                  <a class="btn btn--light" href="/parents">Parents: what you'll sign</a>
+                </div>
+                <p class="dv-join__note">Free to start. Nothing until you sell something.</p>
+              </div>
             </div>
           </div>
+          <!-- What this is, in words, on the first screen. Not an h1: the
+               panel's headline is the page's h1 in every state, including the
+               ones where this never renders. -->
+          <div class="dive__lede">
+            <p class="lede__h">Get paid for the work you already do.</p>
+            <p class="lede__sub">
+              Invoicing, payment and books for people who sell their work.
+            </p>
+            <a class="lede__skip" href="#signup">Skip to the sign-up</a>
+          </div>
+          <p class="dive__cue" aria-hidden="true"><span></span>Scroll</p>
+          <span class="dive__anchor" id="signup" aria-hidden="true"></span>
         </div>
-
       </section>
 
-      <!-- ── the work ──────────────────────────────────────────────────────
-           A band of its own, so the density counter stops folding the
-           marquee into the hero above it. -->
-      <section class="band band--night" style="padding-block: 0">
-        <div class="strip">
-          <span class="artifact-label wrap">Examples of the work</span>
-          <div class="strip__row">
-            <span class="strip__item">Senior portraits</span>
-            <span class="strip__item">Lawn and hedges, weekly</span>
-            <span class="strip__item">SAT tutoring</span>
-            <span class="strip__item">Wedding highlight reel</span>
-            <span class="strip__item">A Shopify storefront</span>
-            <span class="strip__item">Birthday DJ set</span>
-            <span class="strip__item">Logo and brand kit</span>
-            <span class="strip__item">Piano lessons</span>
+      <!-- ── the problem ───────────────────────────────────────────────
+           The page is an overview, in the order a stranger needs it: what is
+           broken, what fuime is, how it works, what it costs, who signs, go.
+           Every claim is one BRIEF.md lists as shipped. -->
+      <section class="band band--cream" id="problem">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The problem</p>
+            <h2 class="h2">The work is real. Getting paid for it isn't.</h2>
+            <p class="lead">
+              Tutoring, lawn care, photo shoots, design, DJ sets. The client is
+              real and so is the money, but it arrives through a group chat and
+              somebody else's account.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="strike">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.5 16.5V16a4 4 0 0 1 4-4h1.5" />
+                <circle cx="7.25" cy="6" r="3" />
+                <path d="M12 16.5h6.5M15.5 13.5l3 3-3 3" />
+              </svg>
+              <h3 class="h4">Venmo to a parent</h3>
+              <p>Their account, their name, their history. You ask for your own money.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="2" y="5.5" width="18" height="11" rx="1.5" />
+                <circle cx="11" cy="11" r="2.75" />
+                <path d="M5 8.5h.01M17 13.5h.01" />
+              </svg>
+              <h3 class="h4">Cash</h3>
+              <p>No record, no receipt for the client, nothing to show at tax time.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.25V11l3.25 2" />
+              </svg>
+              <h3 class="h4">“I'll get you next week”</h3>
+              <p>With no invoice to point at, following up feels like begging.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="4" y="9.5" width="14" height="9.5" rx="1.5" />
+                <path d="M7.5 9.5V6.75a3.5 3.5 0 0 1 7 0V9.5" />
+                <path d="M11 13.25v2.5" />
+              </svg>
+              <h3 class="h4">Taking cards yourself</h3>
+              <p>A merchant account, a business entity, a contract. Under 18 you can't sign one.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      <!-- ── the artifact ──────────────────────────────────────────────────
-           The slider lives on /pricing now. This band keeps the artifact and
-           the three-way split bar under it, which is the claim. -->
-      <section class="band band--cream">
+      <!-- ── what fuime is ─────────────────────────────────────────────── -->
+      <section class="band band--paper" id="what">
         <div class="wrap split rise">
           <div>
-            <p class="eyebrow">What the client gets</p>
-            <h2 class="h2">An invoice with your name on it.</h2>
-            <p class="lead mt-5">Not a Venmo request.</p>
+            <p class="eyebrow">What fuime is</p>
+            <h2 class="h2">fuime sells for you, then pays you what you earned.</h2>
+            <p class="lead mt-5">
+              Your client buys from fuime and pays by card. fuime pays you the
+              sale, less one fee, and keeps the books while it does. We are the
+              seller of record, so the payments paperwork is ours, not yours.
+            </p>
           </div>
 
           <div>
@@ -257,209 +339,53 @@
             ></div>
           </div>
         </div>
-      </section>
 
-      <!-- ── the problem ───────────────────────────────────────────────── -->
-      <section class="band band--night">
-        <div class="wrap rise">
-          <div class="bhead">
-            <p class="eyebrow">How you get paid today</p>
-            <h2 class="h2">
-              Every option makes you look like a kid doing a favor.
-            </h2>
-            <p class="lead">
-              The work is real and the client is real. The payment method is a
-              group chat and somebody's mom.
-            </p>
-          </div>
-
-          <div class="rows mt-8" data-fx-rows="strike">
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <path d="M2.5 16.5V16a4 4 0 0 1 4-4h1.5" />
-                <circle cx="7.25" cy="6" r="3" />
-                <path d="M12 16.5h6.5M15.5 13.5l3 3-3 3" />
-              </svg>
-              <h3 class="h4">Venmo → mom</h3>
-              <p>
-                It's her account, her name, her transaction history. You ask her
-                for your own money.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="2" y="5.5" width="18" height="11" rx="1.5" />
-                <circle cx="11" cy="11" r="2.75" />
-                <path d="M5 8.5h.01M17 13.5h.01" />
-              </svg>
-              <h3 class="h4">Cash</h3>
-              <p>
-                No record. Nothing to show a client who wants a receipt, or the
-                IRS if you clear $400.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M11 6.25V11l3.25 2" />
-              </svg>
-              <h3 class="h4">“I'll get you next week”</h3>
-              <p>
-                You have no invoice to point at, so following up feels like
-                begging.
-              </p>
-            </article>
-
-            <article class="card card--row">
-              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
-                <rect x="4" y="9.5" width="14" height="9.5" rx="1.5" />
-                <path d="M7.5 9.5V6.75a3.5 3.5 0 0 1 7 0V9.5" />
-                <path d="M11 13.25v2.5" />
-              </svg>
-              <h3 class="h4">A business account</h3>
-              <p>Requires 18. Waiting it out costs you two years of clients.</p>
-            </article>
-          </div>
+        <div class="wrap grid grid--3 mt-8 rise">
+          <article class="card">
+            <h3 class="h4">Get paid like a business</h3>
+            <p>Invoices, payment links and a storefront page, with your business name on them. Clients pay by card.</p>
+          </article>
+          <article class="card">
+            <h3 class="h4">Books that keep themselves</h3>
+            <p>Every sale, fee and refund lands on your ledger. Income and net for the year, ready at tax time.</p>
+          </article>
+          <article class="card">
+            <h3 class="h4">Open from 13</h3>
+            <p>Under 18, a parent or guardian signs once as the account holder. You run the business day to day.</p>
+          </article>
         </div>
       </section>
 
-      <picture>
-        <source
-          type="image/avif"
-          srcset="/img/keys-900.avif 900w, /img/keys-1600.avif 1600w"
-          sizes="100vw"
-        />
-        <source
-          type="image/webp"
-          srcset="/img/keys-900.webp 900w, /img/keys-1600.webp 1600w"
-          sizes="100vw"
-        />
-        <img
-          class="seam"
-          src="/img/keys-900.webp"
-          alt=""
-          width="1600"
-          height="686"
-          loading="lazy"
-          decoding="async"
-        />
-      </picture>
-
       <!-- ── how it works ──────────────────────────────────────────────── -->
-      <section class="band band--cream" id="how">
+      <section class="band band--night" id="how">
         <div class="wrap rise">
           <div class="bhead">
-            <p class="eyebrow">How fuime works</p>
-            <h2 class="h2">Three steps. One of them needs a parent.</h2>
+            <p class="eyebrow">How it works</p>
+            <h2 class="h2">Three steps to your first paid invoice.</h2>
           </div>
 
           <div class="grid grid--3 mt-8">
-            <article class="card">
-              <h3 class="h4">01 Name your business</h3>
-              <p>About a minute. You'll need a parent or guardian's email address.</p>
-              <picture>
-                <source
-                  type="image/avif"
-                  srcset="
-                    /img/tile-invoice-480.avif 480w,
-                    /img/tile-invoice-800.avif 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <source
-                  type="image/webp"
-                  srcset="
-                    /img/tile-invoice-480.webp 480w,
-                    /img/tile-invoice-800.webp 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <img
-                  class="tile"
-                  src="/img/tile-invoice-800.webp"
-                  alt="A blank sheet of paper and a pen on a folding table, lit from one side by a laptop screen."
-                  width="800"
-                  height="600"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
+            <article class="step">
+              <p class="step__n">01</p>
+              <h3>Set up your business</h3>
+              <p>A name and what you sell. A person at fuime reviews every new business before it can take payment.</p>
             </article>
-
-            <article class="card">
-              <h3 class="h4">02 A guardian signs</h3>
-              <p>
-                They accept the Guardian Agreement, become the legal payee, and
-                approve the payout destination.
-              </p>
-              <picture>
-                <source
-                  type="image/avif"
-                  srcset="
-                    /img/tile-phone-480.avif 480w,
-                    /img/tile-phone-800.avif 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <source
-                  type="image/webp"
-                  srcset="
-                    /img/tile-phone-480.webp 480w,
-                    /img/tile-phone-800.webp 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <img
-                  class="tile"
-                  src="/img/tile-phone-800.webp"
-                  alt="A phone lying face up in the grass at night, its screen glowing."
-                  width="800"
-                  height="600"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
+            <article class="step">
+              <p class="step__n">02</p>
+              <h3>Send a link</h3>
+              <p>An invoice or a payment link. Your client pays by card and the sale shows up on your ledger.</p>
             </article>
-
-            <article class="card">
-              <h3 class="h4">03 Invoice and keep books</h3>
-              <p>Send a link. fuime keeps the books: income, expenses, and net.</p>
-              <picture>
-                <source
-                  type="image/avif"
-                  srcset="
-                    /img/tile-box-480.avif 480w,
-                    /img/tile-box-800.avif 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <source
-                  type="image/webp"
-                  srcset="
-                    /img/tile-box-480.webp 480w,
-                    /img/tile-box-800.webp 800w
-                  "
-                  sizes="(max-width: 900px) 92vw, 33vw"
-                />
-                <img
-                  class="tile"
-                  src="/img/tile-box-800.webp"
-                  alt="An open cardboard box and a camera lens on the grass at night."
-                  width="800"
-                  height="600"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
+            <article class="step">
+              <p class="step__n">03</p>
+              <h3>Get paid out</h3>
+              <p>fuime pays out what you've earned on a set schedule. Under 18, a parent or guardian sets up where it goes.</p>
             </article>
           </div>
         </div>
       </section>
 
       <!-- ── money ─────────────────────────────────────────────────────── -->
-      <section class="band band--paper">
+      <section class="band band--cream">
         <div class="wrap rise">
           <div class="bhead">
             <p class="eyebrow">What it costs</p>
@@ -511,101 +437,49 @@
       </section>
 
       <!-- ── parents ───────────────────────────────────────────────────── -->
-      <section class="band band--night">
-        <div class="wrap split rise">
-          <div>
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
             <p class="eyebrow">For parents</p>
             <h2 class="h2">You sign once. You keep the controls.</h2>
-            <p class="lead mt-5">
-              Your kid is going to keep taking money for work either way. This
-              is the version with a paper trail.
-            </p>
-            <p class="mt-6">
-              <a class="tlink" href="/parents"
-                >Read what you're actually signing<svg
-                  class="arrow"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
-              ></a>
+            <p class="lead">
+              You accept the Guardian Agreement, become the account holder, and
+              approve where payouts go. Nothing is paid out until you have.
             </p>
           </div>
-
-          <div class="arch arch--portrait">
-            <picture>
-              <source
-                type="image/avif"
-                srcset="
-                  /img/parents-arch-640.avif   640w,
-                  /img/parents-arch-1000.avif 1000w
-                "
-                sizes="(max-width: 900px) 92vw, 44vw"
-              />
-              <source
-                type="image/webp"
-                srcset="
-                  /img/parents-arch-640.webp   640w,
-                  /img/parents-arch-1000.webp 1000w
-                "
-                sizes="(max-width: 900px) 92vw, 44vw"
-              />
-              <img
-                src="/img/parents-arch-1000.webp"
-                alt="A tall arched window at night seen from inside a dark room, two mugs on the sill, the lights of a town in the valley below."
-                width="1000"
-                height="1250"
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
-          </div>
+          <p class="mt-7">
+            <a class="tlink" href="/parents"
+              >Read what you're signing<svg
+                class="arrow"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
         </div>
       </section>
 
-      <!-- ── join ──────────────────────────────────────────────────────── -->
-      <section class="band band--night" id="join" style="padding-bottom: 0">
-        <div class="wrap portal">
-          <div class="portal__media">
-            <picture>
-              <source
-                type="image/avif"
-                srcset="
-                  /img/arch-dusk-640.avif   640w,
-                  /img/arch-dusk-1000.avif 1000w
-                "
-                sizes="(max-width: 620px) 96vw, 520px"
-              />
-              <source
-                type="image/webp"
-                srcset="
-                  /img/arch-dusk-640.webp   640w,
-                  /img/arch-dusk-1000.webp 1000w
-                "
-                sizes="(max-width: 620px) 96vw, 520px"
-              />
-              <img
-                src="/img/arch-dusk-1000.webp"
-                alt="A stone archway standing alone on a hilltop at dusk, the lights of a town visible through the opening."
-                width="1000"
-                height="1250"
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
+      <!-- ── start ─────────────────────────────────────────────────────────
+           The last thing on the page is the first thing it asks for. The
+           schools form stays, but under the ask rather than as it. -->
+      <section class="band band--night closer" id="join">
+        <div class="wrap closer__in">
+          <h2 class="h2">You're already working. Start billing.</h2>
+          <p class="lead">Free to start. Nothing until you sell something.</p>
+          <div class="closer__cta">
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
+            <a class="btn btn--ghost" href="/login">Log in</a>
           </div>
 
-          <div class="portal__in">
+          <div class="closer__schools">
             <p class="eyebrow">Schools, teachers and cohorts</p>
-            <h2 class="h2">Bringing a class or a closed group?</h2>
-            <p class="lead">Leave your address. We read every one.</p>
+            <p>Bringing a class or a closed group? Leave your address. We read every one.</p>
             <form class="capture" data-source="home-cohort" novalidate>
               <div class="capture__row">
                 <input
@@ -616,7 +490,7 @@
                   aria-label="Email address"
                   required
                 />
-                <button type="submit" class="btn btn--accent">
+                <button type="submit" class="btn btn--light">
                   Get in touch
                 </button>
               </div>
@@ -626,10 +500,6 @@
                 <span>Got it. We'll follow up by email.</span>
               </p>
             </form>
-            <p class="small muted">
-              On your own?
-              <a class="tlink" href="/get-started">Start your business</a>.
-            </p>
           </div>
         </div>
       </section>

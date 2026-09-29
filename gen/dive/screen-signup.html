@@ -7,7 +7,7 @@
     <!-- ── the plate the dive hands off FROM ──────────────────────────────────
          This is what gets shot at 1600×1000@2x, warped onto the laptop screen
          by composite.py, and baked into all 121 frames. The DOM panel in
-         start.html is what the dive hands off TO, at the end of the flight.
+         index.html is what the dive hands off TO, at the end of the flight.
          The two cross-fade into each other over about a second, corner to
          corner, so any difference between them is not a difference — it is a
          visible morph in the middle of the shot.
@@ -23,7 +23,9 @@
          Re-shoot after ANY change to .dv-join or .capture:
            node shoot-screen.mjs keys/screen-signup.png screen-signup.html
            python3 composite.py raw keys/screen-signup.png comp
-           ./build-frames.sh -->
+           ./build-frames.sh
+         raw/ is gitignored and was gone by 2026-09-25, so that restore
+         re-plated the shipped frames in place instead: see replate.py. -->
 
     <link rel="stylesheet" href="/style.css" />
     <style>
@@ -56,45 +58,23 @@
          is registered onto the screen. Wearing it here is how the plate ends up
          in the same 1600×1000 resting geometry the live panel lands in. -->
     <section class="dive" data-fx-dive-on>
-      <!-- ↓↓↓ VERBATIM COPY of the panel in site/start.html ↓↓↓
+      <!-- ↓↓↓ VERBATIM COPY of the panel in site/index.html ↓↓↓
            Change one, change the other, then re-shoot. -->
       <div class="dive__app dive__app--join">
         <div class="dv-join">
           <svg class="dv-join__mark" viewBox="0 0 713 582" aria-hidden="true">
             <use href="#arch" />
           </svg>
-          <p class="dv-join__eyebrow">Early access</p>
-          <h1 class="dv-join__h">
-            You're already working.<br />Start billing.
-          </h1>
+          <h1 class="dv-join__h">You're already working.<br />Start billing.</h1>
           <p class="dv-join__lead">
-            Send a real invoice, get paid into an account you run day to day,
-            and know what you owe at tax time. A parent co-signs once. After
-            that it's yours.
+            Write a real invoice, keep books that hold up, and know what
+            you owe at tax time. You run the business.
           </p>
-          <form class="capture" data-source="start-dive" novalidate>
-            <div class="capture__row">
-              <input
-                type="email"
-                name="email"
-                placeholder="you@school.edu"
-                autocomplete="email"
-                aria-label="Email address"
-                required
-              />
-              <button type="submit" class="btn btn--accent">
-                Get early access
-              </button>
-            </div>
-            <p class="capture__msg" role="status" aria-live="polite"></p>
-            <p class="capture__done">
-              You're on the list. We'll email you once.
-            </p>
-          </form>
-          <p class="dv-join__fine">
-            One email when it's your turn, nothing after that. fuime is not a
-            bank — payments go from your client into your own Stripe account.
-          </p>
+          <div class="dv-join__cta">
+            <a class="btn btn--accent" href="/get-started">Start your business</a>
+            <a class="btn btn--light" href="/parents">Parents: what you'll sign</a>
+          </div>
+          <p class="dv-join__note">Free to start. Nothing until you sell something.</p>
         </div>
       </div>
     </section>

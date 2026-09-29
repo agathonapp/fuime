@@ -55,8 +55,14 @@ import { getStage } from 'cwe/stage'
      rows        one-shot rule draw on a ruled list
      roll        per-digit odometer on the calculator's figures
      split       the fee bar, which IS the argument
-     field       focus-visible rings and 44px mobile hit areas (WCAG 2.4.7) */
-const NAMES = ['ledger-bus', 'rows', 'roll', 'split', 'field']
+     field       focus-visible rings and 44px mobile hit areas (WCAG 2.4.7)
+
+   And one exception to that rule, by the founder's call on 2026-09-25:
+     dive        scroll flies into the laptop and lands on the sign-up. The
+                 light centred hero it replaced read as a template; this is the
+                 one thing on the site nobody else has. It is only on / — no
+                 other page carries [data-fx-dive], so it costs them nothing. */
+const NAMES = ['ledger-bus', 'dive', 'rows', 'roll', 'split', 'field']
 
 /* One wave. A module that 404s or fails to parse resolves to null here and is
    simply skipped later — it never rejects, so it cannot unwind the sequence. */
@@ -126,6 +132,7 @@ await Promise.all([
 
 // Scroll readers. Independent of each other.
 await Promise.all([
+  start('dive', m => m.initDive()),
   // The mount attribute is deliberately not `data-fx-steprail`: the module
   // writes that one onto its host to mark itself mounted, so shipping it in
   // the markup would make steprail bail on sight.

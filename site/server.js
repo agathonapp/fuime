@@ -95,9 +95,8 @@ const REDIRECTS = new Map([
 ])
 
 // Old page addresses, kept so links in the wild still land somewhere. The dive
-// was deleted on 2026-09-14 — 5,069px of scroll animation on the front door and
-// 22MB of frames, carrying no information — so its two files now resolve to the
-// landing page rather than to themselves.
+// was deleted on 2026-09-14 and came back on 2026-09-25 as the top of / itself,
+// so its old standalone addresses all resolve to the landing page.
 const INTERNAL_REDIRECTS = new Map([
   ['/start.html', '/'],
   ['/start-scroll.html', '/'],
@@ -136,7 +135,7 @@ const CLOSED = new Set([])
 // — the internal build contract, including the list of claims the site may not
 // make — at https://fuime.com/docs/BRIEF.md. Nothing ever linked it; it was
 // reachable because the directory sat next to the pages. Removed.
-const PUBLIC_DIRS = /^\/(img|vid|fx|fonts)\//
+const PUBLIC_DIRS = /^\/(img|vid|dive|dive-m|fx|fonts)\//
 const PUBLIC_FILES = new Set([
   // the spine
   '/index.html',
@@ -197,9 +196,8 @@ async function resolveFile(pathname) {
   const abs = join(ROOT, rel)
   if (abs !== ROOT && !abs.startsWith(ROOT + sep)) return null
 
-  // index.html is the front door and the only landing page. It spent weeks
-  // unreachable at /home behind CLOSED while / served the dive; the dive is
-  // now deleted outright.
+  // index.html is the front door and the only landing page. The dive opens it:
+  // the frame ladder lives in /dive/ and /dive-m/, served by PUBLIC_DIRS.
   if (pathname === '/') {
     return { path: join(ROOT, 'index.html'), ext: '.html' }
   }
@@ -336,7 +334,7 @@ const server = createServer(async (req, res) => {
   // Hashless filenames, so HTML must revalidate or a deploy goes unseen.
   // Frames and imagery are content-addressed by directory and never edited in
   // place, which is what earns them the immutable year.
-  const longLived = /^\/(img|vid|fonts)\//.test(pathname)
+  const longLived = /^\/(img|vid|dive|dive-m|fonts)\//.test(pathname)
   res.setHeader(
     'Cache-Control',
     longLived ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate'

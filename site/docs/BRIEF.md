@@ -165,13 +165,22 @@ Three decisions carry it:
    There is nowhere for inconsistency to enter when there is no eighth size to
    reach for.
 
-The hero is **light, centred, 55svh, and does not fill the viewport** — theirs
+**Exception, founder's call 2026-09-25: `/` opens with the dive** — scroll
+flies into the laptop on the desk and lands on the sign-up panel, which is the
+page's h1. The light centred hero below read as a template on the front door;
+the dive is the one thing on the site nobody else has. It is `/` only. Every
+other page keeps the hero rule that follows. The panel's markup is duplicated
+in `gen/dive/screen-signup.html` and baked into the frames — change one, change
+the other, re-shoot, and run `gen/dive/replate.py`, or the old panel ghosts
+through the cross-fade.
+
+Everywhere else, the hero is **light, centred, 55svh, and does not fill the viewport** — theirs
 run 30-71%, median 55, so the next section is always partly visible and the page
 reads as continuing rather than as a wall. Headline, one subhead, two buttons,
 one note. Nothing else, and no photograph: a photograph behind type is a
 contrast problem you solve on every page forever.
 
-**Motion is almost nothing.** Five fx modules, down from fifteen, and only the
+**Motion is almost nothing** — apart from the dive on `/`, above. Five fx modules, down from fifteen, and only the
 ones caused by a hand rather than by scrolling — the fee arithmetic, the ruled
 lists, the calculator odometer, the split bar, focus rings. **No scroll reveals**
 (parking sections at `opacity:0` was the single biggest reason this read as

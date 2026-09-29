@@ -94,9 +94,27 @@ try {
     assert.match(r.headers.get('content-type'), /text\/html/)
     const body = await r.text()
     // index.html carries the nav, the worked example and the footer sitemap.
-    // It is the only landing page; the dive that used to sit here was deleted.
+    // It is the only landing page, and the dive opens it.
     assert.match(body, /class="nav nav--solid"/, 'root should be index.html')
     assert.match(body, /class="foot"/, 'root should carry the footer sitemap')
+  })
+
+  await run('the dive opens / and says what the product is', async () => {
+    // A scroll-driven film is easy to keep polishing until the first screen is
+    // a mood with no nouns on it. A visitor who cannot tell what fuime is
+    // without scrolling does not scroll.
+    const body = await (await get('/')).text()
+    assert.match(body, /data-fx-dive/, 'the dive is not on /')
+    assert.match(body, /class="dive__lede"/, 'no lede on the first screen')
+    // The panel is the page's h1 in every state, including dive-off.
+    assert.match(body, /<h1 class="dv-join__h"/, 'the sign-up panel lost the h1')
+    assert.match(body, /class="lede__skip" href="#signup"/, 'no skip link')
+    assert.match(body, /id="signup"/, 'skip link points at nothing')
+    // The ladder it scrubs. Without these the dive silently never arms and the
+    // page is a still photograph — which is how it failed quietly before.
+    for (const p of ['/dive/track.json', '/dive/f_0001.webp', '/dive/f_0122.webp', '/dive-m/f_0001.webp', '/img/dive-end.webp']) {
+      assert.equal((await get(p)).status, 200, `${p} not served`)
+    }
   })
 
   await run('every page in the footer sitemap is actually served', async () => {
@@ -314,6 +332,8 @@ try {
   await run('immutable caching only for content-addressed dirs', async () => {
     const asset = await get('/img/mark.svg')
     assert.match(asset.headers.get('cache-control'), /immutable/)
+    const frame = await get('/dive/f_0001.webp')
+    assert.match(frame.headers.get('cache-control'), /immutable/)
     // HTML must revalidate or a deploy goes unseen.
     const page = await get('/')
     assert.match(page.headers.get('cache-control'), /must-revalidate/)
