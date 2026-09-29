@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>fuime motion</title>
+    <meta name="darkreader-lock" />
+    <link
+      rel="stylesheet"
+      href="https://api.fontshare.com/v2/css?f%5B%5D=general-sans@1,2&f%5B%5D=gambetta@1,2&display=swap"
+    />
+    <style>
+      /* Same tokens as site/style.css. Warm neutrals, one accent, no pure
+         black or white, and no gradients anywhere. */
+      :root {
+        --ink: #1c1a15;
+        --ink-muted: rgba(28, 26, 21, 0.72);
+        --paper: #f9f8f7;
+        --cream: #ebe7df;
+        --accent: #c2401f;
+        --hair: rgba(28, 26, 21, 0.14);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: 'General Sans', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+      header { padding: 72px 0 40px; border-bottom: 1px solid var(--hair); }
+      h1 {
+        font-family: Gambetta, Georgia, serif;
+        font-weight: 500;
+        font-size: 48px;
+        margin: 0 0 12px;
+        letter-spacing: -0.01em;
+      }
+      header p { margin: 0; color: var(--ink-muted); font-size: 20px; max-width: 60ch; }
+      .piece { padding: 48px 0; border-bottom: 1px solid var(--hair); }
+      .piece__head {
+        display: flex;
+        gap: 16px;
+        align-items: baseline;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      h2 { font-family: Gambetta, Georgia, serif; font-weight: 500; font-size: 28px; margin: 0; }
+      .use { color: var(--ink-muted); font-size: 16px; }
+      .stage {
+        background: var(--cream);
+        border: 1px solid var(--hair);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+        min-height: 200px;
+      }
+      canvas { max-width: 100%; height: auto; display: block; }
+      .files { margin: 14px 0 0; font-size: 14px; color: var(--ink-muted); }
+      .files a { color: var(--accent); text-decoration: none; }
+      .files a:hover { text-decoration: underline; }
+      button.replay {
+        font: inherit;
+        font-size: 14px;
+        color: var(--accent);
+        background: none;
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        padding: 5px 14px;
+        cursor: pointer;
+      }
+      .tag {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 3px 10px;
+      }
+      .tag--warn { border-color: var(--ink-muted); color: var(--ink-muted); }
+      .note {
+        margin: 12px 0 0;
+        font-size: 14px;
+        color: var(--ink-muted);
+        max-width: 72ch;
+        line-height: 1.5;
+      }
+      .note code {
+        background: var(--cream);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      video { max-width: 100%; height: auto; display: block; border-radius: 6px; }
+      footer { padding: 40px 0 80px; color: var(--ink-muted); font-size: 15px; }
+      @media (max-width: 640px) { h1 { font-size: 36px; } header { padding-top: 48px; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>fuime motion</h1>
+        <p>
+          Eight Rive pieces, authored as text (RML) and built with the Rive CLI. Two of them you can actually touch.
+          Every one is flat colour on the site's own warm palette — no
+          gradients, no glow. Sources live beside this file; run
+          <code>tools/build-all.sh</code> to rebuild.
+        </p>
+      </header>
+
+      <section class="piece" data-riv="pay-button" data-h="300" data-tag="interactive">
+        <div class="piece__head">
+          <h2>pay-button</h2>
+          <span class="use">Hover it. Click it. What your buyer actually does</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="fee-dial" data-h="360" data-mode="video" data-tag="needs signing"
+               data-note="Drag-driven, and the maths runs in Luau. Local builds carry unsigned scripts and web runtimes silently refuse to run them, so this plays as video here. Run <code>rive login</code> then <code>rive fee-dial --publish</code> for the live one, or <code>rive fee-dial</code> to drag it now.">
+        <div class="piece__head">
+          <h2>fee-dial</h2>
+          <span class="use">Drag to set the sale; every figure recomputes, floor and all</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="arch-draw" data-h="380">
+        <div class="piece__head">
+          <h2>arch-draw</h2>
+          <span class="use">The mark builds itself · loaders, intros, README, social</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="flow-of-funds" data-h="300">
+        <div class="piece__head">
+          <h2>flow-of-funds</h2>
+          <span class="use">Client → fuime → you, with the fee splitting off · the thing hardest to explain</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="paid" data-h="380">
+        <div class="piece__head">
+          <h2>paid</h2>
+          <span class="use">The moment an invoice is paid · in-app</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="invoice-builds" data-h="400">
+        <div class="piece__head">
+          <h2>invoice-builds</h2>
+          <span class="use">An invoice assembling itself · "An invoice with your name on it"</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="cosign" data-h="330">
+        <div class="piece__head">
+          <h2>cosign</h2>
+          <span class="use">Neither half of the arch stands alone · "One of them needs a parent"</span>
+        </div>
+      </section>
+
+      <section class="piece" data-riv="arch-pending" data-h="200">
+        <div class="piece__head">
+          <h2>arch-pending</h2>
+          <span class="use">Pending state · loops, 593 bytes</span>
+        </div>
+      </section>
+
+      <footer>
+        fuime is a financial technology company, not a bank.
+      </footer>
+    </div>
+
+    <script src="https://unpkg.com/@rive-app/canvas@2.34.0"></script>
+    <script>
+      // Each piece gets a canvas sized to its artboard, a replay button (most
+      // of these are one-shots and a gallery you cannot re-trigger is useless),
+      // and a line of links to the exported files.
+      document.querySelectorAll('.piece').forEach((el) => {
+        const name = el.dataset.riv;
+        const h = +el.dataset.h;
+        const head = el.querySelector('.piece__head');
+
+        if (el.dataset.tag) {
+          const tag = document.createElement('span');
+          tag.className = 'tag' + (el.dataset.mode === 'video' ? ' tag--warn' : '');
+          tag.textContent = el.dataset.tag;
+          head.appendChild(tag);
+        }
+
+        const stage = document.createElement('div');
+        stage.className = 'stage';
+        el.appendChild(stage);
+
+        const files = document.createElement('p');
+        files.className = 'files';
+        files.innerHTML =
+          ['riv', 'mp4', 'gif', 'png']
+            .map((x) => `<a href="out/${name}.${x}">${name}.${x}</a>`)
+            .join(' · ') + ' ';
+        el.appendChild(files);
+
+        if (el.dataset.note) {
+          const note = document.createElement('p');
+          note.className = 'note';
+          note.innerHTML = el.dataset.note;
+          el.appendChild(note);
+        }
+
+        // A file whose behaviour lives in an unsigned script plays as video.
+        if (el.dataset.mode === 'video') {
+          const v = document.createElement('video');
+          Object.assign(v, { src: `out/${name}.mp4`, autoplay: true, loop: true, muted: true, playsInline: true });
+          v.style.height = h + 'px';
+          stage.appendChild(v);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.height = h * 2;
+        stage.appendChild(canvas);
+
+        const replay = document.createElement('button');
+        replay.className = 'replay';
+        replay.textContent = 'Replay';
+        files.appendChild(replay);
+
+        const r = new rive.Rive({
+          src: `out/${name}.riv`,
+          canvas,
+          autoplay: true,
+          stateMachines: 'State Machine 1',
+          onLoad: () => {
+            const b = r.bounds;
+            canvas.width = Math.round((b.maxX - b.minX) * (canvas.height / (b.maxY - b.minY)));
+            canvas.style.height = h + 'px';
+            r.resizeDrawingSurfaceToCanvas();
+            el.dataset.loaded = '1';
+          },
+          onLoadError: () => {
+            stage.textContent = 'failed to load ' + name + '.riv';
+            el.dataset.loaded = 'error';
+          },
+        });
+        // Pointer input needs the listeners to see real coordinates, which is
+        // what resizeDrawingSurfaceToCanvas keeps true on zoom and resize.
+        addEventListener('resize', () => r.resizeDrawingSurfaceToCanvas());
+        replay.addEventListener('click', () => r.reset({ stateMachines: 'State Machine 1', autoplay: true }));
+      });
+    </script>
+  </body>
+</html>

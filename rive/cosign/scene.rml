@@ -1,0 +1,215 @@
+<Rive version="1" kind="fragment">
+    <!-- cosign - "Three steps. One of them needs a parent." (site/index.html)
+
+         The arch is built in two halves and neither half stands alone. That is
+         the argument, and it is a true one: under CLAUDE.md L2 the guardian is
+         the account owner and the legal signer, so a teen-only signature does
+         not hold - an arch missing a side is not a smaller arch, it is rubble.
+
+         Each half only goes solid once its signature is drawn, and the caption
+         at the end is the approved disclosure wording from LEGAL_RESEARCH
+         (L5): accounts are opened and owned by a parent or guardian. Do not
+         reword it here; that sentence has a lawyer behind it.
+
+         Flat strokes, no gradient, no glow. -->
+
+    <Artboard defaultStateMachineId="0:7" styleId="0:5" width="900" height="560" name="Cosign" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- ============ the arch, in two halves ============ -->
+        <Node x="450" y="300" name="Arch" id="0:10">
+            <Shape x="-55" opacity="0" name="LeftHalf" id="0:11">
+                <PointsPath name="P">
+                    <StraightVertex x="-130" y="140"/>
+                    <CubicDetachedVertex x="-130" y="0" inRotation="0" inDistance="0" outRotation="-1.5707963" outDistance="71.8"/>
+                    <CubicDetachedVertex x="0" y="-130" inRotation="3.1415927" inDistance="71.8" outRotation="0" outDistance="0"/>
+                </PointsPath>
+                <Stroke thickness="15" cap="round" join="round" name="S"><SolidColor colorValue="FFC2401F" name="C"/></Stroke>
+            </Shape>
+            <Shape x="55" opacity="0" name="RightHalf" id="0:12">
+                <PointsPath name="P">
+                    <CubicDetachedVertex x="0" y="-130" inRotation="0" inDistance="0" outRotation="0" outDistance="71.8"/>
+                    <CubicDetachedVertex x="130" y="0" inRotation="-1.5707963" inDistance="71.8" outRotation="0" outDistance="0"/>
+                    <StraightVertex x="130" y="140"/>
+                </PointsPath>
+                <Stroke thickness="15" cap="round" join="round" name="S"><SolidColor colorValue="FFC2401F" name="C"/></Stroke>
+            </Shape>
+        </Node>
+
+        <!-- ============ the two signatures ============ -->
+        <Node x="172" y="306" name="SigLeft" id="0:20">
+            <Shape name="Ink" id="0:21">
+                <PointsPath name="P">
+                    <CubicMirroredVertex x="-78" y="6" rotation="0" distance="12"/>
+                    <CubicMirroredVertex x="-46" y="-16" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="-16" y="12" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="12" y="-20" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="40" y="8" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="64" y="-12" rotation="0" distance="14"/>
+                    <CubicMirroredVertex x="82" y="4" rotation="0" distance="10"/>
+                </PointsPath>
+                <Stroke thickness="3.5" cap="round" join="round" name="S" id="0:22">
+                    <SolidColor colorValue="FF1C1A15" name="C"/>
+                    <TrimPath start="0" end="0" offset="0" modeValue="sequential" name="Write" id="0:23"/>
+                </Stroke>
+            </Shape>
+            <Shape x="0" y="34" name="Line" id="0:24">
+                <Rectangle width="180" height="1.5" originX="0.5" originY="0.5" name="P"/>
+                <Fill name="F"><SolidColor colorValue="3D1C1A15" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <Node x="728" y="306" name="SigRight" id="0:30">
+            <Shape name="Ink" id="0:31">
+                <PointsPath name="P">
+                    <CubicMirroredVertex x="-80" y="2" rotation="0" distance="11"/>
+                    <CubicMirroredVertex x="-52" y="-18" rotation="0" distance="15"/>
+                    <CubicMirroredVertex x="-22" y="10" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="6" y="-16" rotation="0" distance="16"/>
+                    <CubicMirroredVertex x="32" y="12" rotation="0" distance="15"/>
+                    <CubicMirroredVertex x="58" y="-10" rotation="0" distance="14"/>
+                    <CubicMirroredVertex x="80" y="6" rotation="0" distance="10"/>
+                </PointsPath>
+                <Stroke thickness="3.5" cap="round" join="round" name="S" id="0:32">
+                    <SolidColor colorValue="FF1C1A15" name="C"/>
+                    <TrimPath start="0" end="0" offset="0" modeValue="sequential" name="Write" id="0:33"/>
+                </Stroke>
+            </Shape>
+            <Shape x="0" y="34" name="Line" id="0:34">
+                <Rectangle width="180" height="1.5" originX="0.5" originY="0.5" name="P"/>
+                <Fill name="F"><SolidColor colorValue="3D1C1A15" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <!-- ============ who is signing ============ -->
+        <Text x="172" y="228" opacity="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="LabelL" id="0:40">
+            <TextStylePaint fontSize="22" fontAssetId="0:100" name="S" id="0:41">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:41" text="You" name="R"/>
+        </Text>
+
+        <Text x="728" y="228" opacity="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="LabelR" id="0:42">
+            <TextStylePaint fontSize="22" fontAssetId="0:100" name="S" id="0:43">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:43" text="Your parent or guardian" name="R"/>
+        </Text>
+
+        <Text x="450" y="502" opacity="0" width="640" sizingValue="fixed" height="34" alignValue="center" verticalAlignValue="middle" originX="0.5" originY="0.5" name="Caption" id="0:44">
+            <TextStylePaint fontSize="21" fontAssetId="0:100" name="S" id="0:45">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:45" text="Accounts are opened and owned by a parent or guardian." name="R"/>
+        </Text>
+
+        <Fill name="Background" id="0:70"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+
+        <LinearAnimation fps="60" duration="320" name="Cosign" id="0:6">
+
+            <!-- left: name, then signature, then the half goes solid and closes up -->
+            <KeyedObject objectId="0:40">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="8" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:23">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="28" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.35" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="90" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0.16" frame="20" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.16" frame="92" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="124" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="-55" frame="92" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.3" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="132" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- right: the same, and only now -->
+            <KeyedObject objectId="0:42">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="118" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="144" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="138" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.35" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="200" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:12">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0.16" frame="20" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.16" frame="202" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="234" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="55" frame="202" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.3" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="242" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- the arch takes its own weight for the first time -->
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="240" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="0.5" period="0.5"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.045" frame="262" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="300" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="240" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="0.5" period="0.5"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.045" frame="262" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="300" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:44">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="248" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="284" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState><StateTransition stateToId="0:80"/></EntryState>
+                <AnimationState x="200" animationId="0:6" id="0:80"/>
+            </StateMachineLayer>
+        </StateMachine>
+    </Artboard>
+
+    <FontAsset file="../fonts/GeneralSans.ttf" name="GeneralSans" id="0:100"/>
+</Rive>

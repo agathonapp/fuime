@@ -1,0 +1,488 @@
+<Rive version="1" kind="fragment">
+    <!-- pay-button - what your buyer actually does, and it is clickable.
+
+         No script anywhere. Hover and press are two view model booleans written
+         by four listeners; the transitions read them. That matters beyond
+         elegance: a Rive file built locally carries UNSIGNED scripts, and web
+         runtimes silently refuse to run them - the file loads and the Luau
+         never executes. A listener-and-bind file has nothing to sign, so this
+         one works in a browser straight out of `--once`. See fee-dial, which
+         does need `rive login` and `--publish` for exactly that reason.
+
+         The five poses are one-keyframe holds. That is the normal way to build
+         this, not a shortcut: the runtime mixes two states' values over the
+         transition's `duration`, so two hold keys and duration="120" IS a
+         120ms crossfade, and there are no in-betweens to author.
+
+         Flat colour only. -->
+
+    <Artboard defaultStateMachineId="0:7" viewModelId="0:40" styleId="0:5" width="640" height="420" name="PayButton" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <Node x="320" y="210" name="Btn" id="0:10">
+            <Shape opacity="0" name="Check" id="0:11">
+                <PointsPath name="P">
+                    <StraightVertex x="-10" y="1"/>
+                    <StraightVertex x="-3" y="8"/>
+                    <StraightVertex x="11" y="-8"/>
+                </PointsPath>
+                <Stroke thickness="4.5" cap="round" join="round" name="S" id="0:12">
+                    <SolidColor colorValue="FFF9F8F7" name="C"/>
+                    <TrimPath start="0" end="0" offset="0" modeValue="sequential" name="Draw" id="0:13"/>
+                </Stroke>
+            </Shape>
+
+            <Shape opacity="0" name="Spinner" id="0:14">
+                <Ellipse width="34" height="34" originX="0.5" originY="0.5" name="P"/>
+                <Stroke thickness="4" cap="round" name="S" id="0:15">
+                    <SolidColor colorValue="FFF9F8F7" name="C"/>
+                    <TrimPath start="0" end="0.28" offset="0" modeValue="sequential" name="Chase" id="0:16"/>
+                </Stroke>
+            </Shape>
+
+            <Text x="0" y="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Label" id="0:17">
+                <TextStylePaint fontSize="22" fontAssetId="0:100" name="S" id="0:18">
+                    <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:18" text="Pay $400.00" name="R"/>
+            </Text>
+
+            <Shape name="Plate" id="0:19">
+                <Rectangle width="300" height="64" cornerRadiusTL="32" originX="0.5" originY="0.5" name="P" id="0:20"/>
+                <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <Shape x="320" y="210" opacity="0" name="Ring" id="0:21">
+            <Ellipse width="64" height="64" originX="0.5" originY="0.5" name="P"/>
+            <Stroke thickness="3" name="S"><SolidColor colorValue="FFC2401F" name="C"/></Stroke>
+        </Shape>
+
+        <Text x="320" y="312" opacity="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Caption" id="0:22">
+            <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:23">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:23" text="$380.00 left for the venture" name="R"/>
+        </Text>
+
+        <Text x="320" y="96" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Hint" id="0:24">
+            <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:25">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:25" text="Click it" name="R"/>
+        </Text>
+
+        <Event name="paid" id="0:90"/>
+
+        <Fill name="Background" id="0:26"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+
+        <LinearAnimation fps="60" duration="1" name="Rest" id="0:30">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="20">
+                    <KeyFrameDouble value="300" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1.0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1.0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="210" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="116">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:13">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+        <LinearAnimation fps="60" duration="1" name="Hover" id="0:31">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="20">
+                    <KeyFrameDouble value="300" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1.03" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1.03" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="206" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="116">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:13">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+        <LinearAnimation fps="60" duration="8" name="Press" id="0:32">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="20">
+                    <KeyFrameDouble value="300" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.97" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.97" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="210" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="116">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:13">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- the button collapses into a spinner -->
+        <LinearAnimation fps="60" duration="96" name="Processing" id="0:33">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="20">
+                    <KeyFrameDouble value="300" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.5" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="64" frame="18" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="0" frame="8" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="10" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="20" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="116">
+                    <KeyFrameDouble value="0" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="2" frame="96" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="210" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:13">
+                <KeyedProperty propertyKey="115"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- it lands -->
+        <LinearAnimation fps="60" duration="132" name="Paid" id="0:34">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="20"><KeyFrameDouble value="64" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="0" frame="6" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="116"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:11">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="4" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="10" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:13">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="6" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="30" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.84" frame="0" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="46" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.84" frame="0" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="46" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="210" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="8" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.15" y1="0.6" x2="0.4" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="3" frame="64" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="8" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.15" y1="0.6" x2="0.4" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="3" frame="64" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0.5" frame="8" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.3" y1="0" x2="0.7" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="64" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="18" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="48" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="240" y="-140"/>
+                <ExitState x="460" y="-140"/>
+                <EntryState><StateTransition stateToId="0:60"/></EntryState>
+
+                <AnimationState x="60" y="0" animationId="0:30" id="0:60">
+                    <StateTransition stateToId="0:61" duration="130" enableEarlyExit="true">
+                        <TransitionViewModelCondition>
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634"/></BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="true"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                </AnimationState>
+
+                <AnimationState x="260" y="0" animationId="0:31" id="0:61">
+                    <StateTransition stateToId="0:62" duration="0" enableEarlyExit="true">
+                        <TransitionViewModelCondition>
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:46" propertyKey="634"/></BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="true"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                    <StateTransition stateToId="0:60" duration="130">
+                        <TransitionViewModelCondition>
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634"/></BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="false"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                </AnimationState>
+
+                <!-- Order matters. A pointer that leaves while held clears BOTH
+                     booleans, so the bail-out is tested before the commit. -->
+                <AnimationState x="480" y="0" animationId="0:32" id="0:62">
+                    <StateTransition stateToId="0:60" duration="130">
+                        <TransitionViewModelCondition>
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634"/></BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="false"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                    <StateTransition stateToId="0:63" duration="70" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <AnimationState x="700" y="0" animationId="0:33" id="0:63">
+                    <StateTransition stateToId="0:64" duration="90" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <AnimationState x="920" y="0" animationId="0:34" id="0:64">
+                    <StateTransition stateToId="0:60" duration="260" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <!-- four listeners, writing two booleans -->
+
+            </StateMachineLayer>
+
+            <StateMachineListenerSingle targetId="0:19" listenerTypeValue="enter" name="In" id="0:70">
+                <ListenerViewModelChange>
+                    <BindablePropertyBoolean propertyValue="true"><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634" direction="true"/></BindablePropertyBoolean>
+                </ListenerViewModelChange>
+            </StateMachineListenerSingle>
+            <StateMachineListenerSingle targetId="0:19" listenerTypeValue="exit" name="Out" id="0:71">
+                <ListenerViewModelChange>
+                    <BindablePropertyBoolean propertyValue="false"><DataBindContext sourcePathIds="0:40-0:45" propertyKey="634" direction="true"/></BindablePropertyBoolean>
+                </ListenerViewModelChange>
+                <ListenerViewModelChange>
+                    <BindablePropertyBoolean propertyValue="false"><DataBindContext sourcePathIds="0:40-0:46" propertyKey="634" direction="true"/></BindablePropertyBoolean>
+                </ListenerViewModelChange>
+            </StateMachineListenerSingle>
+            <StateMachineListenerSingle targetId="0:19" listenerTypeValue="down" name="Down" id="0:72">
+                <ListenerViewModelChange>
+                    <BindablePropertyBoolean propertyValue="true"><DataBindContext sourcePathIds="0:40-0:46" propertyKey="634" direction="true"/></BindablePropertyBoolean>
+                </ListenerViewModelChange>
+            </StateMachineListenerSingle>
+            <StateMachineListenerSingle targetId="0:19" listenerTypeValue="click" name="Pay" id="0:74">
+                <ListenerViewModelChange>
+                    <BindablePropertyTrigger><DataBindContext sourcePathIds="0:40-0:47" propertyKey="686" direction="true"/></BindablePropertyTrigger>
+                </ListenerViewModelChange>
+                <ListenerFireEvent eventId="0:90"/>
+            </StateMachineListenerSingle>
+            <StateMachineListenerSingle targetId="0:19" listenerTypeValue="up" name="Up" id="0:73">
+                <ListenerViewModelChange>
+                    <BindablePropertyBoolean propertyValue="false"><DataBindContext sourcePathIds="0:40-0:46" propertyKey="634" direction="true"/></BindablePropertyBoolean>
+                </ListenerViewModelChange>
+            </StateMachineListenerSingle>
+        </StateMachine>
+    </Artboard>
+
+    <ViewModel defaultInstanceId="0:41" name="Button" id="0:40">
+        <ViewModelPropertyBoolean name="hover" id="0:45"/>
+        <ViewModelPropertyBoolean name="down" id="0:46"/>
+        <ViewModelPropertyTrigger name="pay" id="0:47"/>
+        <ViewModelInstance exports="true" name="Default" id="0:41">
+            <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:45"/>
+            <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:46"/>
+            <ViewModelInstanceTrigger viewModelPropertyId="0:47"/>
+        </ViewModelInstance>
+    </ViewModel>
+
+    <FontAsset file="../fonts/GeneralSans.ttf" name="GeneralSans" id="0:100"/>
+</Rive>

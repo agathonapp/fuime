@@ -1,0 +1,243 @@
+<Rive version="1" kind="fragment">
+    <!-- invoice-builds - "An invoice with your name on it." (site/index.html h1)
+
+         The headline promises a document, so the animation builds the document:
+         rules wipe out from the left, rows rise into place in reading order,
+         and the total lands last. Nothing floats in from off-screen - an
+         invoice is assembled, not delivered.
+
+         Figures are the site's worked example (site/pricing.html) and are not
+         recomputed here. One fee line only: Stripe bills fuime, so card
+         processing must never appear as a second charge to the seller
+         (CLAUDE.md L8).
+
+         Flat fills and hairlines only - no gradient, no shadow, no blur. The
+         card is separated from the ground by a warm hairline, which is how the
+         site does it too. -->
+
+    <Artboard defaultStateMachineId="0:7" styleId="0:5" width="800" height="620" name="Invoice" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- ============ paid chip, last in and first in the tree ============ -->
+        <Node x="586" y="474" opacity="0" name="PaidChip" id="0:60">
+            <Text x="0" y="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="T" id="0:61">
+                <TextStylePaint fontSize="17" fontAssetId="0:100" name="S" id="0:62">
+                    <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:62" text="Paid" name="R"/>
+            </Text>
+            <Shape name="Plate" id="0:63">
+                <Rectangle width="82" height="38" cornerRadiusTL="19" originX="0.5" originY="0.5" name="P"/>
+                <Stroke thickness="1.5" name="S"><SolidColor colorValue="FFC2401F" name="C"/></Stroke>
+            </Shape>
+        </Node>
+
+        <!-- ============ the total ============ -->
+        <Node x="0" y="0" opacity="0" name="TotalRow" id="0:50">
+            <Text x="620" y="398" sizingValue="autoWidth" originX="1" originY="0.5" name="Amt" id="0:51">
+                <TextStylePaint fontSize="32" fontAssetId="0:100" name="S" id="0:52">
+                    <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:52" text="$380.00" name="R"/>
+            </Text>
+            <Text x="180" y="398" sizingValue="autoWidth" originX="0" originY="0.5" name="Label" id="0:53">
+                <TextStylePaint fontSize="21" fontAssetId="0:100" name="S" id="0:54">
+                    <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:54" text="Left for the venture" name="R"/>
+            </Text>
+        </Node>
+
+        <!-- ============ the fee line ============ -->
+        <Node x="0" y="0" opacity="0" name="FeeRow" id="0:40">
+            <Text x="620" y="312" sizingValue="autoWidth" originX="1" originY="0.5" name="Amt" id="0:41">
+                <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:42">
+                    <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:42" text="−$20.00" name="R"/>
+            </Text>
+            <Text x="180" y="312" sizingValue="autoWidth" originX="0" originY="0.5" name="Label" id="0:43">
+                <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:44">
+                    <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:44" text="fuime fee · 5%, minimum 50¢" name="R"/>
+            </Text>
+        </Node>
+
+        <!-- ============ the work ============ -->
+        <Node x="0" y="0" opacity="0" name="ItemRow" id="0:30">
+            <Text x="620" y="262" sizingValue="autoWidth" originX="1" originY="0.5" name="Amt" id="0:31">
+                <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:32">
+                    <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:32" text="$400.00" name="R"/>
+            </Text>
+            <Text x="180" y="262" sizingValue="autoWidth" originX="0" originY="0.5" name="Label" id="0:33">
+                <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:34">
+                    <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:34" text="Senior portraits · 3 hr session" name="R"/>
+            </Text>
+        </Node>
+
+        <!-- ============ header ============ -->
+        <Text x="180" y="182" opacity="0" sizingValue="autoWidth" originX="0" originY="0.5" name="Who" id="0:22">
+            <TextStylePaint fontSize="24" fontAssetId="0:100" name="S" id="0:23">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:23" text="Maya R. · Photography" name="R"/>
+        </Text>
+
+        <Text x="180" y="142" opacity="0" sizingValue="autoWidth" originX="0" originY="0.5" name="No" id="0:20">
+            <TextStylePaint fontSize="15" letterSpacing="1.6" fontAssetId="0:100" name="S" id="0:21">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:21" text="INVOICE 0014" name="R"/>
+        </Text>
+
+        <!-- ============ rules: originX=0 so scaleX wipes from the left ============ -->
+        <Shape x="180" y="352" scaleX="0" name="Rule2" id="0:45">
+            <Rectangle width="440" height="1.5" originX="0" originY="0.5" name="P"/>
+            <Fill name="F"><SolidColor colorValue="331C1A15" name="C"/></Fill>
+        </Shape>
+        <Shape x="180" y="216" scaleX="0" name="Rule1" id="0:25">
+            <Rectangle width="440" height="1.5" originX="0" originY="0.5" name="P"/>
+            <Fill name="F"><SolidColor colorValue="331C1A15" name="C"/></Fill>
+        </Shape>
+
+        <!-- ============ the card ============ -->
+        <Shape x="400" y="310" opacity="0" name="Card" id="0:10">
+            <Rectangle width="520" height="440" cornerRadiusTL="18" originX="0.5" originY="0.5" name="P"/>
+            <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+            <Stroke thickness="1.5" name="S"><SolidColor colorValue="241C1A15" name="C"/></Stroke>
+        </Shape>
+
+        <Fill name="Background" id="0:70"><SolidColor colorValue="FFEBE7DF" name="C"/></Fill>
+
+        <LinearAnimation fps="60" duration="250" name="Build" id="0:6">
+
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="22" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.97" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.15" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.97" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.15" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="20" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="42" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="32" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="56" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:25">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="46" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="82" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="62" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="88" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="14" frame="62" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="96" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:40">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="86" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="112" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="14" frame="86" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="120" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:45">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="112" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="148" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:50">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="130" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="158" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="16" frame="130" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="168" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- the chip stamps rather than fades, because that is what a stamp does -->
+            <KeyedObject objectId="0:60">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="168" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="182" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1.5" frame="168" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="0.85" period="0.45"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="226" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1.5" frame="168" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="0.85" period="0.45"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="226" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState><StateTransition stateToId="0:80"/></EntryState>
+                <AnimationState x="200" animationId="0:6" id="0:80"/>
+            </StateMachineLayer>
+        </StateMachine>
+    </Artboard>
+
+    <FontAsset file="../fonts/GeneralSans.ttf" name="GeneralSans" id="0:100"/>
+</Rive>

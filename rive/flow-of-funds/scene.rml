@@ -1,0 +1,249 @@
+<Rive version="1" kind="fragment">
+    <!-- flow-of-funds - the one thing fuime most has to explain.
+
+         fuime is the seller of record (Ninth Street Labs, LLC), so the client
+         does not pay the teenager and get reimbursed: they buy from fuime, and
+         fuime pays the venture what the sale earned. That is the whole reason
+         a 15-year-old can take card payments at all, and it is invisible in
+         every static diagram of it - which is what this is for. The money
+         travels THROUGH the arch rather than past it.
+
+         The numbers are the site's own worked example (site/pricing.html):
+         $400.00 collected, -$20.00 at 5% minimum 50c, $380.00 left for the
+         venture. They are not recomputed here. If pricing changes, that page
+         changes first and this follows it.
+
+         Two rules from CLAUDE.md L8 bind the copy below: the 5% never appears
+         without the 50c floor, and card processing is never shown as a second
+         line - Stripe bills fuime, and its cut comes out of the 5%. -->
+
+    <Artboard defaultStateMachineId="0:7" styleId="0:5" width="1200" height="600" name="Flow" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- ============ the money, in front of everything it passes ============ -->
+        <Node x="160" y="270" name="Payment" id="0:10">
+            <Text x="0" y="0" sizingValue="autoWidth" originX="0.5" originY="0.5" opacity="0" name="After" id="0:12">
+                <TextStylePaint fontSize="34" fontAssetId="0:100" name="Amt" id="0:13">
+                    <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:13" text="$380.00" name="Run"/>
+            </Text>
+            <Text x="0" y="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Before" id="0:14">
+                <TextStylePaint fontSize="34" fontAssetId="0:100" name="Amt" id="0:15">
+                    <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:15" text="$400.00" name="Run"/>
+            </Text>
+            <Shape name="Pill" id="0:16">
+                <Rectangle width="168" height="72" cornerRadiusTL="36" originX="0.5" originY="0.5" name="Path" id="0:17"/>
+                <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <!-- ============ the cut, leaving downward ============ -->
+        <Node x="600" y="270" opacity="0" name="Fee" id="0:20">
+            <Text x="0" y="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="FeeAmt" id="0:21">
+                <TextStylePaint fontSize="24" fontAssetId="0:100" name="S" id="0:22">
+                    <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+                </TextStylePaint>
+                <TextValueRun styleId="0:22" text="−$20.00" name="Run"/>
+            </Text>
+            <Shape name="Chip" id="0:23">
+                <Rectangle width="118" height="50" cornerRadiusTL="25" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <Text x="600" y="528" opacity="0" sizingValue="autoWidth" originX="0.5" originY="0.5" alignValue="center" name="FeeLabel" id="0:25">
+            <TextStylePaint fontSize="21" fontAssetId="0:100" name="S" id="0:26">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:26" text="fuime fee · 5%, minimum 50¢" name="Run"/>
+        </Text>
+
+        <!-- ============ the stations ============ -->
+        <Text x="160" y="196" sizingValue="autoWidth" originX="0.5" originY="0.5" name="LeftLabel" id="0:30">
+            <TextStylePaint fontSize="23" fontAssetId="0:100" name="S" id="0:31">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:31" text="Your client pays" name="Run"/>
+        </Text>
+
+        <Text x="1040" y="196" sizingValue="autoWidth" originX="0.5" originY="0.5" name="RightLabel" id="0:32">
+            <TextStylePaint fontSize="23" fontAssetId="0:100" name="S" id="0:33">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:33" text="You get" name="Run"/>
+        </Text>
+
+        <Text x="1040" y="348" opacity="0" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Landed" id="0:34">
+            <TextStylePaint fontSize="21" fontAssetId="0:100" name="S" id="0:35">
+                <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:35" text="Left for the venture" name="Run"/>
+        </Text>
+
+        <!-- ============ the arch: fuime, and the thing money crosses ============ -->
+        <Text x="600" y="200" sizingValue="autoWidth" originX="0.5" originY="0.5" name="ArchLabel" id="0:40">
+            <TextStylePaint fontSize="27" fontAssetId="0:100" name="S" id="0:41">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:41" text="fuime" name="Run"/>
+        </Text>
+
+        <Shape name="Arch" id="0:42">
+            <PointsPath name="Path">
+                <StraightVertex x="480" y="410"/>
+                <CubicDetachedVertex x="480" y="270" inRotation="0" inDistance="0" outRotation="-1.5707963" outDistance="66.3"/>
+                <CubicDetachedVertex x="600" y="150" inRotation="3.1415927" inDistance="66.3" outRotation="0" outDistance="66.3"/>
+                <CubicDetachedVertex x="720" y="270" inRotation="-1.5707963" inDistance="66.3" outRotation="0" outDistance="0"/>
+                <StraightVertex x="720" y="410"/>
+            </PointsPath>
+            <Stroke thickness="16" cap="butt" join="round" name="S" id="0:43">
+                <SolidColor colorValue="FF1C1A15" name="C"/>
+            </Stroke>
+        </Shape>
+
+        <!-- The route. Dashed, because it is a path and not a pipe. -->
+        <Shape name="Rail" id="0:50">
+            <PointsPath name="Path">
+                <StraightVertex x="110" y="270"/>
+                <StraightVertex x="1090" y="270"/>
+            </PointsPath>
+            <Stroke thickness="2" cap="round" name="S">
+                <SolidColor colorValue="3D1C1A15" name="C"/>
+                <DashPath name="D"><Dash length="9" name="On"/><Dash length="9" name="Off"/></DashPath>
+            </Stroke>
+        </Shape>
+
+        <Fill name="Background" id="0:60"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+
+        <LinearAnimation loopValue="loop" fps="60" duration="330" name="Flow" id="0:6">
+
+            <!-- the payment: appear, cross, land, clear -->
+            <KeyedObject objectId="0:10">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="160" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.65" y1="0" x2="0.35" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="600" frame="118" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.65" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1040" frame="212" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="4" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="30" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="286" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="318" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.7" frame="4" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="46" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.7" frame="4" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="46" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- the pill gets smaller by exactly the amount that left it -->
+            <KeyedObject objectId="0:17">
+                <KeyedProperty propertyKey="20">
+                    <KeyFrameDouble value="168" frame="118" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.4" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="158" frame="146" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- $400 hands over to $380 under the arch, where the cut happens -->
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="116" interpolationType="linear"/>
+                    <KeyFrameDouble value="0" frame="130" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:12">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="120" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="134" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- the cut drops out of the bottom of the arch -->
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="116" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="138" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="268" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="304" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="270" frame="116" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.3" y1="0" x2="0.25" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="470" frame="176" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:25">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="150" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="182" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="268" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="304" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- "Left for the venture" arrives with the money, not before it -->
+            <KeyedObject objectId="0:34">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="206" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="236" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="268" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="304" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- the arch takes the hit as the money crosses it -->
+            <KeyedObject objectId="0:43">
+                <KeyedProperty propertyKey="47">
+                    <KeyFrameDouble value="16" frame="104" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.3" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="24" frame="124" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="16" frame="166" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState><StateTransition stateToId="0:70"/></EntryState>
+                <AnimationState x="200" animationId="0:6" id="0:70"/>
+            </StateMachineLayer>
+        </StateMachine>
+    </Artboard>
+
+    <FontAsset file="../fonts/GeneralSans.ttf" name="GeneralSans" id="0:100"/>
+</Rive>

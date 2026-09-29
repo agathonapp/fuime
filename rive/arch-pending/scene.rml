@@ -1,0 +1,73 @@
+<Rive version="1" kind="fragment">
+    <!-- arch-pending - the pending state, as an arch with something moving through it.
+
+         Not a rotating spinner. A spinner says "wait"; this says "your money is
+         crossing", which is what a pending payment actually is, and it reuses
+         the one shape the whole brand is built on.
+
+         Two copies of one arch: a faint track that shows the whole route, and a
+         bright runner trimmed to a short segment whose offset is keyed around
+         the path. Because offset wraps, the runner leaves the top right and
+         reappears at the bottom left with no seam - so this loops honestly
+         rather than snapping back.
+
+         At 200x200 the real glyph is mud, which is why this is the arch's
+         silhouette rather than the mark itself. Use arch-draw where the actual
+         logo is what is wanted. -->
+
+    <Artboard defaultStateMachineId="0:7" styleId="0:5" width="200" height="200" name="Pending" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- the runner, declared first so it sits over its own track -->
+        <Shape name="Runner" id="0:20">
+            <PointsPath name="Arch">
+                <StraightVertex x="52" y="158"/>
+                <CubicDetachedVertex x="52" y="98" inRotation="0" inDistance="0" outRotation="-1.5707963" outDistance="26.5"/>
+                <CubicDetachedVertex x="100" y="50" inRotation="3.1415927" inDistance="26.5" outRotation="0" outDistance="26.5"/>
+                <CubicDetachedVertex x="148" y="98" inRotation="-1.5707963" inDistance="26.5" outRotation="0" outDistance="0"/>
+                <StraightVertex x="148" y="158"/>
+            </PointsPath>
+            <Stroke thickness="11" cap="round" join="round" name="Stroke" id="0:21">
+                <SolidColor colorValue="FFC2401F" name="Color"/>
+                <TrimPath start="0" end="0.34" offset="0" modeValue="sequential" name="Chase" id="0:22"/>
+            </Stroke>
+        </Shape>
+
+        <Shape name="Track" id="0:30">
+            <PointsPath name="Arch">
+                <StraightVertex x="52" y="158"/>
+                <CubicDetachedVertex x="52" y="98" inRotation="0" inDistance="0" outRotation="-1.5707963" outDistance="26.5"/>
+                <CubicDetachedVertex x="100" y="50" inRotation="3.1415927" inDistance="26.5" outRotation="0" outDistance="26.5"/>
+                <CubicDetachedVertex x="148" y="98" inRotation="-1.5707963" inDistance="26.5" outRotation="0" outDistance="0"/>
+                <StraightVertex x="148" y="158"/>
+            </PointsPath>
+            <Stroke thickness="11" cap="round" join="round" name="Stroke" id="0:31">
+                <SolidColor colorValue="24C2401F" name="Color"/>
+            </Stroke>
+        </Shape>
+
+        <Fill name="Background" id="0:40">
+            <SolidColor colorValue="FFF9F8F7" name="Color"/>
+        </Fill>
+
+        <!-- linear throughout: an eased loop has a visible slow spot every
+             cycle, which reads as stuttering rather than as easing. -->
+        <LinearAnimation loopValue="loop" fps="60" duration="96" name="Chase" id="0:6">
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="116">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="96" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState><StateTransition stateToId="0:12"/></EntryState>
+                <AnimationState x="200" animationId="0:6" id="0:12"/>
+            </StateMachineLayer>
+        </StateMachine>
+    </Artboard>
+</Rive>

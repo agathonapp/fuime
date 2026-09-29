@@ -1,0 +1,5 @@
+name: flow-of-funds
+main: Flow
+logs:
+  file: build/rive.log
+  problems: build/problems.log

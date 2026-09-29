@@ -8004,3 +8004,66 @@ money is not reaching ledgers right now), `command_bar/actions.js`, and `config/
 10 checks, 3 channels, the error counter); `app/jobs/fuime/oncall/sweep_job.rb`;
 `app/mailers/fuime/oncall_mailer.rb`; `app/controllers/fuime/oncall_controller.rb`;
 `lib/tasks/fuime_oncall.rake`; `spec/services/fuime/oncall_spec.rb`; `docs/fuime/ONCALL.md`.
+
+## 2026-09-21 — A motion set for fuime, authored as text (`rive/`)
+
+New top-level `rive/`: six Rive animations built with the Rive CLI, which is upstream-neutral
+— HCB has no motion assets and nothing in `app/` or `site/` loads these, so there is no merge
+surface here. Recorded because the directory is ours and a future upstream pull should leave
+it alone.
+
+**Why the CLI rather than the Rive editor.** Rive's editor produces a binary `.rev`, which is
+unreviewable in a pull request and unmergeable. The CLI's RML is XML: every piece is a source
+file that diffs, and the only binaries are build outputs under `rive/out/`.
+
+**The mark is converted, not traced.** `rive/tools/svg2rml.py` turns an SVG path into RML
+`PointsPath` vertices. SVG stores cubic handles as absolute control points and Rive stores
+them as polar offsets from the vertex, so the conversion is exact; the render is pixel-identical
+to `site/img/favicon.svg`. That is what lets the mark be stroke-drawn and trimmed rather than
+shipped as a PNG. `arch-draw` and `paid` carry generated vertex blocks inline — regenerate,
+do not hand-edit.
+
+**Copy and figures are borrowed, never recomputed.** Every amount is the worked example from
+`site/pricing.html` ($400.00 → −$20.00 → $380.00); the 5% never appears without the 50¢ floor
+and no second processing charge is shown to the seller (CLAUDE.md L8). `cosign`'s caption is
+the approved L5 disclosure wording verbatim. If pricing moves, `site/pricing.html` moves first
+and these follow it.
+
+**No Ruby, no ERB, no migration, no route.** The test suite is untouched by this change.
+
+**Files:** `rive/README.md`, `rive/gallery.html`, `rive/.gitignore`; `rive/tools/{svg2rml.py,
+render.sh,build-all.sh}`; `rive/fonts/{GeneralSans,Gambetta}.ttf` (Fontshare); six project
+directories `rive/{arch-draw,arch-pending,flow-of-funds,paid,invoice-builds,cosign}/` each
+holding `rive.yaml` + `scene.rml`; build outputs in `rive/out/`.
+
+## 2026-09-21 — Two interactive Rive pieces, and the unsigned-script limit (`rive/`)
+
+Adds `pay-button` and `fee-dial` to `rive/`. Still upstream-neutral and still wired into
+nothing; recorded for the constraint below, which will bite anyone who adds a scripted piece.
+
+**A locally built `.riv` carries unsigned Luau and web runtimes refuse to run it, silently.**
+The file loads, the view model resolves, every bind is fine, and the script never executes.
+Verified rather than taken from the docs: loading `fee-dial.riv` in a browser and reading
+`fillW` back gives the authored `300` where the script writes `439`. The fix is `rive login`
+then `--publish`; the CLI itself runs unsigned scripts, so this is invisible locally.
+
+**That is why `pay-button` uses no script.** Hover and press are two view model booleans
+written by listeners, and the transitions read them — nothing to sign, so it works from
+`--once`. A checkout button that silently does nothing on the web is worse than no button.
+
+**`fee-dial` keeps its Luau deliberately.** The fee is `max(5% of the sale, 50¢)`, matching
+`Event::Plan::MINIMUM_FEE_CENTS`, computed in integer cents. The script-free route
+(`DataConverterOperation` + `Rounder` + `ToString`) cannot express the floor, so it would
+quote a clean 5% on a $6 sale where the real charge is 8.3% — the exact shape of an L8
+violation. Better to need a login than to ship a pricing widget that understates the price.
+The dial shows its own effective rate for the same reason.
+
+**Three format traps worth keeping**, all of which build clean and report no problems:
+listeners nested in a `StateMachineLayer` never fire (they belong on the `StateMachine`);
+a transition cannot be left mid-blend without `enableEarlyExit`, so a quick click is lost
+while `Rest -> Hover` is still fading; and `exitTimeIsPercetange` is misspelled in the format
+itself. `--data-dump --data-dump-every=1` is what found the first one.
+
+**Files:** `rive/{pay-button,fee-dial}/` (`rive.yaml`, `scene.rml`, `fee-dial/dial.luau`);
+`rive/tools/render-interactive.sh`; updates to `rive/README.md`, `rive/gallery.html`,
+`rive/tools/build-all.sh`; outputs in `rive/out/`.

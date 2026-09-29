@@ -1,0 +1,5 @@
+name: pay-button
+main: PayButton
+logs:
+  file: build/rive.log
+  problems: build/problems.log

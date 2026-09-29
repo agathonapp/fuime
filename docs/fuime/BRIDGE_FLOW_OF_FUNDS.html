@@ -1,0 +1,669 @@
+<title>Fuime Flow of Funds</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root{
+    --paper:#FBFBFC;
+    --surface:#FFFFFF;
+    --ink:#14181D;
+    --ink-2:#4B545E;
+    --ink-3:#727C87;
+    --rule:#DEE3E8;
+    --rule-2:#EDF0F3;
+    --accent:#1A4F7A;
+    --accent-soft:#E9F0F6;
+    --flag:#8A3324;
+    --flag-soft:#FAEEEB;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#101317; --surface:#171B21; --ink:#E7EAEE; --ink-2:#9BA5B0; --ink-3:#7B858F;
+      --rule:#2A3138; --rule-2:#21272D; --accent:#82B6DE; --accent-soft:#16242F;
+      --flag:#E09480; --flag-soft:#2A1C18;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#101317; --surface:#171B21; --ink:#E7EAEE; --ink-2:#9BA5B0; --ink-3:#7B858F;
+    --rule:#2A3138; --rule-2:#21272D; --accent:#82B6DE; --accent-soft:#16242F;
+    --flag:#E09480; --flag-soft:#2A1C18;
+  }
+
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{ max-width:830px; margin:0 auto; padding-inline:20px; padding-block:48px 72px; }
+
+  /* ---- masthead ---- */
+  .mast{ border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:10px; }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--ink-3); margin:0 0 14px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:600; font-size:clamp(28px,5.2vw,40px);
+    line-height:1.14; letter-spacing:-.015em; margin:0 0 12px; text-wrap:balance;
+  }
+  .standfirst{ font-size:17px; color:var(--ink-2); margin:0; max-width:62ch; }
+
+  .filemeta{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:2px 28px;
+    margin:0 0 34px; padding:16px 0 0; font-size:13px;
+  }
+  .filemeta div{ padding:5px 0; border-bottom:1px solid var(--rule-2); }
+  .filemeta dt{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-3); }
+  .filemeta dd{ margin:1px 0 0; color:var(--ink); }
+
+  /* ---- draft notice ---- */
+  .notice{
+    border-left:3px solid var(--flag); background:var(--flag-soft);
+    padding:14px 18px; margin:0 0 42px; font-size:14px; line-height:1.55; color:var(--ink);
+  }
+  .notice strong{ color:var(--flag); }
+  .notice ul{ margin:8px 0 0; padding-left:18px; }
+  .notice li{ margin:3px 0; }
+
+  /* ---- numbered sections ---- */
+  section{ display:grid; grid-template-columns:3.2rem 1fr; gap:0 18px; margin-bottom:46px; }
+  .sn{
+    font-family:var(--mono); font-size:12px; color:var(--accent);
+    padding-top:9px; letter-spacing:.02em;
+  }
+  .body{ min-width:0; }
+  h2{
+    font-family:var(--serif); font-weight:600; font-size:23px; line-height:1.25;
+    margin:0 0 14px; letter-spacing:-.01em; text-wrap:balance;
+  }
+  h3{
+    font-family:var(--sans); font-weight:600; font-size:14px; letter-spacing:.01em;
+    margin:28px 0 8px;
+  }
+  p{ margin:0 0 14px; max-width:66ch; }
+  .body > ul, .body > ol{ margin:0 0 16px; padding-left:20px; max-width:64ch; }
+  .body li{ margin:7px 0; }
+  strong{ font-weight:600; }
+  em{ font-style:italic; }
+  .num{ font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:.94em; }
+  code{ font-family:var(--mono); font-size:.88em; background:var(--rule-2);
+    padding:1px 5px; border-radius:2px; }
+
+  /* ---- the two headline answers ---- */
+  .answers{ display:grid; gap:14px; margin:4px 0 22px; }
+  .ans{ background:var(--surface); border:1px solid var(--rule);
+    border-left:3px solid var(--accent); padding:15px 18px; }
+  .ans .q{ font-family:var(--mono); font-size:10.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--ink-3); margin:0 0 6px; }
+  .ans .a{ margin:0; font-size:15px; }
+  .ans .a b{ color:var(--accent); font-weight:600; }
+
+  /* ---- tables ---- */
+  .tw{ overflow-x:auto; margin:0 0 18px; }
+  table{ border-collapse:collapse; width:100%; min-width:520px; font-size:13.5px;
+    font-variant-numeric:tabular-nums; }
+  caption{ text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--ink-3); padding-bottom:8px; }
+  th{ text-align:left; font-weight:600; font-size:11px; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--ink-3); padding:0 14px 7px 0;
+    border-bottom:1px solid var(--ink); vertical-align:bottom; }
+  td{ padding:9px 14px 9px 0; border-bottom:1px solid var(--rule-2);
+    vertical-align:top; line-height:1.5; }
+  th:last-child, td:last-child{ padding-right:0; }
+  td.n{ font-family:var(--mono); white-space:nowrap; }
+  td.leg{ font-family:var(--mono); color:var(--accent); white-space:nowrap; }
+  tr.total td{ border-top:1px solid var(--ink); border-bottom:none; font-weight:600; }
+
+  /* ---- figure ---- */
+  figure{ margin:8px 0 22px; }
+  .figframe{ overflow-x:auto; background:var(--surface); border:1px solid var(--rule);
+    padding:18px 14px; }
+  svg.flow{ display:block; margin:0 auto; width:100%; min-width:500px; max-width:620px;
+    height:auto; color:var(--ink); }
+  figcaption{ font-size:13px; color:var(--ink-2); margin-top:10px; max-width:64ch; }
+
+  /* ---- callout ---- */
+  .ask{ border:1px solid var(--accent); background:var(--accent-soft);
+    padding:16px 18px; margin:6px 0 16px; }
+  .ask h3{ margin-top:0; color:var(--accent); }
+  .ask p:last-child{ margin-bottom:0; }
+
+  .plain{ list-style:none; padding-left:0 !important; }
+  .plain li{ padding-left:20px; position:relative; }
+  .plain li::before{ content:"—"; position:absolute; left:0; color:var(--ink-3);
+    font-family:var(--mono); font-size:12px; }
+
+  footer{ border-top:1px solid var(--rule); padding-top:16px; margin-top:8px;
+    font-size:12.5px; color:var(--ink-3); max-width:66ch; }
+
+  a{ color:var(--accent); }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  @media (max-width:640px){
+    section{ grid-template-columns:1fr; gap:0; }
+    .sn{ padding-top:0; padding-bottom:4px; }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+
+<div class="shell">
+
+  <div class="mast">
+    <p class="eyebrow">Third-party money movement · Underwriting response</p>
+    <h1>Flow of Funds</h1>
+    <p class="standfirst">Ninth Street Labs, LLC, doing business as Fuime — a merchant-of-record
+    platform through which vetted teen-run businesses in the United States sell services and
+    digital products.</p>
+  </div>
+
+  <dl class="filemeta">
+    <div><dt>Applicant</dt><dd>Ninth Street Labs, LLC</dd></div>
+    <div><dt>Trading as</dt><dd>Fuime</dd></div>
+    <div><dt>Formation / EIN</dt><dd>⟨state⟩ · ⟨EIN⟩</dd></div>
+    <div><dt>Prepared for</dt><dd>Bridge — compliance</dd></div>
+    <div><dt>Date</dt><dd>18 September 2026</dd></div>
+    <div><dt>Contact</dt><dd>⟨name, email⟩</dd></div>
+  </dl>
+
+  <div class="notice">
+    <strong>Draft — complete before sending.</strong> Three things in this document are
+    placeholders or assumptions rather than verified facts:
+    <ul>
+      <li>Entity details above (formation state, EIN, contact) are blank.</li>
+      <li>§7 assumes Ninth Street Labs is the <em>account holder</em> on every per-venture
+      Bridge account. If the intent is for guardians to open accounts in their own names,
+      §7 is wrong and the regulatory answer changes.</li>
+      <li>Card acquiring is described as Stripe. If the acquirer changes, §3 and §4 change
+      with it; the Bridge legs do not.</li>
+    </ul>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <section>
+    <div class="sn">§ 1</div>
+    <div class="body">
+      <h2>The two answers, up front</h2>
+
+      <div class="answers">
+        <div class="ans">
+          <p class="q">Will received funds be exchanged for another currency?</p>
+          <p class="a"><b>No foreign currency is involved at any point.</b> Every amount is
+          denominated in US dollars from the customer's card to the family's bank account.
+          There is one conversion inside Bridge, and it is USD into a USD-pegged stablecoin
+          at 1:1 on receipt, converted back to USD before funds leave. No FX rate is ever
+          applied, no non-USD currency is held, and no party to the flow is outside the
+          United States.</p>
+        </div>
+        <div class="ans">
+          <p class="q">Where will funds ultimately be sent?</p>
+          <p class="a"><b>To two destinations, both US bank accounts.</b> (1) The venture's
+          payout account — held by the parent or guardian, the teen operator, or jointly —
+          approved by the guardian and verified by Plaid Auth before the first payout.
+          (2) Ninth Street Labs' own operating account, for the platform fee it earned as
+          seller. Nothing is sent to a wallet address, to a non-US account, or to any end
+          user in stablecoin.</p>
+        </div>
+      </div>
+
+      <p>The rest of this document supports those two answers: who the parties are (§2), the
+      path money takes (§3–4), the conversion in detail (§5), the destinations in detail (§6),
+      why Ninth Street Labs treats this as its own revenue rather than third-party funds (§7),
+      the controls on the payout leg (§8), and four questions we would rather ask than
+      assume (§9).</p>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section>
+    <div class="sn">§ 2</div>
+    <div class="body">
+      <h2>Parties</h2>
+      <div class="tw">
+        <table>
+          <caption>Who is who in the flow</caption>
+          <thead><tr><th style="width:27%">Party</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Ninth Street Labs, LLC</strong><br><span style="color:var(--ink-3)">d/b/a Fuime</span></td>
+              <td>Bridge's customer and the account holder on every Bridge account described here.
+              <strong>Merchant and seller of record on every transaction</strong> — its name is on
+              the checkout page, the receipt and the terms of sale. Bears all refund and
+              chargeback liability.</td>
+            </tr>
+            <tr>
+              <td><strong>Customer</strong></td>
+              <td>A US retail buyer purchasing a service or a digital product. Their purchase
+              contract is with Ninth Street Labs, not with the venture.</td>
+            </tr>
+            <tr>
+              <td><strong>Venture</strong></td>
+              <td>A vetted, US-based business run day to day by an operator aged 13–17. Sets its
+              own prices. Paid by Ninth Street Labs as a vendor. Sells services and digital
+              products only — no physical goods.</td>
+            </tr>
+            <tr>
+              <td><strong>Parent or guardian</strong></td>
+              <td>An adult in every case. The venture's <strong>legal payee and clawback
+              obligor</strong>. Must approve the payout destination before the first payout is
+              made. No payout runs without a linked guardian on the line.</td>
+            </tr>
+            <tr>
+              <td><strong>Stripe</strong></td>
+              <td>Card acquiring only. Ninth Street Labs is the merchant on the acquiring
+              relationship.</td>
+            </tr>
+            <tr>
+              <td><strong>Bridge</strong></td>
+              <td>Receiving accounts, USD ⇄ stablecoin conversion, and USD payout origination.</td>
+            </tr>
+            <tr>
+              <td><strong>Plaid</strong></td>
+              <td>Verification of the payout destination account (Auth). Plaid does not move money.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section>
+    <div class="sn">§ 3</div>
+    <div class="body">
+      <h2>The path money takes</h2>
+      <p>Drawn with a worked $100.00 sale so the arithmetic is visible. Percentages are the
+      standard published rate; no venture is on a different one.</p>
+
+      <figure>
+        <div class="figframe">
+          <svg class="flow" viewBox="0 0 600 700" role="img"
+               aria-label="Vertical flow of funds: a US customer pays $100 by card to Stripe, which settles $96.80 by ACH to a Bridge virtual account held by Ninth Street Labs; funds convert on receipt to a USD-pegged stablecoin at 1 to 1; $1.80 of net margin is swept to Ninth Street Labs' operating account and $95.00 remains as a payable, which converts back to USD and is sent by ACH to the family's guardian-approved, Plaid-verified US bank account.">
+            <defs>
+              <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4"
+                      markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+                <polygon points="0,0 10,4 0,8" fill="currentColor"></polygon>
+              </marker>
+              <marker id="ahA" viewBox="0 0 10 8" refX="9" refY="4"
+                      markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+                <polygon points="0,0 10,4 0,8" fill="var(--accent)"></polygon>
+              </marker>
+            </defs>
+
+            <!-- B1 customer -->
+            <rect x="40" y="14" width="290" height="70" rx="2" fill="var(--surface)"
+                  stroke="currentColor" stroke-width="1"></rect>
+            <text x="58" y="42" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="currentColor">US customer</text>
+            <text x="58" y="61" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-3)">buys a service or digital product</text>
+
+            <line x1="185" y1="84" x2="185" y2="130" stroke="currentColor"
+                  stroke-width="1.2" marker-end="url(#ah)"></line>
+            <text x="199" y="111" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="var(--ink-2)">$100.00 · card</text>
+
+            <!-- B2 stripe -->
+            <rect x="40" y="130" width="290" height="70" rx="2" fill="var(--surface)"
+                  stroke="currentColor" stroke-width="1"></rect>
+            <text x="58" y="158" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="currentColor">Stripe — card acquiring</text>
+            <text x="58" y="177" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-3)">merchant of record: Ninth Street Labs, LLC</text>
+
+            <line x1="185" y1="200" x2="185" y2="246" stroke="currentColor"
+                  stroke-width="1.2" marker-end="url(#ah)"></line>
+            <text x="199" y="227" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="var(--ink-2)">$96.80 · ACH, net of $3.20 acquiring</text>
+
+            <!-- B3 bridge VA -->
+            <rect x="40" y="246" width="290" height="70" rx="2" fill="var(--surface)"
+                  stroke="currentColor" stroke-width="1"></rect>
+            <text x="58" y="274" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="currentColor">Bridge account — one per venture</text>
+            <text x="58" y="293" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-3)">account holder: Ninth Street Labs, LLC</text>
+
+            <line x1="185" y1="316" x2="185" y2="362" stroke="var(--accent)"
+                  stroke-width="1.6" marker-end="url(#ahA)"></line>
+            <text x="199" y="343" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="var(--accent)">converted on receipt</text>
+
+            <!-- B4 stablecoin (accent) -->
+            <rect x="40" y="362" width="290" height="70" rx="2" fill="var(--accent-soft)"
+                  stroke="var(--accent)" stroke-width="1.6"></rect>
+            <text x="58" y="390" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="var(--accent)">USD-pegged stablecoin</text>
+            <text x="58" y="409" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-2)">1:1 · no FX · no foreign currency</text>
+
+            <!-- fee branch -->
+            <line x1="330" y1="405" x2="372" y2="405" stroke="currentColor"
+                  stroke-width="1.2" marker-end="url(#ah)"></line>
+            <rect x="372" y="369" width="196" height="72" rx="2" fill="var(--surface)"
+                  stroke="currentColor" stroke-width="2"></rect>
+            <text x="388" y="393" font-family="IBM Plex Sans, sans-serif" font-size="13"
+                  font-weight="600" fill="currentColor">Ninth Street Labs</text>
+            <text x="388" y="411" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-3)">operating account</text>
+            <text x="388" y="431" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="currentColor">$1.80 net margin</text>
+
+            <line x1="185" y1="432" x2="185" y2="478" stroke="currentColor"
+                  stroke-width="1.2" marker-end="url(#ah)"></line>
+            <text x="199" y="462" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="var(--ink-2)">$95.00 payable</text>
+
+            <!-- B5 convert back (accent) -->
+            <rect x="40" y="478" width="290" height="70" rx="2" fill="var(--accent-soft)"
+                  stroke="var(--accent)" stroke-width="1.6"></rect>
+            <text x="58" y="506" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="var(--accent)">Converted back to USD</text>
+            <text x="58" y="525" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-2)">1:1 redemption inside Bridge</text>
+
+            <line x1="185" y1="548" x2="185" y2="594" stroke="currentColor"
+                  stroke-width="1.2" marker-end="url(#ah)"></line>
+            <text x="199" y="575" font-family="IBM Plex Mono, monospace" font-size="11"
+                  fill="var(--ink-2)">ACH · weekly batch, human-approved</text>
+
+            <!-- B6 family bank (terminal) -->
+            <rect x="40" y="594" width="290" height="70" rx="2" fill="var(--surface)"
+                  stroke="currentColor" stroke-width="2"></rect>
+            <text x="58" y="622" font-family="IBM Plex Sans, sans-serif" font-size="14"
+                  font-weight="600" fill="currentColor">Family's US bank account</text>
+            <text x="58" y="641" font-family="IBM Plex Sans, sans-serif" font-size="11"
+                  fill="var(--ink-3)">guardian-approved · Plaid Auth verified</text>
+          </svg>
+        </div>
+        <figcaption>One US dollar path from customer to family. The only currency change is the
+        1:1 conversion into and out of a USD-pegged stablecoin inside Bridge (shown in blue);
+        the two heavy-bordered boxes are the only places funds come to rest outside Bridge.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section>
+    <div class="sn">§ 4</div>
+    <div class="body">
+      <h2>Leg by leg</h2>
+      <div class="tw">
+        <table>
+          <caption>Worked example — a single $100.00 sale</caption>
+          <thead>
+            <tr><th style="width:9%">Leg</th><th style="width:30%">Movement</th>
+            <th style="width:13%">Amount</th><th>Detail</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="leg">1</td>
+              <td>Customer → Stripe</td>
+              <td class="n">$100.00</td>
+              <td>Card payment. The checkout page and receipt name Ninth Street Labs, LLC as the
+              seller. Billing address is collected on every sale.</td>
+            </tr>
+            <tr>
+              <td class="leg">2</td>
+              <td>Stripe → Bridge account</td>
+              <td class="n">$96.80</td>
+              <td>ACH settlement, net of card acquiring of approximately 2.9% + $0.30 = $3.20.
+              That cost is borne by Ninth Street Labs as the merchant; it is <em>not</em> passed
+              on to the venture.</td>
+            </tr>
+            <tr>
+              <td class="leg">3</td>
+              <td>Conversion on receipt</td>
+              <td class="n">$96.80</td>
+              <td>USD → USD-pegged stablecoin at 1:1, inside Bridge. No rate is applied.</td>
+            </tr>
+            <tr>
+              <td class="leg">4</td>
+              <td>Fee retained → operating account</td>
+              <td class="n">$1.80</td>
+              <td>The platform fee is <code>max(5% × sale, $0.50)</code> = $5.00. Of that,
+              $3.20 has already gone to the acquirer, leaving $1.80 of net margin swept to
+              Ninth Street Labs' operating account.</td>
+            </tr>
+            <tr>
+              <td class="leg">5</td>
+              <td>Payable accrues to venture</td>
+              <td class="n">$95.00</td>
+              <td>Recorded as vendor debt owed by Ninth Street Labs, denominated in US dollars.
+              Not a balance the venture can spend, transfer to another user, or draw a card
+              against.</td>
+            </tr>
+            <tr>
+              <td class="leg">6</td>
+              <td>Weekly payout batch</td>
+              <td class="n">varies</td>
+              <td>7-day hold from settlement, 10% rolling reserve against trailing 90-day
+              volume, $2,500 per venture per run cap, $10 floor. Every run is approved by a
+              human before any money moves. See §8.</td>
+            </tr>
+            <tr>
+              <td class="leg">7</td>
+              <td>Conversion on payout</td>
+              <td class="n">—</td>
+              <td>Stablecoin → USD at 1:1, inside Bridge, immediately before origination.</td>
+            </tr>
+            <tr>
+              <td class="leg">8</td>
+              <td>ACH → family's bank</td>
+              <td class="n">—</td>
+              <td>US bank account held by the guardian, the operator, or jointly. Guardian-approved
+              and Plaid Auth-verified before the first payout.</td>
+            </tr>
+            <tr class="total">
+              <td class="leg"></td>
+              <td>Customer pays $100.00</td>
+              <td class="n">$100.00</td>
+              <td>= $95.00 to the venture + $3.20 to the card acquirer + $1.80 to Ninth Street Labs.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section>
+    <div class="sn">§ 5</div>
+    <div class="body">
+      <h2>Currency exchange, in detail</h2>
+
+      <p>Two instruments touch the flow and one of them is a 1:1 claim on the other. Stated
+      precisely:</p>
+
+      <ul class="plain">
+        <li><strong>No foreign currency, ever.</strong> Every party is in the United States.
+        Buyers are US retail customers, ventures are US businesses, payout accounts are US bank
+        accounts. No FX rate is applied at any leg and there is no FX exposure to disclose.</li>
+        <li><strong>Two conversions, both 1:1, both inside Bridge.</strong> USD into a USD-pegged
+        stablecoin on receipt, and back to USD before origination. Funds are in stablecoin only
+        for the interval between settlement and the next approved payout run — currently a
+        weekly cycle with a 7-day minimum hold.</li>
+        <li><strong>The venture's claim is denominated in dollars, not in the stablecoin.</strong>
+        This is the important one. The venture is owed a fixed US dollar amount. If the
+        stablecoin were to trade away from par, Ninth Street Labs would still owe the full
+        dollar payable and would make up the difference from its own funds. <strong>Conversion
+        and de-peg risk sit entirely with Ninth Street Labs.</strong></li>
+        <li><strong>No end user holds, sees, or is offered stablecoin.</strong> Families are shown
+        a dollar amount owed and a date, and they receive dollars by ACH. Neither the teen
+        operator nor the guardian has a wallet, a key, or any ability to direct funds on-chain.</li>
+        <li><strong>No yield.</strong> No interest or yield is earned on balances held in
+        conversion, and none is credited to ventures. See §9 for the confirmation we are asking
+        Bridge for on this point.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 6 ============ -->
+  <section>
+    <div class="sn">§ 6</div>
+    <div class="body">
+      <h2>Where funds ultimately go</h2>
+
+      <div class="tw">
+        <table>
+          <caption>Every terminal destination</caption>
+          <thead><tr><th style="width:34%">Destination</th><th>Controls and verification</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>The venture's payout account</strong><br>
+              <span style="color:var(--ink-3)">US bank account — guardian, operator, or joint</span></td>
+              <td>Guardian is the legal payee and clawback obligor. The guardian must approve the
+              destination before the first payout. The account is verified by Plaid Auth. The
+              account number is never required to match the guardian's name — many families use a
+              joint or teen account — but ownership is recorded where known.</td>
+            </tr>
+            <tr>
+              <td><strong>Ninth Street Labs' operating account</strong><br>
+              <span style="color:var(--ink-3)">the platform fee it earned as seller</span></td>
+              <td>Fuime's own revenue. Funds card acquiring costs, refunds and chargebacks, and
+              operations.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Explicitly out of scope, by design</h3>
+      <p>These are not unimplemented features awaiting a roadmap — they are excluded because each
+      one would convert a vendor payable into stored value, and are enforced as a standing
+      prohibition in our payout runbook:</p>
+      <ul>
+        <li>No spendable platform balance. A venture cannot draw on the figure it is owed.</li>
+        <li>No peer-to-peer transfers between ventures or users.</li>
+        <li>No card issued against a payable.</li>
+        <li>No disbursement in stablecoin or any other crypto asset, and no wallet addresses as
+        payout destinations.</li>
+        <li>No international payouts and no non-US destination accounts.</li>
+        <li>No payout without a linked guardian obligor and a guardian-approved destination.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 7 ============ -->
+  <section>
+    <div class="sn">§ 7</div>
+    <div class="body">
+      <h2>Why Ninth Street Labs treats this as its own revenue</h2>
+
+      <p>Bridge's question is headed <em>third-party money movement</em>, so this is the part
+      worth being direct about.</p>
+
+      <p><strong>Ninth Street Labs is the seller, not an intermediary.</strong> The customer's
+      contract of sale is with Ninth Street Labs. Ninth Street Labs' name is on the checkout page,
+      the receipt and the terms of sale; Ninth Street Labs sets the terms of sale, honours the
+      14-day refund window out of its own funds, and is the party a cardholder disputes against.
+      Money received is therefore Ninth Street Labs' own revenue, and paying the venture
+      afterwards is Ninth Street Labs paying one of its own vendors. This is the standard
+      merchant-of-record structure operated by Paddle, FastSpring, Lemon Squeezy and Whop.</p>
+
+      <p><strong>The per-venture accounts are segregation, not custody.</strong> Ninth Street Labs
+      is the account holder on each one. The balance sitting in a venture's account is Ninth Street
+      Labs' money; what the venture holds is a US dollar claim against Ninth Street Labs, not a
+      claim on any particular account or on the funds in it. One account per venture exists because
+      it makes reconciliation, audit and dispute attribution far cleaner than a single commingled
+      pool — it is a bookkeeping choice, not a custodial one.</p>
+
+      <p><strong>What a venture cannot do is what keeps this true.</strong> A venture cannot spend
+      from the figure, move it to another user, draw a card against it, direct where it is held, or
+      hold it indefinitely. Any one of those would make it stored value regardless of what it is
+      called, and each is prohibited in our payout runbook rather than merely unbuilt.</p>
+
+      <div class="ask">
+        <h3>Disclosed rather than assumed</h3>
+        <p>Ninth Street Labs is <strong>not registered as an MSB with FinCEN and holds no state
+        money transmitter licences</strong>, on the basis of the own-revenue characterisation
+        above. A state-by-state money transmission analysis has not been completed, and the
+        structure has not yet been reviewed by outside counsel. We would rather Bridge have that
+        on the record at underwriting than discover it later.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8 ============ -->
+  <section>
+    <div class="sn">§ 8</div>
+    <div class="body">
+      <h2>Controls on the payout leg</h2>
+
+      <p>Under merchant of record, a disputed sale is disputed against Ninth Street Labs and the
+      acquirer debits Ninth Street Labs — not the venture. The card dispute window is 120 days and
+      payouts are weekly, so the controls below exist to bound that gap without making a teenager
+      wait four months to be paid.</p>
+
+      <div class="tw">
+        <table>
+          <caption>Standing controls</caption>
+          <thead><tr><th style="width:30%">Control</th><th style="width:16%">Setting</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Hold from settlement</td><td class="n">7 days</td>
+              <td>Catches the fast failures — a stolen card, a same-week chargeback — before money leaves.</td></tr>
+            <tr><td>Rolling reserve</td><td class="n">10%</td>
+              <td>Sized against trailing volume, so it scales with the exposure it covers. Roughly twenty times cover against the dispute rate a vetted services business should see.</td></tr>
+            <tr><td>Reserve window</td><td class="n">90 days</td>
+              <td>The trailing period the reserve target is computed over. A venture that stops trading sees the reserve unwind to zero over one window.</td></tr>
+            <tr><td>Per-venture cap</td><td class="n">$2,500 / run</td>
+              <td>A concentration limit, not a refusal — the remainder rolls to the next run. A venture whose volume stops resembling the business we vetted cannot clear the account before a human looks.</td></tr>
+            <tr><td>Minimum payout</td><td class="n">$10</td>
+              <td>Below the floor the payable rolls forward rather than generating a transfer.</td></tr>
+            <tr><td>Human approval</td><td class="n">every run</td>
+              <td>No batch pays out without a named approver and a timestamp. Policy values are frozen onto the batch at generation so a run can always be explained after the fact.</td></tr>
+            <tr><td>Operator vetting</td><td class="n">pre-sale</td>
+              <td>Every venture is reviewed by a person before it may sell anything.</td></tr>
+            <tr><td>Category limits</td><td class="n">services, digital</td>
+              <td>No physical goods — no shipping, no product liability, no freight disputes.</td></tr>
+            <tr><td>Minimum operator age</td><td class="n">13</td>
+              <td>Under-13 signup is refused at validation. Every operator has a linked adult guardian.</td></tr>
+            <tr><td>Refunds</td><td class="n">14 days</td>
+              <td>Honoured by Ninth Street Labs as seller and debited against the venture's payable.</td></tr>
+            <tr><td>Chargebacks</td><td class="n">Fuime's liability</td>
+              <td>Netted against the venture's future payables; the guardian remains the contractual obligor where payables are insufficient.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9 ============ -->
+  <section>
+    <div class="sn">§ 9</div>
+    <div class="body">
+      <h2>Four questions for Bridge</h2>
+
+      <ol>
+        <li><strong>Account topology.</strong> We have specified one Bridge account per venture
+        because it makes reconciliation and audit cleaner. If Bridge's underwriting reads a
+        per-end-user account as a <em>customer-designated</em> account — custody of a third
+        party's funds rather than segregation of ours — we would rather know now and hold a
+        single Ninth Street Labs account with internal sub-ledgering instead. The economic
+        substance is identical either way; only the topology differs, and we lose nothing
+        operationally by changing it.</li>
+
+        <li><strong>KYB scope.</strong> Given the accounts hold Ninth Street Labs' own funds,
+        does Bridge require know-your-business diligence on each venture, or only on Ninth Street
+        Labs as the account holder? This materially affects our onboarding flow, because our
+        operators are minors and their guardians are the adult parties.</li>
+
+        <li><strong>Timing we can promise families.</strong> What is the reliable end-to-end time
+        from an approved payout instruction to funds landing in a family's account, including both
+        conversions? We would rather quote a date we can hit than Bridge's best case.</li>
+
+        <li><strong>Yield and returned items.</strong> Confirmation that no yield accrues on
+        balances held between conversions, and Bridge's handling of a returned or failed ACH on
+        the payout leg — specifically whether funds return as USD or as stablecoin.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Ninth Street Labs, LLC, doing business as Fuime, is a financial technology company, not a bank.
+    Prepared for Bridge's third-party money movement review, 18 September 2026. This document
+    describes the platform as built and is not a legal opinion.
+  </footer>
+
+</div>

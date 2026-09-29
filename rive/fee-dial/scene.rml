@@ -1,0 +1,171 @@
+<Rive version="1" kind="fragment">
+    <!-- fee-dial - drag to set the sale, and watch what fuime actually charges.
+
+         This is the piece that cannot be a video. Every figure is computed live
+         by dial.luau from the real rule (max 5%, 50c floor) and bound in as a
+         string, because a Rive number cannot drive a text run.
+
+         The honest part is the effective-rate line at the bottom. On a $400 sale
+         the fee is 5.0%; on a $5 sale the 50c floor makes it 10.0%, and the dial
+         will say so. A pricing widget that hides its own floor is how site copy
+         gets ahead of the product (CLAUDE.md L8), so this one shows it.
+
+         Flat colour, hairlines, no gradients. -->
+
+    <Artboard defaultStateMachineId="0:7" viewModelId="0:40" styleId="0:5" clip="true" width="900" height="560" name="Dial" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- Declared first and fill-sized, so it is in front of everything and
+             receives pointer events across the whole artboard. Pointer input is
+             not offered on the artboard itself. -->
+        <LayoutComponent width="900" height="560" styleId="0:11" name="Input Layer" id="0:10">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Layout Style" id="0:11"/>
+            <ScriptedLayout scriptAssetId="0:80" name="Dial" id="0:12"/>
+        </LayoutComponent>
+
+        <!-- ============ the knob ============ -->
+        <Node x="450" y="222" name="Knob" id="0:20">
+            <DataBindContext sourcePathIds="0:40-0:41" propertyKey="13"/>
+            <Shape name="Pip" id="0:21">
+                <Ellipse width="12" height="12" originX="0.5" originY="0.5" name="P"/>
+                <Fill name="F"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+            </Shape>
+            <Shape name="Cap" id="0:22">
+                <Ellipse width="36" height="36" originX="0.5" originY="0.5" name="P"/>
+                <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+            </Shape>
+        </Node>
+
+        <Shape x="150" y="222" name="TrackFill" id="0:23">
+            <Rectangle width="300" height="6" cornerRadiusTL="3" originX="0" originY="0.5" name="P" id="0:24">
+                <DataBindContext sourcePathIds="0:40-0:42" propertyKey="20"/>
+            </Rectangle>
+            <Fill name="F"><SolidColor colorValue="66C2401F" name="C"/></Fill>
+        </Shape>
+
+        <Shape x="150" y="222" name="Track" id="0:25">
+            <Rectangle width="600" height="6" cornerRadiusTL="3" originX="0" originY="0.5" name="P"/>
+            <Fill name="F"><SolidColor colorValue="241C1A15" name="C"/></Fill>
+        </Shape>
+
+        <!-- ============ the split, to scale ============ -->
+        <Shape x="750" y="312" name="FeeBar" id="0:26">
+            <Rectangle width="30" height="26" cornerRadiusTL="6" originX="1" originY="0.5" name="P" id="0:27">
+                <DataBindContext sourcePathIds="0:40-0:44" propertyKey="20"/>
+            </Rectangle>
+            <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+        </Shape>
+
+        <Shape x="150" y="312" name="PayoutBar" id="0:28">
+            <Rectangle width="566" height="26" cornerRadiusTL="6" originX="0" originY="0.5" name="P" id="0:29">
+                <DataBindContext sourcePathIds="0:40-0:43" propertyKey="20"/>
+            </Rectangle>
+            <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+        </Shape>
+
+        <!-- ============ readouts ============ -->
+        <Text x="450" y="62" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Hint" id="0:30">
+            <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:31">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:31" text="Drag anywhere to set the sale" name="R"/>
+        </Text>
+
+        <Text x="450" y="132" sizingValue="autoWidth" originX="0.5" originY="0.5" name="Amount" id="0:32">
+            <TextStylePaint fontSize="64" fontAssetId="0:101" name="S" id="0:33">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:33" text="$400" name="R">
+                <DataBindContext sourcePathIds="0:40-0:45" propertyKey="268"/>
+            </TextValueRun>
+        </Text>
+
+        <Text x="150" y="394" sizingValue="autoWidth" originX="0" originY="0.5" name="PayoutLabel" id="0:50">
+            <TextStylePaint fontSize="21" fontAssetId="0:100" name="S" id="0:51">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:51" text="Left for the venture" name="R"/>
+        </Text>
+
+        <Text x="750" y="394" sizingValue="autoWidth" originX="1" originY="0.5" name="PayoutAmt" id="0:52">
+            <TextStylePaint fontSize="30" fontAssetId="0:100" name="S" id="0:53">
+                <Fill name="F"><SolidColor colorValue="FFC2401F" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:53" text="$380.00" name="R">
+                <DataBindContext sourcePathIds="0:40-0:46" propertyKey="268"/>
+            </TextValueRun>
+        </Text>
+
+        <Text x="150" y="442" sizingValue="autoWidth" originX="0" originY="0.5" name="FeeLabel" id="0:54">
+            <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:55">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:55" text="fuime fee · 5%, minimum 50¢" name="R"/>
+        </Text>
+
+        <Text x="750" y="442" sizingValue="autoWidth" originX="1" originY="0.5" name="FeeAmt" id="0:56">
+            <TextStylePaint fontSize="19" fontAssetId="0:100" name="S" id="0:57">
+                <Fill name="F"><SolidColor colorValue="FF1C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:57" text="−$20.00" name="R">
+                <DataBindContext sourcePathIds="0:40-0:47" propertyKey="268"/>
+            </TextValueRun>
+        </Text>
+
+        <Text x="150" y="490" sizingValue="autoWidth" originX="0" originY="0.5" name="Rate" id="0:58">
+            <TextStylePaint fontSize="17" fontAssetId="0:100" name="S" id="0:59">
+                <Fill name="F"><SolidColor colorValue="B81C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:59" text="That's 5.0% of this sale" name="R">
+                <DataBindContext sourcePathIds="0:40-0:48" propertyKey="268"/>
+            </TextValueRun>
+        </Text>
+
+        <Text x="150" y="282" sizingValue="autoWidth" originX="0" originY="0.5" name="BarLabel" id="0:61">
+            <TextStylePaint fontSize="15" letterSpacing="1.4" fontAssetId="0:100" name="S" id="0:62">
+                <Fill name="F"><SolidColor colorValue="801C1A15" name="C"/></Fill>
+            </TextStylePaint>
+            <TextValueRun styleId="0:62" text="WHERE IT GOES" name="R"/>
+        </Text>
+
+        <Shape x="150" y="360" name="Rule" id="0:60">
+            <Rectangle width="600" height="1.5" originX="0" originY="0.5" name="P"/>
+            <Fill name="F"><SolidColor colorValue="241C1A15" name="C"/></Fill>
+        </Shape>
+
+        <Fill name="Background" id="0:70"><SolidColor colorValue="FFF9F8F7" name="C"/></Fill>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState/>
+            </StateMachineLayer>
+        </StateMachine>
+    </Artboard>
+
+    <ViewModel defaultInstanceId="0:49" name="Dial" id="0:40">
+        <ViewModelPropertyNumber name="knobX" id="0:41"/>
+        <ViewModelPropertyNumber name="fillW" id="0:42"/>
+        <ViewModelPropertyNumber name="payoutW" id="0:43"/>
+        <ViewModelPropertyNumber name="feeW" id="0:44"/>
+        <ViewModelPropertyString name="amount" id="0:45"/>
+        <ViewModelPropertyString name="payout" id="0:46"/>
+        <ViewModelPropertyString name="fee" id="0:47"/>
+        <ViewModelPropertyString name="rate" id="0:48"/>
+        <ViewModelInstance exports="true" name="Instance" id="0:49">
+            <ViewModelInstanceNumber propertyValue="450" viewModelPropertyId="0:41"/>
+            <ViewModelInstanceNumber propertyValue="300" viewModelPropertyId="0:42"/>
+            <ViewModelInstanceNumber propertyValue="566" viewModelPropertyId="0:43"/>
+            <ViewModelInstanceNumber propertyValue="30" viewModelPropertyId="0:44"/>
+            <ViewModelInstanceString propertyValue="$400" viewModelPropertyId="0:45"/>
+            <ViewModelInstanceString propertyValue="$380.00" viewModelPropertyId="0:46"/>
+            <ViewModelInstanceString propertyValue="−$20.00" viewModelPropertyId="0:47"/>
+            <ViewModelInstanceString propertyValue="That's 5.0% of this sale" viewModelPropertyId="0:48"/>
+        </ViewModelInstance>
+    </ViewModel>
+
+    <ScriptAsset file="dial.luau" name="dial" id="0:80"/>
+    <FontAsset file="../fonts/GeneralSans.ttf" name="GeneralSans" id="0:100"/>
+    <FontAsset file="../fonts/Gambetta.ttf" name="Gambetta" id="0:101"/>
+</Rive>
