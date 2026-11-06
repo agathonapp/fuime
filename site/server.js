@@ -14,6 +14,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import waitlist from './api/waitlist.js'
+import waitlistExport from './api/export.js'
 
 // fileURLToPath on a directory URL keeps a trailing separator. Strip it, or
 // the containment check below compares against a doubled slash and rejects
@@ -311,6 +312,12 @@ const server = createServer(async (req, res) => {
     res.statusCode = 307
     res.setHeader('Location', target)
     return res.end()
+  }
+
+  // Token-guarded CSV of the roster (api/export.js). 404 unless
+  // WAITLIST_EXPORT_TOKEN is set, so it is closed by default.
+  if (pathname === '/api/waitlist/export') {
+    return waitlistExport(req, res)
   }
 
   if (pathname === '/api/waitlist') {

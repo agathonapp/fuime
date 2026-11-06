@@ -390,6 +390,13 @@ try {
     }
   })
 
+  await run('/api/waitlist/export is closed without a configured token', async () => {
+    // The test server runs with WAITLIST_EXPORT_TOKEN unset: the roster
+    // export must not exist at all, not merely refuse a wrong token.
+    const r = await get('/api/waitlist/export', { headers: { Authorization: 'Bearer anything' } })
+    assert.equal(r.status, 404)
+  })
+
   await run('/api/waitlist is wired and rejects GET', async () => {
     const r = await get('/api/waitlist')
     assert.equal(r.status, 405)

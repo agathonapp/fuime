@@ -344,6 +344,11 @@ services:
         sync: false
       - key: WAITLIST_NOTIFY_FROM
         value: fuime <rushil@fuime.com>
+      # Bearer token for GET /api/waitlist/export (site/api/export.js), the CSV
+      # of every signup. Unset means the route 404s. Set in the dashboard; a
+      # copy lives in the founder's ~/.fuime-waitlist-token.
+      - key: WAITLIST_EXPORT_TOKEN
+        sync: false
 
   - type: worker
     name: fuime-worker
