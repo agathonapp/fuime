@@ -1,5 +1,31 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: fuime_incident_notifications
+#
+#  id              :bigint           not null, primary key
+#  attempted_at    :datetime         not null
+#  channel         :string           not null
+#  error           :text
+#  response_code   :string
+#  status          :integer          default(0), not null
+#  target_redacted :string
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  incident_id     :bigint           not null
+#  responder_id    :bigint
+#
+# Indexes
+#
+#  idx_on_incident_id_attempted_at_acf1592728          (incident_id,attempted_at)
+#  index_fuime_incident_notifications_on_responder_id  (responder_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (incident_id => fuime_incidents.id)
+#  fk_rails_...  (responder_id => fuime_oncall_responders.id)
+#
 module Fuime
   # Fuime: one attempt to reach one human, and what the far end said about it.
   #
