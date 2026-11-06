@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Inter:wght@400;500&family=Geist+Mono&display=block" />
+<style>
+  html, body { margin: 0; background: #f7f3e8; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+// "Instructions": a 10 s loop for fuime.com's og:video.
+// draw(t) is a pure function of time, so every frame renders identically.
+const W = 1200, H = 630
+const C = { cream: '#f7f3e8', ink: '#171a18', muted: '#8a857a', green: '#2e7d5b', night: '#0e2a1e', mint: '#b7e4c7', paper: '#fbf8f0' }
+const SANS = '"Inter", sans-serif', SERIF = '"Hedvig Letters Serif", serif', MONO = '"Geist Mono", monospace'
+const ctx = document.getElementById('c').getContext('2d')
+const logo = new Image()
+logo.src = 'logo.svg'
+
+// ── timeline ────────────────────────────────────────────────────────────
+// Typed beats: a small instruction types in, then a hard cut to its answer.
+// Durations deliberately uneven so it breathes rather than ticks.
+const BEATS = [
+  { cmd: 'move 25% to taxes',          t0: 0.45, type: 1.05, hold: 0.22, ans: 'done.',  ground: 'cream', ansDur: 0.62, note: 'ach in · $3,150.00 · 25% → taxes' },
+  { cmd: 'wire bayside $2,284.50',     t0: 2.34, type: 0.78, hold: 0.14, ans: 'sent.',  ground: 'green', ansDur: 0.48, note: 'wire · arrives before 5 pm' },
+  { cmd: "freeze luis's card",         t0: 3.74, type: 0.62, hold: 0.12, ans: 'frozen.', ground: 'night', ansDur: 0.62, note: 'card ·· 5530', freeze: true },
+  { cmd: 'what did the chen job make?', t0: 5.10, type: 0.66, hold: 0.12, ans: '$2,130', ground: 'cream', ansDur: 0.52, note: 'after materials · october' },
+]
+const MONTAGE_T0 = 6.40
+const MONTAGE = [
+  ['scheduled.', 'green', 0.14], ['noted.', 'cream', 0.12], ['paid.', 'night', 0.12],
+  ['moved.', 'cream', 0.11], ['approved.', 'green', 0.16],
+]
+const END_T0 = 7.05          // cream, a lone cursor
+const MARK_T0 = 7.55         // the arch rises
+const LINE_T0 = 8.30         // tagline types
+const TAG = 'a business account that takes instructions.'
+const DURATION = 10
+
+// ── helpers ─────────────────────────────────────────────────────────────
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x))
+const ease = x => 1 - Math.pow(1 - clamp(x), 3)
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296) }
+function fill(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H) }
+// Typed count with a little human jitter, deterministic per string.
+function typedCount(text, p) {
+  if (p <= 0) return 0
+  if (p >= 1) return text.length
+  const r = rng(text.length * 97 + text.charCodeAt(0))
+  const w = [...text].map(ch => (ch === ' ' ? 1.7 : 0.7 + r() * 0.8))
+  const total = w.reduce((a, b) => a + b, 0)
+  let acc = 0
+  for (let i = 0; i < w.length; i++) { acc += w[i] / total; if (p < acc) return i }
+  return text.length
+}
+function cursorOn(t) { return Math.floor(t / 0.5) % 2 === 0 }
+
+// The small instruction line, anchored so the finished string is centred.
+function drawCommand(text, n, t, showCursor, y = H / 2 + 10, color = C.ink) {
+  ctx.font = `400 30px ${SANS}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = color
+  const full = ctx.measureText(text).width
+  const x0 = (W - full) / 2
+  const s = text.slice(0, n)
+  ctx.fillText(s, x0, y)
+  if (showCursor) {
+    const cx = x0 + ctx.measureText(s).width + 3
+    ctx.fillRect(cx, y - 25, 3, 32)
+  }
+}
+
+// Corner details: the "specimen" layer that makes a frame feel made.
+function corners(fg, note, idx) {
+  ctx.font = `400 15px ${MONO}`
+  ctx.fillStyle = fg
+  ctx.globalAlpha = 0.72
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText(note, 40, H - 38)
+  const r = 'fuime'
+  ctx.fillText(r, W - 40 - ctx.measureText(r).width, H - 38)
+  if (idx != null) {
+    const k = String(idx).padStart(2, '0') + ' / 04'
+    ctx.fillText(k, 40, 52)
+  }
+  ctx.globalAlpha = 1
+}
+
+function groundColors(g) {
+  if (g === 'green') return [C.green, C.cream]
+  if (g === 'night') return [C.night, C.mint]
+  return [C.cream, C.green]
+}
+
+// The giant answer: big serif, optically centred, a touch condensed.
+function drawAnswer(word, g, local, opts = {}) {
+  const [bg, fg] = groundColors(g)
+  fill(bg)
+  let size = opts.size || 300
+  ctx.font = `400 ${size}px ${SERIF}`
+  let w = ctx.measureText(word).width
+  const max = W - 120
+  if (w > max) { size = size * max / w; ctx.font = `400 ${size}px ${SERIF}`; w = ctx.measureText(word).width }
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = fg
+  const baseY = H / 2 + size * 0.30
+  ctx.save()
+  // a very short settle: lands 6px low and rises, no bounce
+  const settle = (1 - ease(local / 0.12)) * 6
+  if (opts.freeze) {
+    // letters shiver for the first beat, then lock dead still
+    const shiver = local < 0.28 ? 1 - local / 0.28 : 0
+    let x = (W - w) / 2
+    const r = rng(17)
+    for (const ch of word) {
+      const cw = ctx.measureText(ch).width
+      const jx = shiver ? (r() - 0.5) * 9 * shiver * Math.sin(local * 90 + x) : 0
+      const jy = shiver ? (r() - 0.5) * 9 * shiver * Math.cos(local * 77 + x) : 0
+      ctx.fillText(ch, x + jx, baseY + jy + settle)
+      x += cw
+    }
+    // once frozen, a hairline frame snaps around it
+    if (local > 0.3) {
+      ctx.strokeStyle = fg
+      ctx.globalAlpha = 0.5
+      ctx.lineWidth = 1.5
+      const pad = 22
+      ctx.strokeRect((W - w) / 2 - pad, baseY - size * 0.78 - pad / 2, w + pad * 2, size * 0.98 + pad)
+      ctx.globalAlpha = 1
+    }
+  } else {
+    ctx.fillText(word, (W - w) / 2, baseY + settle)
+  }
+  ctx.restore()
+  return fg
+}
+
+function drawMark(p, cx, cy, h) {
+  if (!logo.complete || p <= 0) return
+  const w = h * 49 / 41
+  ctx.save()
+  // rises out of the baseline: a clip that opens upward
+  ctx.beginPath()
+  ctx.rect(cx - w / 2 - 2, cy + h / 2 - h * ease(p) - 2, w + 4, h * ease(p) + 4)
+  ctx.clip()
+  ctx.drawImage(logo, cx - w / 2, cy - h / 2 + (1 - ease(p)) * 10, w, h)
+  ctx.restore()
+}
+
+// ── the frame ───────────────────────────────────────────────────────────
+function draw(t) {
+  t = ((t % DURATION) + DURATION) % DURATION
+  ctx.globalAlpha = 1
+
+  // 1. typed beats
+  for (let i = 0; i < BEATS.length; i++) {
+    const b = BEATS[i]
+    const typeEnd = b.t0 + b.type
+    const ansStart = typeEnd + b.hold
+    const ansEnd = ansStart + b.ansDur
+    const prevEnd = i === 0 ? 0 : (() => { const p = BEATS[i - 1]; return p.t0 + p.type + p.hold + p.ansDur })()
+    if (t >= prevEnd && t < ansStart) {
+      fill(C.cream)
+      const n = typedCount(b.cmd, (t - b.t0) / b.type)
+      const typing = t >= b.t0 && t < typeEnd
+      drawCommand(b.cmd, n, t, typing || cursorOn(t))
+      corners(C.muted, i === 0 && t < b.t0 ? '' : '', i + 1)
+      return
+    }
+    if (t >= ansStart && t < ansEnd) {
+      const fg = drawAnswer(b.ans, b.ground, t - ansStart, { freeze: b.freeze })
+      corners(fg, b.note, i + 1)
+      return
+    }
+  }
+
+  // 2. montage of answers, hard cuts
+  let m = MONTAGE_T0
+  const lastBeat = BEATS[BEATS.length - 1]
+  const beatsEnd = lastBeat.t0 + lastBeat.type + lastBeat.hold + lastBeat.ansDur
+  if (t >= beatsEnd && t < MONTAGE_T0) { fill(C.cream); return }
+  for (const [word, g, d] of MONTAGE) {
+    if (t >= m && t < m + d) {
+      const fg = drawAnswer(word, g, t - m, { size: 230 })
+      corners(fg, '', null)
+      return
+    }
+    m += d
+  }
+
+  // 3. end: silence, a cursor, the mark, the line
+  fill(C.cream)
+  if (t < MARK_T0) {
+    if (t >= END_T0 + 0.12 && cursorOn(t - END_T0)) {
+      ctx.fillStyle = C.ink
+      ctx.fillRect(W / 2 - 1.5, H / 2 - 16, 3, 32)
+    }
+    return
+  }
+  const markY = H / 2 - 50
+  drawMark((t - MARK_T0) / 0.7, W / 2, markY, 92)
+  if (t >= LINE_T0) {
+    const n = typedCount(TAG, (t - LINE_T0) / 0.95)
+    ctx.font = `400 26px ${SANS}`
+    ctx.fillStyle = C.ink
+    const full = ctx.measureText(TAG).width
+    const x0 = (W - full) / 2, y = H / 2 + 62
+    ctx.fillText(TAG.slice(0, n), x0, y)
+    if (n < TAG.length || cursorOn(t)) ctx.fillRect(x0 + ctx.measureText(TAG.slice(0, n)).width + 3, y - 22, 2.5, 28)
+  }
+  if (t >= LINE_T0 + 1.05) {
+    ctx.globalAlpha = ease((t - LINE_T0 - 1.05) / 0.3)
+    ctx.font = `400 15px ${MONO}`
+    ctx.fillStyle = C.muted
+    const s = 'fuime.com · 2027'
+    ctx.fillText(s, (W - ctx.measureText(s).width) / 2, H - 52)
+    ctx.globalAlpha = 1
+  }
+}
+
+window.ready = (async () => {
+  await Promise.all([
+    document.fonts.load(`400 100px "Hedvig Letters Serif"`),
+    document.fonts.load(`400 30px "Inter"`),
+    document.fonts.load(`400 15px "Geist Mono"`),
+    new Promise(r => (logo.complete ? r() : (logo.onload = r))),
+  ])
+  await document.fonts.ready
+  draw(0)
+  return true
+})()
+window.draw = draw
+window.DURATION = DURATION
+</script>
+</body>
+</html>
