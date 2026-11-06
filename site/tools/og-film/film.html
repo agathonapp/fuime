@@ -11,270 +11,224 @@
 <body>
 <canvas id="c" width="1200" height="630"></canvas>
 <script>
-// "Coins into the arch": fuime.com's og:video. One continuous shot.
-// A payment drops through the keystone of a pixel arch as coins and piles up
-// inside. The instruction types. A quarter of the coins hop back out of the
-// slot and land in a second pile: taxes.
-//
-// The physics runs once, at a fixed timestep, when the page loads; draw(t)
-// only reads the recorded frame, so every render is identical.
-const W = 1200, H = 630, FPS = 30, DURATION = 10
-const C = { ground: '#f7f3e8', ink: '#171a18', muted: '#8f8a7e', green: '#2e7d5b', line: '#e2dac8' }
-const FONT = '"Satoshi", sans-serif'
+// "Instructions": a 10 s loop for fuime.com's og:video.
+// draw(t) is a pure function of time, so every frame renders identically.
+const W = 1200, H = 630
+const C = { cream: '#f7f3e8', ink: '#171a18', muted: '#8a857a', green: '#2e7d5b', night: '#0e2a1e', mint: '#b7e4c7', paper: '#fbf8f0' }
+// One family throughout: Satoshi. Bold for the answers, medium for everything typed.
+const SANS = '"Satoshi", sans-serif', SERIF = SANS, MONO = SANS
 const ctx = document.getElementById('c').getContext('2d')
-
-// ── geometry ────────────────────────────────────────────────────────────
-const PX = 10                      // one arch "pixel"
-const CX = 470, FLOOR = 532        // arch centre x, ground line
-const ROUT = 170, RIN = 140        // arch ring, outer and inner radius
-const CY = FLOOR - 150             // centre of the semicircle
-const SLOT = 32                    // half-width of the keystone slot
-const R = 17                       // coin radius
-const N = 20, POP = 5              // 20 coins = $3,150.00; 5 = $787.50
-const EACH = 157.5
-const TAX_X = CX + ROUT + 190      // taxes pile centre
+const logo = new Image()
+logo.src = 'logo.svg'
 
 // ── timeline ────────────────────────────────────────────────────────────
-const T_TYPE = 0.5, T_TYPED = 1.75 // instruction types
-const T_DROP = 2.0, DROP_GAP = 0.085
-const T_POP = 5.35, POP_GAP = 0.3
-const T_DONE = 7.55
+// Typed beats: a small instruction types in, then a hard cut to its answer.
+// Durations deliberately uneven so it breathes rather than ticks.
+const BEATS = [
+  { cmd: 'move 25% to taxes',          t0: 0.45, type: 1.05, hold: 0.22, ans: 'done.',  ground: 'cream', ansDur: 0.62, note: 'ach in · $3,150.00 · 25% → taxes' },
+  { cmd: 'wire bayside $2,284.50',     t0: 2.34, type: 0.78, hold: 0.14, ans: 'sent.',  ground: 'green', ansDur: 0.48, note: 'wire · arrives before 5 pm' },
+  { cmd: "freeze luis's card",         t0: 3.74, type: 0.62, hold: 0.12, ans: 'frozen.', ground: 'night', ansDur: 0.62, note: 'card ·· 5530', freeze: true },
+  { cmd: 'what did the chen job make?', t0: 5.10, type: 0.66, hold: 0.12, ans: '$2,130', ground: 'cream', ansDur: 0.52, note: 'after materials · october' },
+]
+const MONTAGE_T0 = 6.40
+const MONTAGE = [
+  ['scheduled.', 'green', 0.14], ['noted.', 'cream', 0.12], ['paid.', 'night', 0.12],
+  ['moved.', 'cream', 0.11], ['approved.', 'green', 0.16],
+]
+const END_T0 = 7.05          // cream, a lone cursor
+const MARK_T0 = 7.55         // the arch rises
+const LINE_T0 = 8.30         // tagline types
+const TAG = 'a business account that takes instructions.'
+const DURATION = 10
 
-// ── deterministic noise ─────────────────────────────────────────────────
-function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296) }
+// ── helpers ─────────────────────────────────────────────────────────────
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x))
-const easeOut = x => 1 - Math.pow(1 - clamp(x), 3)
-const easeInOut = x => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
-
-// ── sprites ─────────────────────────────────────────────────────────────
-// A 12x12 coin, lit from the top left: outline, shadow, base, mid, highlight.
-function coinSprite() {
-  const s = 12, c = document.createElement('canvas')
-  c.width = c.height = s
-  const g = c.getContext('2d')
-  const T = { line: '#7a5a16', shadow: '#b8862a', base: '#d6a63a', mid: '#e8c264', hi: '#f7e3a4' }
-  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
-    const dx = x + 0.5 - s / 2, dy = y + 0.5 - s / 2, d = Math.hypot(dx, dy)
-    if (d > 5.9) continue
-    let col
-    if (d > 4.9) col = T.line
-    else if (Math.abs(d - 3.1) < 0.55) col = (dx + dy > 0) ? T.mid : T.shadow // engraved ring
-    else {
-      const light = -(dx + dy) / 6           // top-left is lit
-      col = light > 0.55 ? T.hi : light > 0.05 ? T.mid : light > -0.5 ? T.base : T.shadow
-    }
-    g.fillStyle = col
-    g.fillRect(x, y, 1, 1)
-  }
-  return c
+const ease = x => 1 - Math.pow(1 - clamp(x), 3)
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296) }
+function fill(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H) }
+// Typed count with a little human jitter, deterministic per string.
+function typedCount(text, p) {
+  if (p <= 0) return 0
+  if (p >= 1) return text.length
+  const r = rng(text.length * 97 + text.charCodeAt(0))
+  const w = [...text].map(ch => (ch === ' ' ? 1.7 : 0.7 + r() * 0.8))
+  const total = w.reduce((a, b) => a + b, 0)
+  let acc = 0
+  for (let i = 0; i < w.length; i++) { acc += w[i] / total; if (p < acc) return i }
+  return text.length
 }
-const COIN = coinSprite()
+function cursorOn(t) { return Math.floor(t / 0.5) % 2 === 0 }
 
-// The arch as a grid of PX blocks: a semicircular ring on two pillars, with a
-// keystone slot. Three tones, lit from the top left.
-const ARCH = (() => {
-  const cells = []
-  const x0 = CX - ROUT, x1 = CX + ROUT
-  for (let y = CY - ROUT; y < FLOOR; y += PX) for (let x = x0; x < x1; x += PX) {
-    const px = x + PX / 2, py = y + PX / 2
-    const dx = px - CX, dy = py - CY, d = Math.hypot(dx, dy)
-    let solid
-    if (py < CY) solid = d >= RIN && d <= ROUT && Math.abs(dx) > SLOT + 2
-    else solid = Math.abs(dx) >= RIN && Math.abs(dx) <= ROUT
-    if (!solid) continue
-    // tone: outer top-left faces catch light, inner bottom-right faces fall away
-    const outer = d > ROUT - PX * 1.05 || (py >= CY && Math.abs(dx) > ROUT - PX * 1.05)
-    const inner = d < RIN + PX * 1.05 || (py >= CY && Math.abs(dx) < RIN + PX * 1.05)
-    const lit = dx < 0
-    let col = '#2e7d5b'
-    if (outer && lit) col = '#3f9a72'
-    else if (inner && !lit) col = '#215c43'
-    else if (outer && !lit) col = '#28704f'
-    cells.push([x, y, col])
+// The small instruction line, anchored so the finished string is centred.
+function drawCommand(text, n, t, showCursor, y = H / 2 + 10, color = C.ink) {
+  ctx.font = `500 30px ${SANS}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = color
+  const full = ctx.measureText(text).width
+  const x0 = (W - full) / 2
+  const s = text.slice(0, n)
+  ctx.fillText(s, x0, y)
+  if (showCursor) {
+    const cx = x0 + ctx.measureText(s).width + 3
+    ctx.fillRect(cx, y - 25, 3, 32)
   }
-  return cells
-})()
+}
 
-// ── the physics, run once ───────────────────────────────────────────────
-const FRAMES = (() => {
-  const r = rng(7)
-  const coins = []
-  for (let i = 0; i < N; i++) coins.push({
-    i, x: CX + (r() - 0.5) * 10, y: -40 - i * 4, px: 0, py: 0,
-    born: T_DROP + i * DROP_GAP, alive: false, kin: null, landed: false,
-  })
-  for (const c of coins) { c.px = c.x; c.py = c.y - 4 }
-
-  // taxes pile: three on the ground, two on top
-  const taxSpots = [
-    [TAX_X - 34, FLOOR - R], [TAX_X, FLOOR - R], [TAX_X + 34, FLOOR - R],
-    [TAX_X - 17, FLOOR - R - 30], [TAX_X + 17, FLOOR - R - 30],
-  ]
-  const STEP = 1 / 240, SUB = 240 / FPS
-  const G = 2600
-  const out = []
-  let popped = 0, t = 0
-  const totalFrames = DURATION * FPS
-
-  function solveBounds(c) {
-    const dx = c.x - CX, dy = c.y - CY, d = Math.hypot(dx, dy)
-    if (c.y < CY) {
-      if (Math.abs(dx) < SLOT && d > RIN - R - 2 && d < ROUT + R) {
-        // inside the keystone slot: walls on either side
-        c.x = clamp(c.x, CX - SLOT + R, CX + SLOT - R)
-      } else if (d < ROUT && c.y > CY - RIN) {
-        if (d > RIN - R) { c.x = CX + dx / d * (RIN - R); c.y = CY + dy / d * (RIN - R) }
-      }
-    } else {
-      c.x = clamp(c.x, CX - RIN + R, CX + RIN - R)
-    }
-    if (c.y > FLOOR - R) {
-      c.y = FLOOR - R
-      c.px = c.x + (c.px - c.x) * 0.6 + (c.x - c.px) * 0.0 // ground friction
-      c.px = c.x - (c.x - c.px) * 0.6
-    }
+// Corner details: the "specimen" layer that makes a frame feel made.
+function corners(fg, note, idx) {
+  ctx.font = `500 15px ${MONO}`
+  ctx.fillStyle = fg
+  ctx.globalAlpha = 0.72
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText(note, 40, H - 38)
+  const r = 'fuime'
+  ctx.fillText(r, W - 40 - ctx.measureText(r).width, H - 38)
+  if (idx != null) {
+    const k = String(idx).padStart(2, '0') + ' / 04'
+    ctx.fillText(k, 40, 52)
   }
+  ctx.globalAlpha = 1
+}
 
-  for (let f = 0; f < totalFrames; f++) {
-    for (let s = 0; s < SUB; s++) {
-      t += STEP
-      // start popping: take whichever coin sits highest in the pile
-      if (popped < POP && t >= T_POP + popped * POP_GAP) {
-        const pile = coins.filter(c => c.alive && !c.kin)
-        pile.sort((a, b) => a.y - b.y)
-        const c = pile[0]
-        c.kin = { t0: t, x0: c.x, y0: c.y, spot: taxSpots[popped] }
-        popped++
-      }
-      for (const c of coins) {
-        if (!c.alive) { if (t >= c.born) c.alive = true; else continue }
-        if (c.kin) continue
-        const vx = (c.x - c.px) * 0.998, vy = (c.y - c.py) * 0.998
-        c.px = c.x; c.py = c.y
-        c.x += vx; c.y += vy + G * STEP * STEP
-      }
-      // collisions between free coins, then the walls
-      const free = coins.filter(c => c.alive && !c.kin)
-      for (let it = 0; it < 4; it++) {
-        for (let a = 0; a < free.length; a++) for (let b = a + 1; b < free.length; b++) {
-          const A = free[a], B = free[b]
-          const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 0.001
-          if (d < 2 * R) {
-            const k = (2 * R - d) / 2 / d
-            A.x -= dx * k; A.y -= dy * k; B.x += dx * k; B.y += dy * k
-          }
-        }
-        for (const c of free) solveBounds(c)
-      }
+function groundColors(g) {
+  if (g === 'green') return [C.green, C.cream]
+  if (g === 'night') return [C.night, C.mint]
+  return [C.cream, C.green]
+}
+
+// The giant answer: big serif, optically centred, a touch condensed.
+function drawAnswer(word, g, local, opts = {}) {
+  const [bg, fg] = groundColors(g)
+  fill(bg)
+  let size = opts.size || 270
+  ctx.font = `700 ${size}px ${SERIF}`
+  let w = ctx.measureText(word).width
+  const max = W - 120
+  if (w > max) { size = size * max / w; ctx.font = `700 ${size}px ${SERIF}`; w = ctx.measureText(word).width }
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = fg
+  ctx.letterSpacing = '-0.04em'
+  const baseY = H / 2 + size * 0.30
+  ctx.save()
+  // a very short settle: lands 6px low and rises, no bounce
+  const settle = (1 - ease(local / 0.12)) * 6
+  if (opts.freeze) {
+    // letters shiver for the first beat, then lock dead still
+    const shiver = local < 0.28 ? 1 - local / 0.28 : 0
+    let x = (W - w) / 2
+    const r = rng(17)
+    for (const ch of word) {
+      const cw = ctx.measureText(ch).width
+      const jx = shiver ? (r() - 0.5) * 9 * shiver * Math.sin(local * 90 + x) : 0
+      const jy = shiver ? (r() - 0.5) * 9 * shiver * Math.cos(local * 77 + x) : 0
+      ctx.fillText(ch, x + jx, baseY + jy + settle)
+      x += cw
     }
-    // record: kinematic hops are computed from their own clock
-    const ft = (f + 1) / FPS
-    const rec = []
-    for (const c of coins) {
-      if (!c.alive) continue
-      if (c.kin) {
-        const k = c.kin, u = ft - k.t0
-        const up = 0.26, arc = 0.62
-        let x, y
-        if (u < up) {          // lift to the slot and out through it
-          const p = easeInOut(u / up)
-          x = k.x0 + (CX - k.x0) * p
-          y = k.y0 + (CY - ROUT - 46 - k.y0) * p
-        } else if (u < up + arc) {
-          const p = (u - up) / arc
-          const sx = CX, sy = CY - ROUT - 46, [tx, ty] = k.spot
-          x = sx + (tx - sx) * p
-          y = sy + (ty - sy) * p - Math.sin(Math.PI * p) * 70
-        } else {               // land, with one small settle
-          const p = clamp((u - up - arc) / 0.12)
-          const [tx, ty] = k.spot
-          x = tx; y = ty - Math.sin(Math.PI * p) * 5
-          k.landed = true
-        }
-        rec.push([x, y, 1, k.landed])
-      } else {
-        rec.push([c.x, c.y, 0, false])
-      }
+    // once frozen, a hairline frame snaps around it
+    if (local > 0.3) {
+      ctx.strokeStyle = fg
+      ctx.globalAlpha = 0.5
+      ctx.lineWidth = 1.5
+      const pad = 22
+      ctx.strokeRect((W - w) / 2 - pad, baseY - size * 0.78 - pad / 2, w + pad * 2, size * 0.98 + pad)
+      ctx.globalAlpha = 1
     }
-    out.push({ coins: rec, popped, inside: coins.filter(c => c.alive && !c.kin && c.y > CY - RIN).length })
+  } else {
+    ctx.fillText(word, (W - w) / 2, baseY + settle)
   }
-  return out
-})()
+  ctx.restore()
+  return fg
+}
 
-// ── drawing ─────────────────────────────────────────────────────────────
-function typed(text, p) { return text.slice(0, Math.round(clamp(p) * text.length)) }
-const cursorOn = t => Math.floor(t / 0.5) % 2 === 0
-const money = v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function drawMark(p, cx, cy, h) {
+  if (!logo.complete || p <= 0) return
+  const w = h * 49 / 41
+  ctx.save()
+  // rises out of the baseline: a clip that opens upward
+  ctx.beginPath()
+  ctx.rect(cx - w / 2 - 2, cy + h / 2 - h * ease(p) - 2, w + 4, h * ease(p) + 4)
+  ctx.clip()
+  ctx.drawImage(logo, cx - w / 2, cy - h / 2 + (1 - ease(p)) * 10, w, h)
+  ctx.restore()
+}
 
+// ── the frame ───────────────────────────────────────────────────────────
 function draw(t) {
   t = ((t % DURATION) + DURATION) % DURATION
-  const f = Math.min(FRAMES.length - 1, Math.floor(t * FPS))
-  const fr = FRAMES[f]
+  ctx.globalAlpha = 1
 
-  ctx.fillStyle = C.ground
-  ctx.fillRect(0, 0, W, H)
-  ctx.imageSmoothingEnabled = false
-
-  // ground
-  ctx.fillStyle = C.line
-  ctx.fillRect(80, FLOOR, W - 160, 2)
-
-  // coins behind the arch face, then the arch, so the slot reads as a slot
-  for (const [x, y] of fr.coins) ctx.drawImage(COIN, Math.round(x - R), Math.round(y - R), R * 2, R * 2)
-  for (const [x, y, col] of ARCH) { ctx.fillStyle = col; ctx.fillRect(x, y, PX, PX) }
-  // a hopping coin passes in front of the arch once it is out of the slot
-  for (const [x, y, kin] of fr.coins) if (kin && y < CY - ROUT) ctx.drawImage(COIN, Math.round(x - R), Math.round(y - R), R * 2, R * 2)
-
-  // the instruction, top left, small
-  ctx.textBaseline = 'alphabetic'
-  ctx.font = `500 24px ${FONT}`
-  ctx.fillStyle = C.ink
-  const cmd = 'move 25% of every payment to taxes'
-  const s = t < T_TYPE ? '' : typed(cmd, (t - T_TYPE) / (T_TYPED - T_TYPE))
-  ctx.fillText(s, 80, 92)
-  if ((t < T_TYPED && t > 0.15) || (t < T_DONE && cursorOn(t))) {
-    ctx.fillRect(80 + ctx.measureText(s).width + 3, 72, 2.5, 26)
-  }
-  if (t >= T_DONE) {
-    ctx.fillStyle = C.green
-    ctx.fillText(typed('done. $787.50 moved.', (t - T_DONE) / 0.45), 80, 126)
+  // 1. typed beats
+  for (let i = 0; i < BEATS.length; i++) {
+    const b = BEATS[i]
+    const typeEnd = b.t0 + b.type
+    const ansStart = typeEnd + b.hold
+    const ansEnd = ansStart + b.ansDur
+    const prevEnd = i === 0 ? 0 : (() => { const p = BEATS[i - 1]; return p.t0 + p.type + p.hold + p.ansDur })()
+    if (t >= prevEnd && t < ansStart) {
+      fill(C.cream)
+      const n = typedCount(b.cmd, (t - b.t0) / b.type)
+      const typing = t >= b.t0 && t < typeEnd
+      drawCommand(b.cmd, n, t, typing || cursorOn(t))
+      corners(C.muted, i === 0 && t < b.t0 ? '' : '', i + 1)
+      return
+    }
+    if (t >= ansStart && t < ansEnd) {
+      const fg = drawAnswer(b.ans, b.ground, t - ansStart, { freeze: b.freeze })
+      corners(fg, b.note, i + 1)
+      return
+    }
   }
 
-  // the payment, labelled where it enters
-  if (t >= T_DROP - 0.2 && t < 4.6) {
-    ctx.globalAlpha = clamp((t - T_DROP + 0.2) / 0.2) * clamp((4.6 - t) / 0.3)
-    ctx.font = `500 17px ${FONT}`
-    ctx.fillStyle = C.muted
-    ctx.fillText('m. chen paid $3,150.00', CX + SLOT + 18, 196)
-    ctx.globalAlpha = 1
+  // 2. montage of answers, hard cuts
+  let m = MONTAGE_T0
+  const lastBeat = BEATS[BEATS.length - 1]
+  const beatsEnd = lastBeat.t0 + lastBeat.type + lastBeat.hold + lastBeat.ansDur
+  if (t >= beatsEnd && t < MONTAGE_T0) { fill(C.cream); return }
+  for (const [word, g, d] of MONTAGE) {
+    if (t >= m && t < m + d) {
+      const fg = drawAnswer(word, g, t - m, { size: 230 })
+      corners(fg, '', null)
+      return
+    }
+    m += d
   }
 
-  // balances, under each pile
-  const landedTax = fr.coins.filter(c => c[2] && c[3]).length
-  const operating = Math.max(0, (fr.inside + fr.popped - landedTax) - (fr.popped - landedTax)) * EACH
-  ctx.font = `500 17px ${FONT}`
-  ctx.fillStyle = C.muted
-  ctx.fillText('operating', CX - 52, FLOOR + 40)
-  ctx.fillStyle = C.ink
-  ctx.fillText(money(operating), CX - 52, FLOOR + 64)
-  if (fr.popped > 0) {
-    ctx.globalAlpha = clamp((t - T_POP) / 0.3)
-    ctx.fillStyle = C.muted
-    ctx.fillText('taxes', TAX_X - 34, FLOOR + 40)
+  // 3. end: silence, a cursor, the mark, the line
+  fill(C.cream)
+  if (t < MARK_T0) {
+    if (t >= END_T0 + 0.12 && cursorOn(t - END_T0)) {
+      ctx.fillStyle = C.ink
+      ctx.fillRect(W / 2 - 1.5, H / 2 - 16, 3, 32)
+    }
+    return
+  }
+  const markY = H / 2 - 50
+  drawMark((t - MARK_T0) / 0.7, W / 2, markY, 92)
+  if (t >= LINE_T0) {
+    const n = typedCount(TAG, (t - LINE_T0) / 0.95)
+    ctx.font = `500 26px ${SANS}`
     ctx.fillStyle = C.ink
-    ctx.fillText(money(landedTax * EACH), TAX_X - 34, FLOOR + 64)
+    const full = ctx.measureText(TAG).width
+    const x0 = (W - full) / 2, y = H / 2 + 62
+    ctx.fillText(TAG.slice(0, n), x0, y)
+    if (n < TAG.length || cursorOn(t)) ctx.fillRect(x0 + ctx.measureText(TAG.slice(0, n)).width + 3, y - 22, 2.5, 28)
+  }
+  if (t >= LINE_T0 + 1.05) {
+    ctx.globalAlpha = ease((t - LINE_T0 - 1.05) / 0.3)
+    ctx.font = `500 15px ${MONO}`
+    ctx.fillStyle = C.muted
+    const s = 'fuime.com · 2027'
+    ctx.fillText(s, (W - ctx.measureText(s).width) / 2, H - 52)
     ctx.globalAlpha = 1
   }
-
-  // the name, quietly, bottom right
-  ctx.font = `500 17px ${FONT}`
-  ctx.fillStyle = C.muted
-  const tag = 'fuime · 2027'
-  ctx.fillText(tag, W - 80 - ctx.measureText(tag).width, 92)
 }
 
 window.ready = (async () => {
-  await document.fonts.load(`500 24px "Satoshi"`)
+  await Promise.all([
+    document.fonts.load(`700 100px "Satoshi"`),
+    document.fonts.load(`500 30px "Satoshi"`),
+    new Promise(r => (logo.complete ? r() : (logo.onload = r))),
+  ])
   await document.fonts.ready
   draw(0)
   return true
