@@ -1,0 +1,25 @@
+<%# Fuime: the answer to a sign-in for an address with no account while
+    sign-ups are closed (Fuime::Signups). It leaves at once for the waitlist on
+    fuime.com, which explains why they are there (?account=none).
+    A page rather than a redirect because the login form is submitted by Turbo,
+    which cannot follow a redirect to another origin (navigate_controller.js).
+    The link covers the moment before it goes, and anyone without JavaScript. %>
+<% title "fuime isn't open for sign-ups yet" %>
+
+<div class="flex flex-col flex-1 justify-center w-full max-w-md" data-controller="navigate" data-navigate-url-value="<%= @waitlist_url %>">
+  <div class="my-auto">
+    <%= render "logins/header", header_label: "Fuime" do %>
+      fuime isn't open for sign-ups yet.
+    <% end %>
+
+    <p class="mt-2 mb-0 muted">
+      There's no fuime account for <strong><%= @no_account_for %></strong>.
+      Taking you to the waitlist.
+    </p>
+
+    <div class="flex justify-between items-center gap-4">
+      <%= link_to "Try another email", auth_users_path, class: "mt-3" %>
+      <%= link_to "Go to the waitlist", @waitlist_url, class: "mt-4 btn" %>
+    </div>
+  </div>
+</div>

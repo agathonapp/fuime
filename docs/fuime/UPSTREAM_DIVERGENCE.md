@@ -8067,3 +8067,43 @@ itself. `--data-dump --data-dump-every=1` is what found the first one.
 **Files:** `rive/{pay-button,fee-dial}/` (`rive.yaml`, `scene.rml`, `fee-dial/dial.luau`);
 `rive/tools/render-interactive.sh`; updates to `rive/README.md`, `rive/gallery.html`,
 `rive/tools/build-all.sh`; outputs in `rive/out/`.
+
+## 2026-10-01 — Sign-ups closed; people without an account go to the waitlist on fuime.com
+
+Founder's call: fuime.com becomes a waitlist and the app stops taking sign-ups "until we
+onboard ppl". `Fuime::Signups` reads `FUIME_SIGNUPS_OPEN` (closed unless exactly `"true"`,
+declared `"false"` on fuime-web in `render.yaml`).
+
+**What closes is the public door, nothing else.** `LoginsController#create` no longer
+`find_or_create_by!`s an unknown address while closed. Existing users sign in unchanged.
+Every invite path (`Fuime::WaitlistInviteService`, the family wizard, the guardian invite,
+`OrganizerPositionInviteService`) creates the User *before* mailing the link, so invited
+people arrive as existing users and walk through. `/admin/waitlist` "Invite" is the way in.
+
+**Anyone without an account is sent to the waitlist on the landing page** (`site/index.html#join`,
+founder's ask): `GET /users/auth?signup=true` 302s to `Fuime::Signups.waitlist_url`, and a
+sign-in for an unknown address goes to `?account=none#join`, where `site.js` says there is no
+account for that email. The sign-in case is a rendered 422 page whose `navigate` Stimulus
+controller leaves at once, NOT a redirect: the login form is submitted by Turbo, Turbo follows
+redirects with fetch, and a cross-origin redirect fails CORS there with only a
+`console.error` — verified in Turbo 8.0.21's source and in a real browser. The site owns
+sign-ups to the list; the app never writes to it. `FUIME_SITE_ORIGIN` points the redirect at a
+local or preview site.
+
+**Side doors.** `ExportsController#transactions` minted a User from any `email` param on a
+public venture's async export, and that User could then sign in; while closed it only looks
+one up. (FIRST and reimbursement sign-up actions are already unrouted.)
+`Fuime::FamilyInvitesController` sent a teen with a dead link to the sign-up page; it now
+sends them to sign-in, since the parent's setup already created their account.
+
+**Specs:** the suite runs OPEN by default (`spec/support/signups.rb`) because every other
+example that signs a fresh address up is about something else; the closed world is
+`:signups_closed` in `spec/requests/fuime_signups_closed_spec.rb`.
+
+**Files:** `app/lib/fuime/signups.rb`, `app/javascript/controllers/navigate_controller.js`,
+`app/views/logins/signups_closed.html.erb` (new); `app/controllers/logins_controller.rb`,
+`app/controllers/exports_controller.rb`, `app/controllers/fuime/family_invites_controller.rb`,
+`app/views/logins/new.html.erb`, `render.yaml`, `.env.development.example`;
+`spec/support/signups.rb`, `spec/requests/fuime_signups_closed_spec.rb` (new),
+`spec/requests/fuime_family_invite_spec.rb`. Site: `site/index.html`, `site/site.js`,
+`site/style.css`, `site/test/{server.test,copy-guard}.mjs`.

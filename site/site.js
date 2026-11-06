@@ -460,7 +460,29 @@
     render(false)
   })
 
+  /* ── arriving at an anchor ───────────────────────────────────────────── */
+
+  // A link into this page (/#join, /#how) is scrolled to before the dive on /
+  // arms, and arming adds about four screens of travel above everything after
+  // it. The browser's smooth scroll keeps the target it measured first, so the
+  // visitor stopped ~3800px short of the waitlist (measured at 1280×900). Go
+  // again once the page has loaded. Past the dive, it no longer arms (fx/dive.js).
+  if (location.hash.length > 1) {
+    window.addEventListener('load', function () {
+      var target = document.getElementById(decodeURIComponent(location.hash.slice(1)))
+      if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' })
+    })
+  }
+
   /* ── waitlist capture ────────────────────────────────────────────────── */
+
+  // The app sends a sign-in that found no account here as /?account=none#join
+  // (Fuime::Signups in the Rails app), so say why they got the waitlist rather
+  // than a login code. Hidden in the markup, so scripts-off shows nothing wrong.
+  if (/(?:^|[?&])account=none(?:&|$)/.test(location.search)) {
+    var none = document.querySelector('[data-account-none]')
+    if (none) none.hidden = false
+  }
 
   // Mirrors the server's check in api/waitlist.js, so a typo never costs a
   // round trip.

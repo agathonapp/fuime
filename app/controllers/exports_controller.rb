@@ -42,7 +42,12 @@ class ExportsController < ApplicationController
                   end
 
         if @export.async?
-          @export.requested_by = User.find_or_create_by(email: params[:email]) if params[:email]
+          if params[:email]
+            # Fuime: a public form may not mint an account while sign-ups are
+            # closed (Fuime::Signups) — a User made here could then sign in.
+            @export.requested_by = ::Fuime::Signups.open? ? User.find_or_create_by(email: params[:email]) : User.find_by(email: params[:email])
+            flash[:error] = "Emailed exports need a fuime account, and sign-ups aren't open yet." if @export.requested_by.nil?
+          end
 
           if @export.requested_by.nil?
             redirect_to collect_email_exports_path(file_extension:, event_slug: params[:event]) and return

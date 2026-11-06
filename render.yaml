@@ -142,6 +142,14 @@ services:
       # fails closed rather than quietly becoming a merchant of record.
       - key: FEATURE_MERCHANT_OF_RECORD
         value: "true"
+      # Whether a stranger can make an account (Fuime::Signups). Closed since
+      # 2026-10-01: fuime.com is a waitlist, and people get in by an invite from
+      # /admin/waitlist, which creates their account before mailing the link.
+      # Declared here so opening the doors is a reviewed one-line change, not a
+      # dashboard edit. "true" opens them; anything else, or absent, is closed.
+      # Web only: the worker serves no sign-up page.
+      - key: FUIME_SIGNUPS_OPEN
+        value: "false"
       # A reference to the counsel advice that says the MoR structure holds.
       # Must answer MOR_MIGRATION_PLAN §7 Q1 (does it take the collection leg
       # outside 18 U.S.C. § 1960 and state MTL), Q2 (does umbrella MoR break the
