@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Extensions that invert colours turn the night bands to mud. -->
+    <meta name="darkreader-lock" />
+    <title>fuime · invoicing for people who aren't 18 yet</title>
+    <meta
+      name="description"
+      content="Get paid for your work without running the payments yourself. Your client buys from Fuime, Fuime pays you what the sale earned, and the books keep themselves. Sellers aged 13 to 17 are welcome, with a parent or guardian as the account holder. Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record."
+    />
+    <link rel="canonical" href="https://fuime.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fuime" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://fuime.com/" />
+    <meta
+      property="og:title"
+      content="You're already working. Start billing."
+    />
+    <meta
+      property="og:description"
+      content="Your client buys from Fuime, Fuime pays you what the sale earned, and the books keep themselves. Sellers aged 13 to 17 are welcome, with a parent or guardian as the account holder. Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record."
+    />
+    <!-- Width and height let a scraper lay the card out before it has the
+         bytes, and alt is the only thing a screen reader gets when this is
+         shared into a feed. og.jpg is the same 1200x630 frame the old og.png
+         held, at 44KB instead of 567KB — the entire difference was a PNG
+         carrying a photograph. -->
+    <meta property="og:image" content="https://fuime.com/img/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="You're already working. Start billing."
+    />
+    <meta
+      name="twitter:description"
+      content="Your client buys from Fuime, Fuime pays you what the sale earned, and the books keep themselves. Sellers aged 13 to 17 are welcome, with a parent or guardian as the account holder. Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record."
+    />
+    <meta name="twitter:image" content="https://fuime.com/img/og.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="A teenager's bedroom at night, a laptop open on the desk at the window, a town spread out in the dark below."
+    />
+    <meta name="theme-color" content="#f9f8f7" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+
+    <!-- First paint. Inline and above every script, or the browser paints its
+         own white for one frame and the whole thing reads as a strobe. These
+         values are the literal night tokens; style.css must agree with them. -->
+    <!-- Without JS nothing would ever lift the overlay off the page. -->
+    <!-- The dive gates on these two, so they are asked for in the head rather
+         than discovered by a module several round trips later. `crossorigin`
+         matches dive.js's same-origin fetch, or the track downloads twice. The
+         media queries mirror LADDERS in fx/dive.js (900px). -->
+    <link rel="preload" as="fetch" href="/dive/track.json" crossorigin />
+    <link rel="preload" as="image" href="/dive-m/f_0001.webp" media="(max-width: 900px)" />
+    <link rel="preload" as="image" href="/dive/f_0001.webp" media="(min-width: 901px)" />
+    <link rel="stylesheet" href="/style.css" />
+    <!-- style.css parks every .rise block at opacity 0 and site.js adding
+         .is-in is the only thing that ever puts it back. With scripting off the
+         rule above lifts the boot overlay onto a page whose copy never arrives:
+         6.4k characters here, 10.2k on /parents, all painted at zero alpha. It
+         looks like a page that loaded with empty bands, which is worse than one
+         that visibly failed.
+
+         Has to sit after the stylesheet link to win on source order, and has to
+         name `.rise > .rise-i` rather than `.rise-i` to match the specificity of
+         the rule it is undoing. Same declarations prefers-reduced-motion
+         already uses to opt out of the same animation. -->
+    <noscript
+      ><style>
+        .rise,
+        .rise > .rise-i {
+          opacity: 1;
+          transform: none;
+        }
+      </style></noscript
+    >
+    <!-- The engines import the bare specifier 'cwe/stage'. The path is fixed
+         here and never inside a module, so vendoring stays a copy. This has to
+         sit above every script on the page: an import map that arrives after
+         the first module load is ignored outright. -->
+    <script type="importmap">
+      { "imports": { "cwe/stage": "/fx/stage.js" } }
+    </script>
+    <script src="/site.js" defer></script>
+    <script type="module" src="/fx/boot.js"></script>
+    <!-- Organization and WebSite, on the homepage only — the two entities the
+         other pages reference by @id rather than restating. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://fuime.com/#org",
+            "name": "fuime",
+            "url": "https://fuime.com/",
+            "logo": "https://fuime.com/img/apple-touch-icon.png",
+            "email": "rushil@fuime.com",
+            "description": "A merchant of record for small businesses selling services and digital work. Sellers aged 13 to 17 are welcome, with a parent or legal guardian as the account holder and legal payee. Fuime is a financial technology company, not a bank. Live · payments processed by Stripe. Ninth Street Labs, LLC (Fuime) is the seller of record."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://fuime.com/#site",
+            "url": "https://fuime.com/",
+            "name": "fuime",
+            "inLanguage": "en-US",
+            "publisher": {
+              "@id": "https://fuime.com/#org"
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <!-- The loader is a first-visit event, not a toll booth on every click. -->
+    <!-- The mark, defined once and referenced everywhere it appears. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="arch" viewBox="0 0 474 387">
+        <path
+          transform="translate(0.000000,387.000000) scale(0.125000,-0.125000)"
+          d="M1744 3091 c-184 -20 -265 -34 -381 -63 -218 -56 -376 -118 -454 -178 -22 -17 -83 -62 -136 -101 -101 -75 -274 -240 -331 -317 -18 -24 -47 -62 -63 -84 -142 -186 -261 -443 -320 -691 -17 -74 -30 -149 -51 -305 -4 -29 -7 -344 -8 -702 l0 -650 216 0 215 0 3 678 3 678 21 105 c20 102 48 208 63 237 4 8 7 18 7 23 0 5 16 45 36 89 171 378 425 626 819 798 71 31 81 26 96 -50 5 -27 13 -61 18 -74 51 -162 72 -308 45 -308 -19 0 -150 -68 -213 -110 -222 -149 -362 -368 -426 -670 l-19 -88 0 -652 0 -652 1016 0 1016 0 0 152 0 152 -442 2 -442 2 -2 250 c-1 140 1 255 5 260 6 9 96 10 444 10 l437 -1 2 56 c6 145 -13 508 -30 573 -86 331 -348 630 -630 719 -30 10 -29 17 43 303 15 61 27 119 27 130 0 30 14 27 182 -41 182 -75 432 -281 570 -471 103 -142 197 -338 237 -499 7 -25 15 -59 20 -77 33 -129 39 -271 39 -906 l0 -618 206 2 206 2 2 580 c3 704 -9 917 -62 1084 -4 13 -19 62 -33 108 -130 438 -448 848 -839 1083 -41 25 -81 51 -89 57 -42 39 -370 128 -575 156 -109 16 -378 27 -448 19z m541 -151 c3 -6 0 -24 -5 -38 -5 -14 -17 -66 -28 -114 -10 -48 -27 -117 -36 -152 -10 -35 -24 -93 -32 -128 -38 -173 -90 -377 -98 -385 -7 -6 -68 -7 -195 -5 l-186 4 -33 137 c-18 75 -50 209 -72 297 -33 135 -89 367 -91 380 -1 2 163 6 363 8 200 2 374 5 386 6 14 1 24 -3 27 -10z m-517 -1840 l0 -788 -260 0 -261 0 3 506 3 506 24 92 c41 152 76 216 170 314 73 76 224 158 291 158 l30 0 0 -788z m362 769 c260 -85 443 -387 421 -693 l-3 -36 -256 0 -256 0 -4 368 c-2 202 -3 371 -2 374 5 11 41 6 100 -13z"
+        />
+      </symbol>
+    </svg>
+
+    <!-- ── loader ──────────────────────────────────────────────────────────
+         The arch is the progress bar. It fills from the bottom against the
+         real manifest — fonts, then the hero photograph, then window load — so
+         the motion means something instead of counting down a timer. -->
+
+    <!-- ── nav ─────────────────────────────────────────────────────────── -->
+    <header class="nav nav--solid">
+      <div class="wrap nav__in">
+        <a class="mark" href="/" aria-label="fuime home">
+          <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+            <use href="#arch" />
+          </svg>
+          <span>fu<i>i</i>me</span>
+        </a>
+
+        <button
+          class="nav__burger"
+          type="button"
+          aria-label="Menu"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav__links" aria-label="Main">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/pricing">What it costs</a>
+          <a class="nav__link" href="/compare">Compare</a>
+          <a class="nav__link" href="/parents">Parents</a>
+          <a class="nav__link" href="/login">Log in</a>
+          <a class="btn btn--ink" href="/get-started">Start your business</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <!-- ── the dive ──────────────────────────────────────────────────────
+           Scroll flies into the laptop on the desk and lands on the sign-up.
+           The panel is not a picture of a screen: it is the door itself,
+           registered onto the laptop's glass by fx/dive.js from the same
+           four-corner track the frames were composited with.
+           It is in the markup from first paint and styled at rest by
+           style.css, so with scripts off or motion reduced the still and the
+           panel are simply two blocks stacked in the page, and the panel is
+           the hero. fx/dive.js holds `inert` on the panel for the flight and
+           drops it when the panel comes to rest.
+           data-surface="dark" is what turns the nav dark over it. -->
+      <section class="dive" data-fx-dive data-surface="dark">
+        <div class="dive__track">
+          <div class="dive__stage">
+            <canvas class="dive__canvas" aria-hidden="true"></canvas>
+            <img
+              class="dive__still"
+              src="/img/dive-end.webp"
+              width="1920"
+              height="1080"
+              fetchpriority="high"
+              decoding="async"
+              alt="A laptop open on a desk at night, a city lit up in the window behind it."
+            />
+            <div class="dive__app dive__app--join">
+              <div class="dv-join">
+                <svg class="dv-join__mark" viewBox="0 0 713 582" aria-hidden="true">
+                  <use href="#arch" />
+                </svg>
+                <h1 class="dv-join__h">You're already working.<br />Start billing.</h1>
+                <p class="dv-join__lead">
+                  Write a real invoice, keep books that hold up, and know what
+                  you owe at tax time. You run the business.
+                </p>
+                <div class="dv-join__cta">
+                  <!-- To the waitlist on this page rather than through the app's
+                       redirect. The label is baked into the dive frames, so it
+                       stays until the front door is rebuilt. -->
+                  <a class="btn btn--accent" href="#join">Start your business</a>
+                  <a class="btn btn--light" href="/parents">Parents: what you'll sign</a>
+                </div>
+                <p class="dv-join__note">Free to start. Nothing until you sell something.</p>
+              </div>
+            </div>
+          </div>
+          <!-- What this is, in words, on the first screen. Not an h1: the
+               panel's headline is the page's h1 in every state, including the
+               ones where this never renders. -->
+          <div class="dive__lede">
+            <p class="lede__h">Get paid for the work you already do.</p>
+            <p class="lede__sub">
+              Invoicing, payment and books for people who sell their work.
+            </p>
+            <a class="lede__skip" href="#signup">Skip to the sign-up</a>
+          </div>
+          <p class="dive__cue" aria-hidden="true"><span></span>Scroll</p>
+          <span class="dive__anchor" id="signup" aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <!-- ── the problem ───────────────────────────────────────────────
+           The page is an overview, in the order a stranger needs it: what is
+           broken, what fuime is, how it works, what it costs, who signs, go.
+           Every claim is one BRIEF.md lists as shipped. -->
+      <section class="band band--cream" id="problem">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">The problem</p>
+            <h2 class="h2">The work is real. Getting paid for it isn't.</h2>
+            <p class="lead">
+              Tutoring, lawn care, photo shoots, design, DJ sets. The client is
+              real and so is the money, but it arrives through a group chat and
+              somebody else's account.
+            </p>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="strike">
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M2.5 16.5V16a4 4 0 0 1 4-4h1.5" />
+                <circle cx="7.25" cy="6" r="3" />
+                <path d="M12 16.5h6.5M15.5 13.5l3 3-3 3" />
+              </svg>
+              <h3 class="h4">Venmo to a parent</h3>
+              <p>Their account, their name, their history. You ask for your own money.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="2" y="5.5" width="18" height="11" rx="1.5" />
+                <circle cx="11" cy="11" r="2.75" />
+                <path d="M5 8.5h.01M17 13.5h.01" />
+              </svg>
+              <h3 class="h4">Cash</h3>
+              <p>No record, no receipt for the client, nothing to show at tax time.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M11 6.25V11l3.25 2" />
+              </svg>
+              <h3 class="h4">“I'll get you next week”</h3>
+              <p>With no invoice to point at, following up feels like begging.</p>
+            </article>
+            <article class="card card--row">
+              <svg class="icon" viewBox="0 0 22 22" aria-hidden="true">
+                <rect x="4" y="9.5" width="14" height="9.5" rx="1.5" />
+                <path d="M7.5 9.5V6.75a3.5 3.5 0 0 1 7 0V9.5" />
+                <path d="M11 13.25v2.5" />
+              </svg>
+              <h3 class="h4">Taking cards yourself</h3>
+              <p>A merchant account, a business entity, a contract. Under 18 you can't sign one.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── what fuime is ─────────────────────────────────────────────── -->
+      <section class="band band--paper" id="what">
+        <div class="wrap split rise">
+          <div>
+            <p class="eyebrow">What fuime is</p>
+            <h2 class="h2">fuime sells for you, then pays you what you earned.</h2>
+            <p class="lead mt-5">
+              Your client buys from fuime and pays by card. fuime pays you the
+              sale, less one fee, and keeps the books while it does. We are the
+              seller of record, so the payments paperwork is ours, not yours.
+            </p>
+          </div>
+
+          <div>
+            <span class="artifact-label">Worked example</span>
+            <div class="invoice">
+              <div class="invoice__head">
+                <div>
+                  <strong>Invoice 0014</strong>
+                  <div class="muted small">Maya R. · Photography</div>
+                </div>
+                <span class="tag">Due on receipt</span>
+              </div>
+              <div class="invoice__body">
+                <div class="invoice__row">
+                  <span>Senior portraits · 3 hr session</span>
+                  <span class="num">$400.00</span>
+                </div>
+                <div class="invoice__row">
+                  <span class="muted">fuime fee · 5%, minimum 50¢</span>
+                  <span class="muted num">−$20.00</span>
+                </div>
+                <div class="invoice__row invoice__row--total">
+                  <span>Left for the venture</span>
+                  <span class="num">$380.00</span>
+                </div>
+              </div>
+              <div class="invoice__foot">
+                <span class="small muted">Paid Jun 14 · Visa ···· 4242</span>
+                <span class="tag">Paid</span>
+              </div>
+            </div>
+            <div
+              class="split-mount mt-5"
+              data-fx-split="full"
+              data-you="95.0"
+              data-fuime="2.0"
+              data-stripe="3.0"
+            ></div>
+          </div>
+        </div>
+
+        <div class="wrap grid grid--3 mt-8 rise">
+          <article class="card">
+            <h3 class="h4">Get paid like a business</h3>
+            <p>Invoices, payment links and a storefront page, with your business name on them. Clients pay by card.</p>
+          </article>
+          <article class="card">
+            <h3 class="h4">Books that keep themselves</h3>
+            <p>Every sale, fee and refund lands on your ledger. Income and net for the year, ready at tax time.</p>
+          </article>
+          <article class="card">
+            <h3 class="h4">Open from 13</h3>
+            <p>Under 18, a parent or guardian signs once as the account holder. You run the business day to day.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ── how it works ──────────────────────────────────────────────── -->
+      <section class="band band--night" id="how">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">How it works</p>
+            <h2 class="h2">Three steps to your first paid invoice.</h2>
+          </div>
+
+          <div class="grid grid--3 mt-8">
+            <article class="step">
+              <p class="step__n">01</p>
+              <h3>Set up your business</h3>
+              <p>A name and what you sell. A person at fuime reviews every new business before it can take payment.</p>
+            </article>
+            <article class="step">
+              <p class="step__n">02</p>
+              <h3>Send a link</h3>
+              <p>An invoice or a payment link. Your client pays by card and the sale shows up on your ledger.</p>
+            </article>
+            <article class="step">
+              <p class="step__n">03</p>
+              <h3>Get paid out</h3>
+              <p>fuime pays out what you've earned on a set schedule. Under 18, a parent or guardian sets up where it goes.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── money ─────────────────────────────────────────────────────── -->
+      <section class="band band--cream">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">What it costs</p>
+            <h2 class="h2">One price. Nothing until you sell.</h2>
+          </div>
+
+          <div class="rows mt-8" data-fx-rows="plain">
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">fuime · 5% of what you collect, minimum 50¢</h3>
+                <p>No monthly fee. Stripe's 2.9% + 30¢ comes out of it.</p>
+              </div>
+              <p class="price__fig">5%<sub>min 50¢</sub></p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Selling at scale · talk to us</h3>
+                <p>Custom pricing, a conversation rather than a tier.</p>
+              </div>
+              <p class="price__fig">Custom</p>
+            </article>
+            <article class="card card--row card--fig">
+              <div>
+                <h3 class="h4">Founders · the launch cohort</h3>
+                <p>No platform fee at all, by invitation.</p>
+              </div>
+              <p class="price__fig">0%</p>
+            </article>
+          </div>
+
+          <p class="mt-7">
+            <a class="tlink" href="/pricing"
+              >The full price list<svg
+                class="arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── parents ───────────────────────────────────────────────────── -->
+      <section class="band band--paper">
+        <div class="wrap rise">
+          <div class="bhead">
+            <p class="eyebrow">For parents</p>
+            <h2 class="h2">You sign once. You keep the controls.</h2>
+            <p class="lead">
+              You accept the Guardian Agreement, become the account holder, and
+              approve where payouts go. Nothing is paid out until you have.
+            </p>
+          </div>
+          <p class="mt-7">
+            <a class="tlink" href="/parents"
+              >Read what you're signing<svg
+                class="arrow"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 7h8M7.5 3.5 11 7l-3.5 3.5" /></svg
+            ></a>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── join ──────────────────────────────────────────────────────────
+           The waitlist. Sign-ups have been closed in the app since 2026-10-01
+           (Fuime::Signups), and the app sends anyone without an account here:
+           the sign-up page redirects to /#join, and a sign-in for an address
+           with no account arrives as /?account=none#join, which site.js uses
+           to show the note below. So every "Start your business" on the site
+           reaches this form, directly or through the app. The schools form
+           stays, under the ask rather than as it. -->
+      <section class="band band--night closer" id="join">
+        <div class="wrap closer__in">
+          <h2 class="h2">You're already working. Start billing.</h2>
+          <p class="lead">
+            fuime isn't open for sign-ups yet. We're letting people in from
+            the waitlist, a few at a time.
+          </p>
+          <p class="closer__note" data-account-none hidden>
+            There's no fuime account for that email. If you have one,
+            <a class="tlink" href="/login">sign in again</a> and check the address.
+          </p>
+          <form class="capture closer__join" data-source="home-waitlist" novalidate>
+            <div class="capture__row">
+              <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                aria-label="Email address"
+                required
+              />
+              <button type="submit" class="btn btn--accent">
+                Join the waitlist
+              </button>
+            </div>
+            <p class="capture__msg" role="status" aria-live="polite"></p>
+            <p class="capture__done">
+              <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
+              <span>You're on the list. We'll email you when there's room.</span>
+            </p>
+          </form>
+          <p class="closer__login">
+            Already have an account? <a class="tlink" href="/login">Log in</a>
+          </p>
+
+          <div class="closer__schools">
+            <p class="eyebrow">Schools, teachers and cohorts</p>
+            <p>Bringing a class or a closed group? Leave your address. We read every one.</p>
+            <form class="capture" data-source="home-cohort" novalidate>
+              <div class="capture__row">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="you@school.edu"
+                  autocomplete="email"
+                  aria-label="Email address"
+                  required
+                />
+                <button type="submit" class="btn btn--light">
+                  Get in touch
+                </button>
+              </div>
+              <p class="capture__msg" role="status" aria-live="polite"></p>
+              <p class="capture__done">
+                <svg class="capture__plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2.5 2.8 10.3a.4.4 0 0 0 .05.75l7.7 2.3 2.3 7.7a.4.4 0 0 0 .75.05Z"/><path d="M21.5 2.5 10.55 13.45"/></svg>
+                <span>Got it. We'll follow up by email.</span>
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ── footer ──────────────────────────────────────────────────────── -->
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__top">
+          <a class="mark" href="/" aria-label="fuime home">
+            <svg class="mark__glyph" viewBox="0 0 713 582" aria-hidden="true">
+              <use href="#arch" />
+            </svg>
+            <span>fu<i>i</i>me</span>
+          </a>
+          <div class="foot__nav">
+            <div class="foot__col">
+              <h4>Product</h4>
+              <a href="/#how">How it works</a>
+              <a href="/payment-links">Payment links</a>
+              <a href="/subscriptions">Subscriptions</a>
+              <a href="/books">Books and receipts</a>
+              <a href="/taxes">Tax tracking</a>
+              <a href="/api">API</a>
+            </div>
+            <div class="foot__col">
+              <h4>The money</h4>
+              <a href="/pricing">What it costs</a>
+              <a href="/merchant-of-record">How you get paid</a>
+              <a href="/why-has-fuime-charged-me">Why has fuime charged me?</a>
+            </div>
+            <div class="foot__col">
+              <h4>Who it's for</h4>
+              <a href="/for/tutoring">Tutoring</a>
+              <a href="/for/photo-video">Photo and video</a>
+              <a href="/for/lawn-care">Lawn and yard care</a>
+              <a href="/for/schools">Schools and cohorts</a>
+              <a href="/parents">Parents</a>
+            </div>
+            <div class="foot__col">
+              <h4>Compare</h4>
+              <a href="/compare">Every option, side by side</a>
+              <a href="/compare/venmo">fuime vs Venmo</a>
+              <a href="/compare/paddle">fuime vs Paddle</a>
+              <a href="/compare/waiting">fuime vs waiting until 18</a>
+            </div>
+            <div class="foot__col">
+              <h4>Company</h4>
+              <a href="/roadmap">What we're building</a>
+              <a href="/faq">Questions</a>
+              <a href="mailto:rushil@fuime.com">rushil@fuime.com</a>
+            </div>
+          </div>
+        </div>
+        <p class="foot__legal">
+          fuime is a financial technology company, not a bank. fuime does not
+          hold deposits and does not offer FDIC-insured products. Payments are
+          processed by Stripe. Ninth Street Labs, LLC, doing business as Fuime,
+          is the seller of record on purchases. Guardians are the legal payee on
+          operator payouts and must approve the destination before the first
+          payout; young founders run the venture day to day.
+        </p>
+        <div class="foot__bot">
+          <span>fuime · your client buys from us, and we pay you</span>
+          <span>Live. Every new business is reviewed by hand before it can sell.</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

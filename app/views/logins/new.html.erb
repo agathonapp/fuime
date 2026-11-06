@@ -53,7 +53,12 @@
           <% if @signup %>
             <%= link_to "Sign in", auth_users_path(return_to: @login.return_to), class: "mt-3" %>
           <% else %>
-            <%= link_to "Sign up", auth_users_path(signup: true, return_to: @login.return_to), class: "mt-3" %>
+            <%# Fuime: while sign-ups are closed this is the waitlist on fuime.com (Fuime::Signups). %>
+            <% if ::Fuime::Signups.open? %>
+              <%= link_to "Sign up", auth_users_path(signup: true, return_to: @login.return_to), class: "mt-3" %>
+            <% else %>
+              <%= link_to "Join the waitlist", ::Fuime::Signups.waitlist_url, class: "mt-3" %>
+            <% end %>
           <% end %>
         <% end %>
 

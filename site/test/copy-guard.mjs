@@ -44,8 +44,10 @@ export const PUBLIC_PAGES = [
 // Mirrors spec/fuime_marketing_pricing_spec.rb `public_price_pages`. ONLY pages
 // that actually quote a price: membership forces "5%" AND "50¢" AND a sales
 // route to be present, which is wrong to demand of a page about receipts.
+// site/index.html left this list on 2026-11-06: the rebuilt front door quotes
+// no price, by rule (docs/fuime/fuime-context-for-claude.md: no fees, APYs or
+// insurance amounts until confirmed). It rides the retired-tier checks instead.
 export const PRICE_PAGES = [
-  'site/index.html',
   'site/pricing.html',
   'site/parents.html',
   'site/merchant-of-record.html',
@@ -53,7 +55,7 @@ export const PRICE_PAGES = [
   'site/faq.html',
 ]
 // Mirrors its `marketing_files` — price pages plus these.
-export const EXTRA_MARKETING_FILES = ['site/site.js', 'site/docs/BRIEF.md']
+export const EXTRA_MARKETING_FILES = ['site/index.html', 'site/site.js', 'site/landing.js', 'site/docs/BRIEF.md']
 
 // spec/fuime_marketing_copy_spec.rb:32-40. Downcased substring over the WHOLE
 // file, HTML comments included.
@@ -72,6 +74,31 @@ const DISCLOSURE = 'financial technology company, not a bank'
 const fails = []
 const fail = (file, msg) => fails.push(`${file}: ${msg}`)
 
+// The front door. Since 2026-11-06 it is a stealth page: the mark and nothing
+// else (the full page waits at site/legacy/index-agent-2026-11.html). The
+// rules below still apply so the page can grow back without losing them: the
+// app's redirect contract, no invented numbers or social proof, no rates or
+// insurance amounts, no em-dashes, and the not-a-bank disclosure the moment
+// the page says "bank". Mirrors the front-door block in
+// spec/fuime_marketing_copy_spec.rb.
+export const FRONT_DOOR = 'site/index.html'
+export const FRONT_DOOR_BANNED = [
+  [/\bAPY\b/i, 'quotes an APY'],
+  [/\$\s?250,?000|250k/i, 'quotes an FDIC insurance amount'],
+  [/trusted by|testimonial|customers love|businesses use fuime/i, 'claims social proof Fuime does not have'],
+  [/—/, 'uses an em-dash'],
+]
+
+function checkFrontDoor(rel) {
+  const body = read(rel)
+  // The Rails app redirects a sign-in with no account to /?account=none#join.
+  if (!body.includes('id="join"')) fail(rel, 'lost id="join", which the app redirects to')
+  if (!body.includes('data-account-none')) fail(rel, 'lost [data-account-none], which explains the redirect')
+  if (/\bbank/i.test(body) && !body.includes(DISCLOSURE))
+    fail(rel, 'mentions banking without the not-a-bank disclosure')
+  for (const [re, why] of FRONT_DOOR_BANNED) if (re.test(body)) fail(rel, why)
+}
+
 function checkPublicPage(rel) {
   if (!existsSync(join(ROOT, rel))) return fail(rel, 'file does not exist')
   const body = read(rel)
@@ -80,9 +107,14 @@ function checkPublicPage(rel) {
   for (const p of BANNED_PHRASES) {
     if (lower.includes(p)) fail(rel, `contains banned phrase "${p}"`)
   }
+  if (body.includes('href="/start"')) fail(rel, 'links to /start (cached 308)')
+
+  // Form tagging and the confirmation block apply to every page, the front
+  // door included; the /get-started CTA rules below do not apply to it.
+  checkCaptureForms(rel, body)
+  if (rel === FRONT_DOOR) return checkFrontDoor(rel)
   // Case-sensitive substring, exactly as the spec asserts it.
   if (!body.includes(DISCLOSURE)) fail(rel, 'lost the standing L5 disclosure')
-  if (body.includes('href="/start"')) fail(rel, 'links to /start (cached 308)')
   if (!body.includes('href="/get-started"')) fail(rel, 'has no /get-started CTA')
 
   // site/test/server.test.mjs:229-238 — anchor TEXT is pinned, not just the href.
@@ -91,9 +123,13 @@ function checkPublicPage(rel) {
   if (!/<a\s[^>]*href="\/login"[^>]*>\s*Log in\s*</.test(body))
     fail(rel, 'lost its <a href="/login">Log in</a>')
 
-  // :254-256 — every capture form must be tagged as a cohort form.
+}
+
+function checkCaptureForms(rel, body) {
+  // server.test.mjs — every capture form is a teacher's (*-cohort) or, since
+  // sign-ups closed on 2026-10-01, a founder's waitlist form (*-waitlist).
   for (const m of body.matchAll(/<form\s[^>]*class="capture[^"]*"[^>]*data-source="([^"]+)"/g)) {
-    if (!/-cohort$/.test(m[1])) fail(rel, `capture form "${m[1]}" is not tagged *-cohort`)
+    if (!/-(cohort|waitlist)$/.test(m[1])) fail(rel, `capture form "${m[1]}" is tagged neither *-cohort nor *-waitlist`)
   }
   // :203-208 — a confirmation block, and one plane per block. Conditional on
   // the page having a form at all: the app is open, so the primary action is

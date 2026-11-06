@@ -25,8 +25,11 @@ RSpec.describe "Fuime pricing truth (G3 / L8)" do
   # and a sales route to be present, which is the wrong demand to make of a
   # page about receipts — so a page that never mentions money stays out, and
   # rides the retired-tier checks below via `marketing_files` instead.
+  #
+  # site/index.html left this list on 2026-11-06: the rebuilt front door quotes
+  # no price by rule (docs/fuime/fuime-context-for-claude.md) and rides the
+  # retired-tier checks in `marketing_files` instead.
   def public_price_pages = %w[
-    site/index.html
     site/pricing.html
     site/parents.html
     site/merchant-of-record.html
@@ -39,6 +42,8 @@ RSpec.describe "Fuime pricing truth (G3 / L8)" do
   # site/docs/BRIEF.md is the contract every page is written from: a retired
   # tier surviving in either of those puts it back on the site by hand.
   def marketing_files = public_price_pages + %w[
+    site/index.html
+    site/landing.js
     site/payment-links.html
     site/subscriptions.html
     site/books.html

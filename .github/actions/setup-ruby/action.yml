@@ -8,9 +8,14 @@ runs:
       # ubuntu-latest ships with recent enough apt indexes to resolve
       # libpoppler-glib-dev without a fresh `apt-get update` (~30 s).
       # Re-add one here if a future runner image breaks that.
+      # libgirepository1.0-dev is named explicitly because the gobject-
+      # introspection gem (pulled in by poppler) links libgirepository-1.0,
+      # and from Ubuntu 26.04 poppler's GLib bindings no longer bring that
+      # in. Without it the cached bundle's .so fails to load and Rails
+      # cannot boot in any job.
       run: |
         sudo apt-get update
-        sudo apt-get install -y --fix-missing libpoppler-glib-dev
+        sudo apt-get install -y --fix-missing libpoppler-glib-dev libgirepository1.0-dev
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:

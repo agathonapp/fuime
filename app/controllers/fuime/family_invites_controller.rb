@@ -26,7 +26,10 @@ module Fuime
       user = ::Fuime::FamilyInviteService.verify_token(params[:token])
 
       if user.nil?
-        return redirect_to auth_users_path(signup: true), flash: {
+        # The sign-in page, not sign-up: this teen has an account (the parent's
+        # setup created it), and with sign-ups closed the sign-up page is the
+        # marketing site's waitlist (Fuime::Signups).
+        return redirect_to auth_users_path, flash: {
           error: "This link has expired or isn't valid. Ask your parent or guardian to send it again, or enter your email and we'll send you a login code."
         }
       end

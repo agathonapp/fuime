@@ -2,6 +2,23 @@
 
 ## Handoff (most recent first)
 
+**2026-10-01 — Sign-ups are closed; fuime.com is becoming a waitlist.** Read
+`site/docs/WAITLIST_PLAN.md` first. It's the plan for the new front door (one
+no-scroll cinematic page, new brand, target 2026-10-08).
+1. **`FUIME_SIGNUPS_OPEN` is `"false"` on fuime-web** (`render.yaml`). No public door
+   makes an account; existing users sign in as before; people get in through
+   `/admin/waitlist` "Invite", which creates their account before mailing the link.
+2. **Anyone without an account is sent to the waitlist on fuime.com's landing
+   page** (`/#join`, or `/?account=none#join` after a failed sign-in). The
+   sign-in case is a page that navigates away, not a redirect, because Turbo
+   can't follow a cross-origin redirect. Set `FUIME_SITE_ORIGIN` to a local site
+   (`PORT=4000 APP_ORIGIN=http://127.0.0.1:3000 node site/server.js`) to try it.
+3. **The founder says fuime is no longer merchant-of-record** and is pursuing a
+   partner bank, which isn't signed. Until one is: no bank / banking / neobank in
+   copy. "Financial platform" is fine. The app footer and the current site still
+   describe MoR, and that copy is now out of date.
+4. Specs run with sign-ups OPEN unless tagged `:signups_closed` (`spec/support/signups.rb`).
+
 **2026-09-21 — A pager, and the daily digest finally reaching a person rather
 than an inbox.** Read `docs/fuime/ONCALL.md` first.
 1. **The digest was not broken — being an admin simply granted nothing.**

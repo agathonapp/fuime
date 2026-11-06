@@ -30,6 +30,14 @@ class LoginsController < ApplicationController
     # Read from `return_to` rather than a second parameter — the same value
     # already has to survive to the other side of the login code.
     @parent_signup = @signup && url_from(params[:return_to]).to_s.start_with?("/setup/parent")
+
+    # Fuime: while sign-ups are closed the sign-up page is fuime.com's waitlist.
+    # The sign-in page is untouched — existing and invited users still need it.
+    # A real redirect works here: arriving from the site is a full page load,
+    # and a Turbo visit that meets a cross-origin redirect reloads into one.
+    if @signup && !@login.for_application? && !current_user && ::Fuime::Signups.closed?
+      redirect_to ::Fuime::Signups.waitlist_url, allow_other_host: true
+    end
   end
 
   # when you submit your email
@@ -37,7 +45,15 @@ class LoginsController < ApplicationController
     referral_link = Referral::Link.find_by(slug: login_params[:referral_link_id]) if login_params[:referral_link_id].present?
     @login = Login.new(**login_params, referral_link:)
 
-    @user = User.create_with(creation_method: @login.for_application? ? :application_form : :login).find_or_create_by!(email: params[:email])
+    # Fuime: sign-ups are closed (Fuime::Signups), so an address with no
+    # account is sent to the waitlist instead of getting a new User. Invited
+    # people already have one — every invite path creates it before mailing.
+    if ::Fuime::Signups.closed?
+      @user = User.find_by(email: params[:email])
+      return render_to_waitlist(no_account_for: params[:email].to_s.strip) if @user.nil?
+    end
+
+    @user ||= User.create_with(creation_method: @login.for_application? ? :application_form : :login).find_or_create_by!(email: params[:email])
 
     # An anonymous visitor only has a session if they arrived via a referral
     # link (see Referral::LinksController#show). No session means no clicks to
@@ -228,6 +244,17 @@ class LoginsController < ApplicationController
   end
 
   private
+
+  # Fuime: send someone with no account to the waitlist on fuime.com. A page
+  # that leaves at once rather than a redirect, because this answers the login
+  # form, which Turbo submits with fetch — and a fetch cannot follow a redirect
+  # to another origin (see navigate_controller.js). 422 so Turbo renders it.
+  # Always the plain login layout: the "apply" layout's footer belongs to its form.
+  def render_to_waitlist(no_account_for:)
+    @no_account_for = no_account_for
+    @waitlist_url = ::Fuime::Signups.waitlist_url(account_none: true)
+    render "logins/signups_closed", layout: "login", status: :unprocessable_content
+  end
 
   def continue_login(preference: login_preference)
     if @login.sms_available? && preference == :sms

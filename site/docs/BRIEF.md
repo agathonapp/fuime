@@ -346,6 +346,12 @@ the test suite.
 
 ## The email form — schools, teachers and cohorts only
 
+> **Since 2026-10-01, `/` also carries the founder waitlist** (`#join`, source
+> `home-waitlist`). Sign-ups are closed in the app (`Fuime::Signups`), and the app
+> sends anyone without an account to that form, with `?account=none` after a failed
+> sign-in. The guards accept `-waitlist` as well as `-cohort` now. Everything below
+> still holds for every other page. See `docs/WAITLIST_PLAN.md`.
+
 The app is open, so the primary action on every page is the `/get-started`
 button, never this form. The form is kept (CLAUDE.md Rule 2) for a teacher
 bringing a class or a programme bringing a closed cohort, labelled as exactly

@@ -23,6 +23,12 @@ runs:
         set -euo pipefail
         major=$(psql -d postgres -tAc 'SHOW server_version_num' | awk '{print int($1/10000)}')
         echo "major=$major" >> "$GITHUB_OUTPUT"
+        # The dump is written by the runner's pg_dump, which is not the
+        # server's version and moves with the runner image. A pg_dump 17+
+        # dump opens with `SET transaction_timeout`, which a 15 server
+        # rejects, so the client's major version has to be in the key too.
+        client=$(pg_dump --version | grep -oE '[0-9]+' | head -1)
+        echo "client=$client" >> "$GITHUB_OUTPUT"
     - name: Cache DB schema dump
       # `rails db:schema:load` is deterministic given db/schema.rb, so a
       # cache hit produces the same tables + schema_migrations state as
@@ -33,7 +39,7 @@ runs:
       uses: actions/cache@v5
       with:
         path: /tmp/schema.sql
-        key: ${{ runner.os }}-pg${{ steps.pg-version.outputs.major }}-schema-${{ hashFiles('db/schema.rb', '.github/actions/setup-db/action.yml') }}
+        key: ${{ runner.os }}-pg${{ steps.pg-version.outputs.major }}-dump${{ steps.pg-version.outputs.client }}-schema-${{ hashFiles('db/schema.rb', '.github/actions/setup-db/action.yml') }}
     - name: Load DB schema
       shell: bash
       env:
@@ -53,7 +59,11 @@ runs:
         if [ "${{ steps.schema-cache.outputs.cache-hit }}" = "true" ] && [ -s /tmp/schema.sql ]; then
           echo "Restoring cached schema dump..."
           createdb bank_test
-          psql -d bank_test -v ON_ERROR_STOP=1 -f /tmp/schema.sql > /dev/null
+          # Drop session settings an older server does not know (pg_dump
+          # 17+ writes `SET transaction_timeout`); they only tune the
+          # restore session and change nothing in the schema.
+          sed '/^SET transaction_timeout/d' /tmp/schema.sql \
+            | psql -d bank_test -v ON_ERROR_STOP=1 > /dev/null
         else
           echo "Cache miss; loading schema via Rails..."
           bundle exec rails db:create db:schema:load

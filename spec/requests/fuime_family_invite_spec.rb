@@ -48,7 +48,7 @@ RSpec.describe "the family join link", type: :request do
       get family_invite_path(expired)
     }.not_to(change { User::Session.count })
 
-    expect(response).to redirect_to(auth_users_path(signup: true))
+    expect(response).to redirect_to(auth_users_path)
     expect(flash[:error]).to match(/expired/i)
     expect(flash[:error]).to match(/login code/i)
   end
@@ -56,7 +56,7 @@ RSpec.describe "the family join link", type: :request do
   it "refuses a tampered token" do
     get family_invite_path("#{token}xyz")
 
-    expect(response).to redirect_to(auth_users_path(signup: true))
+    expect(response).to redirect_to(auth_users_path)
     expect(User::Session.count).to eq(0)
   end
 
