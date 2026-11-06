@@ -70,8 +70,13 @@ RSpec.describe "Fuime marketing copy truth (L8)" do
     end
   end
 
+  # site/index.html is the stealth front door since 2026-11-06: the mark and
+  # nothing else, so it makes no claim to disclose against. The block below
+  # requires the disclosure the moment it mentions banking again.
   it "keeps the standing L5 disclosure on every public page" do
     public_pages.each do |rel|
+      next if rel == "site/index.html"
+
       body = File.read(Rails.root.join(rel))
       expect(body).to include("financial technology company, not a bank"), "#{rel} lost the standing disclosure"
     end
@@ -81,11 +86,45 @@ RSpec.describe "Fuime marketing copy truth (L8)" do
   # may send a visitor to the dive no matter what server.js says now. Every
   # CTA points at /get-started, which has never been anything but a 307 into
   # the app's sign-up.
+  # site/index.html is excluded: since 2026-11-06 it is a stealth page with no
+  # call to action at all. It is pinned by the block below instead.
   it "points every call to action at /get-started and never at /start" do
     public_pages.each do |rel|
       body = File.read(Rails.root.join(rel))
-      expect(body).to include('href="/get-started"'), "#{rel} has no /get-started call to action"
       expect(body).not_to include('href="/start"'), "#{rel} still links to /start"
+      next if rel == "site/index.html"
+
+      expect(body).to include('href="/get-started"'), "#{rel} has no /get-started call to action"
+    end
+  end
+
+  # The front door. A stealth page since 2026-11-06 (the full page waits at
+  # site/legacy/index-agent-2026-11.html); these rules hold whatever it grows
+  # back into. Mirrored offline by checkFrontDoor in site/test/copy-guard.mjs.
+  describe "the front door (site/index.html)" do
+    let(:body) { File.read(Rails.root.join("site/index.html")) }
+
+    # Fuime::Signups sends a sign-in that finds no account to /?account=none#join.
+    it "keeps the target the app redirects to" do
+      expect(body).to include('id="join"')
+      expect(body).to include("data-account-none")
+    end
+
+    it "carries the not-a-bank disclosure whenever it mentions banking" do
+      next unless body.match?(/\bbank/i)
+
+      expect(body).to include("financial technology company, not a bank")
+    end
+
+    it "makes no claim the business cannot back yet" do
+      expect(body).not_to match(/\bAPY\b/i), "quotes an APY"
+      expect(body).not_to match(/\$\s?250,?000|250k/i), "quotes an FDIC insurance amount"
+      expect(body).not_to match(/trusted by|testimonial|customers love|businesses use fuime/i),
+                          "claims social proof Fuime does not have"
+    end
+
+    it "uses no em-dashes" do
+      expect(body).not_to include("\u2014")
     end
   end
 end

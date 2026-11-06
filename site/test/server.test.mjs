@@ -57,13 +57,15 @@ async function run(name, fn) {
 
 const get = (p, init) => fetch(BASE + p, { redirect: 'manual', ...init })
 
-// Every page server.js serves. Hardcoded rather than globbed for the same
-// reason the rspec guards are: the list IS the guard, and a page missing from
-// it escapes every check below. Keep in step with PUBLIC_FILES in server.js,
-// `public_pages` in spec/fuime_marketing_copy_spec.rb, and PUBLIC_PAGES in
-// test/copy-guard.mjs.
-const PAGES = [
-  '/',
+// Every page server.js answers 200 for. Hardcoded rather than globbed for the
+// same reason the rspec guards are: the list IS the guard. Since 2026-11-06 that
+// is the rebuilt front door plus the one legacy page kept up through the
+// dispute window; every other page is in RETIRED and 307s to /. Keep in step
+// with CLOSED_PAGES in server.js and the lists in
+// spec/fuime_marketing_copy_spec.rb and test/copy-guard.mjs.
+const PAGES = ['/', '/why-has-fuime-charged-me']
+const LEGACY_PAGES = PAGES.filter(p => p !== '/')
+const RETIRED = [
   '/pricing',
   '/parents',
   '/payment-links',
@@ -72,7 +74,6 @@ const PAGES = [
   '/taxes',
   '/api',
   '/merchant-of-record',
-  '/why-has-fuime-charged-me',
   '/for/tutoring',
   '/for/photo-video',
   '/for/lawn-care',
@@ -93,46 +94,48 @@ try {
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /text\/html/)
     const body = await r.text()
-    // index.html carries the nav, the worked example and the footer sitemap.
-    // It is the only landing page, and the dive opens it.
-    assert.match(body, /class="nav nav--solid"/, 'root should be index.html')
-    assert.match(body, /class="foot"/, 'root should carry the footer sitemap')
+    // index.html is the one-page site rebuilt on 2026-11-06.
+    assert.match(body, /<main id="join">/, 'root should be index.html')
   })
 
-  await run('the dive opens / and says what the product is', async () => {
-    // A scroll-driven film is easy to keep polishing until the first screen is
-    // a mood with no nouns on it. A visitor who cannot tell what fuime is
-    // without scrolling does not scroll.
+  await run('the front door is the stealth page and keeps the app contract', async () => {
+    // 2026-11-06: the mark, one typed instruction line, and a quiet invite
+    // form. No nav, and at most the one form, tagged as a waitlist.
     const body = await (await get('/')).text()
-    assert.match(body, /data-fx-dive/, 'the dive is not on /')
-    assert.match(body, /class="dive__lede"/, 'no lede on the first screen')
-    // The panel is the page's h1 in every state, including dive-off.
-    assert.match(body, /<h1 class="dv-join__h"/, 'the sign-up panel lost the h1')
-    assert.match(body, /class="lede__skip" href="#signup"/, 'no skip link')
-    assert.match(body, /id="signup"/, 'skip link points at nothing')
-    // The ladder it scrubs. Without these the dive silently never arms and the
-    // page is a still photograph — which is how it failed quietly before.
-    for (const p of ['/dive/track.json', '/dive/f_0001.webp', '/dive/f_0122.webp', '/dive-m/f_0001.webp', '/img/dive-end.webp']) {
-      assert.equal((await get(p)).status, 200, `${p} not served`)
+    assert.match(body, /<img class="mark" src="\/img\/v2\/logo.svg"/, 'lost the mark')
+    assert.doesNotMatch(body, /<nav/, 'the stealth page grew a nav')
+    const forms = [...body.matchAll(/<form\s[^>]*data-source="([^"]+)"/g)].map(m => m[1])
+    assert.ok(forms.length <= 1, 'the stealth page grew a second form')
+    for (const f of forms) assert.match(f, /-waitlist$/, `form "${f}" is not a waitlist form`)
+    // The Rails app sends a sign-in that finds no account to /?account=none#join
+    // (Fuime::Signups), and the page explains why in [data-account-none].
+    assert.match(body, /id="join"/, 'lost the #join target the app redirects to')
+    assert.match(body, /data-account-none/, 'lost the account=none explanation')
+  })
+
+  await run('every same-origin link on the front door is actually served', async () => {
+    // server.js serves from an ALLOWLIST, so a link to a file missing from
+    // PUBLIC_FILES answers 404. /login is the one intended redirect.
+    const body = await (await get('/')).text()
+    const refs = [
+      ...body.matchAll(/(?:href|src)="(\/[^"#]*)"/g),
+    ].map(m => m[1]).filter(h => h !== '/login')
+    for (const h of new Set(refs)) {
+      const r = await get(h)
+      assert.equal(r.status, 200, `/ links ${h}, which answers ${r.status}`)
     }
   })
 
-  await run('every page in the footer sitemap is actually served', async () => {
-    // server.js serves from an ALLOWLIST, so a page that exists on disk but is
-    // missing from PUBLIC_FILES answers 308 -> 404: a redirect into a dead end
-    // that reads as a routing bug. Every href the shared chrome ships must
-    // resolve, which is the one thing BRIEF.md asks for and nothing tested.
-    const chrome = readFileSync(
-      fileURLToPath(new URL('../chrome/foot.html', import.meta.url)),
-      'utf8'
-    )
-    const hrefs = [...chrome.matchAll(/href="(\/[^"#]*)"/g)].map(m => m[1])
-    for (const h of new Set(hrefs)) {
-      const r = await get(h)
-      assert.ok(
-        r.status === 200,
-        `footer links ${h}, which answers ${r.status}`
-      )
+  await run('retired pages 307 to the front door, in one hop', async () => {
+    // Closed on 2026-11-06, not deleted: they describe the retired teen
+    // product. 307 so no browser caches it, and both spellings land on / in
+    // one hop.
+    for (const p of RETIRED) {
+      for (const spelling of [p, `${p}.html`]) {
+        const r = await get(spelling)
+        assert.equal(r.status, 307, `${spelling} status`)
+        assert.equal(r.headers.get('location'), '/', `${spelling} -> /`)
+      }
     }
   })
 
@@ -147,20 +150,6 @@ try {
     }
   })
 
-  await run('the front door still offers both doors into the app', async () => {
-    // This used to assert the front door linked NOWHERE but the app, because
-    // the site was closed and a link to a page that 307s back is worse than no
-    // link. The site is open, so what is left of that rule is the part that was
-    // never about the closure: the two exits the page exists to offer.
-    const body = await (await get('/')).text()
-    const hrefs = [...body.matchAll(/<a\s[^>]*href="([^"]+)"/g)].map(m => m[1])
-    assert.ok(hrefs.includes('/get-started'), 'front door has no sign-up door')
-    assert.ok(hrefs.includes('/login'), 'front door has no Log in')
-    // Nothing on any page may point at /start: it answered a cacheable 308 for
-    // weeks and a browser that saw it may still hold it.
-    assert.ok(!hrefs.includes('/start'), 'front door links the cached /start')
-  })
-
   await run('the sitemap lists only what is served', async () => {
     // A sitemap that disagrees with the canonical tag is worse than no sitemap,
     // so this checks every listed URL answers 200 rather than pinning a list
@@ -168,7 +157,7 @@ try {
     // the site was closed.
     const body = await (await get('/sitemap.xml')).text()
     const locs = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1])
-    assert.ok(locs.length > 1, 'the sitemap is still the closed-site sitemap')
+    assert.ok(locs.length >= 1, 'the sitemap lists nothing')
     for (const loc of locs) {
       const path = new URL(loc).pathname
       const r = await get(path)
@@ -190,6 +179,8 @@ try {
     const cases = [
       ['/style.css', /text\/css/],
       ['/site.js', /javascript/],
+      ['/landing.css', /text\/css/],
+      ['/landing.js', /javascript/],
       ['/robots.txt', /text\/plain/],
       ['/sitemap.xml', /xml/],
       ['/img/mark.svg', /image\/svg/],
@@ -266,6 +257,11 @@ try {
   })
 
   await run('the marketing pages send a visitor into the app, not a queue', async () => {
+    // ⚠️ Superseded in part on 2026-10-01: sign-ups are closed, and the app
+    // sends a visitor without an account back to the waitlist on /. The
+    // checks below still hold. /get-started is still every page's door, and the
+    // phrase bans stay because the waitlist copy never needed those words.
+    //
     // The app is open: anyone can create an account. For a while the only thing
     // these pages offered was a waitlist form, which parked every warm visitor
     // in Redis (docs/fuime/ONBOARDING_PLAN.md §1 #1). The primary button now
@@ -277,7 +273,9 @@ try {
     //
     // Fetched over HTTP now that nothing is closed, so this checks what a
     // visitor is actually served rather than what is on disk next to it.
-    for (const n of PAGES) {
+    // 2026-11-06: the front door left this loop. It has no /get-started CTA
+    // (sign-ups are closed) and is checked by its own test above.
+    for (const n of LEGACY_PAGES) {
       const body = await (await get(n)).text()
       assert.match(
         body,
@@ -304,8 +302,12 @@ try {
         /href="#join"[^>]*>\s*Get early access/,
         `${n} primary CTA still points at the waitlist`
       )
+      // 2026-10-01: sign-ups are closed in the app (Fuime::Signups), so the
+      // waitlist is real again and / carries a founder form, tagged -waitlist.
+      // The tag is what separates it from a teacher's -cohort enquiry in the
+      // roster; an untagged form still fails.
       for (const m of body.matchAll(/<form\s[^>]*class="capture[^"]*"[^>]*data-source="([^"]+)"/g)) {
-        assert.match(m[1], /-cohort$/, `${n} form "${m[1]}" is not tagged as a cohort form`)
+        assert.match(m[1], /-(cohort|waitlist)$/, `${n} form "${m[1]}" is tagged neither -cohort nor -waitlist`)
       }
     }
   })

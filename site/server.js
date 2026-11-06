@@ -56,8 +56,8 @@ const TYPES = {
 const MARKETING_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
-  "font-src 'self' https://cdn.fontshare.com",
+  "style-src 'self' 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com",
+  "font-src 'self' https://cdn.fontshare.com https://fonts.gstatic.com",
   "img-src 'self' data:",
   "connect-src 'self'",
   "object-src 'none'",
@@ -124,7 +124,34 @@ const INTERNAL_REDIRECTS = new Map([
 //   Crawlable. Deliberately NOT disallowed in robots.txt: a crawler blocked
 //   from fetching them never sees the redirect, and the URL sits in the index
 //   as a bare link forever.
-const CLOSED = new Set([])
+// 2026-11-06: closed again. fuime.com was rebuilt as one page for business
+// banking (docs/fuime/fuime-context-for-claude.md), and every page below
+// describes the retired teen merchant-of-record product. They stay on disk and
+// in PUBLIC_FILES so reopening one is a one-line change here.
+// /why-has-fuime-charged-me is deliberately NOT closed: it explains a card
+// statement line to people who bought from a seller under the old product,
+// and has to keep answering through the dispute window.
+const CLOSED_PAGES = [
+  '/pricing',
+  '/parents',
+  '/payment-links',
+  '/subscriptions',
+  '/books',
+  '/taxes',
+  '/api',
+  '/merchant-of-record',
+  '/for/tutoring',
+  '/for/photo-video',
+  '/for/lawn-care',
+  '/for/schools',
+  '/compare',
+  '/compare/venmo',
+  '/compare/paddle',
+  '/compare/waiting',
+  '/roadmap',
+  '/faq',
+]
+const CLOSED = new Set(CLOSED_PAGES.flatMap(p => [p, `${p}.html`]))
 
 // Everything the public may fetch. The site root doubles as the deploy root on
 // Render, so package.json, server.js, .env and test/ all sit in the same
@@ -166,6 +193,8 @@ const PUBLIC_FILES = new Set([
   // assets served from the root
   '/style.css',
   '/site.js',
+  '/landing.css',
+  '/landing.js',
   '/favicon.ico',
   '/robots.txt',
   '/sitemap.xml',

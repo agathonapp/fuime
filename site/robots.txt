@@ -1,8 +1,7 @@
-# fuime — your client buys from us, and we pay you
+# Fuime: business banking for small operators
 #
-# The site was closed to one page for several weeks: / was the front door and
-# /home, /pricing and /parents 307'd to it. It opened on 2026-09-14, and the
-# sitemap below is the list of pages we are asking to have indexed.
+# fuime.com is one page as of 2026-11-06. The retired pages 307 to / and are
+# left crawlable on purpose, so search engines see the redirect and drop them.
 
 User-agent: *
 Allow: /

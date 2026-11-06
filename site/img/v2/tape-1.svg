@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="192" height="48" viewBox="0 0 192 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Tape" filter="url(#filter0_d_0_13)">
+<path d="M4 2H188V8.5L180.729 14.6L185.923 22.5L182.658 28.9L180.581 34.6L184.439 40.5L185.032 42H4L5.1871 37L4.44516 31.1L9.63871 25.5L5.48387 20.3L7.11613 16.2L9.93548 9.8L5.48387 4.6L8.00645 2H4Z" fill="#EEE4C8" fill-opacity="0.93"/>
+</g>
+<defs>
+<filter id="filter0_d_0_13" x="0" y="0" width="192" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="2"/>
+<feGaussianBlur stdDeviation="2"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.09 0 0 0 0 0.1 0 0 0 0 0.09 0 0 0 0.12 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_13"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_13" result="shape"/>
+</filter>
+</defs>
+</svg>
