@@ -185,7 +185,7 @@ RSpec.describe Fuime::DisputeRecorder do
   describe "an inquiry, before any money moves" do
     it "records the case without touching the operator's payable" do
       expect { handle("charge.dispute.created", dispute_object(status: "warning_needs_response", due_by: nil)) }
-        .not_to change { pending_outgoing }
+        .not_to(change { pending_outgoing })
 
       dispute = Fuime::Dispute.sole
       expect(dispute).to be_early_warning
@@ -214,7 +214,7 @@ RSpec.describe Fuime::DisputeRecorder do
       handle("charge.dispute.created", dispute_object(status: "warning_needs_response", due_by: nil))
 
       expect { handle("charge.dispute.closed", dispute_object(status: "warning_closed", due_by: nil)) }
-        .not_to change { pending_outgoing }
+        .not_to(change { pending_outgoing })
       expect(pending_outgoing).to eq(-fee_on(10_000))
     end
   end
