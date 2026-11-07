@@ -6,7 +6,9 @@
     <title>Fuime</title>
     <meta name="description" content="A business account that takes instructions. 2027." />
     <link rel="canonical" href="https://fuime.com/" />
-    <meta property="og:type" content="website" />
+    <!-- video.other, not website: Apple's link previews (iMessage) only consider
+         og:video for a page that says it is a video. -->
+    <meta property="og:type" content="video.other" />
     <meta property="og:site_name" content="Fuime" />
     <meta property="og:url" content="https://fuime.com/" />
     <meta property="og:title" content="Fuime" />
@@ -15,6 +17,7 @@
          Telegram play og:video inline; X, Slack and LinkedIn fall back to the
          og:image poster, which is the film's end card. -->
     <meta property="og:video" content="https://fuime.com/vid/fuime-instructions.mp4" />
+    <meta property="og:video:url" content="https://fuime.com/vid/fuime-instructions.mp4" />
     <meta property="og:video:secure_url" content="https://fuime.com/vid/fuime-instructions.mp4" />
     <meta property="og:video:type" content="video/mp4" />
     <meta property="og:video:width" content="1200" />
