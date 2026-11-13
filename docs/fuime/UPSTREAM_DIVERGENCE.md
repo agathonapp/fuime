@@ -8112,25 +8112,27 @@ example that signs a fresh address up is about something else; the closed world 
 
 Site only; nothing upstream. The front door's `<title>` was just "Fuime" and its description
 "A business account that takes instructions. 2027.", which tells a search or answer engine
-nothing it can quote. Now: a descriptive title and description, `og:locale`,
-`twitter:image:alt`, `max-image-preview:large`, a JSON-LD `@graph` (Organization + WebSite,
-values taken only from the page: no price, rating, partner or `sameAs`), and the visually
-hidden `.sr` line rewritten as one quotable sentence ("Fuime is a business account for small
-businesses that takes instructions in plain language, coming in 2027."). The og:video setup is
-untouched, and the page still never says "bank", so the not-a-bank disclosure rule does not
-trigger. New `site/llms.txt` (llmstxt.org) served from `PUBLIC_FILES`; it carries the L5
-disclosure and says the teen-era pages are retired. No visual change.
+nothing it can quote. Now: title "Fuime: the business account that takes instructions",
+description "Fuime is a business account that takes plain-language instructions: set aside
+taxes, pay by ACH or wire, issue cards. Coming 2027. Request an invite.", matching og/twitter
+tags, `og:locale`, `twitter:image:alt`, `max-image-preview:large`, and the visually hidden
+`.sr` line rewritten as one quotable sentence ("Fuime is a business account that takes
+instructions in plain language, coming in 2027."). The og:video setup is untouched, and the
+page still never says bank, banking or neobank (L5), so the not-a-bank disclosure rule does not
+trigger. No visual change.
+
+**Framing is neutral by owner decision (2026-11-13):** no audience is named (neither "small
+businesses" nor "teens"). Both were tried on this branch the same day and withdrawn.
+
+**JSON-LD:** a `@graph` of Organization + WebSite. Values come from the page (no price,
+rating, partner or `sameAs`), plus two the owner confirmed: `founder` (Rushil Chopra,
+rushilchopra.com) and `parentOrganization` (Ninth Street Labs, ninthstreetlabs.com).
+`legalName` was added and then removed, since `parentOrganization` already says Ninth Street
+Labs owns Fuime.
+
+**`site/llms.txt`** (new, llmstxt.org) is served from `PUBLIC_FILES` like robots.txt. It
+carries the same definition, the L5 not-a-bank disclosure, the page's example instructions
+marked illustrative, and a note that the retired pages redirect to the front page.
 
 **Files:** `site/index.html`, `site/llms.txt` (new), `site/server.js`, `site/sitemap.xml`
 (lastmod), `site/test/server.test.mjs` (llms.txt content type; JSON-LD parses).
-
-**Follow-up, same day:** the Organization JSON-LD gains `legalName` (Ninth Street Labs LLC),
-`founder` (Rushil Chopra, rushilchopra.com) and `parentOrganization` (Ninth Street Labs,
-ninthstreetlabs.com), confirmed by the owner. Not stated in visible copy; no visible change.
-
-**Second follow-up, same day:** at the owner's direction the framing moves from small businesses
-to teens. Title "Fuime: the business account for teens that takes instructions"; description,
-og/twitter tags, JSON-LD descriptions and the `.sr` definition now read "a business account for
-teens who run their own businesses". `index.html` still never says bank, banking or neobank (L5).
-`site/llms.txt` says the owner describes Fuime as a neobank-style account for teens, with the
-not-a-bank disclosure in the same paragraph, and no longer calls the teen-era pages out of date.
