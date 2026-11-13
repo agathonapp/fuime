@@ -3,16 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Fuime</title>
-    <meta name="description" content="A business account that takes instructions. 2027." />
+    <title>Fuime: the small business account that takes instructions</title>
+    <meta name="description" content="Fuime is a business account for small businesses that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://fuime.com/" />
     <!-- video.other, not website: Apple's link previews (iMessage) only consider
          og:video for a page that says it is a video. -->
     <meta property="og:type" content="video.other" />
     <meta property="og:site_name" content="Fuime" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/" />
-    <meta property="og:title" content="Fuime" />
-    <meta property="og:description" content="A business account that takes instructions. 2027." />
+    <meta property="og:title" content="Fuime: the small business account that takes instructions" />
+    <meta property="og:description" content="Fuime is a business account for small businesses that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027." />
     <!-- A 10 s silent loop (tools/og-film renders it). Discord, iMessage and
          Telegram play og:video inline; X, Slack and LinkedIn fall back to the
          og:image poster, which is the film's end card. -->
@@ -28,12 +30,48 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Fuime" />
-    <meta name="twitter:description" content="A business account that takes instructions. 2027." />
+    <meta name="twitter:title" content="Fuime: the small business account that takes instructions" />
+    <meta name="twitter:description" content="Fuime is a business account for small businesses that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027." />
     <meta name="twitter:image" content="https://fuime.com/img/v2/og-instructions.jpg" />
+    <meta name="twitter:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
     <meta name="theme-color" content="#f7f3e8" />
     <link rel="icon" href="/img/v2/logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <!-- Structured data for search and answer engines. Every value here is
+         said on this page or in its head: no prices, ratings or partners,
+         because the page states none. sameAs is left out until Fuime has
+         public profiles to point at. Keep the description in step with the
+         one-sentence definition in .sr below. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://fuime.com/#org",
+            "name": "Fuime",
+            "url": "https://fuime.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://fuime.com/img/apple-touch-icon.png",
+              "width": 180,
+              "height": 180
+            },
+            "email": "support@fuime.com",
+            "description": "Fuime is a business account for small businesses that takes instructions in plain language, coming in 2027."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://fuime.com/#website",
+            "name": "Fuime",
+            "url": "https://fuime.com/",
+            "description": "Fuime is a business account for small businesses that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027.",
+            "inLanguage": "en-US",
+            "publisher": { "@id": "https://fuime.com/#org" }
+          }
+        ]
+      }
+    </script>
     <!-- Stealth front door, 2026-11-06. The mark, and under it one small line
          typing instructions to the account and the account answering. It hints
          at the product (an account with an agent in it) without pitching it.
@@ -264,7 +302,7 @@
     <main id="join">
       <div class="stack">
         <h1><img class="mark" src="/img/v2/logo.svg" width="49" height="41" alt="Fuime" /></h1>
-        <p class="sr">A business account that takes instructions. Coming in 2027.</p>
+        <p class="sr">Fuime is a business account for small businesses that takes instructions in plain language, coming in 2027.</p>
         <div class="term" aria-hidden="true">
           <p class="cmd" data-cmd>move 25% of every payment to taxes</p>
           <p class="ans is-on" data-ans>done. $787.50 moved today.</p>

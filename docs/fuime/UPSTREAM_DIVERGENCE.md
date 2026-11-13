@@ -8107,3 +8107,19 @@ example that signs a fresh address up is about something else; the closed world 
 `spec/support/signups.rb`, `spec/requests/fuime_signups_closed_spec.rb` (new),
 `spec/requests/fuime_family_invite_spec.rb`. Site: `site/index.html`, `site/site.js`,
 `site/style.css`, `site/test/{server.test,copy-guard}.mjs`.
+
+## 2026-11-13 — fuime.com: search and answer-engine metadata on the stealth front door
+
+Site only; nothing upstream. The front door's `<title>` was just "Fuime" and its description
+"A business account that takes instructions. 2027.", which tells a search or answer engine
+nothing it can quote. Now: a descriptive title and description, `og:locale`,
+`twitter:image:alt`, `max-image-preview:large`, a JSON-LD `@graph` (Organization + WebSite,
+values taken only from the page: no price, rating, partner or `sameAs`), and the visually
+hidden `.sr` line rewritten as one quotable sentence ("Fuime is a business account for small
+businesses that takes instructions in plain language, coming in 2027."). The og:video setup is
+untouched, and the page still never says "bank", so the not-a-bank disclosure rule does not
+trigger. New `site/llms.txt` (llmstxt.org) served from `PUBLIC_FILES`; it carries the L5
+disclosure and says the teen-era pages are retired. No visual change.
+
+**Files:** `site/index.html`, `site/llms.txt` (new), `site/server.js`, `site/sitemap.xml`
+(lastmod), `site/test/server.test.mjs` (llms.txt content type; JSON-LD parses).

@@ -199,6 +199,8 @@ const PUBLIC_FILES = new Set([
   '/favicon.ico',
   '/robots.txt',
   '/sitemap.xml',
+  // the llmstxt.org summary for answer engines (ChatGPT, Perplexity, Claude)
+  '/llms.txt',
 ])
 
 function isPublic(rel) {

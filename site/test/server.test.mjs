@@ -165,6 +165,20 @@ try {
     }
   })
 
+  await run("the front door's structured data parses", async () => {
+    // A JSON-LD block that does not parse is dropped silently by every
+    // crawler, so a stray comma would cost the whole block without a sound.
+    const body = await (await get('/')).text()
+    const blocks = [...body.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+    assert.ok(blocks.length >= 1, 'the front door has no JSON-LD')
+    const types = blocks.flatMap(([, json]) => {
+      const data = JSON.parse(json)
+      return (data['@graph'] || [data]).map(n => n['@type'])
+    })
+    assert.ok(types.includes('Organization'), `no Organization in ${types}`)
+    assert.ok(types.includes('WebSite'), `no WebSite in ${types}`)
+  })
+
   await run('moved pages redirect in a single hop', async () => {
     // /start is the sign-up door, asserted alongside /login below. The dive's
     // own spellings are moved pages now that it is deleted.
@@ -183,6 +197,7 @@ try {
       ['/landing.js', /javascript/],
       ['/robots.txt', /text\/plain/],
       ['/sitemap.xml', /xml/],
+      ['/llms.txt', /text\/plain/],
       ['/img/mark.svg', /image\/svg/],
     ]
     for (const [p, type] of cases) {

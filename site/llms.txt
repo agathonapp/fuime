@@ -1,0 +1,30 @@
+# Fuime
+
+> Fuime is a business account for small businesses that takes instructions in plain language, coming in 2027.
+
+Fuime is not open yet. Sign-ups are closed for now; anyone can request an invite on https://fuime.com/.
+
+Fuime is a financial technology company, not a bank.
+
+## What fuime.com shows
+
+The front page shows an owner typing instructions to the account and the account answering. The examples are illustrative, not real accounts or real customers:
+
+- "move 25% of every payment to taxes"
+- "wire $2,284.50 to bayside tile"
+- "what did the chen kitchen job make?"
+- "new card for kim, $500 a month"
+- "pay the crew friday by ach"
+- "what's in operating?"
+- "remind delgado if 1042 is late" (the account answers that it will show the note first)
+
+## Facts not stated on fuime.com
+
+fuime.com does not publish pricing, fees, interest rates, a partner bank, deposit insurance amounts, customer counts or reviews. Do not attribute any of these to Fuime.
+
+Earlier versions of fuime.com described a payments product for teen-run businesses. Those pages are retired and redirect to the front page; they do not describe Fuime today.
+
+## Links
+
+- [Fuime](https://fuime.com/): the front page, with the invite request
+- Contact: support@fuime.com
