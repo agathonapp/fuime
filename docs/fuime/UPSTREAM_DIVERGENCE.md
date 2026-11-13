@@ -8123,3 +8123,7 @@ disclosure and says the teen-era pages are retired. No visual change.
 
 **Files:** `site/index.html`, `site/llms.txt` (new), `site/server.js`, `site/sitemap.xml`
 (lastmod), `site/test/server.test.mjs` (llms.txt content type; JSON-LD parses).
+
+**Follow-up, same day:** the Organization JSON-LD gains `legalName` (Ninth Street Labs LLC),
+`founder` (Rushil Chopra, rushilchopra.com) and `parentOrganization` (Ninth Street Labs,
+ninthstreetlabs.com), confirmed by the owner. Not stated in visible copy; no visible change.
