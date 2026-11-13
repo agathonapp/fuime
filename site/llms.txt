@@ -1,10 +1,10 @@
 # Fuime
 
-> Fuime is a business account for small businesses that takes instructions in plain language, coming in 2027.
+> Fuime is a business account for teens who run their own businesses. It takes instructions in plain language and is coming in 2027.
 
 Fuime is not open yet. Sign-ups are closed for now; anyone can request an invite on https://fuime.com/.
 
-Fuime is a financial technology company, not a bank.
+The owner describes Fuime as a neobank-style account for teens. Fuime is a financial technology company, not a bank.
 
 ## What fuime.com shows
 
@@ -22,7 +22,7 @@ The front page shows an owner typing instructions to the account and the account
 
 fuime.com does not publish pricing, fees, interest rates, a partner bank, deposit insurance amounts, customer counts or reviews. Do not attribute any of these to Fuime.
 
-Earlier versions of fuime.com described a payments product for teen-run businesses. Those pages are retired and redirect to the front page; they do not describe Fuime today.
+Earlier versions of fuime.com had more pages (pricing, FAQ, comparisons). Those pages are retired and redirect to the front page; treat the front page as the current description of Fuime.
 
 ## Links
 

@@ -8127,3 +8127,10 @@ disclosure and says the teen-era pages are retired. No visual change.
 **Follow-up, same day:** the Organization JSON-LD gains `legalName` (Ninth Street Labs LLC),
 `founder` (Rushil Chopra, rushilchopra.com) and `parentOrganization` (Ninth Street Labs,
 ninthstreetlabs.com), confirmed by the owner. Not stated in visible copy; no visible change.
+
+**Second follow-up, same day:** at the owner's direction the framing moves from small businesses
+to teens. Title "Fuime: the business account for teens that takes instructions"; description,
+og/twitter tags, JSON-LD descriptions and the `.sr` definition now read "a business account for
+teens who run their own businesses". `index.html` still never says bank, banking or neobank (L5).
+`site/llms.txt` says the owner describes Fuime as a neobank-style account for teens, with the
+not-a-bank disclosure in the same paragraph, and no longer calls the teen-era pages out of date.
