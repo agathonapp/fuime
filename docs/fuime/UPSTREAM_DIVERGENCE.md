@@ -8136,3 +8136,17 @@ marked illustrative, and a note that the retired pages redirect to the front pag
 
 **Files:** `site/index.html`, `site/llms.txt` (new), `site/server.js`, `site/sitemap.xml`
 (lastmod), `site/test/server.test.mjs` (llms.txt content type; JSON-LD parses).
+
+## 2026-11-18: StatsD is opt-in; no more telemetry.hackclub.com
+
+**What:** `config/initializers/statsd.rb` no longer hard-codes `STATSD_ADDR=telemetry.hackclub.com:8125`.
+Metrics go over UDP only when `STATSD_ADDR` is set; production/staging otherwise use a
+`NullSink`, and development keeps the gem's log sink.
+
+**Why:** Rule 4 (the fork was reporting startup metrics to Hack Club's telemetry), and an
+outage: Hack Club removed that DNS record in late October 2026, so `StatsD.increment("startup")`
+raised `Socket::ResolutionError` on every boot. fuime-web crash-looped from 2026-10-30 until
+Render suspended it on 2026-11-02, fuime-worker failed from 2026-10-19, and every later build
+died in `assets:precompile` for the same reason.
+
+**Files:** `config/initializers/statsd.rb`
