@@ -8150,3 +8150,21 @@ Render suspended it on 2026-11-02, fuime-worker failed from 2026-10-19, and ever
 died in `assets:precompile` for the same reason.
 
 **Files:** `config/initializers/statsd.rb`
+
+## 2026-11-21: On-call stops emailing by default
+
+**What:** `Fuime::Oncall::Pager.dispatch!` (the sweep's automatic paging) is a no-op unless
+`FUIME_ONCALL_PAGING=true`; `Fuime::OpsDigestJob` sends nothing unless `FUIME_OPS_DIGEST=true`.
+The sweep still runs every 5 minutes, still records incidents on `/admin/oncall`, and still pings
+`FUIME_HEARTBEAT_URL`, so an external monitor stays quiet. Explicit pages (the admin "Send a test
+page" button, `rake fuime:oncall:test_page`) still send. `/healthz` is untouched. Admin → On-call
+shows a banner saying paging is off.
+
+**Why:** the owner asked for the on-call emails to stop. Since the 2026-11 pivot away from Stripe,
+`Checks::Stripe` / `Checks::MoneyIn` report permanent sev-1s, and once fuime-worker came back after
+the 2026-11-18 StatsD fix the pager re-sent them every 10 minutes. Re-point the checks at the new
+providers before turning paging back on.
+
+**Files:** `app/services/fuime/oncall/pager.rb`, `app/jobs/fuime/ops_digest_job.rb`,
+`app/views/admin/oncall.html.erb`, `config/schedule.yml`, `docs/fuime/ONCALL.md`,
+`spec/services/fuime/oncall_spec.rb`, `spec/mailers/fuime_ops_alerting_spec.rb`

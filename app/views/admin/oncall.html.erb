@@ -12,6 +12,16 @@
     broken if you stop there. The whole failure this subsystem addresses is
     alerting that was configured nowhere while looking fine, so a setup flow
     that lets you feel finished at step one would rebuild the same problem. %>
+<%# FUIME 2026-11-21: automatic paging and the morning digest are off by default. %>
+<% unless Fuime::Oncall::Pager.automatic_paging_enabled? %>
+  <div class="card mb2">
+    <strong>Automatic paging is off.</strong>
+    Incidents below are still detected and recorded, but nobody is emailed, texted or called about them.
+    The test-page button still sends. To turn paging back on, set <code>FUIME_ONCALL_PAGING=true</code>
+    on the worker service<%= Fuime::OpsDigestJob.enabled? ? "" : "; the morning digest likewise needs FUIME_OPS_DIGEST=true" %>.
+  </div>
+<% end %>
+
 <% unless @me&.pageable? && @heartbeat_url.present? %>
   <div class="card mb2">
     <h3 class="mt0">Set this up — three steps</h3>

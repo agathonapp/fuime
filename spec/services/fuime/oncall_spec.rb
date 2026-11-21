@@ -228,6 +228,27 @@ RSpec.describe "Fuime on-call" do
                              title: "Broken", severity: :sev2)
     end
 
+    # 2026-11-21: the owner asked for the on-call emails to stop. The sweep's
+    # automatic dispatch is gated; an explicit page! still sends.
+    describe ".dispatch!" do
+      before { incident }
+
+      it "pages nobody unless FUIME_ONCALL_PAGING is set" do
+        Fuime::Oncall::Responder.create!(name: "Founder", email: "f@fuime.com")
+
+        expect { described_class.dispatch! }.not_to change(Fuime::IncidentNotification, :count)
+        expect(incident.reload.last_paged_at).to be_nil
+      end
+
+      it "pages again once FUIME_ONCALL_PAGING=true" do
+        Fuime::Oncall::Responder.create!(name: "Founder", email: "f@fuime.com")
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("FUIME_ONCALL_PAGING").and_return("true")
+
+        expect { described_class.dispatch! }.to change(Fuime::IncidentNotification, :count).by(1)
+      end
+    end
+
     # "There was nobody to page" is the single most important fact about an
     # incident nobody answered, and the hardest to reconstruct later.
     it "records that there was nobody to page rather than skipping silently" do

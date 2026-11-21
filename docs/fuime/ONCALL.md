@@ -2,6 +2,12 @@
 
 Last updated 2026-09-21.
 
+> **2026-11-21: automatic paging and the morning digest are OFF by default.** The sweep still
+> runs and records incidents, and still pings the heartbeat, but nobody is emailed, texted or
+> called until `FUIME_ONCALL_PAGING=true` (and `FUIME_OPS_DIGEST=true` for the digest) is set on
+> fuime-worker. The Stripe-era checks report permanent sev-1s since the pivot away from Stripe;
+> re-point them at the new providers before turning paging back on.
+
 Fuime is one person operating a payments platform for minors. The assumption
 behind everything here is that **nobody is watching a dashboard**, so the
 system has to come and find you, and it has to be trustworthy enough that when
