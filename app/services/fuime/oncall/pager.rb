@@ -20,7 +20,27 @@ module Fuime
     # than an experiment, and makes Checks::Alerting able to notice a channel
     # that has failed every time for a day.
     class Pager
+      # ── Automatic paging is OFF unless FUIME_ONCALL_PAGING is set (2026-11-21) ──
+      #
+      # After the 2026-11 pivot away from Stripe, Checks::Stripe and friends
+      # report permanent sev-1s, and the pager re-sent them to every responder
+      # every 10 minutes. The owner asked for the emails to stop. The sweep
+      # still runs, still records incidents (Admin → On-call shows them) and
+      # still pings the external heartbeat; only the automatic sending is gated.
+      # `page!` (the admin "Send a test page" button and `rake fuime:oncall:test_page`)
+      # is an explicit human action and still sends.
+      #
+      # Re-enable with FUIME_ONCALL_PAGING=true on the worker service.
+      def self.automatic_paging_enabled?
+        ActiveModel::Type::Boolean.new.cast(ENV["FUIME_ONCALL_PAGING"].presence) == true
+      end
+
       def self.dispatch!(now: Time.current)
+        unless automatic_paging_enabled?
+          Rails.logger.info("[Fuime::Oncall] automatic paging is off (FUIME_ONCALL_PAGING unset); incidents recorded, nobody paged")
+          return []
+        end
+
         new(now:).dispatch!
       end
 

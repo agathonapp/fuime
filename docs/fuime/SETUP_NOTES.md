@@ -2,6 +2,13 @@
 
 ## Handoff (most recent first)
 
+**2026-11-21: on-call no longer emails anyone by default.** `FUIME_ONCALL_PAGING=true` turns
+the sweep's automatic paging back on, and `FUIME_OPS_DIGEST=true` turns the morning digest back
+on (both go on fuime-worker). The sweep still records incidents on `/admin/oncall` and pings the
+heartbeat. The Stripe-era checks raise permanent sev-1s since the pivot. Re-point them at the
+new providers before turning paging back on. The rebuild plan for app.fuime.com (new identity
+check, onboarding, account home; admin kept) is being agreed with the owner.
+
 **2026-10-01 — Sign-ups are closed; fuime.com is becoming a waitlist.** Read
 `site/docs/WAITLIST_PLAN.md` first. It's the plan for the new front door (one
 no-scroll cinematic page, new brand, target 2026-10-08).

@@ -62,6 +62,14 @@ RSpec.describe "Fuime operational alerting" do
     end
   end
 
+  describe Fuime::OpsDigestJob do
+    # 2026-11-21: off unless FUIME_OPS_DIGEST is set.
+    it "sends nothing by default" do
+      expect(Fuime::OpsDigestMailer).not_to receive(:daily)
+      described_class.perform_now
+    end
+  end
+
   describe Fuime::OpsDigestMailer do
     it "renders, and says what is waiting" do
       create(:event, operator_vetting_status: :unvetted)

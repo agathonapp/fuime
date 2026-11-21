@@ -318,6 +318,7 @@ fuime_missed_mor_payment_sweep_job:
 # SendAdminRemindersJob: that one lands at 11pm Pacific, which is how a queue
 # goes unread for a day. It sends on quiet days too — see Fuime::OpsDigestMailer
 # for why an absent email is the ambiguous case.
+# 2026-11-21: off unless FUIME_OPS_DIGEST=true (checked inside the job).
 fuime_ops_digest_job:
   cron: "0 13 * * *"
   class: "Fuime::OpsDigestJob"
@@ -349,6 +350,11 @@ fuime_guardian_invite_reminder_job:
 # ⚠️ This schedule cannot detect its own absence. That is what the outbound
 # heartbeat inside the job is for, and it is why FUIME_HEARTBEAT_URL matters
 # more than anything else in this file.
+#
+# 2026-11-21: still scheduled, but it no longer sends anything by itself.
+# Fuime::Oncall::Pager.dispatch! is a no-op unless FUIME_ONCALL_PAGING=true, so
+# the sweep records incidents and pings the heartbeat without emailing anyone.
+# Keeping the schedule keeps the external heartbeat monitor quiet.
 fuime_oncall_sweep_job:
   cron: "*/5 * * * *"
   class: "Fuime::Oncall::SweepJob"
