@@ -143,7 +143,7 @@
         display: block;
         width: min(560px, calc(100vw - 24px));
         height: auto;
-        aspect-ratio: 560 / 176;
+        aspect-ratio: 560 / 148;
         image-rendering: pixelated;
         animation: in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
@@ -155,7 +155,7 @@
         clip: rect(0 0 0 0);
       }
       .has-stage .for {
-        margin-top: -16px;
+        margin-top: -6px;
       }
       /* the one plain statement of what this is */
       .for {
@@ -292,7 +292,7 @@
     <main id="join">
       <div class="stack">
         <h1><img class="mark" src="/img/v2/logo.svg" width="49" height="41" alt="Fuime" /></h1>
-        <canvas class="stage" data-stage width="560" height="176" aria-hidden="true"></canvas>
+        <canvas class="stage" data-stage width="560" height="148" aria-hidden="true"></canvas>
         <p class="for">business accounts for teens.</p>
         <p class="sr">Fuime is a business account for teens, opened jointly with a parent or guardian. Coming in 2027.</p>
       </div>
@@ -334,9 +334,9 @@
         var stage = document.querySelector('[data-stage]')
         var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
         if (stage && stage.getContext && !calm) {
-          var LW = 560, LH = 176, P = 4, GROUND = 132
+          var LW = 560, LH = 148, P = 4, GROUND = 132
           var MARK = { cx: 280, w: 76, h: 64 }
-          var SCENE_X = 120, NAME_Y = 162
+          var SCENE_X = 136, TEXT_X = 280 + 38 + 30
           var ctx = stage.getContext('2d')
           var logo = new Image()
           logo.src = '/img/v2/logo.svg'
@@ -347,10 +347,11 @@
             r: '#d1543a', R: '#a63d28', s: '#ee8a6c', k: '#6b6458', K: '#4d473e', w: '#2f2b25', W: '#8a8478',
             b: '#b9824a', B: '#8e6136', y: '#d9a56b', p: '#fbf8f0', P: '#e4dccb', c: '#2e7d5b', C: '#215c43',
             Y: '#f6d365', L: '#fff2b8', n: '#9a948a', N: '#6f6a61', q: '#ece6d6', Q: '#d3cbb8',
-            x: '#c99a5e', X: '#a07642', z: '#e1b97f', t: '#ece3cc', T: '#cfc2a5',
+            x: '#c99a5e', X: '#a07642', z: '#e1b97f', t: '#ece3cc', 7: '#cfc2a5',
             e: '#f6f3ea', E: '#d6cfbf', m: '#2e7d5b', u: '#8a8478', v: '#e07a5f', V: '#b85a43',
-            f: '#f5b8c8', F: '#db8fa3', i: '#fde2ea', a: '#c08552', A: '#94603a',
-            j: '#e3b341', J: '#b8862a', l: '#f7e3a4', O: '#7a5a16', ground: '#ddd4bf'
+            f: '#f5b8c8', F: '#db8fa3', i: '#fde2ea', a: '#c08552', A: '#94603a', T: '#e07a5f',
+            j: '#e3b341', J: '#b8862a', l: '#f7e3a4', O: '#7a5a16', ground: '#ddd4bf',
+            1: '#f28b30', 2: '#f6d365', 3: '#e0552c', M: '#3fa7a0', H: '#3b2a20', S: '#e0a77e', U: '#c4865e', Z: '#5a4a8a', '4': '#463a6e'
           }
           // sprite maps: one character per art pixel, '.' is empty
           var S = {
@@ -365,7 +366,9 @@
             cupcake: ['...rr..', '..iff..', '.iffffF', 'offFFFo', 'oaAaAao', '.aAaAa.', '..ooo..'],
             coin: ['..OOOO..', '.OllljO.', 'OlljjjJO', 'OljjjjJO', 'OljjjjJO', 'OjjjjJJO', '.OJJJJO.', '..OOOO..'],
             coinMid: ['.OOOO.', 'OlljjO', 'OljjJO', 'OljjJO', 'OljjJO', 'OjjJJO', 'OjJJJO', '.OOOO.'],
-            coinEdge: ['.OO.', 'OljO', 'OjJO', 'OjJO', 'OjJO', 'OjJO', 'OJJO', '.OO.']
+            coinEdge: ['.OO.', 'OljO', 'OjJO', 'OjJO', 'OjJO', 'OjJO', 'OJJO', '.OO.'],
+            lotusA: ['....ooo....', '...oHHHo...', '...oHSSo...', '...oSSSo...', '....oUo....', '..oTTTTTo..', '.oSoTTToSo.', '.oSoTTToSo.', 'oZZZZZZZZZo', 'oZ4ZZZZZ4Zo', '.ooooooooo.'],
+            lotusB: ['oSo.....oSo', 'oSo.....oSo', 'oSo.ooo.oSo', 'oSooHHHooSo', 'oSooHSSooSo', 'oSooSSSooSo', '.oSooUooSo.', '..oTTTTTo..', '..oTTTTTo..', '..oTTTTTo..', 'oZZZZZZZZZo', 'oZ4ZZZZZ4Zo', '.ooooooooo.']
           }
           var ease = function (x) { x = Math.max(0, Math.min(1, x)); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
           var easeOut = function (x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3) }
@@ -383,7 +386,7 @@
           function stand(map, cx, bottom) { sprite(map, cx - (map[0].length * P) / 2, bottom - map.length * P) }
 
           /* ── the four businesses ─────────────────────────────────────── */
-          var GX0 = 52, GX1 = 196 // grass span
+          var GX0 = SCENE_X - 68, GX1 = SCENE_X + 76 // grass span
 
           function lawn(t) {
             var p = ease((t - 0.55) / 2.15)
@@ -477,7 +480,7 @@
             var tp = (t - 1.85) / 0.35
             if (tp > 0) {
               var tw = Math.round(Math.min(1, ease(tp)) * (w - 2))
-              px(x0 + P, top + P, tw, 1, 't'); px(x0 + 6 * P, top, 2, 3, 't'); if (tw > 7) px(x0 + 7 * P, top + 2 * P, 1, 1, 'T')
+              px(x0 + P, top + P, tw, 1, 't'); px(x0 + 6 * P, top, 2, 3, 't'); if (tw > 7) px(x0 + 7 * P, top + 2 * P, 1, 1, '7')
             }
             return { x: cx, y: top - 14 }
           }
@@ -504,10 +507,65 @@
             return { x: cx, y: top - 40 }
           }
 
+
+          function cooking(t) {
+            var cx = SCENE_X, w = 18, x0 = snap(cx - (w * P) / 2), top = GROUND - 6 * P
+            // a little stove: dark body, a burner, two knobs
+            px(x0, top, w, 1, 'o'); px(x0, top, 1, 6, 'o'); px(x0 + (w - 1) * P, top, 1, 6, 'o')
+            px(x0 + P, top + P, w - 2, 1, 'W'); px(x0 + P, top + 2 * P, w - 2, 3, 'K'); px(x0 + (w - 2) * P, top + 2 * P, 1, 3, 'w')
+            px(x0 + 3 * P, top + 3 * P, 2, 1, 'n'); px(x0 + 6 * P, top + 3 * P, 2, 1, 'n')
+            px(x0 + P, top + 5 * P, w - 2, 1, 'o')
+            // flame, flickering between three shapes
+            var fl = Math.floor(t * 10) % 3
+            var fx = snap(cx - 12)
+            var flame = [['3', '1', '2', '1', '3', '1'], ['1', '2', '1', '3', '1', '2'], ['2', '1', '3', '1', '2', '1']][fl]
+            for (var k = 0; k < 6; k++) px(fx + k * P, top - P, 1, 1, flame[k])
+            if (fl !== 1) { px(fx + P, top - 2 * P, 1, 1, '2'); px(fx + 4 * P, top - 2 * P, 1, 1, '1') }
+            // the pan and its handle
+            var py = top - 4 * P
+            px(cx - 28, py + P, 14, 1, 'o'); px(cx - 24, py + 2 * P, 12, 1, 'w'); px(cx - 28, py + 2 * P, 1, 1, 'o'); px(cx + 24, py + 2 * P, 1, 1, 'o')
+            px(cx - 24, py + P, 12, 1, 'K'); px(cx + 28, py + P, 6, 1, 'k'); px(cx + 52, py + P, 1, 1, 'o')
+            // the pancake: two flips, three frames each way (flat, edge, flat)
+            var flips = [1.05, 1.9], cy = py, frame = 0
+            flips.forEach(function (f0) {
+              var u = (t - f0) / 0.5
+              if (u > 0 && u < 1) { cy = py - snap(Math.sin(Math.PI * u) * 26); frame = u < 0.33 || u > 0.66 ? 1 : 2 }
+            })
+            if (frame === 2) { px(cx - 12, cy - P, 3, 1, 'y'); px(cx - 4, cy, 3, 1, 'b'); px(cx - 16, cy - P, 1, 1, 'o'); px(cx + 8, cy, 1, 1, 'o') } // tilted, mid-turn
+            else { px(cx - 12, cy, 6, 1, 'y'); px(cx - 16, cy + P, 8, 1, 'b'); px(cx - 16, cy, 1, 1, 'o'); px(cx + 16, cy, 1, 1, 'o') }
+            // steam, three puffs drifting up and thinning out
+            for (var p2 = 0; p2 < 3; p2++) {
+              var ph = (t * 0.7 + p2 / 3) % 1
+              ctx.globalAlpha = Math.max(0, 0.9 - ph) * Math.min(1, t / 0.25)
+              px(snap(cx - 16 + p2 * 16 + Math.sin(ph * 6 + p2) * 4), snap(py - 6 * P - ph * 30), 2, 1, ph < 0.5 ? 'q' : 'Q')
+              ctx.globalAlpha = Math.min(1, t / 0.25, (LEN - t) / 0.3)
+            }
+            return { x: cx, y: py - 20 }
+          }
+
+          function yoga(t) {
+            var cx = SCENE_X, len = 30, x0 = snap(cx - (len * P) / 2)
+            // the mat unrolls left to right, with the roll at its leading edge
+            var u = ease((t - 0.25) / 0.7), out = Math.round(len * u)
+            px(x0, GROUND - P, out, 1, 'M'); px(x0, GROUND - P, 1, 1, 'C')
+            if (u < 1) { px(x0 + out * P, GROUND - 3 * P, 2, 1, 'o'); px(x0 + out * P, GROUND - 2 * P, 2, 1, 'M'); px(x0 + out * P - P, GROUND - 2 * P, 1, 1, 'o') }
+            else px(x0 + (len - 1) * P, GROUND - P, 1, 1, 'C')
+            // she sits, raises her arms, and the coin rises off her hands
+            if (t > 1.0) {
+              var arms = t > 1.75 && t < 3.6
+              var map = arms ? S.lotusB : S.lotusA
+              var drop = t < 1.12 ? P : 0
+              stand(map, cx, GROUND - P - drop + (drop ? P : 0) - drop)
+            }
+            return { x: cx, y: GROUND - P - S.lotusB.length * P + 4 }
+          }
+
           var BIZ = [
             { name: "maya's lawn co.", amt: '+$40.00', draw: lawn },
+            { name: "kai's sneakers", amt: '+$120.00', draw: resell },
+            { name: "nia's kitchen", amt: '+$65.00', draw: cooking },
             { name: "jordan's tutoring", amt: '+$30.00', draw: tutoring },
-            { name: "kai's resell", amt: '+$120.00', draw: resell },
+            { name: "zoe's yoga", amt: '+$25.00', draw: yoga },
             { name: "ari's bake sale", amt: '+$18.00', draw: bake }
           ]
           var LEN = 5.2, COIN_T = 2.95, POP = 0.18, FLY = 0.55
@@ -563,12 +621,12 @@
             var from = biz.draw(t)
             ctx.globalAlpha = 1
 
-            // name, typed under its business
+            // the name, typed to the right of the arch, level with its middle
             var typed = t < 4.75 ? Math.round(Math.min(1, Math.max(0, (t - 0.15) / 0.8)) * biz.name.length) : Math.max(0, Math.round(biz.name.length * (1 - (t - 4.75) / 0.3)))
             ctx.font = FONT; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#171a18'
-            var full = ctx.measureText(biz.name).width, nx = SCENE_X - full / 2, s = biz.name.slice(0, typed)
-            ctx.fillText(s, nx, NAME_Y)
-            if ((t > 0.1 && t < 1.0) || (t > 4.7 && t < 5.1)) ctx.fillRect(nx + ctx.measureText(s).width + 2, NAME_Y - 12, 2, 15)
+            var NAME_Y = GROUND - 38, s = biz.name.slice(0, typed)
+            ctx.fillText(s, TEXT_X, NAME_Y)
+            if ((t > 0.1 && t < 1.0) || (t > 4.7 && t < 5.1)) ctx.fillRect(TEXT_X + ctx.measureText(s).width + 2, NAME_Y - 12, 2, 15)
 
             // the coin, then the mark acknowledges it with a 2 px dip
             var since = coin(t, from)
@@ -580,7 +638,7 @@
               var la = Math.min(1, since / 0.2, (LEN - 0.4 - t) / 0.25)
               ctx.globalAlpha = Math.max(0, la)
               ctx.fillStyle = '#2e7d5b'
-              ctx.fillText(biz.amt, MARK.cx + MARK.w / 2 + 14, GROUND - MARK.h + 22 - Math.round(4 * easeOut(since / 0.3)))
+              ctx.fillText(biz.amt, TEXT_X, GROUND - 14 + Math.round(4 * (1 - easeOut(since / 0.3))))
               ctx.globalAlpha = 1
             }
           }
