@@ -1,6 +1,6 @@
 # Fuime
 
-> Fuime is a business account that takes instructions in plain language, coming in 2027.
+> Fuime is a business account for teens, opened jointly with a parent or guardian, that takes instructions in plain language. Coming in 2027.
 
 Fuime is not open yet. Sign-ups are closed for now; anyone can request an invite on https://fuime.com/.
 
@@ -8,15 +8,17 @@ Fuime is a financial technology company, not a bank.
 
 ## What fuime.com shows
 
-The front page shows an owner typing instructions to the account and the account answering. The examples are illustrative, not real accounts or real customers:
+Accounts are for teen founders and are opened as a joint account with a parent or guardian: the teen runs it, the parent or guardian is on the account and can see and approve.
 
-- "move 25% of every payment to taxes"
-- "wire $2,284.50 to bayside tile"
-- "what did the chen kitchen job make?"
-- "new card for kim, $500 a month"
-- "pay the crew friday by ach"
-- "what's in operating?"
-- "remind delgado if 1042 is late" (the account answers that it will show the note first)
+The front page shows a teen typing instructions to the account and the account answering. The examples are illustrative, not real accounts or real customers:
+
+- "move 25% of every sale to taxes"
+- "pay jordan $40 for the lawn job" (the account answers that the parent can see it too)
+- "how much did the sneaker drop make?"
+- "invoice the parks for tutoring"
+- "ask dad before anything over $200" (the account answers that the parent will get a tap to approve)
+- "what's in my account?"
+- "freeze my card"
 
 ## Facts not stated on fuime.com
 
