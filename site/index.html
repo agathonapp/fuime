@@ -4,36 +4,25 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Fuime: business accounts for teens</title>
-    <meta name="description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
+    <meta name="description" content="Fuime is a business account for teens, opened as a joint account with a parent or guardian. Coming 2027. Request an invite." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://fuime.com/" />
-    <!-- video.other, not website: Apple's link previews (iMessage) only consider
-         og:video for a page that says it is a video. -->
-    <meta property="og:type" content="video.other" />
+    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Fuime" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/" />
     <meta property="og:title" content="Fuime: business accounts for teens" />
-    <meta property="og:description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
-    <!-- A 10 s silent loop (tools/og-film renders it). Discord, iMessage and
-         Telegram play og:video inline; X, Slack and LinkedIn fall back to the
-         og:image poster, which is the film's end card. -->
-    <meta property="og:video" content="https://fuime.com/vid/fuime-instructions.mp4" />
-    <meta property="og:video:url" content="https://fuime.com/vid/fuime-instructions.mp4" />
-    <meta property="og:video:secure_url" content="https://fuime.com/vid/fuime-instructions.mp4" />
-    <meta property="og:video:type" content="video/mp4" />
-    <meta property="og:video:width" content="1200" />
-    <meta property="og:video:height" content="630" />
-    <meta property="og:image" content="https://fuime.com/img/v2/og-instructions.jpg" />
+    <meta property="og:description" content="Fuime is a business account for teens, opened as a joint account with a parent or guardian. Coming 2027. Request an invite." />
+    <meta property="og:image" content="https://fuime.com/img/v2/og-teens.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
+    <meta property="og:image:alt" content="The Fuime arch mark above the line: business accounts for teens." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Fuime: business accounts for teens" />
-    <meta name="twitter:description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
-    <meta name="twitter:image" content="https://fuime.com/img/v2/og-instructions.jpg" />
-    <meta name="twitter:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
+    <meta name="twitter:description" content="Fuime is a business account for teens, opened as a joint account with a parent or guardian. Coming 2027. Request an invite." />
+    <meta name="twitter:image" content="https://fuime.com/img/v2/og-teens.jpg" />
+    <meta name="twitter:image:alt" content="The Fuime arch mark above the line: business accounts for teens." />
     <meta name="theme-color" content="#f7f3e8" />
     <link rel="icon" href="/img/v2/logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
@@ -70,25 +59,25 @@
               "name": "Ninth Street Labs",
               "url": "https://ninthstreetlabs.com"
             },
-            "description": "Fuime is a business account for teens, opened jointly with a parent or guardian, that takes instructions in plain language. Coming in 2027."
+            "description": "Fuime is a business account for teens, opened jointly with a parent or guardian. Coming in 2027."
           },
           {
             "@type": "WebSite",
             "@id": "https://fuime.com/#website",
             "name": "Fuime",
             "url": "https://fuime.com/",
-            "description": "Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite.",
+            "description": "Fuime is a business account for teens, opened as a joint account with a parent or guardian. Coming 2027. Request an invite.",
             "inLanguage": "en-US",
             "publisher": { "@id": "https://fuime.com/#org" }
           }
         ]
       }
     </script>
-    <!-- Stealth front door, 2026-11-06. The mark, and under it one small line
-         typing instructions to the account and the account answering. It hints
-         at the product (an account with an agent in it) without pitching it.
-         The full page is parked, unserved, at legacy/index-agent-2026-11.html.
-         Everything is inline so the page is one request. -->
+    <!-- Stealth front door. The mark, one line saying who it is for
+         (2026-11-23: approved for teens), and an invite request. The typed
+         agent instructions were removed the same day: the page does not lead
+         with the agent. An earlier full page is parked, unserved, at
+         legacy/index-agent-2026-11.html. Everything is inline: one request. -->
     <style>
       :root {
         --ground: #f7f3e8;
@@ -151,42 +140,6 @@
         color: var(--ink);
         animation: in 1.4s 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
-      /* the instruction line */
-      .term {
-        width: min(440px, 88vw);
-        height: 3em;
-        text-align: center;
-        animation: in 1.4s 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-      }
-      .term p {
-        margin: 0;
-        min-height: 1.5em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: clip;
-      }
-      .cmd::after {
-        content: '';
-        display: inline-block;
-        width: 7px;
-        height: 1.05em;
-        margin-left: 2px;
-        vertical-align: -0.15em;
-        background: var(--ink);
-        animation: blink 1s steps(1) infinite;
-      }
-      .term.is-answering .cmd::after {
-        visibility: hidden;
-      }
-      .ans {
-        color: var(--green);
-        opacity: 0;
-        transition: opacity 0.35s ease;
-      }
-      .ans.is-on {
-        opacity: 1;
-      }
-
       /* the bottom line */
       .foot {
         position: fixed;
@@ -299,19 +252,10 @@
           transform: translateY(6px);
         }
       }
-      @keyframes blink {
-        50% {
-          opacity: 0;
-        }
-      }
       @media (prefers-reduced-motion: reduce) {
         .mark,
         .for,
-        .term,
         .foot {
-          animation: none;
-        }
-        .cmd::after {
           animation: none;
         }
       }
@@ -324,11 +268,7 @@
       <div class="stack">
         <h1><img class="mark" src="/img/v2/logo.svg" width="49" height="41" alt="Fuime" /></h1>
         <p class="for">business accounts for teens.</p>
-        <p class="sr">Fuime is a business account for teens, opened jointly with a parent or guardian, that takes instructions in plain language. Coming in 2027.</p>
-        <div class="term" aria-hidden="true">
-          <p class="cmd" data-cmd>move 25% of every sale to taxes</p>
-          <p class="ans is-on" data-ans>done. $96.00 set aside.</p>
-        </div>
+        <p class="sr">Fuime is a business account for teens, opened jointly with a parent or guardian. Coming in 2027.</p>
       </div>
     </main>
 
@@ -357,69 +297,6 @@
         // The app's redirect for a sign-in with no account.
         if (/(?:^|[?&])account=none(?:&|$)/.test(location.search)) {
           document.querySelector('[data-account-none]').hidden = false
-        }
-
-        /* ── the instruction line ───────────────────────────────────────
-           Types an instruction, the account answers, it clears, the next
-           one types. Loops. With reduced motion the first pair just sits. */
-        // Account actions (wires, ACH, cards, balances) alternate with agent
-        // ones (rules, reports, follow-ups), so it reads as a business account
-        // with an agent in it, not a chatbot.
-        var LINES = [
-          ['move 25% of every sale to taxes', 'done. $96.00 set aside.'],
-          ['pay jordan $40 for the lawn job', 'sent. your mom can see it too.'],
-          ['how much did the sneaker drop make?', '$612 after shipping.'],
-          ['invoice the parks for tutoring', 'sent. $120.00 due friday.'],
-          ['ask dad before anything over $200', "noted. he'll get a tap to approve."],
-          ["what's in my account?", '$1,284.50.'],
-          ['freeze my card', 'frozen.'],
-        ]
-        var term = document.querySelector('.term')
-        var cmd = document.querySelector('[data-cmd]')
-        var ans = document.querySelector('[data-ans]')
-        var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-        if (!still) {
-          var wait = function (ms) {
-            return new Promise(function (r) {
-              setTimeout(r, ms)
-            })
-          }
-          var type = async function (text) {
-            for (var i = 1; i <= text.length; i++) {
-              cmd.textContent = text.slice(0, i)
-              var ch = text[i - 1]
-              await wait(ch === ' ' ? 70 : 38 + Math.random() * 46)
-            }
-          }
-          var erase = async function () {
-            ans.classList.remove('is-on')
-            await wait(250)
-            var t = cmd.textContent
-            for (var i = t.length; i >= 0; i--) {
-              cmd.textContent = t.slice(0, i)
-              await wait(14)
-            }
-          }
-          var run = async function () {
-            cmd.textContent = ''
-            ans.textContent = ''
-            ans.classList.remove('is-on')
-            await wait(1600)
-            for (var n = 0; ; n = (n + 1) % LINES.length) {
-              term.classList.remove('is-answering')
-              await type(LINES[n][0])
-              await wait(650)
-              term.classList.add('is-answering')
-              ans.textContent = LINES[n][1]
-              ans.classList.add('is-on')
-              await wait(2600)
-              term.classList.remove('is-answering')
-              await erase()
-              await wait(450)
-            }
-          }
-          run()
         }
 
         /* ── invite ─────────────────────────────────────────────────── */
