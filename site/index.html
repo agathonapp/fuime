@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Fuime: the business account that takes instructions</title>
-    <meta name="description" content="Fuime is a business account that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027. Request an invite." />
+    <title>Fuime: business accounts for teens</title>
+    <meta name="description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://fuime.com/" />
     <!-- video.other, not website: Apple's link previews (iMessage) only consider
@@ -13,8 +13,8 @@
     <meta property="og:site_name" content="Fuime" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://fuime.com/" />
-    <meta property="og:title" content="Fuime: the business account that takes instructions" />
-    <meta property="og:description" content="Fuime is a business account that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027. Request an invite." />
+    <meta property="og:title" content="Fuime: business accounts for teens" />
+    <meta property="og:description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
     <!-- A 10 s silent loop (tools/og-film renders it). Discord, iMessage and
          Telegram play og:video inline; X, Slack and LinkedIn fall back to the
          og:image poster, which is the film's end card. -->
@@ -30,8 +30,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Fuime: the business account that takes instructions" />
-    <meta name="twitter:description" content="Fuime is a business account that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027. Request an invite." />
+    <meta name="twitter:title" content="Fuime: business accounts for teens" />
+    <meta name="twitter:description" content="Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite." />
     <meta name="twitter:image" content="https://fuime.com/img/v2/og-instructions.jpg" />
     <meta name="twitter:image:alt" content="The Fuime arch mark above the line: a business account that takes instructions." />
     <meta name="theme-color" content="#f7f3e8" />
@@ -70,14 +70,14 @@
               "name": "Ninth Street Labs",
               "url": "https://ninthstreetlabs.com"
             },
-            "description": "Fuime is a business account that takes instructions in plain language, coming in 2027."
+            "description": "Fuime is a business account for teens, opened jointly with a parent or guardian, that takes instructions in plain language. Coming in 2027."
           },
           {
             "@type": "WebSite",
             "@id": "https://fuime.com/#website",
             "name": "Fuime",
             "url": "https://fuime.com/",
-            "description": "Fuime is a business account that takes plain-language instructions: set aside taxes, pay by ACH or wire, issue cards. Coming 2027. Request an invite.",
+            "description": "Fuime is a business account for teens, opened jointly with a parent or guardian. Tell it what to do in plain language: set aside taxes, pay people, send invoices. Coming 2027. Request an invite.",
             "inLanguage": "en-US",
             "publisher": { "@id": "https://fuime.com/#org" }
           }
@@ -143,6 +143,14 @@
         animation: in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
 
+      /* the one plain statement of what this is */
+      .for {
+        margin: -22px 0 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ink);
+        animation: in 1.4s 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
       /* the instruction line */
       .term {
         width: min(440px, 88vw);
@@ -298,6 +306,7 @@
       }
       @media (prefers-reduced-motion: reduce) {
         .mark,
+        .for,
         .term,
         .foot {
           animation: none;
@@ -314,17 +323,18 @@
     <main id="join">
       <div class="stack">
         <h1><img class="mark" src="/img/v2/logo.svg" width="49" height="41" alt="Fuime" /></h1>
-        <p class="sr">Fuime is a business account that takes instructions in plain language, coming in 2027.</p>
+        <p class="for">business accounts for teens.</p>
+        <p class="sr">Fuime is a business account for teens, opened jointly with a parent or guardian, that takes instructions in plain language. Coming in 2027.</p>
         <div class="term" aria-hidden="true">
-          <p class="cmd" data-cmd>move 25% of every payment to taxes</p>
-          <p class="ans is-on" data-ans>done. $787.50 moved today.</p>
+          <p class="cmd" data-cmd>move 25% of every sale to taxes</p>
+          <p class="ans is-on" data-ans>done. $96.00 set aside.</p>
         </div>
       </div>
     </main>
 
     <div class="foot" data-foot>
       <p data-account-none hidden>There's no Fuime account for that email. Sign-ups are closed for now.</p>
-      <p>a business account that takes instructions &middot; 2027</p>
+      <p>a joint account with a parent or guardian &middot; 2027</p>
       <button class="invite" type="button" data-invite>request an invite</button>
       <form class="capture" data-source="stealth-waitlist" novalidate>
         <div class="capture__row">
@@ -356,13 +366,13 @@
         // ones (rules, reports, follow-ups), so it reads as a business account
         // with an agent in it, not a chatbot.
         var LINES = [
-          ['move 25% of every payment to taxes', 'done. $787.50 moved today.'],
-          ['wire $2,284.50 to bayside tile', 'sent. arrives before 5 pm.'],
-          ['what did the chen kitchen job make?', '$2,130 after materials.'],
-          ['new card for kim, $500 a month', 'card ·· 9912 is ready.'],
-          ['pay the crew friday by ach', 'scheduled. $3,860.00 to 3 people.'],
-          ["what's in operating?", '$18,958.06.'],
-          ['remind delgado if 1042 is late', "i'll show you the note first."],
+          ['move 25% of every sale to taxes', 'done. $96.00 set aside.'],
+          ['pay jordan $40 for the lawn job', 'sent. your mom can see it too.'],
+          ['how much did the sneaker drop make?', '$612 after shipping.'],
+          ['invoice the parks for tutoring', 'sent. $120.00 due friday.'],
+          ['ask dad before anything over $200', "noted. he'll get a tap to approve."],
+          ["what's in my account?", '$1,284.50.'],
+          ['freeze my card', 'frozen.'],
         ]
         var term = document.querySelector('.term')
         var cmd = document.querySelector('[data-cmd]')
