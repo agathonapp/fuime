@@ -73,8 +73,10 @@
         ]
       }
     </script>
-    <!-- Stealth front door. The mark, one line saying who it is for
-         (2026-11-23: approved for teens), and an invite request. The typed
+    <!-- Stealth front door. The mark standing on a ground line beside a small
+         pixel business (one teen, one business, one coin into the arch), one
+         line saying who it is for (2026-11-23: approved for teens), and an
+         invite request. The typed
          agent instructions were removed the same day: the page does not lead
          with the agent. An earlier full page is parked, unserved, at
          legacy/index-agent-2026-11.html. Everything is inline: one request. -->
@@ -132,6 +134,29 @@
         animation: in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
 
+      /* the stage: a pixel business and the arch on one ground line.
+         Hidden until its script runs; then it stands in for the mark. */
+      .stage {
+        display: none;
+      }
+      .has-stage .stage {
+        display: block;
+        width: min(560px, calc(100vw - 24px));
+        height: auto;
+        aspect-ratio: 560 / 176;
+        image-rendering: pixelated;
+        animation: in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+      .has-stage h1 {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+      .has-stage .for {
+        margin-top: -16px;
+      }
       /* the one plain statement of what this is */
       .for {
         margin: -22px 0 0;
@@ -267,6 +292,7 @@
     <main id="join">
       <div class="stack">
         <h1><img class="mark" src="/img/v2/logo.svg" width="49" height="41" alt="Fuime" /></h1>
+        <canvas class="stage" data-stage width="560" height="176" aria-hidden="true"></canvas>
         <p class="for">business accounts for teens.</p>
         <p class="sr">Fuime is a business account for teens, opened jointly with a parent or guardian. Coming in 2027.</p>
       </div>
@@ -297,6 +323,281 @@
         // The app's redirect for a sign-in with no account.
         if (/(?:^|[?&])account=none(?:&|$)/.test(location.search)) {
           document.querySelector('[data-account-none]').hidden = false
+        }
+
+        /* ── the stage ──────────────────────────────────────────────────
+           One teen, one business, one coin. A name types in, a small pixel
+           scene does its job, a coin hops into the arch's keystone and the
+           amount lands beside it. Four businesses, then it loops.
+           Drawn on an art grid of 4 px; every position snaps to that grid
+           so motion stays crisp. With reduced motion the static mark shows. */
+        var stage = document.querySelector('[data-stage]')
+        var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        if (stage && stage.getContext && !calm) {
+          var LW = 560, LH = 176, P = 4, GROUND = 132
+          var MARK = { cx: 280, w: 76, h: 64 }
+          var SCENE_X = 120, NAME_Y = 162
+          var ctx = stage.getContext('2d')
+          var logo = new Image()
+          logo.src = '/img/v2/logo.svg'
+          var FONT = "500 15px -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif"
+
+          var C = {
+            o: '#3b3328', g: '#7fb069', G: '#5b8f4c', h: '#a8d38a', d: '#4a7a3e',
+            r: '#d1543a', R: '#a63d28', s: '#ee8a6c', k: '#6b6458', K: '#4d473e', w: '#2f2b25', W: '#8a8478',
+            b: '#b9824a', B: '#8e6136', y: '#d9a56b', p: '#fbf8f0', P: '#e4dccb', c: '#2e7d5b', C: '#215c43',
+            Y: '#f6d365', L: '#fff2b8', n: '#9a948a', N: '#6f6a61', q: '#ece6d6', Q: '#d3cbb8',
+            x: '#c99a5e', X: '#a07642', z: '#e1b97f', t: '#ece3cc', T: '#cfc2a5',
+            e: '#f6f3ea', E: '#d6cfbf', m: '#2e7d5b', u: '#8a8478', v: '#e07a5f', V: '#b85a43',
+            f: '#f5b8c8', F: '#db8fa3', i: '#fde2ea', a: '#c08552', A: '#94603a',
+            j: '#e3b341', J: '#b8862a', l: '#f7e3a4', O: '#7a5a16', ground: '#ddd4bf'
+          }
+          // sprite maps: one character per art pixel, '.' is empty
+          var S = {
+            mower: [
+              'oo..............', '.ko.............', '..ko............', '...ko...........',
+              '....ko..........', '.....kooooooo...', '....osssrrrrro..', '...orrrrrrrrRRo.',
+              '...oRRRRRRRRRRo.', '....owWo..owWo..', '.....oo....oo...'
+            ],
+            bulbOn: ['..ooo..', '.oLLYo.', 'oLLYYYo', 'oLYYYYo', 'oYYYYYo', '.oYYYo.', '..oNo..', '..nNn..', '..ooo..'],
+            bulbOff: ['..ooo..', '.oqqQo.', 'oqqQQQo', 'oqQQQQo', 'oQQQQQo', '.oQQQo.', '..oNo..', '..nNn..', '..ooo..'],
+            shoe: ['....ooo..', '.ooeeeeo.', 'oeeemmmEo', 'ouuuuuuuo'],
+            cupcake: ['...rr..', '..iff..', '.iffffF', 'offFFFo', 'oaAaAao', '.aAaAa.', '..ooo..'],
+            coin: ['..OOOO..', '.OllljO.', 'OlljjjJO', 'OljjjjJO', 'OljjjjJO', 'OjjjjJJO', '.OJJJJO.', '..OOOO..'],
+            coinMid: ['.OOOO.', 'OlljjO', 'OljjJO', 'OljjJO', 'OljjJO', 'OjjJJO', 'OjJJJO', '.OOOO.'],
+            coinEdge: ['.OO.', 'OljO', 'OjJO', 'OjJO', 'OjJO', 'OjJO', 'OJJO', '.OO.']
+          }
+          var ease = function (x) { x = Math.max(0, Math.min(1, x)); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
+          var easeOut = function (x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3) }
+          var snap = function (v) { return Math.round(v / P) * P }
+
+          function px(ax, ay, w, h, col) { ctx.fillStyle = C[col] || col; ctx.fillRect(ax, ay, w * P, h * P) }
+          function sprite(map, x, y) {
+            x = snap(x); y = snap(y)
+            for (var r = 0; r < map.length; r++) for (var c = 0; c < map[r].length; c++) {
+              var ch = map[r][c]
+              if (ch !== '.') { ctx.fillStyle = C[ch]; ctx.fillRect(x + c * P, y + r * P, P, P) }
+            }
+          }
+          // sprites stand on the ground: give the bottom-left in logical px
+          function stand(map, cx, bottom) { sprite(map, cx - (map[0].length * P) / 2, bottom - map.length * P) }
+
+          /* ── the four businesses ─────────────────────────────────────── */
+          var GX0 = 52, GX1 = 196 // grass span
+
+          function lawn(t) {
+            var p = ease((t - 0.55) / 2.15)
+            var mx = snap(GX0 - 8 + (GX1 - GX0 - 40) * p)
+            var cutTo = mx + 12
+            for (var x = GX0; x < GX1; x += P) {
+              var i = (x - GX0) / P
+              px(x, GROUND - P, 1, 1, 'd')
+              if (x < cutTo) {
+                var lit = Math.floor(i / 5) % 2
+                px(x, GROUND - 2 * P, 1, 1, lit ? 'h' : 'g')
+              } else {
+                var hgt = [4, 3, 4, 2, 3, 4, 3, 2, 4, 3][i % 10]
+                for (var k = 1; k <= hgt; k++) px(x, GROUND - (k + 1) * P, 1, 1, k === hgt ? 'h' : k === 1 ? 'G' : 'g')
+              }
+            }
+            // clippings thrown behind the mower while it runs
+            if (t > 0.6 && t < 2.7) {
+              for (var c = 0; c < 4; c++) {
+                var ph = (t * 3 + c * 0.25) % 1
+                px(snap(mx + 2 - ph * 22 - c * 4), snap(GROUND - 3 * P - Math.sin(Math.PI * ph) * 14), 1, 1, c % 2 ? 'h' : 'g')
+              }
+            }
+            var bob = t > 0.55 && t < 2.7 && Math.floor(t * 12) % 2 ? P : 0
+            sprite(S.mower, mx - 8, GROUND - S.mower.length * P - P - bob + P)
+            return { x: mx + 28, y: GROUND - 52 }
+          }
+
+          function tutoring(t) {
+            var cx = SCENE_X, top = GROUND - 6 * P
+            // desk
+            px(cx - 44, top, 22, 1, 'o')
+            px(cx - 40, top + P, 20, 1, 'y')
+            px(cx - 40, top + 2 * P, 20, 1, 'b'); px(cx + 36, top + 2 * P, 1, 1, 'B')
+            px(cx - 44, top + P, 1, 2, 'o'); px(cx + 40, top + P, 1, 2, 'o')
+            px(cx - 44, top + 3 * P, 22, 1, 'o')
+            ;[cx - 40, cx + 28].forEach(function (lx) { px(lx, top + 4 * P, 1, 2, 'o'); px(lx + P, top + 4 * P, 1, 2, 'B'); px(lx + 2 * P, top + 4 * P, 1, 2, 'o') })
+            // open book
+            var by = top - 5 * P
+            by = top - 5 * P
+            px(cx - 24, by + 4 * P, 12, 1, 'C'); px(cx - 28, by + 4 * P, 1, 1, 'o'); px(cx + 24, by + 4 * P, 1, 1, 'o')
+            px(cx - 24, by, 6, 4, 'o'); px(cx + 4, by, 6, 4, 'o')
+            px(cx - 20, by + P, 5, 3, 'p'); px(cx + 4, by + P, 5, 3, 'p')
+            px(cx - 20, by + P, 5, 1, 'p'); px(cx - 4, by + P, 1, 3, 'P'); px(cx + 4, by + P, 1, 3, 'P')
+            px(cx - 16, by + 2 * P, 3, 1, 'Q'); px(cx - 16, by + 3 * P, 2, 1, 'Q'); px(cx + 8, by + 2 * P, 3, 1, 'Q'); px(cx + 8, by + 3 * P, 2, 1, 'Q')
+            px(cx, by + P, 1, 4, 'o')
+            // a page turning over the spine
+            var flips = [1.0, 1.45]
+            flips.forEach(function (f0) {
+              var u = (t - f0) / 0.4
+              if (u > 0 && u < 1) { var fx = snap(cx + 12 - 32 * ease(u)); px(fx, by - P * Math.round(Math.sin(Math.PI * u) * 2), 1, 2, 'p') }
+            })
+            // the idea
+            var on = t > 1.95 && !(t > 2.03 && t < 2.11)
+            var bx = cx - 14, bt = by - 11 * P
+            sprite(on ? S.bulbOn : S.bulbOff, bx, bt)
+            if (on && Math.floor(t * 4) % 2 === 0) {
+              px(bx + 3 * P, bt - 2 * P, 1, 1, 'Y'); px(bx - 2 * P, bt + 2 * P, 1, 1, 'Y'); px(bx + 8 * P, bt + 2 * P, 1, 1, 'Y')
+              px(bx - P, bt - P, 1, 1, 'Y'); px(bx + 7 * P, bt - P, 1, 1, 'Y')
+            }
+            return { x: cx, y: bt } // the coin rises off the idea
+          }
+
+          function resell(t) {
+            var cx = SCENE_X, w = 14, h = 9
+            var hop = t > 2.45 && t < 2.75 ? -snap(Math.sin(Math.PI * (t - 2.45) / 0.3) * 10) : 0
+            var x0 = snap(cx - (w * P) / 2), top = GROUND - h * P + hop
+            // shoe drops in, clipped by the box rim
+            var u = (t - 0.85) / 0.45
+            if (u > 0 && t < 1.6) {
+              var sy = snap(top - 40 + 52 * Math.min(1, u * u))
+              ctx.save(); ctx.beginPath(); ctx.rect(0, 0, LW, top + P); ctx.clip()
+              sprite(S.shoe, cx - 18, sy); ctx.restore()
+            }
+            // box
+            px(x0, top, w, 1, 'o'); px(x0, top, 1, h, 'o'); px(x0 + (w - 1) * P, top, 1, h, 'o'); px(x0, top + (h - 1) * P, w, 1, 'o')
+            px(x0 + P, top + P, w - 2, 1, 'z'); px(x0 + P, top + 2 * P, w - 3, h - 3, 'x'); px(x0 + (w - 2) * P, top + 2 * P, 1, h - 3, 'X')
+            px(x0 + 2 * P, top + 4 * P, 3, 1, 'X'); px(x0 + 2 * P, top + 5 * P, 2, 1, 'X')
+            // flaps: open, half, shut
+            var open = t < 1.55, half = t >= 1.55 && t < 1.72
+            if (open) {
+              for (var k = 0; k < 3; k++) {
+                px(x0 - (k + 1) * P, top - (k + 1) * P, 5, 1, 'z'); px(x0 - (k + 2) * P, top - (k + 1) * P, 1, 1, 'o')
+                px(x0 + (w - 5 + k + 1) * P, top - (k + 1) * P, 5, 1, 'X'); px(x0 + (w + k + 1) * P, top - (k + 1) * P, 1, 1, 'o')
+              }
+              px(x0 - 4 * P, top - 4 * P, 5, 1, 'o'); px(x0 + (w - 1) * P, top - 4 * P, 5, 1, 'o')
+            } else if (half) {
+              px(x0, top - 2 * P, 6, 1, 'z'); px(x0 + (w - 6) * P, top - 2 * P, 6, 1, 'X'); px(x0, top - P, w, 1, 'o')
+            }
+            // tape slides across the seam
+            var tp = (t - 1.85) / 0.35
+            if (tp > 0) {
+              var tw = Math.round(Math.min(1, ease(tp)) * (w - 2))
+              px(x0 + P, top + P, tw, 1, 't'); px(x0 + 6 * P, top, 2, 3, 't'); if (tw > 7) px(x0 + 7 * P, top + 2 * P, 1, 1, 'T')
+            }
+            return { x: cx, y: top - 14 }
+          }
+
+          function bake(t) {
+            var cx = SCENE_X, w = 26, x0 = snap(cx - (w * P) / 2), top = GROUND - 8 * P
+            // table and striped cloth
+            px(x0, top, w, 1, 'o')
+            for (var r = 0; r < 3; r++) for (var c = 1; c < w - 1; c++) {
+              var on = (Math.floor(c / 2) + r) % 2 === 0
+              px(x0 + c * P, top + (r + 1) * P, 1, 1, on ? 'v' : (r === 2 ? 'E' : 'e'))
+            }
+            for (var c2 = 1; c2 < w - 1; c2++) px(x0 + c2 * P, top + 4 * P, 1, 1, c2 % 3 === 0 ? 'V' : 'o')
+            px(x0, top + P, 1, 4, 'o'); px(x0 + (w - 1) * P, top + P, 1, 4, 'o')
+            ;[x0 + 2 * P, x0 + (w - 4) * P].forEach(function (lx) { px(lx, top + 5 * P, 2, 3, 'o'); px(lx + P, top + 5 * P, 1, 3, 'B') })
+            // cupcakes sell one at a time
+            var sold = [1.0, 1.55, 2.1]
+            ;[-36, 0, 36].forEach(function (dx, n) {
+              var u = (t - sold[n]) / 0.2
+              if (u < 0) stand(S.cupcake, cx + dx, top)
+              else if (u < 1) { stand(S.cupcake, cx + dx, top - snap(6 * easeOut(u))) }
+              else if (u < 1.8) { var sx = snap(cx + dx); px(sx - 2 * P, top - 7 * P, 1, 1, 'L'); px(sx + 2 * P, top - 9 * P, 1, 1, 'L'); px(sx, top - 11 * P, 1, 1, 'Y') }
+            })
+            return { x: cx, y: top - 40 }
+          }
+
+          var BIZ = [
+            { name: "maya's lawn co.", amt: '+$40.00', draw: lawn },
+            { name: "jordan's tutoring", amt: '+$30.00', draw: tutoring },
+            { name: "kai's resell", amt: '+$120.00', draw: resell },
+            { name: "ari's bake sale", amt: '+$18.00', draw: bake }
+          ]
+          var LEN = 5.2, COIN_T = 2.95, POP = 0.18, FLY = 0.55
+
+          function coin(t, from) {
+            var u = t - COIN_T
+            if (u < 0) return 0
+            var slotX = MARK.cx, slotY = GROUND - MARK.h
+            var x, y
+            if (u < POP) { x = from.x; y = from.y - 16 * easeOut(u / POP) }
+            else if (u < POP + FLY) {
+              var q = (u - POP) / FLY
+              x = from.x + (slotX - from.x) * q
+              // the arc never leaves the canvas, even from a tall scene
+              var lift = Math.max(10, Math.min(46, Math.min(from.y - 16, slotY - 4) - 22))
+              y = (from.y - 16) + (slotY - 4 - (from.y - 16)) * q - Math.sin(Math.PI * q) * lift
+            } else if (u < POP + FLY + 0.1) { x = slotX; y = slotY - 4 + 10 * (u - POP - FLY) / 0.1 }
+            else return u - POP - FLY - 0.1 // seconds since it went in
+            var frames = [S.coin, S.coinMid, S.coinEdge, S.coinMid]
+            var map = u < POP ? S.coin : frames[Math.floor(u / 0.07) % 4]
+            ctx.save()
+            if (u >= POP + FLY) { ctx.beginPath(); ctx.rect(0, 0, LW, slotY + 6); ctx.clip() }
+            sprite(map, x - (map[0].length * P) / 2, y - 16)
+            ctx.restore()
+            return 0
+          }
+
+          // Scale only in steps that keep one art pixel a whole number of
+          // device pixels, so the pixel art stays crisp at every width.
+          function fit() {
+            var dpr = Math.min(window.devicePixelRatio || 1, 3)
+            var cssW = Math.min(LW, document.documentElement.clientWidth - 24)
+            var art = Math.max(1, Math.floor((P * cssW / LW) * dpr))
+            var k = art / P
+            stage.width = Math.round(LW * k); stage.height = Math.round(LH * k)
+            stage.style.width = stage.width / dpr + 'px'; stage.style.height = stage.height / dpr + 'px'
+            ctx.setTransform(k, 0, 0, k, 0, 0)
+            ctx.imageSmoothingEnabled = false
+          }
+
+          var t0 = null, running = true
+          function drawAt(T) {
+            var n = Math.floor(T / LEN) % BIZ.length, t = T % LEN, biz = BIZ[n]
+            ctx.clearRect(0, 0, LW, LH)
+
+            // ground, a dotted line the arch and the businesses share
+            ctx.fillStyle = C.ground
+            for (var gx = 36; gx < LW - 36; gx += P * 2) ctx.fillRect(gx, GROUND, P, 2)
+
+            // the business, fading in and out at the edges of its turn
+            var a = Math.min(1, t / 0.25, (LEN - t) / 0.3)
+            ctx.globalAlpha = Math.max(0, a)
+            var from = biz.draw(t)
+            ctx.globalAlpha = 1
+
+            // name, typed under its business
+            var typed = t < 4.75 ? Math.round(Math.min(1, Math.max(0, (t - 0.15) / 0.8)) * biz.name.length) : Math.max(0, Math.round(biz.name.length * (1 - (t - 4.75) / 0.3)))
+            ctx.font = FONT; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#171a18'
+            var full = ctx.measureText(biz.name).width, nx = SCENE_X - full / 2, s = biz.name.slice(0, typed)
+            ctx.fillText(s, nx, NAME_Y)
+            if ((t > 0.1 && t < 1.0) || (t > 4.7 && t < 5.1)) ctx.fillRect(nx + ctx.measureText(s).width + 2, NAME_Y - 12, 2, 15)
+
+            // the coin, then the mark acknowledges it with a 2 px dip
+            var since = coin(t, from)
+            var dip = since > 0 && since < 0.16 ? Math.round(Math.sin(Math.PI * since / 0.16) * 2) : 0
+            if (logo.complete) ctx.drawImage(logo, MARK.cx - MARK.w / 2, GROUND - MARK.h + dip, MARK.w, MARK.h)
+
+            // the amount lands beside the arch
+            if (since > 0) {
+              var la = Math.min(1, since / 0.2, (LEN - 0.4 - t) / 0.25)
+              ctx.globalAlpha = Math.max(0, la)
+              ctx.fillStyle = '#2e7d5b'
+              ctx.fillText(biz.amt, MARK.cx + MARK.w / 2 + 14, GROUND - MARK.h + 22 - Math.round(4 * easeOut(since / 0.3)))
+              ctx.globalAlpha = 1
+            }
+          }
+          function frame(now) {
+            if (!running) return
+            if (t0 === null) t0 = now
+            drawAt((now - t0) / 1000)
+            requestAnimationFrame(frame)
+          }
+          window.__fuimeStage = { at: function (T) { running = false; drawAt(T) } }
+
+          var start = function () {
+            document.documentElement.classList.add('has-stage')
+            fit(); window.addEventListener('resize', fit)
+            requestAnimationFrame(frame)
+          }
+          if (logo.complete) start(); else { logo.onload = start; logo.onerror = function () {} }
         }
 
         /* ── invite ─────────────────────────────────────────────────── */
