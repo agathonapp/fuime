@@ -351,7 +351,7 @@
             e: '#f6f3ea', E: '#d6cfbf', m: '#2e7d5b', u: '#8a8478', v: '#e07a5f', V: '#b85a43',
             f: '#f5b8c8', F: '#db8fa3', i: '#fde2ea', a: '#c08552', A: '#94603a', T: '#e07a5f',
             j: '#e3b341', J: '#b8862a', l: '#f7e3a4', O: '#7a5a16', ground: '#ddd4bf',
-            1: '#f28b30', 2: '#f6d365', 3: '#e0552c', M: '#3fa7a0', H: '#3b2a20', S: '#e0a77e', U: '#c4865e', Z: '#5a4a8a', '4': '#463a6e'
+            1: '#f28b30', 2: '#f6d365', 3: '#e0552c', M: '#3fa7a0', H: '#3b2a20', S: '#e0a77e', U: '#c4865e', Z: '#5a4a8a', '4': '#463a6e', D: '#c94f8a', '5': '#a33d6f'
           }
           // sprite maps: one character per art pixel, '.' is empty
           var S = {
@@ -367,6 +367,11 @@
             coin: ['..OOOO..', '.OllljO.', 'OlljjjJO', 'OljjjjJO', 'OljjjjJO', 'OjjjjJJO', '.OJJJJO.', '..OOOO..'],
             coinMid: ['.OOOO.', 'OlljjO', 'OljjJO', 'OljjJO', 'OljjJO', 'OjjJJO', 'OjJJJO', '.OOOO.'],
             coinEdge: ['.OO.', 'OljO', 'OjJO', 'OjJO', 'OjJO', 'OjJO', 'OJJO', '.OO.'],
+            danceA: ['...ooo...', '..oHHHo..', '..oHSSo..', '..oSSSo..', '...oUo...', 'SooDDDooS', '.oDDDDDo.', '..oDDDo..', '.oDDDDDo.', 'oD5D5D5Do', '.ooSoSoo.', '..oS.So..', '.oS...So.', '.oo...oo.'],
+            danceB: ['So.....oS', 'So.ooo.oS', '.SoHHHoS.', '..oHSSo..', '..oSSSo..', '...oUo...', '..oDDDo..', '..oDDDo..', '.oDDDDDo.', 'oD5D5D5Do', '.ooSoSoo.', '..oSoSo..', '..oSoSo..', '..oo.oo..'],
+            speaker: ['oooooo', 'oKKKKo', 'oKwwKo', 'owWWwo', 'owWWwo', 'oKwwKo', 'oKKKKo', 'oooooo'],
+            speakerPump: ['oooooo', 'oKKKKo', 'oKWWKo', 'oWnnWo', 'oWnnWo', 'oKWWKo', 'oKKKKo', 'oooooo'],
+            note: ['..cc', '..c.', '..c.', 'ccc.', 'cc..'],
             lotusA: ['....ooo....', '...oHHHo...', '...oHSSo...', '...oSSSo...', '....oUo....', '..oTTTTTo..', '.oSoTTToSo.', '.oSoTTToSo.', 'oZZZZZZZZZo', 'oZ4ZZZZZ4Zo', '.ooooooooo.'],
             lotusB: ['oSo.....oSo', 'oSo.....oSo', 'oSo.ooo.oSo', 'oSooHHHooSo', 'oSooHSSooSo', 'oSooSSSooSo', '.oSooUooSo.', '..oTTTTTo..', '..oTTTTTo..', '..oTTTTTo..', 'oZZZZZZZZZo', 'oZ4ZZZZZ4Zo', '.ooooooooo.']
           }
@@ -560,13 +565,38 @@
             return { x: cx, y: GROUND - P - S.lotusB.length * P + 4 }
           }
 
+          function chacha(t) {
+            var cx = SCENE_X, beat = 0.3
+            var b = Math.floor(Math.max(0, t - 0.45) / beat), dancing = t > 0.45 && t < 3.3
+            // the speaker pumps on the beat
+            stand(dancing && b % 2 === 0 ? S.speakerPump : S.speaker, cx - 40, GROUND)
+            // notes float up and drift off, one per beat
+            // three notes, a third of a cycle apart, alternating sides so none overlap
+            for (var n = 0; n < 3; n++) {
+              var ph = ((t - 0.45) / (beat * 6) + n / 3) % 1
+              if (t < 0.45 + n * beat * 2) continue
+              ctx.globalAlpha = Math.max(0, Math.min(1, (1 - ph) * 1.6)) * Math.min(1, t / 0.25, (LEN - t) / 0.3)
+              sprite(S.note, cx - [62, 42, 54][n] + Math.round(Math.sin(ph * 4 + n * 2) * 3), GROUND - 44 - ph * 60)
+            }
+            ctx.globalAlpha = Math.min(1, t / 0.25, (LEN - t) / 0.3)
+            // cha cha: step (arms out), turn (arms up), step the other way
+            var pose = !dancing ? 0 : [0, 1, 2, 1][b % 4]
+            var map = pose === 1 ? S.danceB : S.danceA
+            if (pose === 2) map = S.danceA.map(function (r) { return r.split('').reverse().join('') })
+            var hop = pose === 1 ? P : 0
+            var sway = !dancing ? 0 : [-P, 0, P, 0][b % 4]
+            stand(map, cx + 16 + sway, GROUND - hop)
+            return { x: cx + 16, y: GROUND - S.danceA.length * P - 6 }
+          }
+
           var BIZ = [
             { name: "maya's lawn co.", amt: '+$40.00', draw: lawn },
             { name: "kai's sneakers", amt: '+$120.00', draw: resell },
             { name: "nia's kitchen", amt: '+$65.00', draw: cooking },
             { name: "jordan's tutoring", amt: '+$30.00', draw: tutoring },
             { name: "zoe's yoga", amt: '+$25.00', draw: yoga },
-            { name: "ari's bake sale", amt: '+$18.00', draw: bake }
+            { name: "ari's bake sale", amt: '+$18.00', draw: bake },
+            { name: "charlotte's cha cha", amt: '+$150.00', draw: chacha }
           ]
           var LEN = 5.2, COIN_T = 2.95, POP = 0.18, FLY = 0.55
 
